@@ -1,0 +1,10 @@
+{
+  "resources": ["Food", "Wood", "Metal", "Wealth", "Knowledge", "Oil"],
+  "ages": ["Ancient", "Classical", "Medieval", "Gunpowder", "Enlightenment", "Industrial", "Modern", "Information"],
+  "cultures": [
+    {"id":"auroran_league","bonus":"+10% knowledge"},
+    {"id":"steppe_concord","bonus":"+10% cavalry speed"},
+    {"id":"ironcrest_union","bonus":"+10% metal mining"},
+    {"id":"mariner_guilds","bonus":"+10% wealth"}
+  ]
+}
