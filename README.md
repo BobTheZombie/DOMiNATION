@@ -54,4 +54,7 @@ Headless deterministic smoke mode (CI/container friendly):
 - **T**: toggle train menu (`1` Worker at City Center, `2` Infantry at Barracks, `Backspace` cancel queue front)
 - **R**: toggle research panel (`1` Age Up)
 - **Esc**: cancel active build placement
-- **1/2/3**: territory / border / fog overlays
+- **Ctrl+1..9**: assign control group
+- **1..9**: select control group (double tap focuses camera on group)
+- **M**: toggle minimap visibility
+- **F1/F2/F3**: territory / border / fog overlays

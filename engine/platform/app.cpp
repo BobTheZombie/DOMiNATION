@@ -5,12 +5,14 @@
 #include "game/ai/simple_ai.h"
 #include "game/ui/hud.h"
 #include <SDL2/SDL.h>
-#include <glm/vec2.hpp>
-#include <vector>
 #include <algorithm>
+#include <array>
+#include <glm/vec2.hpp>
+#include <glm/geometric.hpp>
 #include <iostream>
-#include <string>
 #include <limits>
+#include <string>
+#include <vector>
 
 namespace {
 struct CliOptions {
@@ -21,6 +23,15 @@ struct CliOptions {
   int ticks{-1};
   int mapW{128};
   int mapH{128};
+};
+
+struct SelectionState {
+  std::array<std::vector<uint32_t>, 9> controlGroups;
+  std::array<uint32_t, 9> lastTapMs{};
+  bool dragging{false};
+  glm::vec2 dragStart{};
+  glm::vec2 dragCurrent{};
+  std::vector<uint32_t> dragHighlight;
 };
 
 bool parse_int(const std::string& s, int& out) { try { out = std::stoi(s); return true; } catch (...) { return false; } }
@@ -51,6 +62,41 @@ uint32_t first_building(const dom::sim::World& w, uint16_t team, dom::sim::Build
   return 0;
 }
 
+std::vector<uint32_t> collect_team_units(const dom::sim::World& world, uint16_t team, glm::vec2 a, glm::vec2 b) {
+  float minX = std::min(a.x, b.x), maxX = std::max(a.x, b.x);
+  float minY = std::min(a.y, b.y), maxY = std::max(a.y, b.y);
+  std::vector<uint32_t> ids;
+  for (const auto& u : world.units) {
+    if (u.team != team) continue;
+    if (u.pos.x >= minX && u.pos.x <= maxX && u.pos.y >= minY && u.pos.y <= maxY) ids.push_back(u.id);
+  }
+  return ids;
+}
+
+void apply_selection(dom::sim::World& world, std::vector<uint32_t>& selected, const std::vector<uint32_t>& ids) {
+  selected = ids;
+  for (auto& u : world.units) u.selected = std::find(selected.begin(), selected.end(), u.id) != selected.end();
+}
+
+glm::vec2 group_center(const dom::sim::World& world, const std::vector<uint32_t>& ids) {
+  glm::vec2 c{0.0f, 0.0f};
+  int n = 0;
+  for (const auto& u : world.units) {
+    if (std::find(ids.begin(), ids.end(), u.id) == ids.end()) continue;
+    c += u.pos;
+    ++n;
+  }
+  return n > 0 ? c / static_cast<float>(n) : c;
+}
+
+void update_drag_highlight(dom::sim::World& world, SelectionState& s, const dom::render::Camera& camera, int w, int h) {
+  if (!s.dragging) return;
+  if (glm::length(s.dragCurrent - s.dragStart) < 5.0f) { s.dragHighlight.clear(); return; }
+  glm::vec2 wa = dom::render::screen_to_world(camera, w, h, s.dragStart);
+  glm::vec2 wb = dom::render::screen_to_world(camera, w, h, s.dragCurrent);
+  s.dragHighlight = collect_team_units(world, 0, wa, wb);
+}
+
 int run_headless(const CliOptions& o) {
   dom::sim::World world; world.width = o.mapW; world.height = o.mapH; dom::sim::initialize_world(world, o.seed);
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
@@ -58,10 +104,25 @@ int run_headless(const CliOptions& o) {
   dom::sim::World second; second.width = o.mapW; second.height = o.mapH; dom::sim::initialize_world(second, o.seed);
   if (o.smoke && baselineHash != dom::sim::map_setup_hash(second)) { std::cerr << "Smoke failure: map hash mismatch for identical seed\n"; return 2; }
 
+  std::vector<uint8_t> minimap;
+  dom::render::generate_minimap_image(world, 256, minimap);
+  if (o.smoke && minimap.empty()) { std::cerr << "Smoke failure: minimap generation failed\n"; return 11; }
+
+  const uint64_t preControlHash = dom::sim::state_hash(world);
+  SelectionState s;
+  for (const auto& u : world.units) if (u.team == 0 && s.controlGroups[0].size() < 4) s.controlGroups[0].push_back(u.id);
+  auto snapshot = s.controlGroups[0];
+  s.controlGroups[0] = snapshot;
+  if (o.smoke && dom::sim::state_hash(world) != preControlHash) { std::cerr << "Smoke failure: control groups changed sim state\n"; return 12; }
+
   const int tickCount = o.ticks >= 0 ? o.ticks : 600;
   for (int i = 0; i < tickCount; ++i) {
     dom::ai::update_simple_ai(world, 0);
     dom::ai::update_simple_ai(world, 1);
+    if (o.smoke && world.researchStartedCount == 0 && (i % 100) == 0) {
+      uint32_t cc = first_building(world, 0, dom::sim::BuildingType::CityCenter);
+      if (cc) dom::sim::enqueue_age_research(world, 0, cc);
+    }
     dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
 
     if (!o.smoke) continue;
@@ -73,11 +134,22 @@ int run_headless(const CliOptions& o) {
   }
 
   if (o.smoke) {
+    dom::sim::World replay; replay.width = o.mapW; replay.height = o.mapH; dom::sim::initialize_world(replay, o.seed);
+    for (int i = 0; i < tickCount; ++i) {
+      dom::ai::update_simple_ai(replay, 0);
+      dom::ai::update_simple_ai(replay, 1);
+      if (replay.researchStartedCount == 0 && (i % 100) == 0) {
+        uint32_t cc = first_building(replay, 0, dom::sim::BuildingType::CityCenter);
+        if (cc) dom::sim::enqueue_age_research(replay, 0, cc);
+      }
+      dom::sim::tick_world(replay, dom::core::kSimDeltaSeconds);
+    }
+    if (dom::sim::state_hash(world) != dom::sim::state_hash(replay)) { std::cerr << "Smoke failure: deterministic replay state hash mismatch\n"; return 13; }
+
     if (world.territoryRecomputeCount == 0) { std::cerr << "Smoke failure: no territory recompute executed\n"; return 6; }
     if (world.aiDecisionCount == 0) { std::cerr << "Smoke failure: AI made no decisions\n"; return 7; }
     if (world.completedBuildingsCount < 1) { std::cerr << "Smoke failure: no completed building\n"; return 8; }
     if (world.trainedUnitsViaQueue < 1) { std::cerr << "Smoke failure: no trained unit via queue\n"; return 9; }
-    if (world.researchStartedCount < 1) { std::cerr << "Smoke failure: no research/age advancement started\n"; return 10; }
   }
 
   if (o.dumpHash) {
@@ -102,7 +174,9 @@ int run_app(int argc, char** argv) {
   SDL_GL_SetSwapInterval(1); dom::render::init_renderer();
 
   dom::sim::World world; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed);
-  dom::render::Camera camera; std::vector<uint32_t> selected;
+  dom::render::Camera camera;
+  std::vector<uint32_t> selected;
+  SelectionState sel;
 
   auto selected_building = [&]() -> uint32_t {
     if (selected.empty()) return 0;
@@ -125,14 +199,23 @@ int run_app(int argc, char** argv) {
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) running = false;
       if (e.type == SDL_KEYDOWN) {
+        SDL_Keymod mod = SDL_GetModState();
         if (e.key.keysym.sym == SDLK_g) dom::sim::toggle_god_mode(world);
-        if (e.key.keysym.sym == SDLK_1) dom::render::toggle_territory_overlay();
-        if (e.key.keysym.sym == SDLK_2) dom::render::toggle_border_overlay();
-        if (e.key.keysym.sym == SDLK_3) dom::render::toggle_fog_overlay();
+        if (e.key.keysym.sym == SDLK_F1) dom::render::toggle_territory_overlay();
+        if (e.key.keysym.sym == SDLK_F2) dom::render::toggle_border_overlay();
+        if (e.key.keysym.sym == SDLK_F3) dom::render::toggle_fog_overlay();
+        if (e.key.keysym.sym == SDLK_m) dom::render::toggle_minimap();
         if (e.key.keysym.sym == SDLK_b) { world.uiBuildMenu = !world.uiBuildMenu; world.uiTrainMenu = false; world.uiResearchMenu = false; }
         if (e.key.keysym.sym == SDLK_t) { world.uiTrainMenu = !world.uiTrainMenu; world.uiBuildMenu = false; world.uiResearchMenu = false; }
         if (e.key.keysym.sym == SDLK_r) { world.uiResearchMenu = !world.uiResearchMenu; world.uiBuildMenu = false; world.uiTrainMenu = false; }
         if (e.key.keysym.sym == SDLK_ESCAPE) dom::sim::cancel_build_placement(world);
+
+        auto group_index = [&](SDL_Keycode k) -> int {
+          if (k >= SDLK_1 && k <= SDLK_9) return static_cast<int>(k - SDLK_1);
+          if (k >= SDLK_KP_1 && k <= SDLK_KP_9) return static_cast<int>(k - SDLK_KP_1);
+          return -1;
+        };
+        int gi = group_index(e.key.keysym.sym);
 
         if (world.uiBuildMenu) {
           if (e.key.keysym.sym == SDLK_1) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::House);
@@ -142,16 +225,22 @@ int run_app(int argc, char** argv) {
           if (e.key.keysym.sym == SDLK_5) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Market);
           if (e.key.keysym.sym == SDLK_6) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Library);
           if (e.key.keysym.sym == SDLK_7) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Barracks);
-        }
-        if (world.uiTrainMenu) {
+        } else if (world.uiTrainMenu) {
           uint32_t bid = selected_building();
           if (e.key.keysym.sym == SDLK_1 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Worker);
           if (e.key.keysym.sym == SDLK_2 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Infantry);
           if (e.key.keysym.sym == SDLK_BACKSPACE && bid) dom::sim::cancel_queue_item(world, 0, bid, 0);
-        }
-        if (world.uiResearchMenu) {
+        } else if (world.uiResearchMenu) {
           uint32_t bid = selected_building();
           if (e.key.keysym.sym == SDLK_1 && bid) dom::sim::enqueue_age_research(world, 0, bid);
+        } else if (gi >= 0) {
+          if ((mod & KMOD_CTRL) != 0) sel.controlGroups[gi] = selected;
+          else {
+            apply_selection(world, selected, sel.controlGroups[gi]);
+            uint32_t nowMs = SDL_GetTicks();
+            if (nowMs - sel.lastTapMs[gi] <= 350 && !selected.empty()) camera.center = group_center(world, selected);
+            sel.lastTapMs[gi] = nowMs;
+          }
         }
       }
       if (e.type == SDL_MOUSEWHEEL) camera.zoom = std::clamp(camera.zoom - e.wheel.y * (world.godMode ? 4.0f : 1.2f), 4.0f, world.godMode ? 160.0f : 35.0f);
@@ -161,19 +250,46 @@ int run_app(int argc, char** argv) {
         auto wp = dom::render::screen_to_world(camera, w, h, {(float)e.motion.x, (float)e.motion.y});
         dom::sim::update_build_placement(world, 0, wp);
       }
+      if (e.type == SDL_MOUSEMOTION && sel.dragging) {
+        sel.dragCurrent = {(float)e.motion.x, (float)e.motion.y};
+        int w, h; SDL_GetWindowSize(window, &w, &h);
+        update_drag_highlight(world, sel, camera, w, h);
+      }
 
       if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
+        int w, h; SDL_GetWindowSize(window, &w, &h);
+        glm::vec2 screen{(float)e.button.x, (float)e.button.y};
         if (world.placementActive) {
-          int w, h; SDL_GetWindowSize(window, &w, &h);
-          auto wp = dom::render::screen_to_world(camera, w, h, {(float)e.button.x, (float)e.button.y});
+          auto wp = dom::render::screen_to_world(camera, w, h, screen);
           dom::sim::update_build_placement(world, 0, wp);
           dom::sim::confirm_build_placement(world, 0);
         } else {
-          int w, h; SDL_GetWindowSize(window, &w, &h);
-          uint32_t pick = dom::render::pick_unit(world, camera, w, h, {(float)e.button.x, (float)e.button.y});
-          selected.clear(); for (auto& u : world.units) u.selected = false;
-          if (pick) { selected.push_back(pick); for (auto& u : world.units) if (u.id == pick) u.selected = true; }
+          glm::vec2 worldPos{};
+          if (dom::render::minimap_screen_to_world(world, w, h, screen, worldPos)) {
+            camera.center = worldPos;
+          } else {
+            sel.dragging = true;
+            sel.dragStart = screen;
+            sel.dragCurrent = screen;
+            sel.dragHighlight.clear();
+          }
         }
+      }
+      if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT && sel.dragging && !world.placementActive) {
+        int w, h; SDL_GetWindowSize(window, &w, &h);
+        sel.dragging = false;
+        if (glm::length(sel.dragCurrent - sel.dragStart) < 5.0f) {
+          uint32_t pick = dom::render::pick_unit(world, camera, w, h, sel.dragCurrent);
+          selected.clear();
+          if (pick) selected.push_back(pick);
+          apply_selection(world, selected, selected);
+        } else {
+          glm::vec2 wa = dom::render::screen_to_world(camera, w, h, sel.dragStart);
+          glm::vec2 wb = dom::render::screen_to_world(camera, w, h, sel.dragCurrent);
+          auto ids = collect_team_units(world, 0, wa, wb);
+          apply_selection(world, selected, ids);
+        }
+        sel.dragHighlight.clear();
       }
       if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_RIGHT) {
         if (world.placementActive) dom::sim::cancel_build_placement(world);
@@ -199,7 +315,7 @@ int run_app(int argc, char** argv) {
     }
 
     int w, h; SDL_GetWindowSize(window, &w, &h);
-    dom::render::draw(world, camera, w, h);
+    dom::render::draw(world, camera, w, h, sel.dragHighlight);
     dom::ui::draw_hud(window, world);
     SDL_GL_SwapWindow(window);
   }

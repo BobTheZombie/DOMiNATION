@@ -1,7 +1,13 @@
 # Build (Linux)
 
 Dependencies (Ubuntu example):
-- `build-essential cmake ninja-build libsdl2-dev libglm-dev nlohmann-json3-dev mesa-common-dev libgl1-mesa-dev`
+- `build-essential cmake ninja-build libsdl2-dev libglm-dev nlohmann-json3-dev mesa-common-dev libgl1-mesa-dev pkg-config`
+
+SDL2 detection order in CMake:
+1. `find_package(SDL2 CONFIG QUIET)`
+2. Fallback to `pkg-config` (`sdl2.pc`) and expose compatible target `SDL2::SDL2`
+
+This allows standard Ubuntu `libsdl2-dev` installations (which often omit `SDL2Config.cmake`) to build without extra setup.
 
 Build:
 ```bash
