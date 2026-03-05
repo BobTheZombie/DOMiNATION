@@ -8,10 +8,22 @@ namespace dom::sim {
 
 enum class Resource : uint8_t { Food, Wood, Metal, Wealth, Knowledge, Oil, Count };
 enum class Age : uint8_t { Ancient, Classical, Medieval, Gunpowder, Enlightenment, Industrial, Modern, Information };
+enum class UnitType : uint8_t { Worker, Infantry };
+enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks };
+
+enum class QueueKind : uint8_t { TrainUnit, AgeResearch };
+
+struct ProductionItem {
+  QueueKind kind{QueueKind::TrainUnit};
+  UnitType unitType{UnitType::Worker};
+  float remaining{0.0f};
+  int targetAge{0};
+};
 
 struct Unit {
   uint32_t id{};
   uint16_t team{};
+  UnitType type{UnitType::Infantry};
   float hp{100.0f};
   float attack{8.0f};
   float range{2.5f};
@@ -31,10 +43,24 @@ struct City {
   bool capital{false};
 };
 
+struct Building {
+  uint32_t id{};
+  uint16_t team{};
+  BuildingType type{BuildingType::House};
+  glm::vec2 pos{};
+  glm::vec2 size{2.0f, 2.0f};
+  bool underConstruction{true};
+  float buildProgress{0.0f};
+  float buildTime{10.0f};
+  std::vector<ProductionItem> queue;
+};
+
 struct PlayerState {
   uint16_t id{};
   Age age{Age::Ancient};
   std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0};
+  int popUsed{0};
+  int popCap{10};
   int score{0};
   bool alive{true};
 };
@@ -48,14 +74,26 @@ struct World {
   std::vector<uint8_t> fog;
   std::vector<Unit> units;
   std::vector<City> cities;
+  std::vector<Building> buildings;
   std::vector<PlayerState> players;
   bool godMode{false};
   uint32_t tick{0};
   bool gameOver{false};
   uint16_t winner{0};
 
+  bool uiBuildMenu{false};
+  bool uiTrainMenu{false};
+  bool uiResearchMenu{false};
+  bool placementActive{false};
+  BuildingType placementType{BuildingType::House};
+  glm::vec2 placementPos{};
+  bool placementValid{false};
+
   uint32_t territoryRecomputeCount{0};
   uint32_t aiDecisionCount{0};
+  uint32_t completedBuildingsCount{0};
+  uint32_t trainedUnitsViaQueue{0};
+  uint32_t researchStartedCount{0};
   bool territoryDirty{true};
   bool fogDirty{true};
 };
@@ -65,6 +103,15 @@ void tick_world(World& world, float dt);
 void issue_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);
 void issue_attack(World& world, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy);
 void toggle_god_mode(World& world);
+
+bool start_build_placement(World& world, uint16_t team, BuildingType type);
+void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos);
+bool confirm_build_placement(World& world, uint16_t team);
+void cancel_build_placement(World& world);
+
+bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitType type);
+bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId);
+bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t index);
 
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);
