@@ -10,6 +10,15 @@ Linux-first original RTS vertical slice inspired by classic nation-building RTS 
 - GLM
 - JSON content files
 
+## Build dependencies (Ubuntu)
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  libsdl2-dev pkg-config libglm-dev nlohmann-json3-dev mesa-common-dev libgl1-mesa-dev ninja-build cmake g++
+```
+
+SDL2 is discovered via `find_package(SDL2 CONFIG)` when available, with an automatic fallback to `pkg-config` (`sdl2.pc`) for distros/packages that do not ship `SDL2Config.cmake`.
+
 ## Build
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
