@@ -5,7 +5,19 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(SDL2 REQUIRED)
+find_package(SDL2 CONFIG QUIET)
+if(NOT TARGET SDL2::SDL2)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(SDL2_PC REQUIRED IMPORTED_TARGET sdl2)
+
+  add_library(SDL2::SDL2 INTERFACE IMPORTED)
+  target_link_libraries(SDL2::SDL2 INTERFACE PkgConfig::SDL2_PC)
+endif()
+
+if(NOT TARGET SDL2::SDL2)
+  message(FATAL_ERROR "Unable to find SDL2 via CMake config package or pkg-config")
+endif()
+
 find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
 find_package(nlohmann_json REQUIRED)
