@@ -189,6 +189,37 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height) {
     draw_textured_overlay(gOverlay.fogTex, w, 0.55f, {0.0f, 0.0f, 0.0f}, true);
   }
 
+  glBegin(GL_QUADS);
+  for (const auto& b : w.buildings) {
+    float r = 0.6f, g = 0.6f, bl = 0.65f;
+    if (b.team == 0) { r = 0.82f; g = 0.32f; bl = 0.32f; }
+    if (b.team == 1) { r = 0.28f; g = 0.45f; bl = 0.88f; }
+    if (b.underConstruction) { r *= 0.6f; g *= 0.6f; bl *= 0.6f; }
+    glColor3f(r, g, bl);
+    float sx = b.size.x * 0.5f;
+    float sy = b.size.y * 0.5f;
+    glVertex2f(b.pos.x - sx, b.pos.y - sy);
+    glVertex2f(b.pos.x + sx, b.pos.y - sy);
+    glVertex2f(b.pos.x + sx, b.pos.y + sy);
+    glVertex2f(b.pos.x - sx, b.pos.y + sy);
+  }
+  glEnd();
+
+  if (w.placementActive) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(w.placementValid ? 0.2f : 0.9f, w.placementValid ? 0.9f : 0.2f, 0.2f, 0.35f);
+    float sx = 1.4f;
+    float sy = 1.4f;
+    glBegin(GL_QUADS);
+    glVertex2f(w.placementPos.x - sx, w.placementPos.y - sy);
+    glVertex2f(w.placementPos.x + sx, w.placementPos.y - sy);
+    glVertex2f(w.placementPos.x + sx, w.placementPos.y + sy);
+    glVertex2f(w.placementPos.x - sx, w.placementPos.y + sy);
+    glEnd();
+    glDisable(GL_BLEND);
+  }
+
   const float nearThreshold = 22.0f;
   const float farThreshold = 58.0f;
   const float clusterThreshold = 95.0f;

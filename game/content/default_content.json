@@ -1,6 +1,24 @@
 {
   "resources": ["Food", "Wood", "Metal", "Wealth", "Knowledge", "Oil"],
   "ages": ["Ancient", "Classical", "Medieval", "Gunpowder", "Enlightenment", "Industrial", "Modern", "Information"],
+  "buildingDefs": [
+    {"id":"CityCenter","size":[3.6,3.6],"buildTime":0.0,"popCapBonus":10},
+    {"id":"House","size":[2.2,2.2],"buildTime":12.0,"cost":{"wood":70},"popCapBonus":5},
+    {"id":"Farm","size":[2.6,2.6],"buildTime":14.0,"cost":{"wood":80},"trickle":{"food":1.9}},
+    {"id":"LumberCamp","size":[2.6,2.6],"buildTime":14.0,"cost":{"wood":75},"trickle":{"wood":1.6}},
+    {"id":"Mine","size":[2.6,2.6],"buildTime":15.0,"cost":{"wood":60,"metal":40},"trickle":{"metal":1.4}},
+    {"id":"Market","size":[2.8,2.8],"buildTime":18.0,"cost":{"wood":110,"metal":40},"trickle":{"wealth":1.7}},
+    {"id":"Library","size":[2.8,2.8],"buildTime":18.0,"cost":{"wood":120,"wealth":60},"trickle":{"knowledge":1.5}},
+    {"id":"Barracks","size":[3.0,3.0],"buildTime":20.0,"cost":{"wood":130,"metal":70}}
+  ],
+  "unitDefs": [
+    {"id":"Worker","trainTime":10.0,"popCost":1,"cost":{"food":60}},
+    {"id":"Infantry","trainTime":12.0,"popCost":1,"cost":{"food":70,"metal":30}}
+  ],
+  "ageUp": {
+    "researchTime": 35.0,
+    "cost": {"knowledge":130,"wealth":110}
+  },
   "cultures": [
     {"id":"auroran_league","bonus":"+10% knowledge"},
     {"id":"steppe_concord","bonus":"+10% cavalry speed"},
