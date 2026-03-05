@@ -1,9 +1,12 @@
 #include "game/ai/simple_ai.h"
+#include <algorithm>
 #include <vector>
 
 namespace dom::ai {
 
 namespace {
+bool gAttackEarly = false;
+
 uint32_t first_building(const dom::sim::World& w, uint16_t team, dom::sim::BuildingType t) {
   for (const auto& b : w.buildings) if (b.team == team && b.type == t && !b.underConstruction) return b.id;
   return 0;
@@ -15,6 +18,8 @@ int count_buildings(const dom::sim::World& w, uint16_t team, dom::sim::BuildingT
   int n = 0; for (const auto& b : w.buildings) if (b.team == team && b.type == t && !b.underConstruction) ++n; return n;
 }
 }
+
+void set_attack_early(bool enabled) { gAttackEarly = enabled; }
 
 void update_simple_ai(dom::sim::World& world, uint16_t team) {
   if (world.tick % 20 != 0) return;
@@ -52,10 +57,17 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     dom::sim::enqueue_age_research(world, team, lib);
   }
 
-  if (count_units(world, team, dom::sim::UnitType::Infantry) >= 8) {
-    std::vector<uint32_t> mine;
-    for (const auto& u : world.units) if (u.team == team && u.type == dom::sim::UnitType::Infantry) mine.push_back(u.id);
-    if (!mine.empty()) dom::sim::issue_move(world, team, mine, team == 0 ? glm::vec2{95, 95} : glm::vec2{20, 20});
+  const int attackThreshold = gAttackEarly ? 4 : 6;
+  if (count_units(world, team, dom::sim::UnitType::Infantry) >= attackThreshold) {
+    std::vector<uint32_t> army;
+    for (const auto& u : world.units) if (u.team == team && u.type != dom::sim::UnitType::Worker) army.push_back(u.id);
+    std::sort(army.begin(), army.end());
+    if (!army.empty()) {
+      const glm::vec2 enemyBase = team == 0 ? glm::vec2{95, 95} : glm::vec2{20, 20};
+      const glm::vec2 staging = team == 0 ? glm::vec2{72, 72} : glm::vec2{42, 42};
+      const glm::vec2 target = world.tick < 380 ? staging : enemyBase;
+      dom::sim::issue_move(world, team, army, target);
+    }
   }
 
   ++world.aiDecisionCount;

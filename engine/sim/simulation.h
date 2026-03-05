@@ -31,7 +31,12 @@ struct Unit {
   glm::vec2 pos{};
   glm::vec2 renderPos{};
   glm::vec2 target{};
+  glm::vec2 slotTarget{};
+  glm::vec2 moveDir{};
   uint32_t targetUnit{0};
+  uint32_t moveOrder{0};
+  uint16_t stuckTicks{0};
+  bool hasMoveOrder{false};
   bool selected{false};
 };
 
@@ -94,6 +99,12 @@ struct World {
   uint32_t completedBuildingsCount{0};
   uint32_t trainedUnitsViaQueue{0};
   uint32_t researchStartedCount{0};
+  uint32_t navVersion{1};
+  uint32_t flowFieldGeneratedCount{0};
+  uint32_t flowFieldCacheHitCount{0};
+  uint32_t groupMoveCommandCount{0};
+  uint32_t unitsReachedSlotCount{0};
+  uint32_t stuckMoveAssertions{0};
   bool territoryDirty{true};
   bool fogDirty{true};
 };
@@ -103,6 +114,8 @@ void tick_world(World& world, float dt);
 void issue_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);
 void issue_attack(World& world, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy);
 void toggle_god_mode(World& world);
+void set_nav_debug(bool enabled);
+bool nav_debug_enabled();
 
 bool start_build_placement(World& world, uint16_t team, BuildingType type);
 void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos);
