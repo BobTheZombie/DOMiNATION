@@ -37,3 +37,15 @@
 ## GOD mode
 - GOD Mode still suppresses fog gating and forces global reveal.
 - Overlay controls remain active for territory/border/fog visualization.
+
+## Minimap pipeline
+- Minimap is generated from existing simulation data (height/fertility, territory owner grid, fog grid, city positions, unit positions).
+- CPU-side minimap image is refreshed every 8 frames and uploaded to a 256x256 GL texture.
+- HUD renders minimap in the lower-right corner and supports click-to-move camera.
+- GOD mode bypasses fog masking and shows all entities on the minimap.
+
+## Selection and control input routing
+- Dragging left mouse starts a box-select pass; candidate units are highlighted during drag.
+- Releasing drag selects all friendly units inside the box, while click still performs point pick.
+- Selected units render selection rings for clarity.
+- Control groups are handled in platform input: `Ctrl+1..9` assigns, `1..9` recalls, double-tap centers camera on group.

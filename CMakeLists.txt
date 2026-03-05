@@ -8,10 +8,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(SDL2 CONFIG QUIET)
 if(NOT TARGET SDL2::SDL2)
   find_package(PkgConfig REQUIRED)
-  pkg_check_modules(SDL2_PC REQUIRED IMPORTED_TARGET sdl2)
+  pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
 
-  add_library(SDL2::SDL2 INTERFACE IMPORTED)
-  target_link_libraries(SDL2::SDL2 INTERFACE PkgConfig::SDL2_PC)
+  add_library(SDL2::SDL2 ALIAS PkgConfig::SDL2)
 endif()
 
 if(NOT TARGET SDL2::SDL2)

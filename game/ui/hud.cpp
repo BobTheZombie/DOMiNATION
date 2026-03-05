@@ -21,7 +21,7 @@ void draw_hud(SDL_Window* window, const dom::sim::World& world) {
     (world.uiTrainMenu ? " | [T] Train" : "") +
     (world.uiResearchMenu ? " | [R] Research" : "") +
     (world.godMode ? " | GOD MODE (All Visible)" : "") +
-    " | Overlays [1]=Territory [2]=Borders [3]=Fog | Capitals " + std::to_string(capitals);
+    " | Minimap [M] | Groups Ctrl+1..9 / 1..9 | Overlays [F1/F2/F3] | Capitals " + std::to_string(capitals);
   SDL_SetWindowTitle(window, title.c_str());
 }
 }
