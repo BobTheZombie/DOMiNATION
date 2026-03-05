@@ -1,2 +1,2 @@
 #include "engine/platform/app.h"
-int main() { return run_app(); }
+int main(int argc, char** argv) { return run_app(argc, argv); }

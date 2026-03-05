@@ -53,6 +53,11 @@ struct World {
   uint32_t tick{0};
   bool gameOver{false};
   uint16_t winner{0};
+
+  uint32_t territoryRecomputeCount{0};
+  uint32_t aiDecisionCount{0};
+  bool territoryDirty{true};
+  bool fogDirty{true};
 };
 
 void initialize_world(World& world, uint32_t seed);
@@ -60,5 +65,8 @@ void tick_world(World& world, float dt);
 void issue_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);
 void issue_attack(World& world, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy);
 void toggle_god_mode(World& world);
+
+uint64_t map_setup_hash(const World& world);
+uint64_t state_hash(const World& world);
 
 } // namespace dom::sim

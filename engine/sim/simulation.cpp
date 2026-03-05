@@ -9,6 +9,18 @@ namespace dom::sim {
 namespace {
 float dist(glm::vec2 a, glm::vec2 b) { return glm::length(a - b); }
 
+constexpr uint64_t kFNVOffset = 1469598103934665603ull;
+constexpr uint64_t kFNVPrime = 1099511628211ull;
+
+void hash_u32(uint64_t& h, uint32_t v) {
+  h ^= static_cast<uint64_t>(v);
+  h *= kFNVPrime;
+}
+
+void hash_float(uint64_t& h, float v) {
+  hash_u32(h, static_cast<uint32_t>(v * 1000.0f));
+}
+
 void recompute_territory(World& w) {
   std::fill(w.territoryOwner.begin(), w.territoryOwner.end(), 0);
   for (int y = 0; y < w.height; ++y) {
@@ -26,6 +38,29 @@ void recompute_territory(World& w) {
       w.territoryOwner[y * w.width + x] = owner;
     }
   }
+  ++w.territoryRecomputeCount;
+  w.territoryDirty = true;
+}
+
+void recompute_fog(World& w) {
+  std::fill(w.fog.begin(), w.fog.end(), 0);
+  for (const auto& c : w.cities) {
+    if (c.team != 0) continue;
+    for (int y = std::max(0, static_cast<int>(c.pos.y) - 10); y <= std::min(w.height - 1, static_cast<int>(c.pos.y) + 10); ++y) {
+      for (int x = std::max(0, static_cast<int>(c.pos.x) - 10); x <= std::min(w.width - 1, static_cast<int>(c.pos.x) + 10); ++x) {
+        if (dist({x + 0.5f, y + 0.5f}, c.pos) < 10.5f) w.fog[y * w.width + x] = 255;
+      }
+    }
+  }
+  for (const auto& u : w.units) {
+    if (u.team != 0 || u.hp <= 0) continue;
+    for (int y = std::max(0, static_cast<int>(u.pos.y) - 7); y <= std::min(w.height - 1, static_cast<int>(u.pos.y) + 7); ++y) {
+      for (int x = std::max(0, static_cast<int>(u.pos.x) - 7); x <= std::min(w.width - 1, static_cast<int>(u.pos.x) + 7); ++x) {
+        if (dist({x + 0.5f, y + 0.5f}, u.pos) < 7.5f) w.fog[y * w.width + x] = 255;
+      }
+    }
+  }
+  w.fogDirty = true;
 }
 
 } // namespace
@@ -53,6 +88,7 @@ void initialize_world(World& w, uint32_t seed) {
     w.units.push_back({id++, 1, 100, 9, 3.0f, 5.0f, {92.0f + i * 0.6f, 89.0f}, {92.0f + i * 0.6f, 89.0f}, {92.0f + i * 0.6f, 89.0f}, 0, false});
   }
   recompute_territory(w);
+  recompute_fog(w);
 }
 
 void tick_world(World& w, float dt) {
@@ -100,6 +136,7 @@ void tick_world(World& w, float dt) {
   }
 
   w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [](const Unit& u) { return u.hp <= 0; }), w.units.end());
+  recompute_fog(w);
 
   bool team0Capital = false, team1Capital = false;
   for (const auto& c : w.cities) {
@@ -133,6 +170,44 @@ void issue_attack(World& w, uint16_t team, const std::vector<uint32_t>& ids, uin
   }
 }
 
-void toggle_god_mode(World& w) { w.godMode = !w.godMode; }
+void toggle_god_mode(World& w) {
+  w.godMode = !w.godMode;
+  w.fogDirty = true;
+}
+
+uint64_t map_setup_hash(const World& w) {
+  uint64_t h = kFNVOffset;
+  for (float v : w.heightmap) hash_float(h, v);
+  for (float v : w.fertility) hash_float(h, v);
+  for (const auto& c : w.cities) {
+    hash_u32(h, c.id);
+    hash_u32(h, c.team);
+    hash_float(h, c.pos.x);
+    hash_float(h, c.pos.y);
+  }
+  for (const auto& u : w.units) {
+    hash_u32(h, u.id);
+    hash_u32(h, u.team);
+    hash_float(h, u.pos.x);
+    hash_float(h, u.pos.y);
+  }
+  return h;
+}
+
+uint64_t state_hash(const World& w) {
+  uint64_t h = kFNVOffset;
+  hash_u32(h, w.tick);
+  hash_u32(h, static_cast<uint32_t>(w.units.size()));
+  for (const auto& u : w.units) {
+    hash_u32(h, u.id);
+    hash_float(h, u.hp);
+    hash_float(h, u.pos.x);
+    hash_float(h, u.pos.y);
+  }
+  hash_u32(h, w.territoryRecomputeCount);
+  hash_u32(h, w.aiDecisionCount);
+  for (uint16_t owner : w.territoryOwner) hash_u32(h, owner);
+  return h;
+}
 
 } // namespace dom::sim
