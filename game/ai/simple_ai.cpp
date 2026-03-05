@@ -8,5 +8,6 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   for (const auto& u : world.units) if (u.team == team) mine.push_back(u.id);
   if (mine.empty()) return;
   dom::sim::issue_move(world, team, mine, {22.0f, 20.0f});
+  ++world.aiDecisionCount;
 }
 }
