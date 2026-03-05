@@ -43,6 +43,9 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--seed <S>` deterministic world seed
 - `--map-size <W>x<H>` override map dimensions
 - `--dump-hash` print deterministic map/state hashes
+- `--nav-debug` print navigation diagnostics counters in headless dump output
+- `--flow-visualize` request flow-field overlay in interactive mode (currently routed to debug path)
+- `--ai-attack-early` lower AI attack threshold for fast testing
 
 ## Controls
 - **WASD**: pan camera

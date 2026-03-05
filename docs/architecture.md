@@ -49,3 +49,11 @@
 - Releasing drag selects all friendly units inside the box, while click still performs point pick.
 - Selected units render selection rings for clarity.
 - Control groups are handled in platform input: `Ctrl+1..9` assigns, `1..9` recalls, double-tap centers camera on group.
+
+## Navigation subsystem (A* + flow field)
+- Existing direct per-unit movement path remains available for small orders.
+- Group orders build a deterministic flow field from a target cell using integer integration costs (base move + slope penalty).
+- Each cell stores the best descending neighbor direction; units follow this vector plus deterministic local separation.
+- Flow fields are cached by `(targetCell, navVersion, grid size)` and reused across units/orders.
+- `navVersion` is incremented on building placement/completion to invalidate cached navigation data cheaply.
+- Flow-field caches are derived runtime data and are excluded from authoritative sim hash/state.

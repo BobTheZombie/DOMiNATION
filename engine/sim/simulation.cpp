@@ -3,6 +3,8 @@
 #include <cmath>
 #include <fstream>
 #include <random>
+#include <queue>
+#include <tuple>
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
@@ -33,6 +35,27 @@ UnitDef gUnitDefs[2];
 float gAgeResearchTime{30.0f};
 std::array<float, static_cast<size_t>(Resource::Count)> gAgeResearchCost{};
 bool gDefsLoaded{false};
+bool gNavDebug{false};
+
+struct FlowField {
+  int targetCell{-1};
+  uint32_t navVersion{0};
+  int width{0};
+  int height{0};
+  std::vector<int32_t> integration;
+  std::vector<int8_t> dirX;
+  std::vector<int8_t> dirY;
+};
+
+struct NavRuntime {
+  std::vector<FlowField> cache;
+  std::vector<int32_t> workIntegration;
+  std::vector<uint8_t> blocked;
+  uint32_t nextMoveOrder{1};
+} gNav;
+
+constexpr int32_t kInfCost = 1 << 29;
+constexpr std::array<std::pair<int,int>, 8> kNeighborOrder{{{1,0},{0,1},{-1,0},{0,-1},{1,1},{-1,1},{-1,-1},{1,-1}}};
 
 size_t ridx(Resource r) { return static_cast<size_t>(r); }
 int bidx(BuildingType t) { return static_cast<int>(t); }
@@ -170,6 +193,95 @@ float fertility_at(const World& w, glm::vec2 p) {
   return w.fertility[y * w.width + x];
 }
 
+int cell_of(const World& w, glm::vec2 p) {
+  int x = std::clamp((int)p.x, 0, w.width - 1);
+  int y = std::clamp((int)p.y, 0, w.height - 1);
+  return y * w.width + x;
+}
+
+glm::vec2 cell_center(const World& w, int idx) {
+  int x = idx % w.width;
+  int y = idx / w.width;
+  return glm::vec2{static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f};
+}
+
+void build_blocked_grid(const World& w) {
+  const int cells = w.width * w.height;
+  if ((int)gNav.blocked.size() != cells) gNav.blocked.assign(cells, 0);
+  else std::fill(gNav.blocked.begin(), gNav.blocked.end(), 0);
+  for (const auto& b : w.buildings) {
+    int minX = std::max(0, (int)std::floor(b.pos.x - b.size.x * 0.5f));
+    int maxX = std::min(w.width - 1, (int)std::ceil(b.pos.x + b.size.x * 0.5f));
+    int minY = std::max(0, (int)std::floor(b.pos.y - b.size.y * 0.5f));
+    int maxY = std::min(w.height - 1, (int)std::ceil(b.pos.y + b.size.y * 0.5f));
+    for (int y = minY; y <= maxY; ++y) for (int x = minX; x <= maxX; ++x) gNav.blocked[y * w.width + x] = 1;
+  }
+}
+
+int cell_step_cost(const World& w, int fromCell, int toCell) {
+  const float hf = w.heightmap[fromCell];
+  const float ht = w.heightmap[toCell];
+  const int slope = (int)std::round(std::abs(ht - hf) * 30.0f);
+  return 10 + slope;
+}
+
+FlowField* get_flow_field(World& w, int targetCell) {
+  for (auto& f : gNav.cache) {
+    if (f.targetCell == targetCell && f.navVersion == w.navVersion && f.width == w.width && f.height == w.height) {
+      ++w.flowFieldCacheHitCount;
+      return &f;
+    }
+  }
+  FlowField f{};
+  f.targetCell = targetCell;
+  f.navVersion = w.navVersion;
+  f.width = w.width;
+  f.height = w.height;
+  const int cells = w.width * w.height;
+  f.integration.assign(cells, kInfCost);
+  f.dirX.assign(cells, 0);
+  f.dirY.assign(cells, 0);
+  build_blocked_grid(w);
+  std::queue<int> q;
+  f.integration[targetCell] = 0;
+  q.push(targetCell);
+  while (!q.empty()) {
+    const int cur = q.front(); q.pop();
+    const int cx = cur % w.width;
+    const int cy = cur / w.width;
+    const int32_t base = f.integration[cur];
+    for (const auto& n : kNeighborOrder) {
+      int nx = cx + n.first;
+      int ny = cy + n.second;
+      if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+      const int ni = ny * w.width + nx;
+      if (gNav.blocked[ni]) continue;
+      int32_t cand = base + cell_step_cost(w, cur, ni);
+      if (cand < f.integration[ni]) { f.integration[ni] = cand; q.push(ni); }
+    }
+  }
+  for (int y = 0; y < w.height; ++y) {
+    for (int x = 0; x < w.width; ++x) {
+      const int idx = y * w.width + x;
+      int32_t best = f.integration[idx];
+      int8_t bx = 0, by = 0;
+      for (const auto& n : kNeighborOrder) {
+        int nx = x + n.first;
+        int ny = y + n.second;
+        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+        const int ni = ny * w.width + nx;
+        if (f.integration[ni] < best) { best = f.integration[ni]; bx = (int8_t)n.first; by = (int8_t)n.second; }
+      }
+      f.dirX[idx] = bx;
+      f.dirY[idx] = by;
+    }
+  }
+  ++w.flowFieldGeneratedCount;
+  gNav.cache.push_back(std::move(f));
+  if (gNav.cache.size() > 32) gNav.cache.erase(gNav.cache.begin());
+  return &gNav.cache.back();
+}
+
 void recompute_population(World& w) {
   for (auto& p : w.players) { p.popUsed = 0; p.popCap = 0; }
   for (const auto& b : w.buildings) {
@@ -249,6 +361,9 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
 
 void initialize_world(World& w, uint32_t seed) {
   load_defs_once();
+  gNav.cache.clear();
+  gNav.nextMoveOrder = 1;
+  w.navVersion = 1;
   std::mt19937 rng(seed);
   std::uniform_real_distribution<float> n(0.f, 1.f);
   w.heightmap.resize(w.width * w.height);
@@ -291,7 +406,7 @@ void tick_world(World& w, float dt) {
     if (b.underConstruction) {
       float workerFactor = has_nearby_builder(w, b.team, b.pos) ? 1.0f : 0.25f;
       b.buildProgress += dt / std::max(1.0f, b.buildTime) * workerFactor;
-      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; }
+      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; ++w.navVersion; gNav.cache.clear(); }
       continue;
     }
 
@@ -334,9 +449,41 @@ void tick_world(World& w, float dt) {
       if (it != w.units.end()) u.target = it->pos;
     }
 
-    glm::vec2 d = u.target - u.pos;
-    float len = glm::length(d);
-    if (len > 0.1f) u.pos += (d / len) * u.speed * dt;
+    glm::vec2 desired = u.target - u.pos;
+    if (u.hasMoveOrder && u.moveOrder != 0) {
+      if (FlowField* ff = get_flow_field(w, cell_of(w, u.target))) {
+        const int cc = cell_of(w, u.pos);
+        desired = glm::vec2{(float)ff->dirX[cc], (float)ff->dirY[cc]};
+        if (glm::length(desired) < 0.1f) desired = u.slotTarget - u.pos;
+      }
+    }
+    glm::vec2 repulse{0.0f, 0.0f};
+    for (const auto& other : w.units) {
+      if (other.id == u.id || other.team != u.team || other.hp <= 0) continue;
+      glm::vec2 delta = u.pos - other.pos;
+      float l = glm::length(delta);
+      if (l > 0.001f && l < 1.2f) repulse += (delta / l) * (1.2f - l);
+    }
+    desired += repulse * 0.65f;
+    float len = glm::length(desired);
+    if (len > 0.05f) {
+      glm::vec2 dir = desired / len;
+      u.moveDir = glm::mix(u.moveDir, dir, 0.35f);
+      float ml = glm::length(u.moveDir);
+      if (ml > 0.001f) u.moveDir /= ml;
+      glm::vec2 prev = u.pos;
+      u.pos += u.moveDir * u.speed * dt;
+      if (glm::length(u.pos - prev) < 0.005f && u.hasMoveOrder) {
+        u.stuckTicks = (uint16_t)std::min<int>(u.stuckTicks + 1, 65535);
+        if (u.stuckTicks > 80) ++w.stuckMoveAssertions;
+      } else u.stuckTicks = 0;
+    }
+    if (u.hasMoveOrder && dist(u.pos, u.slotTarget) < 1.1f) {
+      ++w.unitsReachedSlotCount;
+      u.hasMoveOrder = false;
+      u.moveOrder = 0;
+      u.target = u.pos;
+    }
 
     if (u.type != UnitType::Worker) {
       for (auto& e : w.units) {
@@ -361,7 +508,31 @@ void tick_world(World& w, float dt) {
 }
 
 void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
-  for (auto& u : w.units) if (u.team == team && std::find(ids.begin(), ids.end(), u.id) != ids.end()) { u.target = target; u.targetUnit = 0; }
+  std::vector<uint32_t> sorted = ids;
+  std::sort(sorted.begin(), sorted.end());
+  const int n = (int)sorted.size();
+  const int cols = std::max(1, (int)std::ceil(std::sqrt((float)n)));
+  const int rows = (n + cols - 1) / cols;
+  const float spacing = 1.1f;
+  const uint32_t moveOrder = gNav.nextMoveOrder++;
+  if (n >= 6) ++w.groupMoveCommandCount;
+  (void)get_flow_field(w, cell_of(w, target));
+
+  for (int i = 0; i < n; ++i) {
+    const uint32_t id = sorted[i];
+    const int r = i / cols;
+    const int c = i % cols;
+    glm::vec2 slot = target + glm::vec2{(c - cols * 0.5f) * spacing, (r - rows * 0.5f) * spacing};
+    for (auto& u : w.units) if (u.team == team && u.id == id) {
+      u.slotTarget = slot;
+      u.target = slot;
+      u.targetUnit = 0;
+      u.moveOrder = moveOrder;
+      u.hasMoveOrder = true;
+      u.stuckTicks = 0;
+      break;
+    }
+  }
 }
 
 void issue_attack(World& w, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy) {
@@ -369,6 +540,9 @@ void issue_attack(World& w, uint16_t team, const std::vector<uint32_t>& ids, uin
 }
 
 void toggle_god_mode(World& w) { w.godMode = !w.godMode; w.fogDirty = true; }
+
+void set_nav_debug(bool enabled) { gNavDebug = enabled; }
+bool nav_debug_enabled() { return gNavDebug; }
 
 bool start_build_placement(World& world, uint16_t, BuildingType type) {
   world.placementActive = true; world.placementType = type; return true;
@@ -383,6 +557,8 @@ bool confirm_build_placement(World& world, uint16_t team) {
   uint32_t id = 1; for (const auto& b : world.buildings) id = std::max(id, b.id + 1);
   const auto& d = gBuildDefs[bidx(world.placementType)];
   world.buildings.push_back({id, team, world.placementType, world.placementPos, d.size, true, 0.0f, d.buildTime, {}});
+  ++world.navVersion;
+  gNav.cache.clear();
   world.placementActive = false;
   return true;
 }

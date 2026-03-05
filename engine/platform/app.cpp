@@ -19,6 +19,9 @@ struct CliOptions {
   bool headless{false};
   bool smoke{false};
   bool dumpHash{false};
+  bool navDebug{false};
+  bool flowVisualize{false};
+  bool aiAttackEarly{false};
   uint32_t seed{1337};
   int ticks{-1};
   int mapW{128};
@@ -46,6 +49,9 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     if (a == "--headless") o.headless = true;
     else if (a == "--smoke") o.smoke = true;
     else if (a == "--dump-hash") o.dumpHash = true;
+    else if (a == "--nav-debug") o.navDebug = true;
+    else if (a == "--flow-visualize") o.flowVisualize = true;
+    else if (a == "--ai-attack-early") o.aiAttackEarly = true;
     else if (a == "--ticks" && i + 1 < argc) { if (!parse_int(argv[++i], o.ticks) || o.ticks < 0) return false; }
     else if (a == "--seed" && i + 1 < argc) { if (!parse_u32(argv[++i], o.seed)) return false; }
     else if (a == "--map-size" && i + 1 < argc) {
@@ -98,6 +104,8 @@ void update_drag_highlight(dom::sim::World& world, SelectionState& s, const dom:
 }
 
 int run_headless(const CliOptions& o) {
+  dom::sim::set_nav_debug(o.navDebug);
+  dom::ai::set_attack_early(o.aiAttackEarly);
   dom::sim::World world; world.width = o.mapW; world.height = o.mapH; dom::sim::initialize_world(world, o.seed);
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
 
@@ -146,6 +154,10 @@ int run_headless(const CliOptions& o) {
     }
     if (dom::sim::state_hash(world) != dom::sim::state_hash(replay)) { std::cerr << "Smoke failure: deterministic replay state hash mismatch\n"; return 13; }
 
+    if (world.groupMoveCommandCount == 0) { std::cerr << "Smoke failure: no group move command executed\n"; return 14; }
+    if (world.flowFieldGeneratedCount == 0) { std::cerr << "Smoke failure: no flow field generated\n"; return 15; }
+    if (world.unitsReachedSlotCount < 6) { std::cerr << "Smoke failure: too few units reached destination slots\n"; return 16; }
+    if (world.stuckMoveAssertions != 0) { std::cerr << "Smoke failure: stuck move assertion triggered\n"; return 17; }
     if (world.territoryRecomputeCount == 0) { std::cerr << "Smoke failure: no territory recompute executed\n"; return 6; }
     if (world.aiDecisionCount == 0) { std::cerr << "Smoke failure: AI made no decisions\n"; return 7; }
     if (world.completedBuildingsCount < 1) { std::cerr << "Smoke failure: no completed building\n"; return 8; }
@@ -155,6 +167,12 @@ int run_headless(const CliOptions& o) {
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
     std::cout << "state_hash=" << dom::sim::state_hash(world) << "\n";
+    if (o.navDebug) {
+      std::cout << "nav_version=" << world.navVersion << "\n";
+      std::cout << "flow_generated=" << world.flowFieldGeneratedCount << "\n";
+      std::cout << "flow_cache_hits=" << world.flowFieldCacheHitCount << "\n";
+      std::cout << "group_moves=" << world.groupMoveCommandCount << "\n";
+    }
   }
   return 0;
 }
@@ -173,8 +191,11 @@ int run_app(int argc, char** argv) {
   if (!ctx) { SDL_DestroyWindow(window); SDL_Quit(); return 1; }
   SDL_GL_SetSwapInterval(1); dom::render::init_renderer();
 
+  dom::sim::set_nav_debug(opts.navDebug);
+  dom::ai::set_attack_early(opts.aiAttackEarly);
   dom::sim::World world; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed);
   dom::render::Camera camera;
+  if (opts.flowVisualize) std::cout << "flow visualization requested (debug overlay path not wired in this slice)\n";
   std::vector<uint32_t> selected;
   SelectionState sel;
 
