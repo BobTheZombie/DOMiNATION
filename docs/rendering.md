@@ -17,3 +17,39 @@
 ## Water/coast rendering
 - Terrain rendering now colors shallow and deep water separately from land.
 - Minimap colors land/shallow/deep water distinctly and still overlays units/cities.
+
+## Visual style guide
+
+Stylized RTS game art should prioritize readability at strategic zoom levels.
+
+### Camera
+- Top-down / isometric RTS perspective.
+
+### Art direction
+- Clean silhouettes.
+- Stylized realism.
+- Bright but grounded color palette.
+- Clear faction colors.
+- High readability from distance.
+
+### Rendering style
+- Modern RTS style similar to Rise of Nations, Age of Empires IV, Northgard, and stylized Company of Heroes.
+
+### Lighting
+- Soft global illumination.
+- Clear shadow shapes.
+- Strong contrast between terrain types.
+
+### Scale
+- Assets must remain readable when units are small on screen.
+
+### Texture quality
+- Clean materials.
+- Avoid noisy details.
+- Prioritize strong shape readability.
+
+### Resolution targets
+- Usable at 1080p / 1440p / 4K.
+
+### Background
+- Use a transparent or neutral backdrop for sprite extraction.
