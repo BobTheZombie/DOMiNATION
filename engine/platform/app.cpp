@@ -18,6 +18,8 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 namespace {
 struct CliOptions {
@@ -39,6 +41,7 @@ struct CliOptions {
   bool perf{false};
   bool cpuOnlyBattle{false};
   int spawnArmy{-1};
+  int threads{0};
   std::string perfLogFile;
   uint32_t seed{1337};
   int ticks{-1};
@@ -118,6 +121,7 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--editor-save" && i + 1 < argc) { o.editorSaveFile = argv[++i]; }
     else if (a == "--perf-log" && i + 1 < argc) { o.perfLogFile = argv[++i]; }
     else if (a == "--spawn-army" && i + 1 < argc) { if (!parse_int(argv[++i], o.spawnArmy) || o.spawnArmy < 0) return false; }
+    else if (a == "--threads" && i + 1 < argc) { if (!parse_int(argv[++i], o.threads) || o.threads <= 0) return false; }
     else if (a == "--map-size" && i + 1 < argc) {
       std::string v = argv[++i]; auto xPos = v.find('x'); if (xPos == std::string::npos) return false;
       int w = 0, h = 0; if (!parse_int(v.substr(0, xPos), w) || !parse_int(v.substr(xPos + 1), h)) return false;
@@ -460,6 +464,9 @@ int run_headless(const CliOptions& o) {
 
   if (o.cpuOnlyBattle || o.spawnArmy > 0) setup_cpu_battle(world, std::max(1, o.spawnArmy > 0 ? o.spawnArmy : 250));
 
+  const int configuredThreads = o.threads > 0 ? o.threads : std::max(1u, std::thread::hardware_concurrency());
+  dom::sim::set_worker_threads(configuredThreads);
+
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
   if (o.smoke && o.replayFile.empty() && o.loadFile.empty() && o.scenarioFile.empty()) {
     dom::sim::World second; second.width = world.width; second.height = world.height; dom::sim::initialize_world(second, o.seed);
@@ -483,7 +490,13 @@ int run_headless(const CliOptions& o) {
     if (o.replayFile.empty()) {
       if (dom::sim::gameplay_orders_allowed(world)) {
         const auto aiStart = std::chrono::steady_clock::now();
-        for (const auto& p : world.players) if (p.isCPU && p.alive) dom::ai::update_simple_ai(world, p.id);
+        std::vector<uint16_t> cpuPlayers;
+        for (const auto& p : world.players) if (p.isCPU && p.alive) cpuPlayers.push_back(p.id);
+        std::sort(cpuPlayers.begin(), cpuPlayers.end());
+        std::mutex aiMergeMutex;
+        dom::sim::TaskGraph aiGraph;
+        for (uint16_t id : cpuPlayers) aiGraph.jobs.push_back({[&world, &aiMergeMutex, id]() { std::lock_guard<std::mutex> lock(aiMergeMutex); dom::ai::update_simple_ai(world, id); }});
+        dom::sim::run_task_graph(aiGraph);
         const auto aiEnd = std::chrono::steady_clock::now();
         aiMs = std::chrono::duration<double, std::milli>(aiEnd - aiStart).count();
       }
@@ -509,7 +522,8 @@ int run_headless(const CliOptions& o) {
                 << " RENDER_TIME=0"
                 << " ENTITY_COUNT=" << entityCount
                 << " UNIT_COUNT=" << unitCount
-                << " BUILDING_COUNT=" << buildingCount << "\n";
+                << " BUILDING_COUNT=" << buildingCount
+                << " THREADS=" << dom::sim::worker_threads() << "\n";
       if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "\n";
     }
 
@@ -523,6 +537,9 @@ int run_headless(const CliOptions& o) {
     std::vector<dom::sim::ReplayCommand> drained;
     dom::sim::consume_replay_commands(drained);
     recorded.insert(recorded.end(), drained.begin(), drained.end());
+    std::vector<dom::sim::GameplayEvent> gameplayEvents;
+    dom::sim::consume_gameplay_events(gameplayEvents);
+    if (o.perf && !gameplayEvents.empty()) std::cout << "EVENT_COUNT tick=" << world.tick << " count=" << gameplayEvents.size() << "\n";
 
     if (world.match.phase == dom::sim::MatchPhase::Postmatch && (o.smoke || !o.replayFile.empty() || o.replaySummaryOnly)) break;
   }
@@ -603,6 +620,8 @@ int run_headless(const CliOptions& o) {
 
 int run_app(int argc, char** argv) {
   CliOptions opts; if (!parse_cli(argc, argv, opts)) return 1;
+  const int configuredThreads = opts.threads > 0 ? opts.threads : std::max(1u, std::thread::hardware_concurrency());
+  dom::sim::set_worker_threads(configuredThreads);
   if (opts.listScenarios) {
     namespace fs = std::filesystem;
     if (!fs::exists("scenarios")) { std::cout << "No scenarios directory\n"; return 0; }
@@ -864,7 +883,13 @@ int run_app(int argc, char** argv) {
       } else {
         const auto simStart = std::chrono::steady_clock::now();
         const auto aiStart = std::chrono::steady_clock::now();
-        for (const auto& p : world.players) if (p.isCPU && p.alive) dom::ai::update_simple_ai(world, p.id);
+        std::vector<uint16_t> cpuPlayers;
+        for (const auto& p : world.players) if (p.isCPU && p.alive) cpuPlayers.push_back(p.id);
+        std::sort(cpuPlayers.begin(), cpuPlayers.end());
+        std::mutex aiMergeMutex;
+        dom::sim::TaskGraph aiGraph;
+        for (uint16_t id : cpuPlayers) aiGraph.jobs.push_back({[&world, &aiMergeMutex, id]() { std::lock_guard<std::mutex> lock(aiMergeMutex); dom::ai::update_simple_ai(world, id); }});
+        dom::sim::run_task_graph(aiGraph);
         const auto aiEnd = std::chrono::steady_clock::now();
         dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
         const auto simEnd = std::chrono::steady_clock::now();
@@ -889,7 +914,7 @@ int run_app(int argc, char** argv) {
       replayOverlay += (replayOverlay.empty()?"":" | ") + ("FPS ~" + std::to_string((int)std::round(1.0f / std::max(0.001f, frameDt))) +
         " sim=" + std::to_string((int)std::round(lastSimMs)) + "ms render=" + std::to_string((int)std::round(dom::render::last_draw_ms())) +
         "ms entities=" + std::to_string(world.units.size() + world.buildings.size()) + " ai=" + std::to_string((int)std::round(lastAiMs)) + "ms");
-      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << "\n";
+      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << dom::sim::worker_threads() << "\n";
     }
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);

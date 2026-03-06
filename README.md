@@ -61,6 +61,7 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--force-score-victory` disable wonder win pressure for score-smoke helper
 - `--force-wonder-progress` helper flag reserved for wonder smoke shaping
 - `--match-debug` print match-flow diagnostics
+- `--threads <N>` set deterministic worker pool size for job graph execution
 
 ## Controls
 - **WASD**: pan camera
@@ -117,3 +118,6 @@ Examples:
 - `./build/rts --width 3840 --height 2160 --ui-scale 1.5`
 
 Civilization data: `content/civilizations.json`.
+
+
+Headless perf mode also emits deterministic `EVENT_COUNT` lines sourced from the gameplay event stream.

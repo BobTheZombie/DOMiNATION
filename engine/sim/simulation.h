@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 #include <glm/vec2.hpp>
@@ -21,6 +22,24 @@ enum class TriggerType : uint8_t { TickReached, EntityDestroyed, BuildingComplet
 enum class TriggerActionType : uint8_t { ShowObjectiveText, SetObjectiveState, GrantResources, SpawnUnits, EndMatchWithVictory, EndMatchWithDefeat, RevealArea };
 
 enum class ReplayCommandType : uint8_t { Move, Attack, AttackMove, PlaceBuilding, QueueTrain, QueueResearch, CancelQueue };
+enum class GameplayEventType : uint8_t {
+  UnitDied,
+  BuildingCompleted,
+  CityCaptured,
+  WonderStarted,
+  WonderCompleted,
+  PlayerEliminated,
+  ObjectiveCompleted,
+};
+
+struct GameplayEvent {
+  GameplayEventType type{GameplayEventType::UnitDied};
+  uint32_t tick{0};
+  uint16_t actor{UINT16_MAX};
+  uint16_t subject{UINT16_MAX};
+  uint32_t entityId{0};
+  std::string text;
+};
 
 struct ReplayCommand {
   ReplayCommandType type{ReplayCommandType::Move};
@@ -82,6 +101,14 @@ struct TickProfile {
   double combatMs{0.0};
 };
 
+struct Job {
+  std::function<void()> execute;
+};
+
+struct TaskGraph {
+  std::vector<Job> jobs;
+};
+
 struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
   std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
@@ -96,6 +123,9 @@ struct World {
 };
 
 void initialize_world(World& world, uint32_t seed);
+void set_worker_threads(int threads);
+int worker_threads();
+void run_task_graph(TaskGraph& graph);
 bool load_scenario_file(World& world, const std::string& path, uint32_t fallbackSeed, std::string& err);
 bool save_scenario_file(const std::string& path, const World& world, std::string& err);
 void on_authoritative_state_loaded(World& world);
@@ -126,5 +156,6 @@ bool players_allied(const World& world, uint16_t a, uint16_t b);
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);
 TickProfile last_tick_profile();
+void consume_gameplay_events(std::vector<GameplayEvent>& out);
 
 } // namespace dom::sim
