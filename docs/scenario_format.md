@@ -31,3 +31,9 @@ Scenario JSON supports:
 - `roads`: array of `{id, owner, a:[x,y], b:[x,y], quality}` segments.
 
 `scenarios/logistics_test.json` provides a minimal logistics validation setup.
+
+
+## Naval/coast additions
+- Optional `waterMask`: byte grid matching `map.width * map.height` with terrain classes (`0=land`, `1=shallow`, `2=deep`).
+- New building: `Port`.
+- New units: `TransportShip`, `LightWarship`, `HeavyWarship`, `BombardShip`.

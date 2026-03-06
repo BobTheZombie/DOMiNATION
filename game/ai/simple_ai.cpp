@@ -22,6 +22,28 @@ int count_buildings(const dom::sim::World& w, uint16_t team, dom::sim::BuildingT
   int n = 0; for (const auto& b : w.buildings) if (b.team == team && b.type == t && !b.underConstruction) ++n; return n;
 }
 
+
+
+bool map_has_navigable_water(const dom::sim::World& w) {
+  int water = 0;
+  for (uint8_t c : w.terrainClass) if (c == (uint8_t)dom::sim::TerrainClass::ShallowWater || c == (uint8_t)dom::sim::TerrainClass::DeepWater) ++water;
+  return water > (w.width * w.height) / 10;
+}
+
+bool coastal_city_exists(const dom::sim::World& w, uint16_t team) {
+  for (const auto& c : w.cities) {
+    if (c.team != team) continue;
+    int x = std::clamp((int)c.pos.x, 0, w.width - 1);
+    int y = std::clamp((int)c.pos.y, 0, w.height - 1);
+    for (int oy=-2;oy<=2;++oy) for (int ox=-2;ox<=2;++ox) {
+      int nx = std::clamp(x+ox,0,w.width-1), ny = std::clamp(y+oy,0,w.height-1);
+      auto tc = (dom::sim::TerrainClass)w.terrainClass[ny*w.width+nx];
+      if (tc != dom::sim::TerrainClass::Land) return true;
+    }
+  }
+  return false;
+}
+
 TeamStrength strength_near(const dom::sim::World& w, uint16_t team, glm::vec2 p, float r) {
   TeamStrength s{};
   for (const auto& u : w.units) {
@@ -77,6 +99,9 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   if (civ.scienceBias > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
   maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
 
+  const bool navalRelevant = map_has_navigable_water(world) && coastal_city_exists(world, team);
+  if (navalRelevant) maybeBuild(dom::sim::BuildingType::Port, {9, 3});
+
   uint32_t barracks = first_building(world, team, dom::sim::BuildingType::Barracks);
   if (barracks) {
     int infTarget = std::clamp((int)std::round(5.0f * civ.militaryBias), 3, 12);
@@ -91,6 +116,18 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
 
   uint32_t lib = first_building(world, team, dom::sim::BuildingType::Library);
   if (lib && world.players[team].age < dom::sim::Age::Classical && civ.scienceBias >= 0.9f) dom::sim::enqueue_age_research(world, team, lib);
+
+  uint32_t port = first_building(world, team, dom::sim::BuildingType::Port);
+  if (port && navalRelevant) {
+    int tTarget = std::max(1, (int)std::round(civ.economyBias));
+    int lTarget = std::max(1, (int)std::round(civ.militaryBias));
+    int hTarget = std::max(1, (int)std::round(civ.aggression));
+    int bTarget = std::max(1, (int)std::round(civ.defense));
+    if (count_units(world, team, dom::sim::UnitType::TransportShip) < tTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::TransportShip);
+    if (count_units(world, team, dom::sim::UnitType::LightWarship) < lTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::LightWarship);
+    if (count_units(world, team, dom::sim::UnitType::HeavyWarship) < hTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::HeavyWarship);
+    if (count_units(world, team, dom::sim::UnitType::BombardShip) < bTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::BombardShip);
+  }
 
   std::vector<uint32_t> army;
   for (const auto& u : world.units) if (u.team == team && u.type != dom::sim::UnitType::Worker) army.push_back(u.id);

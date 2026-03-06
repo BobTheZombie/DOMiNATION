@@ -155,3 +155,10 @@ Expected outcome:
 ```
 
 Perf counters now include `ROAD_COUNT`, `ACTIVE_TRADE_ROUTES`, `SUPPLIED_UNITS`, `LOW_SUPPLY_UNITS`, `OUT_OF_SUPPLY_UNITS`, `OPERATION_COUNT`.
+
+
+### Naval / Coast deterministic smoke
+- Naval baseline: `./build/rts --headless --ticks 1800 --seed 1234 --dump-hash`
+- Coastal scenario: `./build/rts --headless --scenario scenarios/naval_test.json --ticks 1800 --dump-hash`
+- Thread parity: `./build/rts --headless --scenario scenarios/naval_test.json --threads 1 --hash-only` and `--threads 4/8`
+- Amphibious stress: `./build/rts --headless --scenario scenarios/naval_test.json --threads 8 --ticks 2200 --dump-hash`

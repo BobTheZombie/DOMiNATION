@@ -212,6 +212,7 @@ dom::sim::BuildingType string_to_building(const std::string& v) {
   if (v == "Library") return dom::sim::BuildingType::Library;
   if (v == "Barracks") return dom::sim::BuildingType::Barracks;
   if (v == "Wonder") return dom::sim::BuildingType::Wonder;
+  if (v == "Port") return dom::sim::BuildingType::Port;
   return dom::sim::BuildingType::House;
 }
 std::string building_to_string(dom::sim::BuildingType v) {
@@ -225,6 +226,8 @@ std::string building_to_string(dom::sim::BuildingType v) {
     case dom::sim::BuildingType::Library: return "Library";
     case dom::sim::BuildingType::Barracks: return "Barracks";
     case dom::sim::BuildingType::Wonder: return "Wonder";
+    case dom::sim::BuildingType::Port: return "Port";
+    case dom::sim::BuildingType::Count: break;
   }
   return "House";
 }
@@ -241,6 +244,7 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["mapHeight"] = w.height;
   j["heightmap"] = w.heightmap;
   j["fertility"] = w.fertility;
+  j["terrainClass"] = w.terrainClass;
   j["territoryOwner"] = w.territoryOwner;
   j["fog"] = w.fog;
   j["players"] = nlohmann::json::array();
@@ -256,7 +260,7 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
       {"renderPos", {u.renderPos.x, u.renderPos.y}}, {"target", {u.target.x, u.target.y}}, {"slotTarget", {u.slotTarget.x, u.slotTarget.y}}, {"moveDir", {u.moveDir.x, u.moveDir.y}},
       {"targetUnit", u.targetUnit}, {"moveOrder", u.moveOrder}, {"attackMoveOrder", u.attackMoveOrder}, {"targetLockTicks", u.targetLockTicks}, {"chaseTicks", u.chaseTicks},
       {"attackCooldownTicks", u.attackCooldownTicks}, {"lastTargetSwitchTick", u.lastTargetSwitchTick}, {"stuckTicks", u.stuckTicks}, {"orderPathLingerTicks", u.orderPathLingerTicks},
-      {"supplyState", (int)u.supplyState}, {"hasMoveOrder", u.hasMoveOrder}, {"attackMove", u.attackMove}});
+      {"supplyState", (int)u.supplyState}, {"transportId", u.transportId}, {"cargo", u.cargo}, {"embarked", u.embarked}, {"hasMoveOrder", u.hasMoveOrder}, {"attackMove", u.attackMove}});
   }
   j["buildings"] = nlohmann::json::array();
   for (const auto& b : w.buildings) {
@@ -493,7 +497,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -549,8 +553,8 @@ int run_headless(const CliOptions& o) {
                 << " SUPPLIED_UNITS=" << stats.suppliedUnits
                 << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits
                 << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits
-                << " OPERATION_COUNT=" << stats.operationCount << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "\n";
+                << " OPERATION_COUNT=" << stats.operationCount << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -635,6 +639,13 @@ int run_headless(const CliOptions& o) {
 
   if (!o.hashOnly) std::cout << "TRIGGER_RESULT count=" << world.triggerExecutionCount << " objectiveTransitions=" << world.objectiveStateChangeCount << " log=" << world.objectiveLog.size() << "\n";
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("naval") != std::string::npos) {
+    int navalUnits = 0;
+    for (const auto& u : world.units) if (u.type == dom::sim::UnitType::TransportShip || u.type == dom::sim::UnitType::LightWarship || u.type == dom::sim::UnitType::HeavyWarship || u.type == dom::sim::UnitType::BombardShip) ++navalUnits;
+    if (navalUnits < 1) { std::cerr << "Smoke failure: no naval units\n"; return 69; }
+    if (world.embarkEvents + world.disembarkEvents < 1) { std::cerr << "Smoke failure: no embark/disembark\n"; return 70; }
+    if (world.navalCombatEvents < 1) { std::cerr << "Smoke failure: no naval combat\n"; return 71; }
+  }
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
     std::cout << "state_hash=" << finalHash << "\n";
@@ -842,7 +853,7 @@ int run_app(int argc, char** argv) {
         glm::vec2 screen{(float)e.button.x, (float)e.button.y};
         if (editorMode) {
           auto wp = dom::render::screen_to_world(camera, w, h, screen);
-          if (editorTool == 0) { dom::sim::UnitType ut = dom::sim::UnitType::Infantry; if (world.units.size() % 2 == 0) ut = dom::sim::UnitType::Worker; world.units.push_back({(uint32_t)(world.units.empty()?1:world.units.back().id+1), editorOwner, ut, 100.0f, 8.0f, 2.5f, 4.0f, ut==dom::sim::UnitType::Worker?dom::sim::UnitRole::Worker:dom::sim::UnitRole::Infantry, dom::sim::AttackType::Melee, dom::sim::UnitRole::Infantry, {1000,1000,1000,1000,1000,1000}, wp, wp, wp, wp, {0,0},0,0,0,0,0,0,0,0,0,false,false,false}); }
+          if (editorTool == 0) { dom::sim::UnitType ut = dom::sim::UnitType::Infantry; if (world.units.size() % 2 == 0) ut = dom::sim::UnitType::Worker; dom::sim::Unit nu{}; nu.id=(uint32_t)(world.units.empty()?1:world.units.back().id+1); nu.team=editorOwner; nu.type=ut; nu.hp=100.0f; nu.attack=8.0f; nu.range=2.5f; nu.speed=4.0f; nu.role=ut==dom::sim::UnitType::Worker?dom::sim::UnitRole::Worker:dom::sim::UnitRole::Infantry; nu.attackType=dom::sim::AttackType::Melee; nu.preferredTargetRole=dom::sim::UnitRole::Infantry; nu.pos=nu.renderPos=nu.target=nu.slotTarget=wp; world.units.push_back(nu); }
           else if (editorTool == 1) { world.buildings.push_back({(uint32_t)(world.buildings.empty()?1:world.buildings.back().id+1), editorOwner, dom::sim::BuildingType::Barracks, wp, {3.0f,3.0f}, false, 1.0f, 20.0f, 1000.0f, 1000.0f, {}}); }
           else if (editorTool == 2) { world.resourceNodes.push_back({(uint32_t)(world.resourceNodes.empty()?1:world.resourceNodes.back().id+1), dom::sim::ResourceNodeType::Forest, wp, 1000.0f, UINT16_MAX}); }
           else if (editorTool == 3) { world.cities.push_back({(uint32_t)(world.cities.empty()?1:world.cities.back().id+1), editorOwner, wp, 1, true}); }
@@ -942,7 +953,7 @@ int run_app(int argc, char** argv) {
         " sim=" + std::to_string((int)std::round(lastSimMs)) + "ms render=" + std::to_string((int)std::round(dom::render::last_draw_ms())) +
         "ms entities=" + std::to_string(world.units.size() + world.buildings.size()) + " ai=" + std::to_string((int)std::round(lastAiMs)) + "ms");
       const auto stats = dom::sim::last_simulation_stats();
-      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << "\n";
+      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
     }
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);
