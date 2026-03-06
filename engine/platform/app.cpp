@@ -264,7 +264,7 @@ std::string building_to_string(dom::sim::BuildingType v) {
 }
 
 
-constexpr uint32_t kSaveSchemaVersion = 1;
+constexpr uint32_t kSaveSchemaVersion = 2;
 
 nlohmann::json save_world_json(const dom::sim::World& w) {
   nlohmann::json j;
@@ -278,6 +278,9 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["terrainClass"] = w.terrainClass;
   j["territoryOwner"] = w.territoryOwner;
   j["fog"] = w.fog;
+  j["fogVisibilityByPlayer"] = w.fogVisibilityByPlayer;
+  j["fogExploredByPlayer"] = w.fogExploredByPlayer;
+  j["fogMaskByPlayer"] = w.fogMaskByPlayer;
   j["players"] = nlohmann::json::array();
   for (const auto& p : w.players) {
     j["players"].push_back({{"id", p.id}, {"age", (int)p.age}, {"resources", p.resources}, {"popUsed", p.popUsed}, {"popCap", p.popCap}, {"score", p.score}, {"alive", p.alive}, {"unitsLost", p.unitsLost}, {"buildingsLost", p.buildingsLost}, {"finalScore", p.finalScore}, {"team", p.teamId}});
@@ -290,7 +293,7 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
       {"attackType", (int)u.attackType}, {"preferredTargetRole", (int)u.preferredTargetRole}, {"vsRoleMultiplierPermille", u.vsRoleMultiplierPermille}, {"pos", {u.pos.x, u.pos.y}},
       {"renderPos", {u.renderPos.x, u.renderPos.y}}, {"target", {u.target.x, u.target.y}}, {"slotTarget", {u.slotTarget.x, u.slotTarget.y}}, {"moveDir", {u.moveDir.x, u.moveDir.y}},
       {"targetUnit", u.targetUnit}, {"moveOrder", u.moveOrder}, {"attackMoveOrder", u.attackMoveOrder}, {"targetLockTicks", u.targetLockTicks}, {"chaseTicks", u.chaseTicks},
-      {"attackCooldownTicks", u.attackCooldownTicks}, {"lastTargetSwitchTick", u.lastTargetSwitchTick}, {"stuckTicks", u.stuckTicks}, {"orderPathLingerTicks", u.orderPathLingerTicks},
+      {"attackCooldownTicks", u.attackCooldownTicks}, {"lastTargetSwitchTick", u.lastTargetSwitchTick}, {"stuckTicks", u.stuckTicks}, {"stealthRevealTicks", u.stealthRevealTicks}, {"orderPathLingerTicks", u.orderPathLingerTicks},
       {"supplyState", (int)u.supplyState}, {"transportId", u.transportId}, {"cargo", u.cargo}, {"embarked", u.embarked}, {"hasMoveOrder", u.hasMoveOrder}, {"attackMove", u.attackMove}});
   }
   j["buildings"] = nlohmann::json::array();
@@ -362,7 +365,8 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
 }
 
 bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& err) {
-  if (j.value("schemaVersion", 0u) != kSaveSchemaVersion) { err = "save schema mismatch"; return false; }
+  const uint32_t schema = j.value("schemaVersion", 0u);
+  if (schema == 0 || schema > kSaveSchemaVersion) { err = "save schema mismatch"; return false; }
   w.seed = j.value("seed", 1337u);
   w.tick = j.value("tick", 0u);
   w.width = j.value("mapWidth", 128);
@@ -371,6 +375,9 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.fertility = j.at("fertility").get<std::vector<float>>();
   w.territoryOwner = j.at("territoryOwner").get<std::vector<uint16_t>>();
   w.fog = j.at("fog").get<std::vector<uint8_t>>();
+  if (j.contains("fogVisibilityByPlayer")) w.fogVisibilityByPlayer = j.at("fogVisibilityByPlayer").get<std::vector<uint8_t>>();
+  if (j.contains("fogExploredByPlayer")) w.fogExploredByPlayer = j.at("fogExploredByPlayer").get<std::vector<uint8_t>>();
+  if (j.contains("fogMaskByPlayer")) w.fogMaskByPlayer = j.at("fogMaskByPlayer").get<std::vector<uint8_t>>();
   w.players.clear();
   for (const auto& jp : j.at("players")) {
     dom::sim::PlayerState p{};
@@ -454,6 +461,7 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
     u.slotTarget = {ju["slotTarget"][0].get<float>(), ju["slotTarget"][1].get<float>()}; u.moveDir = {ju["moveDir"][0].get<float>(), ju["moveDir"][1].get<float>()};
     u.targetUnit = ju.value("targetUnit", 0u); u.moveOrder = ju.value("moveOrder", 0u); u.attackMoveOrder = ju.value("attackMoveOrder", 0u); u.targetLockTicks = ju.value("targetLockTicks", 0);
     u.chaseTicks = ju.value("chaseTicks", 0); u.attackCooldownTicks = ju.value("attackCooldownTicks", 0); u.lastTargetSwitchTick = ju.value("lastTargetSwitchTick", 0); u.stuckTicks = ju.value("stuckTicks", 0);
+    u.stealthRevealTicks = ju.value("stealthRevealTicks", 0);
     u.orderPathLingerTicks = ju.value("orderPathLingerTicks", 0); u.supplyState = static_cast<dom::sim::SupplyState>(ju.value("supplyState", 0)); u.hasMoveOrder = ju.value("hasMoveOrder", false); u.attackMove = ju.value("attackMove", false); u.selected = false; w.units.push_back(u);
   }
   w.buildings.clear();
@@ -612,6 +620,32 @@ int run_headless(const CliOptions& o) {
   if (o.smoke && o.replayFile.empty() && o.loadFile.empty() && o.scenarioFile.empty()) {
     dom::sim::World second; second.width = world.width; second.height = world.height; dom::sim::initialize_world(second, o.seed);
     if (baselineHash != dom::sim::map_setup_hash(second)) { std::cerr << "Smoke failure: map hash mismatch for identical seed\n"; return 2; }
+
+    dom::sim::World detA; detA.width = world.width; detA.height = world.height; dom::sim::initialize_world(detA, o.seed);
+    dom::sim::World detB; detB.width = world.width; detB.height = world.height; dom::sim::initialize_world(detB, o.seed);
+    auto scripted_order = [](dom::sim::World& w, uint32_t tick) {
+      if (w.units.empty()) return;
+      if (tick % 120 == 0) dom::sim::issue_move(w, 0, {w.units.front().id}, {22.0f + (tick % 240) * 0.05f, 22.0f});
+    };
+    const int detTicks = std::max(300, o.ticks > 0 ? o.ticks / 4 : 400);
+    for (int i = 0; i < detTicks; ++i) {
+      scripted_order(detA, detA.tick);
+      dom::sim::set_worker_threads(1);
+      dom::sim::tick_world(detA, dom::core::kSimDeltaSeconds);
+      scripted_order(detB, detB.tick);
+      dom::sim::set_worker_threads(4);
+      dom::sim::tick_world(detB, dom::core::kSimDeltaSeconds);
+    }
+    const uint64_t detHashA = dom::sim::state_hash(detA);
+    const uint64_t detHashB = dom::sim::state_hash(detB);
+    if (detHashA != detHashB) { std::cerr << "Smoke failure: deterministic hash mismatch across thread counts\n"; return 82; }
+
+    std::string loadErr;
+    dom::sim::World loaded;
+    if (!load_world_json(save_world_json(detA), loaded, loadErr)) { std::cerr << "Smoke failure: deterministic save/load parse failed\n"; return 83; }
+    dom::sim::on_authoritative_state_loaded(loaded);
+    if (dom::sim::state_hash(loaded) != detHashA) { std::cerr << "Smoke failure: deterministic save/load hash mismatch\n"; return 84; }
+    dom::sim::set_worker_threads(configuredThreads);
   }
 
   std::vector<uint8_t> minimap;
