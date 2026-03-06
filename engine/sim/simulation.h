@@ -58,7 +58,16 @@ struct TriggerAction { TriggerActionType type{TriggerActionType::ShowObjectiveTe
 struct Trigger { uint32_t id{}; bool once{true}; bool fired{false}; TriggerCondition condition{}; std::vector<TriggerAction> actions; };
 struct ObjectiveLogEntry { uint32_t tick{0}; std::string text; };
 
-struct PlayerState { uint16_t id{}; Age age{Age::Ancient}; std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0}; int popUsed{0}; int popCap{10}; int score{0}; bool alive{true}; uint32_t unitsLost{0}; uint32_t buildingsLost{0}; int finalScore{0}; };
+struct CivilizationRuntime {
+  std::string id{"default"};
+  float economyBias{1.0f};
+  float militaryBias{1.0f};
+  float scienceBias{1.0f};
+  float aggression{1.0f};
+  float defense{1.0f};
+};
+
+struct PlayerState { uint16_t id{}; Age age{Age::Ancient}; std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0}; int popUsed{0}; int popCap{10}; int score{0}; bool alive{true}; uint32_t unitsLost{0}; uint32_t buildingsLost{0}; int finalScore{0}; bool isHuman{false}; bool isCPU{true}; uint16_t teamId{0}; std::array<float, 3> color{0.8f, 0.8f, 0.8f}; CivilizationRuntime civilization{}; };
 struct MatchResult { MatchPhase phase{MatchPhase::Running}; VictoryCondition condition{VictoryCondition::None}; uint16_t winner{0}; uint32_t endTick{0}; bool scoreTieBreak{false}; };
 struct WonderState { uint16_t owner{UINT16_MAX}; uint32_t heldTicks{0}; };
 
@@ -107,6 +116,7 @@ void cancel_build_placement(World& world);
 bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitType type);
 bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId);
 bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t index);
+bool players_allied(const World& world, uint16_t a, uint16_t b);
 
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);

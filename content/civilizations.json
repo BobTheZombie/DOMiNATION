@@ -1,0 +1,35 @@
+[
+  {
+    "id": "agrarian_league",
+    "displayName": "Agrarian League",
+    "economyBias": 1.35,
+    "militaryBias": 0.9,
+    "scienceBias": 1.0,
+    "aggression": 0.85,
+    "defense": 1.1,
+    "preferredUnits": ["Infantry", "Archer"],
+    "uniqueModifiers": ["faster farms"]
+  },
+  {
+    "id": "iron_phalanx",
+    "displayName": "Iron Phalanx",
+    "economyBias": 0.9,
+    "militaryBias": 1.35,
+    "scienceBias": 0.85,
+    "aggression": 1.25,
+    "defense": 1.2,
+    "preferredUnits": ["Infantry", "Siege"],
+    "uniqueModifiers": ["stronger infantry"]
+  },
+  {
+    "id": "scholar_dynasty",
+    "displayName": "Scholar Dynasty",
+    "economyBias": 1.0,
+    "militaryBias": 0.95,
+    "scienceBias": 1.4,
+    "aggression": 0.95,
+    "defense": 0.95,
+    "preferredUnits": ["Archer", "Cavalry"],
+    "uniqueModifiers": ["faster research"]
+  }
+]

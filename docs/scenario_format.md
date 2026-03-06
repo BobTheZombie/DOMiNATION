@@ -14,3 +14,11 @@ When terrain grids are omitted, terrain is generated from `seed` and authored pl
 
 Authoritative: players, entities, resources, triggers/objectives, rules, territory if provided.
 Derived: nav cache, fog/territory recompute counters, editor UI state.
+
+
+## Extended authored schema
+- `map.width`, `map.height`
+- `players[]`: `id,isHuman,isCPU,civilization,team,color,startingResources,popCap`
+- `placements`: `cities,units,buildings,resourceNodes`
+- `terrainOverrides` (optional): `height`, `fertility`
+- `rulesOverrides`: `timeLimit`, `wonderRules`, `disabledVictoryTypes`
