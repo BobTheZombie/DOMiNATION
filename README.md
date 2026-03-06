@@ -123,6 +123,33 @@ Civilization data: `content/civilizations.json`.
 
 Headless perf mode also emits deterministic `EVENT_COUNT` lines sourced from the gameplay event stream.
 
+## Diplomacy / tension / espionage
+
+- Authoritative diplomacy matrix now controls bilateral `Allied`, `Neutral`, `War`, and `Ceasefire` relation state.
+- Authoritative treaties support alliance, trade agreement, and open-borders style access.
+- Global authoritative `worldTension` escalates from war/espionage/elimination outcomes and influences AI diplomatic posture.
+- Authoritative espionage operations execute deterministic timed effects (`RECON_CITY`, `REVEAL_ROUTE`, `SABOTAGE_ECONOMY`, `SABOTAGE_SUPPLY`, `COUNTERINTEL`).
+- AI exposes deterministic posture labels: `EXPANSIONIST`, `DEFENSIVE`, `TRADE_FOCUSED`, `ESCALATING`, `TOTAL_WAR`.
+
+Additional perf counters:
+- `WORLD_TENSION`
+- `ALLIANCE_COUNT`
+- `WAR_COUNT`
+- `ACTIVE_ESPIONAGE_OPS`
+- `POSTURE_CHANGES`
+- `DIPLOMACY_EVENTS`
+
+Deterministic diplomacy smoke commands:
+
+```bash
+./build/rts --headless --ticks 1800 --seed 1234 --dump-hash
+./build/rts --headless --scenario scenarios/diplomacy_test.json --ticks 1800 --dump-hash
+./build/rts --headless --scenario scenarios/diplomacy_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/diplomacy_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/diplomacy_test.json --threads 8 --hash-only
+./build/rts --headless --scenario scenarios/diplomacy_test.json --threads 8 --ticks 2400 --dump-hash --smoke
+```
+
 ## Deterministic threaded simulation validation
 
 Chunked deterministic simulation now parallelizes movement integration, fog updates, territory updates, and async navigation generation while committing authoritative state in stable order.

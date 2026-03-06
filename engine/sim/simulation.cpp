@@ -20,6 +20,37 @@ namespace dom::sim {
 namespace {
 float dist(glm::vec2 a, glm::vec2 b) { return glm::length(a - b); }
 
+size_t dip_index(const World& w, uint16_t a, uint16_t b) {
+  const size_t n = w.players.size();
+  return static_cast<size_t>(a) * n + static_cast<size_t>(b);
+}
+
+DiplomacyRelation relation_of(const World& w, uint16_t a, uint16_t b) {
+  if (a >= w.players.size() || b >= w.players.size()) return a == b ? DiplomacyRelation::Allied : DiplomacyRelation::Neutral;
+  if (a == b) return DiplomacyRelation::Allied;
+  if (w.diplomacy.size() != w.players.size() * w.players.size()) return DiplomacyRelation::Neutral;
+  return w.diplomacy[dip_index(w, a, b)];
+}
+
+DiplomacyTreaty treaty_of(const World& w, uint16_t a, uint16_t b) {
+  if (a >= w.players.size() || b >= w.players.size() || w.treaties.size() != w.players.size() * w.players.size()) return {};
+  return w.treaties[dip_index(w, a, b)];
+}
+
+void set_relation(World& w, uint16_t a, uint16_t b, DiplomacyRelation rel) {
+  if (a >= w.players.size() || b >= w.players.size()) return;
+  if (w.diplomacy.size() != w.players.size() * w.players.size()) w.diplomacy.assign(w.players.size() * w.players.size(), DiplomacyRelation::Neutral);
+  w.diplomacy[dip_index(w, a, b)] = rel;
+  w.diplomacy[dip_index(w, b, a)] = rel;
+}
+
+void set_treaty(World& w, uint16_t a, uint16_t b, const DiplomacyTreaty& treaty) {
+  if (a >= w.players.size() || b >= w.players.size()) return;
+  if (w.treaties.size() != w.players.size() * w.players.size()) w.treaties.assign(w.players.size() * w.players.size(), DiplomacyTreaty{});
+  w.treaties[dip_index(w, a, b)] = treaty;
+  w.treaties[dip_index(w, b, a)] = treaty;
+}
+
 constexpr uint64_t kFNVOffset = 1469598103934665603ull;
 constexpr uint64_t kFNVPrime = 1099511628211ull;
 
@@ -145,6 +176,10 @@ void ensure_chunk_layout(const World& w);
 void process_nav_requests(World& w);
 void apply_nav_results(World& w);
 void rebuild_chunk_membership_impl(const World& w);
+bool players_allied(const World& world, uint16_t a, uint16_t b);
+bool players_at_war(const World& world, uint16_t a, uint16_t b);
+bool trade_access_allowed(const World& world, uint16_t a, uint16_t b);
+const char* posture_name(StrategicPosture posture);
 
 void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subject, uint32_t entityId, std::string text = {}) {
   gGameplayEvents.push_back({type, w.tick, actor, subject, entityId, std::move(text)});
@@ -1045,6 +1080,10 @@ bool near_friendly_road(const World& w, uint16_t team, glm::vec2 p) {
   int ty = std::clamp((int)std::round(p.y), 0, w.height - 1);
   for (int oy = -1; oy <= 1; ++oy) for (int ox = -1; ox <= 1; ++ox) {
     if (has_road_on_tile(w, team, tx + ox, ty + oy)) return true;
+    for (uint16_t other = 0; other < w.players.size(); ++other) {
+      if (other == team) continue;
+      if (trade_access_allowed(w, team, other) && has_road_on_tile(w, other, tx + ox, ty + oy)) return true;
+    }
   }
   return false;
 }
@@ -1078,7 +1117,7 @@ void recompute_trade_routes(World& w) {
     for (size_t j = i + 1; j < w.cities.size(); ++j) {
       const auto& a = w.cities[i];
       const auto& b = w.cities[j];
-      if (a.team != b.team) continue;
+      if (!(a.team == b.team || trade_access_allowed(w, a.team, b.team))) continue;
       float d = dist(a.pos, b.pos);
       float roadBonus = (near_friendly_road(w, a.team, a.pos) && near_friendly_road(w, b.team, b.pos)) ? 1.3f : 1.0f;
       int ax = std::clamp((int)a.pos.x, 0, w.width - 1), ay = std::clamp((int)a.pos.y, 0, w.height - 1);
@@ -1088,6 +1127,7 @@ void recompute_trade_routes(World& w) {
       bool active = eff > 0.2f;
       float wealth = active ? eff * 0.08f : 0.0f;
       w.tradeRoutes.push_back({nextId++, a.team, a.id, b.id, active, eff, wealth, w.tick});
+      if (a.team != b.team) w.tradeRoutes.push_back({nextId++, b.team, b.id, a.id, active, eff, wealth, w.tick});
     }
   }
 }
@@ -1145,9 +1185,113 @@ void update_operations(World& w) {
     if (p.civilization.economyBias > 1.15f) t = OperationType::NavalPatrol;
     if (p.civilization.aggression > 1.2f) t = OperationType::AmphibiousAssault;
     glm::vec2 target{(p.id == 0) ? 85.0f : 20.0f, (p.id == 0) ? 85.0f : 20.0f};
-    for (const auto& c : w.cities) if (c.team != p.id) { target = c.pos; break; }
+    for (const auto& c : w.cities) if (c.team != p.id && !players_allied(w, c.team, p.id)) { target = c.pos; break; }
     w.operations.push_back({nextId++, p.id, t, target, w.tick, true});
     ++w.logisticsOperationIssuedCount;
+  }
+}
+
+int military_strength(const World& w, uint16_t team) {
+  int s = 0;
+  for (const auto& u : w.units) if (u.team == team && u.hp > 0 && u.type != UnitType::Worker) s += static_cast<int>(u.hp + u.attack * 10.0f);
+  return s;
+}
+
+void update_world_tension(World& w) {
+  if (w.tick % 20 != 0) return;
+  float drift = -0.01f;
+  int wars = 0;
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    for (size_t j = i + 1; j < w.players.size(); ++j) if (players_at_war(w, static_cast<uint16_t>(i), static_cast<uint16_t>(j))) ++wars;
+  }
+  drift += wars * 0.03f;
+  if (w.navalCombatEvents > 0 || w.combatEngagementCount > 0) drift += 0.02f;
+  w.worldTension = std::clamp(w.worldTension + drift, 0.0f, 100.0f);
+}
+
+void update_espionage(World& w) {
+  if (w.tick % 100 == 0) {
+    uint32_t nextId = 1;
+    for (const auto& op : w.espionageOps) nextId = std::max(nextId, op.id + 1);
+    for (const auto& p : w.players) {
+      if (!p.isCPU || !p.alive) continue;
+      uint16_t target = p.id;
+      for (const auto& e : w.players) if (e.id != p.id && e.alive && !players_allied(w, p.id, e.id)) { target = e.id; break; }
+      if (target == p.id) continue;
+      int activeByTeam = 0;
+      for (const auto& op : w.espionageOps) if (op.actor == p.id && op.state == EspionageOpState::Active) ++activeByTeam;
+      if (activeByTeam >= 1) continue;
+      EspionageOpType type = EspionageOpType::ReconCity;
+      if (w.worldTension > 45.0f) type = EspionageOpType::SabotageSupply;
+      else if (p.civilization.scienceBias > 1.05f) type = EspionageOpType::RevealRoute;
+      else if (p.civilization.aggression > 1.05f) type = EspionageOpType::SabotageEconomy;
+      w.espionageOps.push_back({nextId++, p.id, target, type, w.tick, 140u, EspionageOpState::Active, 0});
+    }
+  }
+
+  for (auto& op : w.espionageOps) {
+    if (op.state != EspionageOpState::Active) continue;
+    if (w.tick < op.startTick + op.durationTicks) continue;
+    const auto counter = std::count_if(w.espionageOps.begin(), w.espionageOps.end(), [&](const EspionageOp& e){ return e.target == op.target && e.type == EspionageOpType::CounterIntel && e.state == EspionageOpState::Active; });
+    const int score = (int)((w.tick + op.actor * 17 + op.target * 31 + (uint16_t)op.type * 13) % 100);
+    const bool detected = score < (20 + (int)counter * 15);
+    if (detected) {
+      op.state = EspionageOpState::Failed;
+      ++w.diplomacyEventCount;
+      emit_event(w, GameplayEventType::EspionageFailure, op.actor, op.target, op.id, "espionage_failed");
+      w.worldTension = std::min(100.0f, w.worldTension + 1.0f);
+      continue;
+    }
+    op.state = EspionageOpState::Completed;
+    ++w.diplomacyEventCount;
+    emit_event(w, GameplayEventType::EspionageSuccess, op.actor, op.target, op.id, "espionage_success");
+    if (op.type == EspionageOpType::ReconCity || op.type == EspionageOpType::RevealRoute) {
+      for (const auto& c : w.cities) if (c.team == op.target) {
+        const int minX = std::max(0, (int)std::floor(c.pos.x) - 4), maxX = std::min(w.width - 1, (int)std::floor(c.pos.x) + 4);
+        const int minY = std::max(0, (int)std::floor(c.pos.y) - 4), maxY = std::min(w.height - 1, (int)std::floor(c.pos.y) + 4);
+        for (int y = minY; y <= maxY; ++y) for (int x = minX; x <= maxX; ++x) w.fog[y * w.width + x] = 255;
+        break;
+      }
+    } else if (op.type == EspionageOpType::SabotageEconomy) {
+      if (op.target < w.players.size()) w.players[op.target].resources[ridx(Resource::Wealth)] = std::max(0.0f, w.players[op.target].resources[ridx(Resource::Wealth)] - 30.0f);
+    } else if (op.type == EspionageOpType::SabotageSupply) {
+      for (auto& u : w.units) if (u.team == op.target && u.supplyState == SupplyState::InSupply) { u.supplyState = SupplyState::LowSupply; break; }
+    }
+    w.worldTension = std::min(100.0f, w.worldTension + 2.0f);
+    if (relation_of(w, op.actor, op.target) == DiplomacyRelation::Neutral && op.type != EspionageOpType::ReconCity) {
+      set_relation(w, op.actor, op.target, DiplomacyRelation::Ceasefire);
+    }
+  }
+}
+
+void update_ai_diplomacy(World& w) {
+  if (w.tick % 60 != 0) return;
+  for (auto& p : w.players) {
+    if (!p.isCPU || !p.alive) continue;
+    uint16_t bestEnemy = p.id;
+    int bestEnemyStr = -1;
+    int ownStr = military_strength(w, p.id);
+    for (const auto& e : w.players) {
+      if (e.id == p.id || !e.alive) continue;
+      if (players_allied(w, p.id, e.id)) continue;
+      int es = military_strength(w, e.id);
+      if (es > bestEnemyStr) { bestEnemyStr = es; bestEnemy = e.id; }
+    }
+    StrategicPosture next = StrategicPosture::Defensive;
+    if (w.worldTension > 70.0f || (bestEnemy != p.id && players_at_war(w, p.id, bestEnemy))) next = StrategicPosture::TotalWar;
+    else if (w.worldTension > 45.0f || p.civilization.aggression > 1.15f) next = StrategicPosture::Escalating;
+    else if (p.civilization.economyBias > p.civilization.militaryBias) next = StrategicPosture::TradeFocused;
+    else if (ownStr > std::max(1, bestEnemyStr)) next = StrategicPosture::Expansionist;
+    if (p.id < w.strategicPosture.size() && w.strategicPosture[p.id] != next) {
+      w.strategicPosture[p.id] = next;
+      ++w.postureChangeCount;
+      ++w.diplomacyEventCount;
+      emit_event(w, GameplayEventType::PostureChanged, p.id, p.id, (uint32_t)next, posture_name(next));
+    }
+
+    if (bestEnemy != p.id && !players_at_war(w, p.id, bestEnemy) && next == StrategicPosture::TotalWar) declare_war(w, p.id, bestEnemy);
+    if (bestEnemy != p.id && relation_of(w, p.id, bestEnemy) == DiplomacyRelation::Neutral && next == StrategicPosture::TradeFocused) establish_trade_agreement(w, p.id, bestEnemy);
+    if (bestEnemy != p.id && relation_of(w, p.id, bestEnemy) == DiplomacyRelation::Neutral && next == StrategicPosture::Expansionist && ownStr > bestEnemyStr * 13 / 10) declare_war(w, p.id, bestEnemy);
   }
 }
 
@@ -1162,7 +1306,95 @@ void consume_gameplay_events(std::vector<GameplayEvent>& out) { out = std::move(
 
 bool players_allied(const World& world, uint16_t a, uint16_t b) {
   if (a >= world.players.size() || b >= world.players.size()) return a == b;
-  return world.players[a].teamId == world.players[b].teamId;
+  if (a == b) return true;
+  if (world.players[a].teamId == world.players[b].teamId) return true;
+  auto rel = relation_of(world, a, b);
+  return rel == DiplomacyRelation::Allied || rel == DiplomacyRelation::Ceasefire;
+}
+
+bool players_at_war(const World& world, uint16_t a, uint16_t b) {
+  if (a >= world.players.size() || b >= world.players.size() || a == b) return false;
+  return relation_of(world, a, b) == DiplomacyRelation::War;
+}
+
+bool trade_access_allowed(const World& world, uint16_t a, uint16_t b) {
+  if (a >= world.players.size() || b >= world.players.size()) return false;
+  if (a == b || players_allied(world, a, b)) return true;
+  const auto treaty = treaty_of(world, a, b);
+  return treaty.tradeAgreement || treaty.openBorders;
+}
+
+bool declare_war(World& world, uint16_t actor, uint16_t target) {
+  if (actor >= world.players.size() || target >= world.players.size() || actor == target) return false;
+  if (players_at_war(world, actor, target)) return false;
+  auto treaty = treaty_of(world, actor, target);
+  treaty.alliance = false;
+  treaty.tradeAgreement = false;
+  treaty.openBorders = false;
+  treaty.nonAggression = false;
+  treaty.lastChangedTick = world.tick;
+  set_treaty(world, actor, target, treaty);
+  set_relation(world, actor, target, DiplomacyRelation::War);
+  world.worldTension = std::min(100.0f, world.worldTension + 8.0f);
+  ++world.diplomacyEventCount;
+  emit_event(world, GameplayEventType::WarDeclared, actor, target, 0, "war_declared");
+  return true;
+}
+
+bool form_alliance(World& world, uint16_t a, uint16_t b) {
+  if (a >= world.players.size() || b >= world.players.size() || a == b) return false;
+  auto treaty = treaty_of(world, a, b);
+  treaty.alliance = true;
+  treaty.tradeAgreement = true;
+  treaty.openBorders = true;
+  treaty.lastChangedTick = world.tick;
+  set_treaty(world, a, b, treaty);
+  set_relation(world, a, b, DiplomacyRelation::Allied);
+  ++world.diplomacyEventCount;
+  emit_event(world, GameplayEventType::AllianceFormed, a, b, 0, "alliance_formed");
+  return true;
+}
+
+bool establish_trade_agreement(World& world, uint16_t a, uint16_t b) {
+  if (a >= world.players.size() || b >= world.players.size() || a == b) return false;
+  if (players_at_war(world, a, b)) return false;
+  auto treaty = treaty_of(world, a, b);
+  treaty.tradeAgreement = true;
+  treaty.openBorders = true;
+  treaty.lastChangedTick = world.tick;
+  set_treaty(world, a, b, treaty);
+  ++world.diplomacyEventCount;
+  emit_event(world, GameplayEventType::TradeAgreementCreated, a, b, 0, "trade_agreement_created");
+  return true;
+}
+
+bool break_treaty(World& world, uint16_t a, uint16_t b) {
+  if (a >= world.players.size() || b >= world.players.size() || a == b) return false;
+  const auto prev = treaty_of(world, a, b);
+  DiplomacyTreaty treaty{};
+  treaty.lastChangedTick = world.tick;
+  set_treaty(world, a, b, treaty);
+  if (prev.alliance) {
+    ++world.diplomacyEventCount;
+    emit_event(world, GameplayEventType::AllianceBroken, a, b, 0, "alliance_broken");
+  }
+  if (prev.tradeAgreement) {
+    ++world.diplomacyEventCount;
+    emit_event(world, GameplayEventType::TradeAgreementBroken, a, b, 0, "trade_agreement_broken");
+  }
+  if (!players_at_war(world, a, b)) set_relation(world, a, b, DiplomacyRelation::Neutral);
+  return true;
+}
+
+const char* posture_name(StrategicPosture posture) {
+  switch (posture) {
+    case StrategicPosture::Expansionist: return "EXPANSIONIST";
+    case StrategicPosture::Defensive: return "DEFENSIVE";
+    case StrategicPosture::TradeFocused: return "TRADE_FOCUSED";
+    case StrategicPosture::Escalating: return "ESCALATING";
+    case StrategicPosture::TotalWar: return "TOTAL_WAR";
+  }
+  return "DEFENSIVE";
 }
 
 int compute_player_score(const World& world, uint16_t playerId) {
@@ -1200,9 +1432,28 @@ void apply_world_defaults(World& w) {
   w.roads.clear();
   w.tradeRoutes.clear();
   w.operations.clear();
+  w.diplomacy.assign(w.players.size() * w.players.size(), DiplomacyRelation::Neutral);
+  w.treaties.assign(w.players.size() * w.players.size(), DiplomacyTreaty{});
+  w.strategicPosture.assign(w.players.size(), StrategicPosture::Defensive);
+  w.espionageOps.clear();
+  w.worldTension = 0.0f;
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    set_relation(w, static_cast<uint16_t>(i), static_cast<uint16_t>(i), DiplomacyRelation::Allied);
+  }
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    for (size_t j = i + 1; j < w.players.size(); ++j) {
+      if (w.players[i].teamId == w.players[j].teamId) {
+        DiplomacyTreaty t{}; t.alliance = true; t.tradeAgreement = true; t.openBorders = true;
+        set_treaty(w, static_cast<uint16_t>(i), static_cast<uint16_t>(j), t);
+        set_relation(w, static_cast<uint16_t>(i), static_cast<uint16_t>(j), DiplomacyRelation::Allied);
+      }
+    }
+  }
   w.logisticsRoadCount = 0;
   w.logisticsTradeActiveCount = 0;
   w.logisticsOperationIssuedCount = 0;
+  w.diplomacyEventCount = 0;
+  w.postureChangeCount = 0;
   w.suppliedUnits = 0;
   w.lowSupplyUnits = 0;
   w.outOfSupplyUnits = 0;
@@ -1392,6 +1643,73 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     }
   }
   for (auto& p : w.players) if (p.civilization.id.empty()) p.civilization = civilization_runtime_for("default");
+  w.diplomacy.assign(w.players.size() * w.players.size(), DiplomacyRelation::Neutral);
+  w.treaties.assign(w.players.size() * w.players.size(), DiplomacyTreaty{});
+  w.strategicPosture.assign(w.players.size(), StrategicPosture::Defensive);
+  for (size_t i = 0; i < w.players.size(); ++i) set_relation(w, static_cast<uint16_t>(i), static_cast<uint16_t>(i), DiplomacyRelation::Allied);
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    for (size_t j = i + 1; j < w.players.size(); ++j) {
+      if (w.players[i].teamId == w.players[j].teamId) {
+        DiplomacyTreaty t{}; t.alliance = true; t.tradeAgreement = true; t.openBorders = true;
+        set_treaty(w, static_cast<uint16_t>(i), static_cast<uint16_t>(j), t);
+        set_relation(w, static_cast<uint16_t>(i), static_cast<uint16_t>(j), DiplomacyRelation::Allied);
+      }
+    }
+  }
+  w.worldTension = j.value("worldTension", 0.0f);
+  if (j.contains("diplomacyRelations") && j["diplomacyRelations"].is_array()) {
+    for (const auto& e : j["diplomacyRelations"]) {
+      uint16_t a = e.value("a", (uint16_t)0), b = e.value("b", (uint16_t)0);
+      std::string rel = e.value("relation", std::string("Neutral"));
+      DiplomacyRelation r = DiplomacyRelation::Neutral;
+      if (rel == "Allied") r = DiplomacyRelation::Allied;
+      else if (rel == "War") r = DiplomacyRelation::War;
+      else if (rel == "Ceasefire") r = DiplomacyRelation::Ceasefire;
+      set_relation(w, a, b, r);
+    }
+  }
+  if (j.contains("treaties") && j["treaties"].is_array()) {
+    for (const auto& e : j["treaties"]) {
+      uint16_t a = e.value("a", (uint16_t)0), b = e.value("b", (uint16_t)0);
+      DiplomacyTreaty t{};
+      t.tradeAgreement = e.value("tradeAgreement", false);
+      t.openBorders = e.value("openBorders", false);
+      t.alliance = e.value("alliance", false);
+      t.nonAggression = e.value("nonAggression", false);
+      t.lastChangedTick = e.value("lastChangedTick", 0u);
+      set_treaty(w, a, b, t);
+    }
+  }
+  if (j.contains("strategicPosture") && j["strategicPosture"].is_array()) {
+    for (const auto& e : j["strategicPosture"]) {
+      uint16_t p = e.value("player", (uint16_t)0);
+      if (p >= w.strategicPosture.size()) continue;
+      std::string s = e.value("posture", std::string("DEFENSIVE"));
+      if (s == "EXPANSIONIST") w.strategicPosture[p] = StrategicPosture::Expansionist;
+      else if (s == "TRADE_FOCUSED") w.strategicPosture[p] = StrategicPosture::TradeFocused;
+      else if (s == "ESCALATING") w.strategicPosture[p] = StrategicPosture::Escalating;
+      else if (s == "TOTAL_WAR") w.strategicPosture[p] = StrategicPosture::TotalWar;
+      else w.strategicPosture[p] = StrategicPosture::Defensive;
+    }
+  }
+  w.espionageOps.clear();
+  if (j.contains("espionageOps") && j["espionageOps"].is_array()) {
+    for (const auto& e : j["espionageOps"]) {
+      EspionageOp op{};
+      op.id = e.value("id", 0u); op.actor = e.value("actor", (uint16_t)0); op.target = e.value("target", (uint16_t)0);
+      const std::string type = e.value("type", std::string("RECON_CITY"));
+      if (type == "REVEAL_ROUTE") op.type = EspionageOpType::RevealRoute;
+      else if (type == "SABOTAGE_ECONOMY") op.type = EspionageOpType::SabotageEconomy;
+      else if (type == "SABOTAGE_SUPPLY") op.type = EspionageOpType::SabotageSupply;
+      else if (type == "COUNTERINTEL") op.type = EspionageOpType::CounterIntel;
+      op.startTick = e.value("startTick", 0u); op.durationTicks = e.value("durationTicks", 120u);
+      const std::string state = e.value("state", std::string("ACTIVE"));
+      if (state == "COMPLETED") op.state = EspionageOpState::Completed;
+      else if (state == "FAILED") op.state = EspionageOpState::Failed;
+      op.effectStrength = e.value("effectStrength", 0);
+      w.espionageOps.push_back(op);
+    }
+  }
   w.cities.clear();
   if (j.contains("cities")) for (const auto& c : j["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
   w.units.clear();
@@ -1494,6 +1812,9 @@ void tick_world(World& w, float dt) {
   ensure_base_roads(w);
   recompute_trade_routes(w);
   recompute_supply(w);
+  update_espionage(w);
+  update_world_tension(w);
+  update_ai_diplomacy(w);
   update_operations(w);
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
@@ -1736,7 +2057,7 @@ void tick_world(World& w, float dt) {
   for (auto& p : w.players) {
     const bool wasAlive = p.alive;
     p.alive = controlled_capitals(w, p.id) > 0;
-    if (wasAlive && !p.alive) emit_event(w, GameplayEventType::PlayerEliminated, p.id, p.id, 0);
+    if (wasAlive && !p.alive) { emit_event(w, GameplayEventType::PlayerEliminated, p.id, p.id, 0); w.worldTension = std::min(100.0f, w.worldTension + 6.0f); }
     if (p.alive) { ++alivePlayers; aliveId = p.id; }
   }
   if (w.config.allowConquest && alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
@@ -1781,6 +2102,19 @@ void tick_world(World& w, float dt) {
   gLastStats.lowSupplyUnits = w.lowSupplyUnits;
   gLastStats.outOfSupplyUnits = w.outOfSupplyUnits;
   gLastStats.operationCount = static_cast<uint32_t>(w.operations.size());
+  gLastStats.worldTension = w.worldTension;
+  gLastStats.allianceCount = 0;
+  gLastStats.warCount = 0;
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    for (size_t j = i + 1; j < w.players.size(); ++j) {
+      const auto r = relation_of(w, static_cast<uint16_t>(i), static_cast<uint16_t>(j));
+      if (r == DiplomacyRelation::Allied) ++gLastStats.allianceCount;
+      if (r == DiplomacyRelation::War) ++gLastStats.warCount;
+    }
+  }
+  gLastStats.activeEspionageOps = static_cast<uint32_t>(std::count_if(w.espionageOps.begin(), w.espionageOps.end(), [](const EspionageOp& op){ return op.state == EspionageOpState::Active; }));
+  gLastStats.postureChanges = w.postureChangeCount;
+  gLastStats.diplomacyEvents = w.diplomacyEventCount;
   gLastStats.navalUnitCount = 0;
   gLastStats.transportCount = 0;
   gLastStats.embarkedUnitCount = 0;
@@ -2008,6 +2342,22 @@ uint64_t state_hash(const World& w) {
   for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
   for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
   for (const auto& o : w.operations) { hash_u32(h, o.id); hash_u32(h, o.team); hash_u32(h, (uint32_t)o.type); hash_float(h, o.target.x); hash_float(h, o.target.y); hash_u32(h, o.assignedTick); hash_u32(h, o.active ? 1u : 0u); }
+  hash_float(h, w.worldTension);
+  for (const auto& r : w.diplomacy) hash_u32(h, static_cast<uint32_t>(r));
+  for (const auto& t : w.treaties) {
+    hash_u32(h, t.tradeAgreement ? 1u : 0u);
+    hash_u32(h, t.openBorders ? 1u : 0u);
+    hash_u32(h, t.alliance ? 1u : 0u);
+    hash_u32(h, t.nonAggression ? 1u : 0u);
+    hash_u32(h, t.lastChangedTick);
+  }
+  for (const auto& s : w.strategicPosture) hash_u32(h, static_cast<uint32_t>(s));
+  for (const auto& op : w.espionageOps) {
+    hash_u32(h, op.id); hash_u32(h, op.actor); hash_u32(h, op.target); hash_u32(h, static_cast<uint32_t>(op.type));
+    hash_u32(h, op.startTick); hash_u32(h, op.durationTicks); hash_u32(h, static_cast<uint32_t>(op.state)); hash_u32(h, static_cast<uint32_t>(op.effectStrength));
+  }
+  hash_u32(h, w.diplomacyEventCount);
+  hash_u32(h, w.postureChangeCount);
   return h;
 }
 

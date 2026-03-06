@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "seed": 7777,
+  "map": {"width": 128, "height": 128},
+  "worldTension": 10.0,
+  "players": [
+    {"id": 0, "team": 0, "isHuman": false, "isCPU": true, "civilization": "mercantile"},
+    {"id": 1, "team": 1, "isHuman": false, "isCPU": true, "civilization": "militarist"},
+    {"id": 2, "team": 2, "isHuman": false, "isCPU": true, "civilization": "scholar_dynasty"}
+  ],
+  "diplomacyRelations": [
+    {"a": 0, "b": 1, "relation": "Neutral"},
+    {"a": 0, "b": 2, "relation": "Allied"},
+    {"a": 1, "b": 2, "relation": "Neutral"}
+  ],
+  "treaties": [
+    {"a": 0, "b": 2, "alliance": true, "tradeAgreement": true, "openBorders": true, "nonAggression": false, "lastChangedTick": 0}
+  ],
+  "strategicPosture": [
+    {"player": 0, "posture": "TRADE_FOCUSED"},
+    {"player": 1, "posture": "ESCALATING"},
+    {"player": 2, "posture": "DEFENSIVE"}
+  ],
+  "espionageOps": [
+    {"id": 1, "actor": 1, "target": 0, "type": "RECON_CITY", "startTick": 0, "durationTicks": 120, "state": "ACTIVE", "effectStrength": 0}
+  ],
+  "cities": [
+    {"id": 1, "team": 0, "pos": [20, 20], "capital": true},
+    {"id": 2, "team": 1, "pos": [95, 95], "capital": true},
+    {"id": 3, "team": 2, "pos": [70, 30], "capital": true}
+  ],
+  "buildings": [
+    {"id": 1, "team": 0, "type": "CityCenter", "pos": [20, 20]},
+    {"id": 2, "team": 0, "type": "Market", "pos": [25, 22]},
+    {"id": 3, "team": 1, "type": "CityCenter", "pos": [95, 95]},
+    {"id": 4, "team": 1, "type": "Market", "pos": [90, 92]},
+    {"id": 5, "team": 2, "type": "CityCenter", "pos": [70, 30]},
+    {"id": 6, "team": 2, "type": "Market", "pos": [74, 33]}
+  ],
+  "units": [
+    {"team": 0, "type": "Infantry", "pos": [30, 30]},
+    {"team": 0, "type": "Infantry", "pos": [32, 29]},
+    {"team": 1, "type": "Infantry", "pos": [88, 88]},
+    {"team": 1, "type": "Infantry", "pos": [86, 89]},
+    {"team": 2, "type": "Infantry", "pos": [67, 35]},
+    {"team": 2, "type": "Infantry", "pos": [66, 36]}
+  ]
+}

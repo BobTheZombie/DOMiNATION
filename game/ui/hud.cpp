@@ -55,6 +55,17 @@ void draw_hud(SDL_Window* window, const dom::sim::World& world, const std::strin
     title += " | Obj A=" + std::to_string(active) + " C=" + std::to_string(done);
   }
   for (const auto& op : world.operations) { if (op.team == 0 && op.active) { title += std::string(" | Op ") + op_name(op.type); break; } }
+  int allianceCount = 0, warCount = 0, activeEspionage = 0;
+  for (size_t i = 0; i < world.players.size(); ++i) {
+    for (size_t k = i + 1; k < world.players.size(); ++k) {
+      auto rel = world.diplomacy[i * world.players.size() + k];
+      if (rel == dom::sim::DiplomacyRelation::Allied) ++allianceCount;
+      else if (rel == dom::sim::DiplomacyRelation::War) ++warCount;
+    }
+  }
+  for (const auto& op : world.espionageOps) if (op.state == dom::sim::EspionageOpState::Active) ++activeEspionage;
+  title += " | Tension " + std::to_string((int)world.worldTension) + " Alliances " + std::to_string(allianceCount) + " Wars " + std::to_string(warCount) + " Esp " + std::to_string(activeEspionage);
+  if (!world.strategicPosture.empty()) title += std::string(" | Posture ") + dom::sim::posture_name(world.strategicPosture[0]);
   if (!overlay.empty()) title += " | " + overlay;
   SDL_SetWindowTitle(window, title.c_str());
 }
