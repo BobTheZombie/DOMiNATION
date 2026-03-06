@@ -24,4 +24,5 @@ void generate_minimap_image(const dom::sim::World& world, int resolution, std::v
 void toggle_territory_overlay();
 void toggle_border_overlay();
 void toggle_fog_overlay();
+double last_draw_ms();
 } // namespace dom::render

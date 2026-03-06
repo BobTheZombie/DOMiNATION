@@ -1,4 +1,5 @@
 #include "engine/render/renderer.h"
+#define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <algorithm>
 #include <array>
@@ -6,6 +7,7 @@
 #include <glm/geometric.hpp>
 #include <unordered_set>
 #include <vector>
+#include <chrono>
 
 namespace dom::render {
 namespace {
@@ -37,6 +39,7 @@ struct OverlayState {
 };
 
 OverlayState gOverlay;
+double gLastDrawMs = 0.0;
 
 std::array<std::array<float, 3>, 4> kTeamColors{{
     {0.0f, 0.0f, 0.0f},
@@ -248,6 +251,7 @@ void ensure_scene_target(int width, int height) {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+
 void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<float, 3>& color) {
   glColor3f(color[0], color[1], color[2]);
   glBegin(GL_TRIANGLE_STRIP);
@@ -309,6 +313,8 @@ bool minimap_screen_to_world(const dom::sim::World& world, int width, int height
 }
 
 void draw(dom::sim::World& w, const Camera& c, int width, int height, const std::vector<uint32_t>& dragHighlight) {
+  using Clock = std::chrono::steady_clock;
+  const auto drawStart = Clock::now();
   set_resolution(width, height);
   ensure_scene_target(width, height);
   glBindFramebuffer(GL_FRAMEBUFFER, gOverlay.sceneFbo);
@@ -398,31 +404,47 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     }
     glEnd();
   } else {
-    for (const auto& u : w.units) {
-      if (!w.godMode) {
-        int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
-        int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
-        if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
-      }
-      auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
-      if (c.zoom < nearThreshold) {
-        glBegin(GL_TRIANGLES);
+    if (c.zoom < nearThreshold) {
+      glBegin(GL_TRIANGLES);
+      for (const auto& u : w.units) {
+        if (!w.godMode) {
+          int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
+          int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
+          if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
+        }
+        auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
         glColor3f(tc[0], tc[1], tc[2]);
         float s = 0.35f;
         glVertex2f(u.renderPos.x, u.renderPos.y + s);
         glVertex2f(u.renderPos.x - s, u.renderPos.y - s);
         glVertex2f(u.renderPos.x + s, u.renderPos.y - s);
-        glEnd();
-      } else if (c.zoom < farThreshold) {
-        glBegin(GL_QUADS);
+      }
+      glEnd();
+    } else if (c.zoom < farThreshold) {
+      glBegin(GL_QUADS);
+      for (const auto& u : w.units) {
+        if (!w.godMode) {
+          int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
+          int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
+          if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
+        }
+        auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
         glColor3f(tc[0], tc[1], tc[2]);
         float s = 0.42f;
         glVertex2f(u.renderPos.x - s, u.renderPos.y - s);
         glVertex2f(u.renderPos.x + s, u.renderPos.y - s);
         glVertex2f(u.renderPos.x + s, u.renderPos.y + s);
         glVertex2f(u.renderPos.x - s, u.renderPos.y + s);
-        glEnd();
-      } else {
+      }
+      glEnd();
+    } else {
+      for (const auto& u : w.units) {
+        if (!w.godMode) {
+          int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
+          int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
+          if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
+        }
+        auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
         glBegin(GL_TRIANGLE_FAN);
         glColor3f(tc[0], tc[1], tc[2]);
         float s = 0.44f;
@@ -523,7 +545,10 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glBlitFramebuffer(0, 0, gOverlay.sceneW, gOverlay.sceneH, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  const auto drawEnd = Clock::now();
+  gLastDrawMs = std::chrono::duration<double, std::milli>(drawEnd - drawStart).count();
 }
+
 
 void generate_minimap_image(const dom::sim::World& world, int resolution, std::vector<uint8_t>& outRgb) {
   int res = std::max(32, resolution);
@@ -533,5 +558,6 @@ void toggle_minimap() { gOverlay.showMinimap = !gOverlay.showMinimap; }
 void toggle_territory_overlay() { gOverlay.showTerritory = !gOverlay.showTerritory; }
 void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }
 void toggle_fog_overlay() { gOverlay.showFog = !gOverlay.showFog; }
+double last_draw_ms() { return gLastDrawMs; }
 
 } // namespace dom::render
