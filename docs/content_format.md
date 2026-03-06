@@ -70,3 +70,5 @@ Excluded from saves:
 - flow-field/nav caches
 - minimap/renderer/UI transient data
 - debug-only counters
+
+See also: `docs/scenario_format.md` and `docs/trigger_format.md` for authored scenario content.

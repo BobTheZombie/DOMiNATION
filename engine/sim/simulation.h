@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <glm/vec2.hpp>
 
@@ -14,6 +15,10 @@ enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Buildi
 enum class AttackType : uint8_t { Melee, Ranged };
 enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
 enum class VictoryCondition : uint8_t { None, Conquest, Score, Wonder };
+enum class ResourceNodeType : uint8_t { Forest, Ore, Farmable, Ruins };
+enum class ObjectiveState : uint8_t { Inactive, Active, Completed, Failed };
+enum class TriggerType : uint8_t { TickReached, EntityDestroyed, BuildingCompleted, AreaEntered, PlayerEliminated };
+enum class TriggerActionType : uint8_t { ShowObjectiveText, SetObjectiveState, GrantResources, SpawnUnits, EndMatchWithVictory, EndMatchWithDefeat, RevealArea };
 
 enum class ReplayCommandType : uint8_t { Move, Attack, AttackMove, PlaceBuilding, QueueTrain, QueueResearch, CancelQueue };
 
@@ -39,149 +44,46 @@ struct ProductionItem {
   int targetAge{0};
 };
 
-struct Unit {
-  uint32_t id{};
-  uint16_t team{};
-  UnitType type{UnitType::Infantry};
-  float hp{100.0f};
-  float attack{8.0f};
-  float range{2.5f};
-  float speed{4.0f};
-  UnitRole role{UnitRole::Infantry};
-  AttackType attackType{AttackType::Melee};
-  UnitRole preferredTargetRole{UnitRole::Infantry};
-  std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000};
-  glm::vec2 pos{};
-  glm::vec2 renderPos{};
-  glm::vec2 target{};
-  glm::vec2 slotTarget{};
-  glm::vec2 moveDir{};
-  uint32_t targetUnit{0};
-  uint32_t moveOrder{0};
-  uint32_t attackMoveOrder{0};
-  uint16_t targetLockTicks{0};
-  uint16_t chaseTicks{0};
-  uint16_t attackCooldownTicks{0};
-  uint16_t lastTargetSwitchTick{0};
-  uint16_t stuckTicks{0};
-  uint8_t orderPathLingerTicks{0};
-  bool hasMoveOrder{false};
-  bool attackMove{false};
-  bool selected{false};
-};
+struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint8_t orderPathLingerTicks{}; bool hasMoveOrder{false}; bool attackMove{false}; bool selected{false}; };
 
-struct City {
-  uint32_t id{};
-  uint16_t team{};
-  glm::vec2 pos{};
-  int level{1};
-  bool capital{false};
-};
+struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
-struct Building {
-  uint32_t id{};
-  uint16_t team{};
-  BuildingType type{BuildingType::House};
-  glm::vec2 pos{};
-  glm::vec2 size{2.0f, 2.0f};
-  bool underConstruction{true};
-  float buildProgress{0.0f};
-  float buildTime{10.0f};
-  float hp{1000.0f};
-  float maxHp{1000.0f};
-  std::vector<ProductionItem> queue;
-};
+struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType::House}; glm::vec2 pos{}; glm::vec2 size{2.0f, 2.0f}; bool underConstruction{true}; float buildProgress{0.0f}; float buildTime{10.0f}; float hp{1000.0f}; float maxHp{1000.0f}; std::vector<ProductionItem> queue; };
 
-struct PlayerState {
-  uint16_t id{};
-  Age age{Age::Ancient};
-  std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0};
-  int popUsed{0};
-  int popCap{10};
-  int score{0};
-  bool alive{true};
-  uint32_t unitsLost{0};
-  uint32_t buildingsLost{0};
-  int finalScore{0};
-};
+struct ResourceNode { uint32_t id{}; ResourceNodeType type{ResourceNodeType::Forest}; glm::vec2 pos{}; float amount{1000.0f}; uint16_t owner{UINT16_MAX}; };
+struct TriggerArea { uint32_t id{}; glm::vec2 min{}; glm::vec2 max{}; };
+struct Objective { uint32_t id{}; std::string title; std::string text; bool primary{true}; ObjectiveState state{ObjectiveState::Inactive}; uint16_t owner{UINT16_MAX}; };
+struct TriggerCondition { TriggerType type{TriggerType::TickReached}; uint32_t tick{0}; uint32_t entityId{0}; BuildingType buildingType{BuildingType::House}; uint32_t areaId{0}; uint16_t player{UINT16_MAX}; };
+struct TriggerAction { TriggerActionType type{TriggerActionType::ShowObjectiveText}; std::string text; uint32_t objectiveId{0}; ObjectiveState objectiveState{ObjectiveState::Active}; uint16_t player{UINT16_MAX}; std::array<float, static_cast<size_t>(Resource::Count)> resources{}; UnitType spawnUnitType{UnitType::Infantry}; uint32_t spawnCount{0}; glm::vec2 spawnPos{}; uint16_t winner{0}; uint32_t areaId{0}; };
+struct Trigger { uint32_t id{}; bool once{true}; bool fired{false}; TriggerCondition condition{}; std::vector<TriggerAction> actions; };
+struct ObjectiveLogEntry { uint32_t tick{0}; std::string text; };
 
-struct MatchResult {
-  MatchPhase phase{MatchPhase::Running};
-  VictoryCondition condition{VictoryCondition::None};
-  uint16_t winner{0};
-  uint32_t endTick{0};
-  bool scoreTieBreak{false};
-};
-
-struct WonderState {
-  uint16_t owner{UINT16_MAX};
-  uint32_t heldTicks{0};
-};
+struct PlayerState { uint16_t id{}; Age age{Age::Ancient}; std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0}; int popUsed{0}; int popCap{10}; int score{0}; bool alive{true}; uint32_t unitsLost{0}; uint32_t buildingsLost{0}; int finalScore{0}; };
+struct MatchResult { MatchPhase phase{MatchPhase::Running}; VictoryCondition condition{VictoryCondition::None}; uint16_t winner{0}; uint32_t endTick{0}; bool scoreTieBreak{false}; };
+struct WonderState { uint16_t owner{UINT16_MAX}; uint32_t heldTicks{0}; };
 
 struct MatchConfig {
-  uint32_t timeLimitTicks{20 * 600};
-  uint32_t wonderHoldTicks{20 * 90};
-  int scoreResourceWeight{1};
-  int scoreUnitWeight{30};
-  int scoreBuildingWeight{70};
-  int scoreAgeWeight{120};
-  int scoreCapitalWeight{220};
+  uint32_t timeLimitTicks{20 * 600}; uint32_t wonderHoldTicks{20 * 90};
+  int scoreResourceWeight{1}; int scoreUnitWeight{30}; int scoreBuildingWeight{70}; int scoreAgeWeight{120}; int scoreCapitalWeight{220};
+  bool allowConquest{true}; bool allowScore{true}; bool allowWonder{true};
 };
 
 struct World {
-  uint32_t seed{1337};
-  int width{128};
-  int height{128};
-  std::vector<float> heightmap;
-  std::vector<float> fertility;
-  std::vector<uint16_t> territoryOwner;
-  std::vector<uint8_t> fog;
-  std::vector<Unit> units;
-  std::vector<City> cities;
-  std::vector<Building> buildings;
+  uint32_t seed{1337}; int width{128}; int height{128};
+  std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
+  std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
+  std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   std::vector<PlayerState> players;
-  bool godMode{false};
-  uint32_t tick{0};
-  bool gameOver{false}; // Backward-compatible mirror of match.phase != Running.
-  uint16_t winner{0}; // Backward-compatible mirror of match.winner.
-  MatchConfig config{};
-  MatchResult match{};
-  WonderState wonder{};
-
-  bool uiBuildMenu{false};
-  bool uiTrainMenu{false};
-  bool uiResearchMenu{false};
-  bool placementActive{false};
-  BuildingType placementType{BuildingType::House};
-  glm::vec2 placementPos{};
-  bool placementValid{false};
-
-  uint32_t territoryRecomputeCount{0};
-  uint32_t aiDecisionCount{0};
-  uint32_t completedBuildingsCount{0};
-  uint32_t trainedUnitsViaQueue{0};
-  uint32_t researchStartedCount{0};
-  uint32_t navVersion{1};
-  uint32_t flowFieldGeneratedCount{0};
-  uint32_t flowFieldCacheHitCount{0};
-  uint32_t groupMoveCommandCount{0};
-  uint32_t unitsReachedSlotCount{0};
-  uint32_t stuckMoveAssertions{0};
-  uint32_t totalDamageDealtPermille{0};
-  uint32_t combatEngagementCount{0};
-  uint32_t targetSwitchCount{0};
-  uint32_t chaseLimitBreakCount{0};
-  uint32_t buildingDamageEvents{0};
-  uint32_t unitDeathEvents{0};
-  uint32_t aiRetreatCount{0};
-  uint32_t focusFireEvents{0};
-  uint32_t combatTicks{0};
-  uint32_t rejectedCommandCount{0};
-  bool territoryDirty{true};
-  bool fogDirty{true};
+  bool godMode{false}; uint32_t tick{0}; bool gameOver{false}; uint16_t winner{0}; MatchConfig config{}; MatchResult match{}; WonderState wonder{};
+  bool uiBuildMenu{false}; bool uiTrainMenu{false}; bool uiResearchMenu{false}; bool placementActive{false}; BuildingType placementType{BuildingType::House}; glm::vec2 placementPos{}; bool placementValid{false};
+  uint32_t territoryRecomputeCount{0}; uint32_t aiDecisionCount{0}; uint32_t completedBuildingsCount{0}; uint32_t trainedUnitsViaQueue{0}; uint32_t researchStartedCount{0}; uint32_t navVersion{1}; uint32_t flowFieldGeneratedCount{0}; uint32_t flowFieldCacheHitCount{0}; uint32_t groupMoveCommandCount{0}; uint32_t unitsReachedSlotCount{0}; uint32_t stuckMoveAssertions{0}; uint32_t totalDamageDealtPermille{0}; uint32_t combatEngagementCount{0}; uint32_t targetSwitchCount{0}; uint32_t chaseLimitBreakCount{0}; uint32_t buildingDamageEvents{0}; uint32_t unitDeathEvents{0}; uint32_t aiRetreatCount{0}; uint32_t focusFireEvents{0}; uint32_t combatTicks{0}; uint32_t rejectedCommandCount{0};
+  uint32_t triggerExecutionCount{0}; uint32_t objectiveStateChangeCount{0};
+  bool territoryDirty{true}; bool fogDirty{true};
 };
 
 void initialize_world(World& world, uint32_t seed);
+bool load_scenario_file(World& world, const std::string& path, uint32_t fallbackSeed, std::string& err);
+bool save_scenario_file(const std::string& path, const World& world, std::string& err);
 void on_authoritative_state_loaded(World& world);
 void tick_world(World& world, float dt);
 bool gameplay_orders_allowed(const World& world);

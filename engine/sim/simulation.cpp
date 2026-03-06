@@ -1,9 +1,11 @@
 #include "engine/sim/simulation.h"
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <random>
 #include <queue>
+#include <sstream>
 #include <tuple>
 #include <limits>
 #include <glm/geometric.hpp>
@@ -79,6 +81,71 @@ constexpr std::array<std::pair<int,int>, 8> kNeighborOrder{{{1,0},{0,1},{-1,0},{
 size_t ridx(Resource r) { return static_cast<size_t>(r); }
 int bidx(BuildingType t) { return static_cast<int>(t); }
 int uidx(UnitType t) { return static_cast<int>(t); }
+int ridx_node(ResourceNodeType t) { return static_cast<int>(t); }
+
+const char* building_name(BuildingType t) {
+  switch (t) {
+    case BuildingType::CityCenter: return "CityCenter";
+    case BuildingType::House: return "House";
+    case BuildingType::Farm: return "Farm";
+    case BuildingType::LumberCamp: return "LumberCamp";
+    case BuildingType::Mine: return "Mine";
+    case BuildingType::Market: return "Market";
+    case BuildingType::Library: return "Library";
+    case BuildingType::Barracks: return "Barracks";
+    case BuildingType::Wonder: return "Wonder";
+  }
+  return "House";
+}
+
+BuildingType parse_building(const std::string& v) {
+  if (v == "CityCenter") return BuildingType::CityCenter;
+  if (v == "Farm") return BuildingType::Farm;
+  if (v == "LumberCamp") return BuildingType::LumberCamp;
+  if (v == "Mine") return BuildingType::Mine;
+  if (v == "Market") return BuildingType::Market;
+  if (v == "Library") return BuildingType::Library;
+  if (v == "Barracks") return BuildingType::Barracks;
+  if (v == "Wonder") return BuildingType::Wonder;
+  return BuildingType::House;
+}
+
+const char* unit_name(UnitType t) {
+  switch (t) {
+    case UnitType::Worker: return "Worker";
+    case UnitType::Infantry: return "Infantry";
+    case UnitType::Archer: return "Archer";
+    case UnitType::Cavalry: return "Cavalry";
+    case UnitType::Siege: return "Siege";
+  }
+  return "Infantry";
+}
+
+UnitType parse_unit(const std::string& v) {
+  if (v == "Worker") return UnitType::Worker;
+  if (v == "Archer") return UnitType::Archer;
+  if (v == "Cavalry") return UnitType::Cavalry;
+  if (v == "Siege") return UnitType::Siege;
+  return UnitType::Infantry;
+}
+
+ObjectiveState parse_objective_state(const std::string& v) {
+  if (v == "active") return ObjectiveState::Active;
+  if (v == "completed") return ObjectiveState::Completed;
+  if (v == "failed") return ObjectiveState::Failed;
+  return ObjectiveState::Inactive;
+}
+
+const char* objective_state_name(ObjectiveState s) {
+  switch (s) {
+    case ObjectiveState::Inactive: return "inactive";
+    case ObjectiveState::Active: return "active";
+    case ObjectiveState::Completed: return "completed";
+    case ObjectiveState::Failed: return "failed";
+  }
+  return "inactive";
+}
+
 
 void hash_u32(uint64_t& h, uint32_t v) { h ^= static_cast<uint64_t>(v); h *= kFNVPrime; }
 void hash_float(uint64_t& h, float v) { hash_u32(h, static_cast<uint32_t>(v * 1000.0f)); }
@@ -533,6 +600,81 @@ int compute_player_score(const World& world, uint16_t playerId) {
       capitals * world.config.scoreCapitalWeight;
 }
 
+
+
+void apply_world_defaults(World& w) {
+  w.players = {{0, Age::Ancient}, {1, Age::Ancient}};
+  w.tick = 0;
+  w.match = {};
+  w.wonder = {};
+  w.gameOver = false;
+  w.winner = 0;
+  w.rejectedCommandCount = 0;
+  w.triggerExecutionCount = 0;
+  w.objectiveStateChangeCount = 0;
+  w.objectiveLog.clear();
+  gReplayCommands.clear();
+}
+
+bool validate_size(const World& w, const std::vector<float>& v) { return (int)v.size() == w.width * w.height; }
+
+void eval_triggers(World& w) {
+  std::sort(w.triggers.begin(), w.triggers.end(), [](const Trigger& a, const Trigger& b){ return a.id < b.id; });
+  for (auto& t : w.triggers) {
+    if (t.once && t.fired) continue;
+    bool hit = false;
+    switch (t.condition.type) {
+      case TriggerType::TickReached: hit = w.tick >= t.condition.tick; break;
+      case TriggerType::EntityDestroyed: {
+        bool unitAlive = false; for (const auto& u : w.units) if (u.id == t.condition.entityId && u.hp > 0) unitAlive = true;
+        bool buildingAlive = false; for (const auto& b : w.buildings) if (b.id == t.condition.entityId && b.hp > 0) buildingAlive = true;
+        hit = !(unitAlive || buildingAlive);
+      } break;
+      case TriggerType::BuildingCompleted: {
+        for (const auto& b : w.buildings) {
+          if ((t.condition.player == UINT16_MAX || b.team == t.condition.player) && b.type == t.condition.buildingType && !b.underConstruction) { hit = true; break; }
+        }
+      } break;
+      case TriggerType::AreaEntered: {
+        auto it = std::find_if(w.triggerAreas.begin(), w.triggerAreas.end(), [&](const TriggerArea& a){ return a.id == t.condition.areaId; });
+        if (it != w.triggerAreas.end()) {
+          for (const auto& u : w.units) {
+            if (t.condition.player != UINT16_MAX && u.team != t.condition.player) continue;
+            if (u.pos.x >= it->min.x && u.pos.x <= it->max.x && u.pos.y >= it->min.y && u.pos.y <= it->max.y) { hit = true; break; }
+          }
+        }
+      } break;
+      case TriggerType::PlayerEliminated: {
+        if (t.condition.player < w.players.size()) hit = !w.players[t.condition.player].alive;
+      } break;
+    }
+    if (!hit) continue;
+    t.fired = true;
+    ++w.triggerExecutionCount;
+    for (const auto& a : t.actions) {
+      if (a.type == TriggerActionType::ShowObjectiveText) w.objectiveLog.push_back({w.tick, a.text});
+      else if (a.type == TriggerActionType::SetObjectiveState) {
+        for (auto& o : w.objectives) if (o.id == a.objectiveId) { if (o.state != a.objectiveState) ++w.objectiveStateChangeCount; o.state = a.objectiveState; }
+      } else if (a.type == TriggerActionType::GrantResources) {
+        if (a.player < w.players.size()) for (size_t i = 0; i < a.resources.size(); ++i) w.players[a.player].resources[i] += a.resources[i];
+      } else if (a.type == TriggerActionType::SpawnUnits) {
+        for (uint32_t i = 0; i < a.spawnCount; ++i) spawn_unit(w, a.player, a.spawnUnitType, {a.spawnPos.x + 0.7f * i, a.spawnPos.y});
+      } else if (a.type == TriggerActionType::EndMatchWithVictory) {
+        apply_match_end(w, VictoryCondition::Conquest, a.winner, false);
+      } else if (a.type == TriggerActionType::EndMatchWithDefeat) {
+        apply_match_end(w, VictoryCondition::Conquest, a.winner, false);
+      } else if (a.type == TriggerActionType::RevealArea) {
+        auto it = std::find_if(w.triggerAreas.begin(), w.triggerAreas.end(), [&](const TriggerArea& ar){ return ar.id == a.areaId; });
+        if (it != w.triggerAreas.end()) {
+          int minX = std::max(0, (int)std::floor(it->min.x)); int maxX = std::min(w.width-1, (int)std::ceil(it->max.x));
+          int minY = std::max(0, (int)std::floor(it->min.y)); int maxY = std::min(w.height-1, (int)std::ceil(it->max.y));
+          for (int y=minY;y<=maxY;++y) for (int x=minX;x<=maxX;++x) w.fog[y*w.width+x]=255;
+        }
+      }
+    }
+  }
+}
+
 void initialize_world(World& w, uint32_t seed) {
 
   load_defs_once();
@@ -552,14 +694,11 @@ void initialize_world(World& w, uint32_t seed) {
     w.fertility[y * w.width + x] = std::clamp(1.0f - std::abs(h), 0.1f, 1.0f);
   }
 
-  w.players = {{0, Age::Ancient}, {1, Age::Ancient}};
-  w.tick = 0;
-  w.match = {};
-  w.wonder = {};
-  w.gameOver = false;
-  w.winner = 0;
-  w.rejectedCommandCount = 0;
-  gReplayCommands.clear();
+  apply_world_defaults(w);
+  w.resourceNodes.clear();
+  w.triggerAreas.clear();
+  w.objectives.clear();
+  w.triggers.clear();
   w.cities = {{1, 0, {20, 20}, 1, true}, {2, 1, {95, 95}, 1, true}};
   w.buildings.clear();
   w.buildings.push_back({1, 0, BuildingType::CityCenter, {20, 20}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
@@ -572,9 +711,82 @@ void initialize_world(World& w, uint32_t seed) {
     spawn_unit(w, 0, UnitType::Infantry, {17.0f + i * 0.8f, 22.0f});
     spawn_unit(w, 1, UnitType::Infantry, {91.0f + i * 0.8f, 87.0f});
   }
+  w.resourceNodes.push_back({1, ResourceNodeType::Forest, {28.0f, 26.0f}, 1500.0f, UINT16_MAX});
+  w.resourceNodes.push_back({2, ResourceNodeType::Ore, {86.0f, 82.0f}, 1400.0f, UINT16_MAX});
   recompute_population(w);
   recompute_territory(w);
   recompute_fog(w);
+}
+
+bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed, std::string& err) {
+  std::ifstream in(path);
+  if (!in.good()) { err = "scenario not found"; return false; }
+  nlohmann::json j; in >> j;
+  if (j.value("schemaVersion", 0u) != 1u) { err = "scenario schema mismatch"; return false; }
+  w.width = j.value("mapWidth", 128);
+  w.height = j.value("mapHeight", 128);
+  w.seed = j.value("seed", fallbackSeed);
+  initialize_world(w, w.seed);
+  if (j.contains("heightmap")) { w.heightmap = j["heightmap"].get<std::vector<float>>(); if (!validate_size(w, w.heightmap)) { err = "heightmap size mismatch"; return false; } }
+  if (j.contains("fertility")) { w.fertility = j["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "fertility size mismatch"; return false; } }
+  if (j.contains("players")) {
+    w.players.clear();
+    for (const auto& p : j["players"]) {
+      PlayerState ps{}; ps.id = p.value("id", (uint16_t)w.players.size()); ps.age = static_cast<Age>(p.value("age", 0));
+      if (p.contains("resources")) ps.resources = p["resources"].get<decltype(ps.resources)>();
+      ps.popCap = p.value("popCap", 10);
+      w.players.push_back(ps);
+    }
+  }
+  w.cities.clear();
+  if (j.contains("cities")) for (const auto& c : j["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
+  w.units.clear();
+  if (j.contains("units")) for (const auto& u : j["units"]) { spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()}); }
+  w.buildings.clear();
+  if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb);} }
+  w.resourceNodes.clear();
+  if (j.contains("resourceNodes")) { uint32_t id=1; for (const auto& r : j["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",id++); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} }
+  if (j.contains("territoryOwner")) { w.territoryOwner = j["territoryOwner"].get<std::vector<uint16_t>>(); if ((int)w.territoryOwner.size()!=w.width*w.height) { err="territory size mismatch"; return false; } }
+  if (j.contains("rules")) { auto rr=j["rules"]; w.config.timeLimitTicks=rr.value("timeLimitTicks", w.config.timeLimitTicks); w.config.wonderHoldTicks=rr.value("wonderHoldTicks", w.config.wonderHoldTicks); w.config.allowConquest=rr.value("allowConquest",true); w.config.allowScore=rr.value("allowScore",true); w.config.allowWonder=rr.value("allowWonder",true); }
+  w.triggerAreas.clear();
+  if (j.contains("areas")) for (const auto& a : j["areas"]) { TriggerArea ta{}; ta.id=a.value("id",0u); ta.min={a["min"][0].get<float>(),a["min"][1].get<float>()}; ta.max={a["max"][0].get<float>(),a["max"][1].get<float>()}; w.triggerAreas.push_back(ta); }
+  w.objectives.clear();
+  if (j.contains("objectives")) for (const auto& o : j["objectives"]) { Objective ob{}; ob.id=o.value("id",0u); ob.title=o.value("title",""); ob.text=o.value("text",""); ob.primary=o.value("primary",true); ob.state=parse_objective_state(o.value("state",std::string("inactive"))); ob.owner=o.value("owner",(uint16_t)UINT16_MAX); w.objectives.push_back(ob);}
+  w.triggers.clear();
+  if (j.contains("triggers")) for (const auto& t : j["triggers"]) { Trigger tr{}; tr.id=t.value("id",0u); tr.once=t.value("once",true); auto c=t["condition"]; std::string ctype=c.value("type",std::string("TickReached")); if (ctype=="EntityDestroyed") tr.condition.type=TriggerType::EntityDestroyed; else if (ctype=="BuildingCompleted") tr.condition.type=TriggerType::BuildingCompleted; else if (ctype=="AreaEntered") tr.condition.type=TriggerType::AreaEntered; else if (ctype=="PlayerEliminated") tr.condition.type=TriggerType::PlayerEliminated; else tr.condition.type=TriggerType::TickReached; tr.condition.tick=c.value("tick",0u); tr.condition.entityId=c.value("entityId",0u); tr.condition.buildingType=parse_building(c.value("buildingType",std::string("House"))); tr.condition.areaId=c.value("areaId",0u); tr.condition.player=c.value("player",(uint16_t)UINT16_MAX); if (t.contains("actions")) for (const auto& a : t["actions"]) { TriggerAction ac{}; std::string at=a.value("type",std::string("ShowObjectiveText")); if (at=="SetObjectiveState") ac.type=TriggerActionType::SetObjectiveState; else if (at=="GrantResources") ac.type=TriggerActionType::GrantResources; else if (at=="SpawnUnits") ac.type=TriggerActionType::SpawnUnits; else if (at=="EndMatchWithVictory") ac.type=TriggerActionType::EndMatchWithVictory; else if (at=="EndMatchWithDefeat") ac.type=TriggerActionType::EndMatchWithDefeat; else if (at=="RevealArea") ac.type=TriggerActionType::RevealArea; else ac.type=TriggerActionType::ShowObjectiveText; ac.text=a.value("text",""); ac.objectiveId=a.value("objectiveId",0u); ac.objectiveState=parse_objective_state(a.value("state",std::string("active"))); ac.player=a.value("player",(uint16_t)UINT16_MAX); if (a.contains("resources")) { auto r=a["resources"]; ac.resources[ridx(Resource::Food)] = r.value("Food",0.0f); ac.resources[ridx(Resource::Wood)] = r.value("Wood",0.0f); ac.resources[ridx(Resource::Metal)] = r.value("Metal",0.0f); ac.resources[ridx(Resource::Wealth)] = r.value("Wealth",0.0f); ac.resources[ridx(Resource::Knowledge)] = r.value("Knowledge",0.0f); ac.resources[ridx(Resource::Oil)] = r.value("Oil",0.0f); } ac.spawnUnitType=parse_unit(a.value("unitType",std::string("Infantry"))); ac.spawnCount=a.value("count",0u); if (a.contains("pos")) ac.spawnPos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; ac.winner=a.value("winner",0u); ac.areaId=a.value("areaId",0u); tr.actions.push_back(ac);} w.triggers.push_back(tr);}
+  recompute_population(w);
+  recompute_territory(w);
+  recompute_fog(w);
+  return true;
+}
+
+bool save_scenario_file(const std::string& path, const World& w, std::string& err) {
+  nlohmann::json j;
+  j["schemaVersion"] = 1; j["seed"] = w.seed; j["mapWidth"] = w.width; j["mapHeight"] = w.height;
+  j["players"] = nlohmann::json::array();
+  for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap}});
+  j["cities"] = nlohmann::json::array(); for (const auto& c : w.cities) j["cities"].push_back({{"id",c.id},{"team",c.team},{"pos",{c.pos.x,c.pos.y}},{"level",c.level},{"capital",c.capital}});
+  j["units"] = nlohmann::json::array(); for (const auto& u : w.units) j["units"].push_back({{"id",u.id},{"team",u.team},{"type",unit_name(u.type)},{"pos",{u.pos.x,u.pos.y}}});
+  j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp}});
+  j["resourceNodes"] = nlohmann::json::array(); for (const auto& r : w.resourceNodes) { std::string t="Forest"; if (r.type==ResourceNodeType::Ore) t="Ore"; else if (r.type==ResourceNodeType::Farmable) t="Farmable"; else if (r.type==ResourceNodeType::Ruins) t="Ruins"; j["resourceNodes"].push_back({{"id",r.id},{"type",t},{"pos",{r.pos.x,r.pos.y}},{"amount",r.amount},{"owner",r.owner}}); }
+  j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
+  j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"title",o.title},{"text",o.text},{"primary",o.primary},{"state",objective_state_name(o.state)},{"owner",o.owner}});
+  j["triggers"] = nlohmann::json::array();
+  for (const auto& t : w.triggers) {
+    nlohmann::json jt; jt["id"]=t.id; jt["once"]=t.once;
+    std::string ctype="TickReached"; if (t.condition.type==TriggerType::EntityDestroyed) ctype="EntityDestroyed"; else if (t.condition.type==TriggerType::BuildingCompleted) ctype="BuildingCompleted"; else if (t.condition.type==TriggerType::AreaEntered) ctype="AreaEntered"; else if (t.condition.type==TriggerType::PlayerEliminated) ctype="PlayerEliminated";
+    jt["condition"]={{"type",ctype},{"tick",t.condition.tick},{"entityId",t.condition.entityId},{"buildingType",building_name(t.condition.buildingType)},{"areaId",t.condition.areaId},{"player",t.condition.player}};
+    jt["actions"]=nlohmann::json::array();
+    for (const auto& a : t.actions) {
+      std::string at="ShowObjectiveText"; if (a.type==TriggerActionType::SetObjectiveState) at="SetObjectiveState"; else if (a.type==TriggerActionType::GrantResources) at="GrantResources"; else if (a.type==TriggerActionType::SpawnUnits) at="SpawnUnits"; else if (a.type==TriggerActionType::EndMatchWithVictory) at="EndMatchWithVictory"; else if (a.type==TriggerActionType::EndMatchWithDefeat) at="EndMatchWithDefeat"; else if (a.type==TriggerActionType::RevealArea) at="RevealArea";
+      jt["actions"].push_back({{"type",at},{"text",a.text},{"objectiveId",a.objectiveId},{"state",objective_state_name(a.objectiveState)},{"player",a.player},{"resources",{{"Food",a.resources[0]},{"Wood",a.resources[1]},{"Metal",a.resources[2]},{"Wealth",a.resources[3]},{"Knowledge",a.resources[4]},{"Oil",a.resources[5]}}},{"unitType",unit_name(a.spawnUnitType)},{"count",a.spawnCount},{"pos",{a.spawnPos.x,a.spawnPos.y}},{"winner",a.winner},{"areaId",a.areaId}});
+    }
+    j["triggers"].push_back(jt);
+  }
+  std::ofstream of(path);
+  if (!of.good()) { err = "cannot write scenario"; return false; }
+  of << j.dump(2) << "\n";
+  return true;
 }
 
 
@@ -796,7 +1008,7 @@ void tick_world(World& w, float dt) {
     p.alive = controlled_capitals(w, p.id) > 0;
     if (p.alive) { ++alivePlayers; aliveId = p.id; }
   }
-  if (alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
+  if (w.config.allowConquest && alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
 
   uint16_t wonderOwner = std::numeric_limits<uint16_t>::max();
   for (const auto& b : w.buildings) if (b.type == BuildingType::Wonder && !b.underConstruction && b.hp > 0.0f) { wonderOwner = b.team; break; }
@@ -806,10 +1018,10 @@ void tick_world(World& w, float dt) {
   } else {
     if (w.wonder.owner != wonderOwner) { w.wonder.owner = wonderOwner; w.wonder.heldTicks = 0; }
     else ++w.wonder.heldTicks;
-    if (w.wonder.heldTicks >= w.config.wonderHoldTicks) apply_match_end(w, VictoryCondition::Wonder, wonderOwner, false);
+    if (w.config.allowWonder && w.wonder.heldTicks >= w.config.wonderHoldTicks) apply_match_end(w, VictoryCondition::Wonder, wonderOwner, false);
   }
 
-  if (w.tick >= w.config.timeLimitTicks && w.match.phase == MatchPhase::Running) {
+  if (w.config.allowScore && w.tick >= w.config.timeLimitTicks && w.match.phase == MatchPhase::Running) {
     int bestScore = std::numeric_limits<int>::min();
     uint16_t bestId = 0;
     for (const auto& p : w.players) {
@@ -823,6 +1035,7 @@ void tick_world(World& w, float dt) {
     apply_match_end(w, VictoryCondition::Score, bestId, tieBreakUsed);
   }
 
+  eval_triggers(w);
   recompute_population(w);
   recompute_fog(w);
 
@@ -962,6 +1175,8 @@ uint64_t map_setup_hash(const World& w) {
   for (const auto& c : w.cities) { hash_u32(h, c.id); hash_u32(h, c.team); hash_float(h, c.pos.x); hash_float(h, c.pos.y); }
   for (const auto& b : w.buildings) { hash_u32(h, b.id); hash_u32(h, b.team); hash_u32(h, (uint32_t)b.type); hash_float(h, b.pos.x); hash_float(h, b.pos.y); }
   for (const auto& u : w.units) { hash_u32(h, u.id); hash_u32(h, u.team); hash_u32(h, (uint32_t)u.type); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }
+  for (const auto& r : w.resourceNodes) { hash_u32(h, r.id); hash_u32(h, (uint32_t)r.type); hash_float(h, r.pos.x); hash_float(h, r.pos.y); hash_float(h, r.amount); }
+  for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   return h;
 }
 
@@ -991,6 +1206,10 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.aiDecisionCount);
   hash_u32(h, w.completedBuildingsCount);
   hash_u32(h, w.trainedUnitsViaQueue);
+  hash_u32(h, w.triggerExecutionCount);
+  hash_u32(h, w.objectiveStateChangeCount);
+  for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
+  for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
   return h;
 }
 

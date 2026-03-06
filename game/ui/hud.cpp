@@ -37,6 +37,11 @@ void draw_hud(SDL_Window* window, const dom::sim::World& world, const std::strin
     }
     if (world.wonder.owner != UINT16_MAX) title += " | Wonder P" + std::to_string(world.wonder.owner) + " hold=" + std::to_string(world.wonder.heldTicks);
   }
+  if (!world.objectives.empty()) {
+    int active = 0, done = 0;
+    for (const auto& o : world.objectives) { if (o.state == dom::sim::ObjectiveState::Active) ++active; if (o.state == dom::sim::ObjectiveState::Completed) ++done; }
+    title += " | Obj A=" + std::to_string(active) + " C=" + std::to_string(done);
+  }
   if (!overlay.empty()) title += " | " + overlay;
   SDL_SetWindowTitle(window, title.c_str());
 }
