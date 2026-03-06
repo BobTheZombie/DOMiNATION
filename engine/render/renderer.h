@@ -25,4 +25,17 @@ void toggle_territory_overlay();
 void toggle_border_overlay();
 void toggle_fog_overlay();
 double last_draw_ms();
+
+struct EditorPreview {
+  bool enabled{false};
+  glm::vec2 pos{};
+  float radius{1.0f};
+  float r{0.2f};
+  float g{0.9f};
+  float b{0.2f};
+  float alpha{0.28f};
+  bool valid{true};
+};
+
+void set_editor_preview(const EditorPreview& preview);
 } // namespace dom::render

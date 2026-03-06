@@ -40,6 +40,7 @@ struct OverlayState {
 
 OverlayState gOverlay;
 double gLastDrawMs = 0.0;
+EditorPreview gEditorPreview{};
 
 std::array<std::array<float, 3>, 4> kTeamColors{{
     {0.0f, 0.0f, 0.0f},
@@ -536,6 +537,24 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glEnd();
   }
 
+  if (gEditorPreview.enabled) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    float r = gEditorPreview.r;
+    float g = gEditorPreview.g;
+    float b = gEditorPreview.b;
+    if (!gEditorPreview.valid) { r = 0.95f; g = 0.25f; b = 0.2f; }
+    glColor4f(r, g, b, gEditorPreview.alpha);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(gEditorPreview.pos.x, gEditorPreview.pos.y);
+    for (int i = 0; i <= 32; ++i) {
+      float a = (float)i / 32.0f * 6.2831853f;
+      glVertex2f(gEditorPreview.pos.x + std::cos(a) * gEditorPreview.radius, gEditorPreview.pos.y + std::sin(a) * gEditorPreview.radius);
+    }
+    glEnd();
+    glDisable(GL_BLEND);
+  }
+
   if (gOverlay.showMinimap) {
     ensure_minimap_texture();
     if ((gOverlay.minimapFrameCounter++ % 8) == 0) {
@@ -617,5 +636,7 @@ void toggle_territory_overlay() { gOverlay.showTerritory = !gOverlay.showTerrito
 void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }
 void toggle_fog_overlay() { gOverlay.showFog = !gOverlay.showFog; }
 double last_draw_ms() { return gLastDrawMs; }
+
+void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }
 
 } // namespace dom::render

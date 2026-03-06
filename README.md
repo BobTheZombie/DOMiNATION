@@ -103,7 +103,11 @@ Headless deterministic smoke mode (CI/container friendly):
 - **Ctrl+1..9**: assign control group
 - **1..9**: select control group (double tap focuses camera on group)
 - **M**: toggle minimap visibility
-- **F1/F2/F3**: territory / border / fog overlays
+- **F1**: toggle HUD/debug panel visibility
+- **F2**: toggle production panel
+- **F3**: toggle research panel
+- **F4**: toggle diplomacy panel
+- **F5**: toggle operations panel
 - **Replay mode controls**: `Space` pause/resume, `Right` step forward (paused), `Left` rewind fallback (restart+seek), `[`/`]` jump ticks, `+`/`-` speed
 
 ## Victory conditions
@@ -127,7 +131,9 @@ Headless output adds `SAVE_RESULT` / `LOAD_RESULT` / `REPLAY_RESULT` lines for a
 - Headless scenario smoke: `./build/rts --headless --scenario scenarios/test_scenario.json --smoke --ticks 1200 --dump-hash`
 - Trigger smoke: `./build/rts --headless --scenario scenarios/trigger_test.json --smoke --ticks 1800 --dump-hash`
 - Editor mode: `./build/rts --editor --scenario scenarios/test_scenario.json`
-  - `F9` toggle editor, `Tab` cycle tool, `O` change owner, LMB place/remove, `F5` save scenario JSON (`--editor-save <file>`).
+  - `F9` toggle editor, `Tab` cycle tool, `O` change owner, LMB place/remove.
+  - Scenario Editor ImGui panel supports Save / Save As / Load for round-trip authoring under `scenarios/*.json`.
+  - Unsupported authored fields are explicitly noted in the editor panel instead of silently dropped.
 
 Objectives/triggers are simulation-authoritative and visible via HUD/objective log overlays.
 
@@ -215,3 +221,10 @@ Perf counters now include `ROAD_COUNT`, `ACTIVE_TRADE_ROUTES`, `SUPPLIED_UNITS`,
 - Coastal scenario: `./build/rts --headless --scenario scenarios/naval_test.json --ticks 1800 --dump-hash`
 - Thread parity: `./build/rts --headless --scenario scenarios/naval_test.json --threads 1 --hash-only` and `--threads 4/8`
 - Amphibious stress: `./build/rts --headless --scenario scenarios/naval_test.json --threads 8 --ticks 2200 --dump-hash`
+
+
+## UI authoritative command flow
+- Production/research/diplomacy actions in ImGui call authoritative simulation commands (`enqueue_train_unit`, `cancel_queue_item`, `enqueue_age_research`, `declare_war`, `form_alliance`, `establish_trade_agreement`).
+- UI panels are presentation-only and read state from authoritative `World` data each frame.
+- Event Log + Notifications consume deterministic gameplay events stream.
+- Command History panel records recently issued authoritative commands for debugging and smoke verification.

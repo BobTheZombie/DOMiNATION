@@ -53,3 +53,7 @@ Stylized RTS game art should prioritize readability at strategic zoom levels.
 
 ### Background
 - Use a transparent or neutral backdrop for sprite extraction.
+
+## Editor preview overlays
+- The renderer supports a lightweight editor preview overlay (tinted circle/ghost marker) for brush/object placement feedback.
+- Preview color encodes validity (green valid / red invalid) and remains camera-zoom independent.
