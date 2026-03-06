@@ -1,5 +1,7 @@
 # Blender Pipeline
 
+This is the only supported art/content pipeline. Legacy generated sprite/icon content (including `content/textures/complete_rts_pack` and `content/textures/icons`) is retired and should not be used.
+
 - Source generated 2D images in `assets_src/concepts/` or civ folders.
 - Run `setup_reference_scene.py` to create REF/MODEL/EXPORT collections.
 - Model low-poly assets in `MODEL`, duplicate exportable meshes to `EXPORT`.
