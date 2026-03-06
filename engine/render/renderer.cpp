@@ -196,9 +196,12 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       size_t gi = static_cast<size_t>(gy * w.width + gx);
       float h = w.heightmap[gi];
       float f = w.fertility[gi];
+      auto tc = static_cast<dom::sim::TerrainClass>(w.terrainClass.empty() ? 0 : w.terrainClass[gi]);
       float r = 0.14f + 0.18f * f;
       float g = 0.28f + 0.45f * f;
       float b = 0.16f + 0.08f * (h + 1.0f);
+      if (tc == dom::sim::TerrainClass::ShallowWater) { r = 0.16f; g = 0.38f; b = 0.68f; }
+      else if (tc == dom::sim::TerrainClass::DeepWater) { r = 0.08f; g = 0.24f; b = 0.55f; }
 
       uint16_t owner = w.territoryOwner[gi];
       if (owner > 0) {
@@ -340,7 +343,10 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       size_t i = y * w.width + x;
       float h = w.heightmap[i];
       float f = w.fertility[i];
-      glColor3f(0.15f + 0.2f * f, 0.35f + 0.4f * f, 0.15f + 0.1f * (h + 1.0f));
+      auto tc = static_cast<dom::sim::TerrainClass>(w.terrainClass.empty() ? 0 : w.terrainClass[i]);
+      if (tc == dom::sim::TerrainClass::ShallowWater) glColor3f(0.18f, 0.40f, 0.72f);
+      else if (tc == dom::sim::TerrainClass::DeepWater) glColor3f(0.10f, 0.26f, 0.58f);
+      else glColor3f(0.15f + 0.2f * f, 0.35f + 0.4f * f, 0.15f + 0.1f * (h + 1.0f));
       glVertex2f(x, y); glVertex2f(x + 1, y); glVertex2f(x + 1, y + 1); glVertex2f(x, y + 1);
     }
   }

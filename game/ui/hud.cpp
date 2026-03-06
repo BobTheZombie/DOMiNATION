@@ -9,6 +9,9 @@ const char* op_name(dom::sim::OperationType t) {
   if (t == dom::sim::OperationType::DefendBorder) return "DEFEND_BORDER";
   if (t == dom::sim::OperationType::SecureRoute) return "SECURE_ROUTE";
   if (t == dom::sim::OperationType::RaidEconomy) return "RAID_ECONOMY";
+  if (t == dom::sim::OperationType::AmphibiousAssault) return "AMPHIBIOUS_ASSAULT";
+  if (t == dom::sim::OperationType::NavalPatrol) return "NAVAL_PATROL";
+  if (t == dom::sim::OperationType::CoastalBombard) return "COASTAL_BOMBARD";
   return "RALLY_AND_PUSH";
 }
 

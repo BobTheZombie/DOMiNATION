@@ -149,3 +149,10 @@ Replay recording drains authoritative command events emitted from sim order APIs
 - **Supply propagation**: deterministic distance model from cities/city-centers/markets with road and territory modifiers, producing in/low/out-of-supply unit states.
 - **Operations**: authoritative per-team operation orders (`ASSAULT_CITY`, `DEFEND_BORDER`, `SECURE_ROUTE`, `RAID_ECONOMY`, `RALLY_AND_PUSH`) consumed by AI for army behavior.
 - **Determinism**: logistics authoritative state is included in state hash/save-load/replay relevant fields.
+
+
+## Water and naval authoritative state
+- Terrain classification (`terrainClass`) is authoritative and included in map/state hashing.
+- Naval units are simulated in deterministic chunk passes with water-only movement constraints.
+- Transport cargo (`Unit.cargo`, `transportId`, `embarked`) is authoritative and serialized.
+- Added naval perf counters: `NAVAL_UNIT_COUNT`, `TRANSPORT_COUNT`, `EMBARKED_UNIT_COUNT`, `ACTIVE_NAVAL_OPERATIONS`, `COASTAL_TARGETS`, `NAVAL_COMBAT_EVENTS`.

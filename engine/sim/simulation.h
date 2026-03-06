@@ -5,15 +5,14 @@
 #include <string>
 #include <vector>
 #include <glm/vec2.hpp>
-#include <glm/ivec2.hpp>
 
 namespace dom::sim {
 
 enum class Resource : uint8_t { Food, Wood, Metal, Wealth, Knowledge, Oil, Count };
 enum class Age : uint8_t { Ancient, Classical, Medieval, Gunpowder, Enlightenment, Industrial, Modern, Information };
-enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege };
-enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder };
-enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building };
+enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege, TransportShip, LightWarship, HeavyWarship, BombardShip, Count };
+enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder, Port, Count };
+enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building, Naval, Transport, Count };
 enum class AttackType : uint8_t { Melee, Ranged };
 enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
 enum class VictoryCondition : uint8_t { None, Conquest, Score, Wonder };
@@ -34,7 +33,8 @@ enum class GameplayEventType : uint8_t {
 };
 
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
-enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush };
+enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
+enum class TerrainClass : uint8_t { Land, ShallowWater, DeepWater };
 
 struct GameplayEvent {
   GameplayEventType type{GameplayEventType::UnitDied};
@@ -67,7 +67,7 @@ struct ProductionItem {
   int targetAge{0};
 };
 
-struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; bool hasMoveOrder{false}; bool attackMove{false}; bool selected{false}; };
+struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; uint32_t transportId{0}; std::vector<uint32_t> cargo; bool hasMoveOrder{false}; bool attackMove{false}; bool embarked{false}; bool selected{false}; };
 
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
 struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
@@ -126,6 +126,12 @@ struct SimulationStats {
   uint32_t lowSupplyUnits{0};
   uint32_t outOfSupplyUnits{0};
   uint32_t operationCount{0};
+  uint32_t navalUnitCount{0};
+  uint32_t transportCount{0};
+  uint32_t embarkedUnitCount{0};
+  uint32_t activeNavalOperations{0};
+  uint32_t coastalTargets{0};
+  uint32_t navalCombatEvents{0};
 };
 
 struct ChunkCoord {
@@ -148,7 +154,7 @@ struct TaskGraph {
 
 struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
-  std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
+  std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint8_t> terrainClass; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
@@ -159,6 +165,7 @@ struct World {
   uint32_t triggerExecutionCount{0}; uint32_t objectiveStateChangeCount{0};
   uint32_t logisticsRoadCount{0}; uint32_t logisticsTradeActiveCount{0}; uint32_t logisticsOperationIssuedCount{0};
   uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
+  uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 

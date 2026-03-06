@@ -12,3 +12,8 @@
 - Roads render as strategic colored line segments.
 - Active trade routes render as yellow strategic lines.
 - Low/out-of-supply units are tinted (amber/red).
+
+
+## Water/coast rendering
+- Terrain rendering now colors shallow and deep water separately from land.
+- Minimap colors land/shallow/deep water distinctly and still overlays units/cities.

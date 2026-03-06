@@ -38,13 +38,13 @@ struct UnitDef {
   UnitRole role{UnitRole::Infantry};
   AttackType attackType{AttackType::Melee};
   UnitRole preferredTargetRole{UnitRole::Infantry};
-  std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000};
+  std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
   int attackCooldownTicks{12};
   int buildingHp{1000};
 };
 
-BuildDef gBuildDefs[9];
-UnitDef gUnitDefs[5];
+BuildDef gBuildDefs[static_cast<int>(BuildingType::Count)];
+UnitDef gUnitDefs[static_cast<int>(UnitType::Count)];
 float gAgeResearchTime{30.0f};
 std::array<float, static_cast<size_t>(Resource::Count)> gAgeResearchCost{};
 bool gDefsLoaded{false};
@@ -54,7 +54,7 @@ std::vector<ReplayCommand> gReplayCommands;
 std::vector<GameplayEvent> gGameplayEvents;
 int gWorkerThreads = 1;
 
-constexpr uint16_t kRoleCount = 6;
+constexpr uint16_t kRoleCount = static_cast<uint16_t>(UnitRole::Count);
 constexpr int kTargetBetterThreshold = 220;
 constexpr int kAttackMoveAggroPermille = 8500;
 constexpr int kAttackMoveChasePermille = 12000;
@@ -137,7 +137,11 @@ std::vector<NavCompletion> gCompletedNavResults;
 constexpr int32_t kInfCost = 1 << 29;
 constexpr std::array<std::pair<int,int>, 8> kNeighborOrder{{{1,0},{0,1},{-1,0},{0,-1},{1,1},{-1,1},{-1,-1},{1,-1}}};
 
+constexpr float kWaterLevel = -0.18f;
+constexpr float kShallowBand = 0.12f;
+
 void queue_flow_field_request(World& w, int targetCell);
+void ensure_chunk_layout(const World& w);
 void process_nav_requests(World& w);
 void apply_nav_results(World& w);
 void rebuild_chunk_membership_impl(const World& w);
@@ -162,6 +166,8 @@ const char* building_name(BuildingType t) {
     case BuildingType::Library: return "Library";
     case BuildingType::Barracks: return "Barracks";
     case BuildingType::Wonder: return "Wonder";
+    case BuildingType::Port: return "Port";
+    case BuildingType::Count: break;
   }
   return "House";
 }
@@ -175,6 +181,7 @@ BuildingType parse_building(const std::string& v) {
   if (v == "Library") return BuildingType::Library;
   if (v == "Barracks") return BuildingType::Barracks;
   if (v == "Wonder") return BuildingType::Wonder;
+  if (v == "Port") return BuildingType::Port;
   return BuildingType::House;
 }
 
@@ -185,6 +192,11 @@ const char* unit_name(UnitType t) {
     case UnitType::Archer: return "Archer";
     case UnitType::Cavalry: return "Cavalry";
     case UnitType::Siege: return "Siege";
+    case UnitType::TransportShip: return "TransportShip";
+    case UnitType::LightWarship: return "LightWarship";
+    case UnitType::HeavyWarship: return "HeavyWarship";
+    case UnitType::BombardShip: return "BombardShip";
+    case UnitType::Count: break;
   }
   return "Infantry";
 }
@@ -194,6 +206,10 @@ UnitType parse_unit(const std::string& v) {
   if (v == "Archer") return UnitType::Archer;
   if (v == "Cavalry") return UnitType::Cavalry;
   if (v == "Siege") return UnitType::Siege;
+  if (v == "TransportShip") return UnitType::TransportShip;
+  if (v == "LightWarship") return UnitType::LightWarship;
+  if (v == "HeavyWarship") return UnitType::HeavyWarship;
+  if (v == "BombardShip") return UnitType::BombardShip;
   return UnitType::Infantry;
 }
 
@@ -307,6 +323,11 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::Wonder)].cost[ridx(Resource::Metal)] = 300;
   gBuildDefs[bidx(BuildingType::Wonder)].cost[ridx(Resource::Wealth)] = 250;
 
+  gBuildDefs[bidx(BuildingType::Port)].size = {3.2f, 3.2f};
+  gBuildDefs[bidx(BuildingType::Port)].buildTime = 22.0f;
+  gBuildDefs[bidx(BuildingType::Port)].cost[ridx(Resource::Wood)] = 140;
+  gBuildDefs[bidx(BuildingType::Port)].cost[ridx(Resource::Metal)] = 80;
+
   gUnitDefs[uidx(UnitType::Worker)].trainTime = 10.0f;
   gUnitDefs[uidx(UnitType::Worker)].cost[ridx(Resource::Food)] = 60;
   gUnitDefs[uidx(UnitType::Worker)].popCost = 1;
@@ -321,7 +342,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Infantry)].role = UnitRole::Infantry;
   gUnitDefs[uidx(UnitType::Infantry)].attackType = AttackType::Melee;
   gUnitDefs[uidx(UnitType::Infantry)].preferredTargetRole = UnitRole::Ranged;
-  gUnitDefs[uidx(UnitType::Infantry)].vsRoleMultiplierPermille = {1000, 1300, 900, 900, 1000, 1000};
+  gUnitDefs[uidx(UnitType::Infantry)].vsRoleMultiplierPermille = {1000, 1300, 900, 900, 1000, 1000, 1000, 1000};
 
   gUnitDefs[uidx(UnitType::Archer)].trainTime = 13.0f;
   gUnitDefs[uidx(UnitType::Archer)].cost[ridx(Resource::Food)] = 65;
@@ -330,7 +351,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Archer)].role = UnitRole::Ranged;
   gUnitDefs[uidx(UnitType::Archer)].attackType = AttackType::Ranged;
   gUnitDefs[uidx(UnitType::Archer)].preferredTargetRole = UnitRole::Cavalry;
-  gUnitDefs[uidx(UnitType::Archer)].vsRoleMultiplierPermille = {1000, 900, 1300, 1000, 1000, 900};
+  gUnitDefs[uidx(UnitType::Archer)].vsRoleMultiplierPermille = {1000, 900, 1300, 1000, 1000, 900, 1000, 1000};
   gUnitDefs[uidx(UnitType::Archer)].attackCooldownTicks = 16;
 
   gUnitDefs[uidx(UnitType::Cavalry)].trainTime = 16.0f;
@@ -340,7 +361,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Cavalry)].role = UnitRole::Cavalry;
   gUnitDefs[uidx(UnitType::Cavalry)].attackType = AttackType::Melee;
   gUnitDefs[uidx(UnitType::Cavalry)].preferredTargetRole = UnitRole::Siege;
-  gUnitDefs[uidx(UnitType::Cavalry)].vsRoleMultiplierPermille = {1000, 1000, 900, 1300, 1100, 900};
+  gUnitDefs[uidx(UnitType::Cavalry)].vsRoleMultiplierPermille = {1000, 1000, 900, 1300, 1100, 900, 1000, 1000};
 
   gUnitDefs[uidx(UnitType::Siege)].trainTime = 18.0f;
   gUnitDefs[uidx(UnitType::Siege)].cost[ridx(Resource::Wood)] = 90;
@@ -349,8 +370,32 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Siege)].role = UnitRole::Siege;
   gUnitDefs[uidx(UnitType::Siege)].attackType = AttackType::Ranged;
   gUnitDefs[uidx(UnitType::Siege)].preferredTargetRole = UnitRole::Building;
-  gUnitDefs[uidx(UnitType::Siege)].vsRoleMultiplierPermille = {900, 900, 900, 1000, 900, 1800};
+  gUnitDefs[uidx(UnitType::Siege)].vsRoleMultiplierPermille = {900, 900, 900, 1000, 900, 1800, 900, 900};
   gUnitDefs[uidx(UnitType::Siege)].attackCooldownTicks = 22;
+
+  gUnitDefs[uidx(UnitType::TransportShip)].trainTime = 16.0f;
+  gUnitDefs[uidx(UnitType::TransportShip)].cost[ridx(Resource::Wood)] = 120;
+  gUnitDefs[uidx(UnitType::TransportShip)].cost[ridx(Resource::Metal)] = 40;
+  gUnitDefs[uidx(UnitType::TransportShip)].popCost = 2;
+  gUnitDefs[uidx(UnitType::TransportShip)].role = UnitRole::Transport;
+
+  gUnitDefs[uidx(UnitType::LightWarship)].trainTime = 18.0f;
+  gUnitDefs[uidx(UnitType::LightWarship)].cost[ridx(Resource::Wood)] = 100;
+  gUnitDefs[uidx(UnitType::LightWarship)].cost[ridx(Resource::Metal)] = 70;
+  gUnitDefs[uidx(UnitType::LightWarship)].popCost = 2;
+  gUnitDefs[uidx(UnitType::LightWarship)].role = UnitRole::Naval;
+
+  gUnitDefs[uidx(UnitType::HeavyWarship)].trainTime = 22.0f;
+  gUnitDefs[uidx(UnitType::HeavyWarship)].cost[ridx(Resource::Wood)] = 120;
+  gUnitDefs[uidx(UnitType::HeavyWarship)].cost[ridx(Resource::Metal)] = 130;
+  gUnitDefs[uidx(UnitType::HeavyWarship)].popCost = 3;
+  gUnitDefs[uidx(UnitType::HeavyWarship)].role = UnitRole::Naval;
+
+  gUnitDefs[uidx(UnitType::BombardShip)].trainTime = 24.0f;
+  gUnitDefs[uidx(UnitType::BombardShip)].cost[ridx(Resource::Wood)] = 140;
+  gUnitDefs[uidx(UnitType::BombardShip)].cost[ridx(Resource::Metal)] = 110;
+  gUnitDefs[uidx(UnitType::BombardShip)].popCost = 3;
+  gUnitDefs[uidx(UnitType::BombardShip)].role = UnitRole::Naval;
 
   gAgeResearchTime = 35.0f;
   gAgeResearchCost[ridx(Resource::Knowledge)] = 130;
@@ -380,6 +425,7 @@ void load_defs_once() {
       else if (id == "Library") t = BuildingType::Library;
       else if (id == "Barracks") t = BuildingType::Barracks;
       else if (id == "Wonder") t = BuildingType::Wonder;
+      else if (id == "Port") t = BuildingType::Port;
       BuildDef& d = gBuildDefs[bidx(t)];
       if (bd.contains("size")) d.size = {bd["size"][0].get<float>(), bd["size"][1].get<float>()};
       d.buildTime = bd.value("buildTime", d.buildTime);
@@ -396,6 +442,10 @@ void load_defs_once() {
       else if (id == "Archer") t = UnitType::Archer;
       else if (id == "Cavalry") t = UnitType::Cavalry;
       else if (id == "Siege") t = UnitType::Siege;
+      else if (id == "TransportShip") t = UnitType::TransportShip;
+      else if (id == "LightWarship") t = UnitType::LightWarship;
+      else if (id == "HeavyWarship") t = UnitType::HeavyWarship;
+      else if (id == "BombardShip") t = UnitType::BombardShip;
       UnitDef& d = gUnitDefs[uidx(t)];
       d.trainTime = ud.value("trainTime", d.trainTime);
       d.popCost = ud.value("popCost", d.popCost);
@@ -429,6 +479,51 @@ bool has_nearby_builder(const World& w, uint16_t team, glm::vec2 p) {
   return false;
 }
 
+
+
+TerrainClass terrain_class_at(const World& w, int idx) {
+  if (idx < 0 || idx >= (int)w.terrainClass.size()) return TerrainClass::Land;
+  return static_cast<TerrainClass>(w.terrainClass[idx]);
+}
+
+bool is_water_class(TerrainClass t) { return t == TerrainClass::ShallowWater || t == TerrainClass::DeepWater; }
+
+bool unit_is_naval(UnitType t) {
+  return t == UnitType::TransportShip || t == UnitType::LightWarship || t == UnitType::HeavyWarship || t == UnitType::BombardShip;
+}
+
+bool unit_can_embark(UnitType t) {
+  return t == UnitType::Infantry || t == UnitType::Archer || t == UnitType::Cavalry || t == UnitType::Siege || t == UnitType::Worker;
+}
+
+bool unit_cell_valid(const World& w, const Unit& u, int cell) {
+  TerrainClass tc = terrain_class_at(w, cell);
+  if (u.embarked) return false;
+  if (unit_is_naval(u.type)) return is_water_class(tc);
+  return !is_water_class(tc);
+}
+
+bool has_adjacent_coast(const World& w, glm::vec2 p) {
+  int x = std::clamp((int)p.x, 0, w.width - 1);
+  int y = std::clamp((int)p.y, 0, w.height - 1);
+  for (int oy = -1; oy <= 1; ++oy) for (int ox = -1; ox <= 1; ++ox) {
+    int nx = std::clamp(x + ox, 0, w.width - 1);
+    int ny = std::clamp(y + oy, 0, w.height - 1);
+    TerrainClass tc = terrain_class_at(w, ny * w.width + nx);
+    if (tc == TerrainClass::ShallowWater) return true;
+  }
+  return false;
+}
+
+void rebuild_terrain_classes(World& w) {
+  w.terrainClass.resize((size_t)w.width * (size_t)w.height);
+  for (int i = 0; i < w.width * w.height; ++i) {
+    float h = w.heightmap[i];
+    if (h <= kWaterLevel - kShallowBand) w.terrainClass[i] = (uint8_t)TerrainClass::DeepWater;
+    else if (h <= kWaterLevel + kShallowBand) w.terrainClass[i] = (uint8_t)TerrainClass::ShallowWater;
+    else w.terrainClass[i] = (uint8_t)TerrainClass::Land;
+  }
+}
 float fertility_at(const World& w, glm::vec2 p) {
   int x = std::clamp((int)p.x, 0, w.width - 1);
   int y = std::clamp((int)p.y, 0, w.height - 1);
@@ -508,7 +603,10 @@ int cell_step_cost(const World& w, int fromCell, int toCell) {
   const float hf = w.heightmap[fromCell];
   const float ht = w.heightmap[toCell];
   const int slope = (int)std::round(std::abs(ht - hf) * 30.0f);
-  return 10 + slope;
+  TerrainClass tf = terrain_class_at(w, fromCell);
+  TerrainClass tt = terrain_class_at(w, toCell);
+  if (is_water_class(tf) != is_water_class(tt)) return kInfCost;
+  return 10 + slope + (tt == TerrainClass::ShallowWater ? 2 : 0);
 }
 
 FlowField* get_flow_field(World& w, int targetCell) {
@@ -540,6 +638,9 @@ bool placeable(const World& w, uint16_t team, BuildingType type, glm::vec2 pos) 
     for (const auto& c : w.cities) if (c.team == team && dist(c.pos, pos) <= 16.0f) territoryOk = true;
   }
   if (!territoryOk) return false;
+  if (type == BuildingType::Port) {
+    if (terrain_class_at(w, ty * w.width + tx) != TerrainClass::Land || !has_adjacent_coast(w, pos)) return false;
+  } else if (is_water_class(terrain_class_at(w, ty * w.width + tx))) return false;
   float centerH = w.heightmap[ty * w.width + tx];
   for (int oy = -1; oy <= 1; ++oy) for (int ox = -1; ox <= 1; ++ox) {
     int nx = std::clamp(tx + ox, 0, w.width - 1), ny = std::clamp(ty + oy, 0, w.height - 1);
@@ -661,7 +762,7 @@ void rebuild_chunk_membership_impl(const World& w) {
     c.territoryTiles.clear();
   }
   for (const auto& u : w.units) {
-    if (u.hp <= 0) continue;
+    if (u.hp <= 0 || u.embarked) continue;
     gChunks.chunks[chunk_index_of_pos(w, u.pos)].unitIds.push_back(u.id);
   }
   for (const auto& b : w.buildings) {
@@ -885,7 +986,17 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   else if (type == UnitType::Infantry) { nu.hp = 105; nu.attack = 8.5f; nu.range = 2.0f; nu.speed = 4.8f; }
   else if (type == UnitType::Archer) { nu.hp = 80; nu.attack = 7.0f; nu.range = 5.4f; nu.speed = 4.4f; }
   else if (type == UnitType::Cavalry) { nu.hp = 130; nu.attack = 9.2f; nu.range = 1.8f; nu.speed = 5.6f; }
-  else { nu.hp = 110; nu.attack = 13.0f; nu.range = 6.2f; nu.speed = 3.2f; }
+  else if (type == UnitType::Siege) { nu.hp = 110; nu.attack = 13.0f; nu.range = 6.2f; nu.speed = 3.2f; }
+  else if (type == UnitType::TransportShip) { nu.hp = 220; nu.attack = 2.0f; nu.range = 2.2f; nu.speed = 4.2f; nu.role = UnitRole::Transport; }
+  else if (type == UnitType::LightWarship) { nu.hp = 200; nu.attack = 11.0f; nu.range = 4.8f; nu.speed = 4.8f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Transport; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1100,1500}; }
+  else if (type == UnitType::HeavyWarship) { nu.hp = 280; nu.attack = 16.0f; nu.range = 4.6f; nu.speed = 4.0f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Naval; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1450,1000}; }
+  else if (type == UnitType::BombardShip) { nu.hp = 240; nu.attack = 18.0f; nu.range = 7.2f; nu.speed = 3.6f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Building; nu.vsRoleMultiplierPermille = {900,900,900,1000,900,1700,1000,1000}; }
+  if (!unit_cell_valid(w, nu, cell_of(w, nu.pos))) {
+    for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
+      int c = y * w.width + x;
+      if (unit_cell_valid(w, nu, c)) { nu.pos = nu.renderPos = nu.target = nu.slotTarget = {x + 0.5f, y + 0.5f}; y = w.height; break; }
+    }
+  }
   w.units.push_back(nu);
   return id;
 }
@@ -1031,6 +1142,8 @@ void update_operations(World& w) {
     if (p.civilization.defense > 1.1f) t = OperationType::DefendBorder;
     else if (p.civilization.economyBias > 1.1f) t = OperationType::SecureRoute;
     else if (p.civilization.aggression > 1.1f) t = OperationType::AssaultCity;
+    if (p.civilization.economyBias > 1.15f) t = OperationType::NavalPatrol;
+    if (p.civilization.aggression > 1.2f) t = OperationType::AmphibiousAssault;
     glm::vec2 target{(p.id == 0) ? 85.0f : 20.0f, (p.id == 0) ? 85.0f : 20.0f};
     for (const auto& c : w.cities) if (c.team != p.id) { target = c.pos; break; }
     w.operations.push_back({nextId++, p.id, t, target, w.tick, true});
@@ -1097,6 +1210,7 @@ void apply_world_defaults(World& w) {
 }
 
 bool validate_size(const World& w, const std::vector<float>& v) { return (int)v.size() == w.width * w.height; }
+bool validate_size_u8(const World& w, const std::vector<uint8_t>& v) { return (int)v.size() == w.width * w.height; }
 
 void eval_triggers(World& w) {
   std::sort(w.triggers.begin(), w.triggers.end(), [](const Trigger& a, const Trigger& b){ return a.id < b.id; });
@@ -1197,10 +1311,14 @@ void initialize_world(World& w, uint32_t seed) {
   w.territoryOwner.resize(w.width * w.height);
   w.fog.assign(w.width * w.height, 0);
   for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
-    float h = 0.4f * std::sin(x * 0.08f) + 0.4f * std::cos(y * 0.09f) + 0.2f * n(rng);
+    float nx = (float)x / std::max(1, w.width - 1) - 0.5f;
+    float ny = (float)y / std::max(1, w.height - 1) - 0.5f;
+    float radial = std::sqrt(nx * nx + ny * ny);
+    float h = 0.55f * std::sin(x * 0.07f) + 0.45f * std::cos(y * 0.06f) + 0.25f * n(rng) - radial * 0.9f;
     w.heightmap[y * w.width + x] = h;
     w.fertility[y * w.width + x] = std::clamp(1.0f - std::abs(h), 0.1f, 1.0f);
   }
+  rebuild_terrain_classes(w);
 
   apply_world_defaults(w);
   w.resourceNodes.clear();
@@ -1246,6 +1364,13 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     if (to.contains("height") && to["height"].is_array()) { w.heightmap = to["height"].get<std::vector<float>>(); if (!validate_size(w, w.heightmap)) { err = "terrainOverrides.height size mismatch"; return false; } }
     if (to.contains("fertility") && to["fertility"].is_array()) { w.fertility = to["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "terrainOverrides.fertility size mismatch"; return false; } }
   }
+  rebuild_terrain_classes(w);
+  if (j.contains("waterMask")) {
+    auto m = j["waterMask"].get<std::vector<uint8_t>>();
+    if (!validate_size_u8(w, m)) { err = "waterMask size mismatch"; return false; }
+    w.terrainClass = std::move(m);
+  }
+
   if (j.contains("players")) {
     w.players.clear();
     for (const auto& p : j["players"]) {
@@ -1416,6 +1541,35 @@ void tick_world(World& w, float dt) {
     c.level = 1 + teamBuildings / 4;
   }
 
+  for (auto& tr : w.units) {
+    if (tr.hp <= 0 || tr.type != UnitType::TransportShip || tr.embarked) continue;
+    if (tr.cargo.size() < 4) {
+      for (auto& lu : w.units) {
+        if (lu.team != tr.team || lu.embarked || !unit_can_embark(lu.type)) continue;
+        if (dist(lu.pos, tr.pos) < 8.0f) {
+          lu.embarked = true;
+          lu.transportId = tr.id;
+          lu.hasMoveOrder = false;
+          lu.pos = tr.pos;
+          tr.cargo.push_back(lu.id);
+          ++w.embarkEvents;
+          break;
+        }
+      }
+    }
+    if (!tr.cargo.empty() && (w.tick % 60 == 0)) {
+      uint32_t uid = tr.cargo.back();
+      tr.cargo.pop_back();
+      for (auto& lu : w.units) if (lu.id == uid) {
+        lu.embarked = false;
+        lu.transportId = 0;
+        lu.pos = tr.pos + glm::vec2{0.8f, 0.4f};
+        ++w.disembarkEvents;
+        break;
+      }
+    }
+  }
+
   const auto combatStart = Clock::now();
   rebuild_chunk_membership_impl(w);
   gLastStats.chunkCount = static_cast<uint32_t>(gChunks.chunks.size());
@@ -1434,19 +1588,13 @@ void tick_world(World& w, float dt) {
         auto it = unitIndexById.find(uid);
         if (it == unitIndexById.end()) continue;
         const Unit& src = unitSnapshot[it->second];
-        if (src.hp <= 0) continue;
+        if (src.hp <= 0 || src.embarked) continue;
         MovementResult out{};
         out.valid = true;
         out.id = src.id;
         glm::vec2 desired = src.target - src.pos;
         if (src.hasMoveOrder && src.moveOrder != 0) {
-          if (FlowField* ff = get_flow_field(w, cell_of(w, src.slotTarget))) {
-            const int cc = cell_of(w, src.pos);
-            desired = glm::vec2{(float)ff->dirX[cc], (float)ff->dirY[cc]};
-            if (glm::length(desired) < 0.1f) desired = src.slotTarget - src.pos;
-          } else {
-            desired = src.slotTarget - src.pos;
-          }
+          desired = src.slotTarget - src.pos;
         }
         glm::vec2 repulse{0.0f, 0.0f};
         for (const auto& other : unitSnapshot) {
@@ -1471,6 +1619,8 @@ void tick_world(World& w, float dt) {
           else if (src.supplyState == SupplyState::OutOfSupply) supplyMul = 0.75f;
           float roadMul = near_friendly_road(w, src.team, src.pos) ? 1.2f : 1.0f;
           out.pos += out.moveDir * src.speed * supplyMul * roadMul * dt;
+          int nc = cell_of(w, out.pos);
+          if (!unit_cell_valid(w, src, nc)) out.pos = prev;
           if (glm::length(out.pos - prev) < 0.005f && src.hasMoveOrder) {
             out.stuckTicks = (uint16_t)std::min<int>(src.stuckTicks + 1, 65535);
           } else out.stuckTicks = 0;
@@ -1524,18 +1674,19 @@ void tick_world(World& w, float dt) {
     }
 
     int buildingTarget = -1;
-    if (u.role == UnitRole::Siege && (!locked || u.attackMove)) {
+    if ((u.role == UnitRole::Siege || u.type == UnitType::BombardShip) && (!locked || u.attackMove)) {
       buildingTarget = find_building_target(w, u, aggro + 4.0f);
       if (buildingTarget >= 0 && (!locked || dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 1.5f)) engagedThisTick = true;
     }
 
-    if (u.type != UnitType::Worker && u.attackCooldownTicks == 0) {
+    if (u.type != UnitType::Worker && !u.embarked && u.attackCooldownTicks == 0) {
       if (locked && dist(u.pos, locked->pos) <= u.range + 0.2f) {
         int mult = (int)u.vsRoleMultiplierPermille[role_idx(locked->role)];
         float damage = u.attack * (mult / 1000.0f);
         locked->hp -= damage;
         w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
         ++w.combatEngagementCount;
+        if (unit_is_naval(u.type)) ++w.navalCombatEvents;
         u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
         engagedThisTick = true;
       } else if (buildingTarget >= 0 && dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 0.8f) {
@@ -1545,6 +1696,7 @@ void tick_world(World& w, float dt) {
         w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
         ++w.buildingDamageEvents;
         ++w.combatEngagementCount;
+        if (unit_is_naval(u.type)) ++w.navalCombatEvents;
         u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
         engagedThisTick = true;
       }
@@ -1557,6 +1709,9 @@ void tick_world(World& w, float dt) {
   const size_t beforeUnits = w.units.size();
   w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [&](const Unit& u) {
     if (u.hp > 0) return false;
+    if (u.type == UnitType::TransportShip) {
+      for (uint32_t cid : u.cargo) for (auto& cu : w.units) if (cu.id == cid) cu.hp = 0;
+    }
     w.players[u.team].unitsLost += 1;
     emit_event(w, GameplayEventType::UnitDied, u.team, u.team, u.id);
     return true;
@@ -1626,6 +1781,22 @@ void tick_world(World& w, float dt) {
   gLastStats.lowSupplyUnits = w.lowSupplyUnits;
   gLastStats.outOfSupplyUnits = w.outOfSupplyUnits;
   gLastStats.operationCount = static_cast<uint32_t>(w.operations.size());
+  gLastStats.navalUnitCount = 0;
+  gLastStats.transportCount = 0;
+  gLastStats.embarkedUnitCount = 0;
+  gLastStats.activeNavalOperations = 0;
+  gLastStats.coastalTargets = 0;
+  gLastStats.navalCombatEvents = w.navalCombatEvents;
+  for (const auto& u : w.units) {
+    if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
+    if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
+    if (u.embarked) ++gLastStats.embarkedUnitCount;
+  }
+  for (const auto& o : w.operations) if (o.active && (o.type == OperationType::AmphibiousAssault || o.type == OperationType::NavalPatrol || o.type == OperationType::CoastalBombard)) ++gLastStats.activeNavalOperations;
+  for (const auto& b : w.buildings) {
+    int c = cell_of(w, b.pos);
+    if (terrain_class_at(w, c) == TerrainClass::Land && has_adjacent_coast(w, b.pos)) ++gLastStats.coastalTargets;
+  }
 
   if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
 }
@@ -1743,7 +1914,9 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
   auto it = std::find_if(world.buildings.begin(), world.buildings.end(), [&](const Building& b) { return b.id == buildingId && b.team == team && !b.underConstruction; });
   if (it == world.buildings.end()) return false;
   if (it->type == BuildingType::CityCenter && type != UnitType::Worker) return false;
-  if (it->type == BuildingType::Barracks && type == UnitType::Worker) return false;
+  if (it->type == BuildingType::Barracks && (type == UnitType::Worker || unit_is_naval(type))) return false;
+  if (it->type == BuildingType::Port && !unit_is_naval(type)) return false;
+  if (it->type != BuildingType::Port && unit_is_naval(type)) return false;
   auto& p = world.players[team];
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
   if (!spend(p.resources, gUnitDefs[uidx(type)].cost)) return false;
@@ -1784,6 +1957,7 @@ uint64_t map_setup_hash(const World& w) {
   uint64_t h = kFNVOffset;
   for (float v : w.heightmap) hash_float(h, v);
   for (float v : w.fertility) hash_float(h, v);
+  for (uint8_t v : w.terrainClass) hash_u32(h, v);
   for (const auto& c : w.cities) { hash_u32(h, c.id); hash_u32(h, c.team); hash_float(h, c.pos.x); hash_float(h, c.pos.y); }
   for (const auto& b : w.buildings) { hash_u32(h, b.id); hash_u32(h, b.team); hash_u32(h, (uint32_t)b.type); hash_float(h, b.pos.x); hash_float(h, b.pos.y); }
   for (const auto& u : w.units) { hash_u32(h, u.id); hash_u32(h, u.team); hash_u32(h, (uint32_t)u.type); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }
@@ -1798,7 +1972,7 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.tick);
   hash_u32(h, static_cast<uint32_t>(w.units.size()));
   hash_u32(h, static_cast<uint32_t>(w.buildings.size()));
-  for (const auto& u : w.units) { hash_u32(h, u.id); hash_float(h, u.hp); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }
+  for (const auto& u : w.units) { hash_u32(h, u.id); hash_float(h, u.hp); hash_float(h, u.pos.x); hash_float(h, u.pos.y); hash_u32(h, u.transportId); hash_u32(h, u.embarked ? 1u : 0u); hash_u32(h, (uint32_t)u.cargo.size()); for (uint32_t cid : u.cargo) hash_u32(h, cid); }
   for (const auto& b : w.buildings) {
     hash_u32(h, b.id); hash_u32(h, (uint32_t)b.type); hash_u32(h, b.underConstruction ? 1 : 0); hash_float(h, b.buildProgress);
     hash_u32(h, (uint32_t)b.queue.size());
@@ -1827,6 +2001,9 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);
   hash_u32(h, w.outOfSupplyUnits);
+  hash_u32(h, w.embarkEvents);
+  hash_u32(h, w.disembarkEvents);
+  hash_u32(h, w.navalCombatEvents);
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
   for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
