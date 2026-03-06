@@ -9,7 +9,7 @@
 - `ageUp: AgeUpDef`
 
 ## BuildingDef
-- `id: string` (`CityCenter`, `House`, `Farm`, `LumberCamp`, `Mine`, `Market`, `Library`, `Barracks`)
+- `id: string` (`CityCenter`, `House`, `Farm`, `LumberCamp`, `Mine`, `Market`, `Library`, `Barracks`, `Wonder`)
 - `size: [float, float]` footprint used by placement/collision
 - `buildTime: float` seconds to finish construction
 - `cost: ResourceCost` optional
@@ -42,3 +42,16 @@ Object with optional keys:
 - `vsRoleMultiplier`: optional object keyed by role (`INFANTRY`, `RANGED`, `CAVALRY`, `SIEGE`, `WORKER`, `BUILDING`) using float multipliers.
 
 Counter defaults used by current content: infantry>ranged, ranged>cavalry, cavalry>siege/support, siege>building.
+
+
+## Match rules fields
+Optional `matchRules` object:
+- `wonderHoldTicks: int`
+- `timeLimitTicksDefault: int`
+- `scoreTieBreak: "lowestPlayerId"`
+- `scoreWeights: {resource:int, unitsAlive:int, buildingsAlive:int, ageReached:int, capitalsControlled:int}`
+
+## Replay format
+Replay JSON fields:
+- `schemaVersion`, `seed`, `mapWidth`, `mapHeight`, `timeLimitTicks`, `flags`, `contentHash`, `expectedFinalHash`
+- `commands[]`: `{tick,type,team,ids?,target?,enemy?,buildingId?,unitType?,buildingType?,queueIndex?}`

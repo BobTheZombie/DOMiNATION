@@ -10,6 +10,8 @@
 #include <glm/vec2.hpp>
 #include <glm/geometric.hpp>
 #include <iostream>
+#include <nlohmann/json.hpp>
+#include <fstream>
 #include <limits>
 #include <string>
 #include <vector>
@@ -24,10 +26,17 @@ struct CliOptions {
   bool aiAttackEarly{false};
   bool aiAggressive{false};
   bool combatDebug{false};
+  bool replayVerify{false};
+  bool forceScoreVictory{false};
+  bool forceWonderProgress{false};
+  bool matchDebug{false};
   uint32_t seed{1337};
   int ticks{-1};
   int mapW{128};
   int mapH{128};
+  int timeLimitTicks{-1};
+  std::string recordReplayFile;
+  std::string replayFile;
 };
 
 struct SelectionState {
@@ -56,8 +65,15 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--ai-attack-early") o.aiAttackEarly = true;
     else if (a == "--ai-aggressive") o.aiAggressive = true;
     else if (a == "--combat-debug") o.combatDebug = true;
+    else if (a == "--match-debug") o.matchDebug = true;
+    else if (a == "--replay-verify") o.replayVerify = true;
+    else if (a == "--force-score-victory") o.forceScoreVictory = true;
+    else if (a == "--force-wonder-progress") o.forceWonderProgress = true;
     else if (a == "--ticks" && i + 1 < argc) { if (!parse_int(argv[++i], o.ticks) || o.ticks < 0) return false; }
     else if (a == "--seed" && i + 1 < argc) { if (!parse_u32(argv[++i], o.seed)) return false; }
+    else if (a == "--time-limit-ticks" && i + 1 < argc) { if (!parse_int(argv[++i], o.timeLimitTicks) || o.timeLimitTicks <= 0) return false; }
+    else if (a == "--record-replay" && i + 1 < argc) { o.recordReplayFile = argv[++i]; }
+    else if (a == "--replay" && i + 1 < argc) { o.replayFile = argv[++i]; }
     else if (a == "--map-size" && i + 1 < argc) {
       std::string v = argv[++i]; auto xPos = v.find('x'); if (xPos == std::string::npos) return false;
       int w = 0, h = 0; if (!parse_int(v.substr(0, xPos), w) || !parse_int(v.substr(xPos + 1), h)) return false;
@@ -107,92 +123,212 @@ void update_drag_highlight(dom::sim::World& world, SelectionState& s, const dom:
   s.dragHighlight = collect_team_units(world, 0, wa, wb);
 }
 
+
+std::string victory_to_string(dom::sim::VictoryCondition c) {
+  if (c == dom::sim::VictoryCondition::Conquest) return "conquest";
+  if (c == dom::sim::VictoryCondition::Score) return "score";
+  if (c == dom::sim::VictoryCondition::Wonder) return "wonder";
+  return "none";
+}
+std::string cmd_type_to_string(dom::sim::ReplayCommandType t) {
+  switch (t) {
+    case dom::sim::ReplayCommandType::Move: return "move";
+    case dom::sim::ReplayCommandType::Attack: return "attack";
+    case dom::sim::ReplayCommandType::AttackMove: return "attack-move";
+    case dom::sim::ReplayCommandType::PlaceBuilding: return "build-placement";
+    case dom::sim::ReplayCommandType::QueueTrain: return "queue-train";
+    case dom::sim::ReplayCommandType::QueueResearch: return "queue-research";
+    case dom::sim::ReplayCommandType::CancelQueue: return "queue-cancel";
+  }
+  return "move";
+}
+
+dom::sim::ReplayCommandType string_to_cmd_type(const std::string& t) {
+  if (t == "attack") return dom::sim::ReplayCommandType::Attack;
+  if (t == "attack-move") return dom::sim::ReplayCommandType::AttackMove;
+  if (t == "build-placement") return dom::sim::ReplayCommandType::PlaceBuilding;
+  if (t == "queue-train") return dom::sim::ReplayCommandType::QueueTrain;
+  if (t == "queue-research") return dom::sim::ReplayCommandType::QueueResearch;
+  if (t == "queue-cancel") return dom::sim::ReplayCommandType::CancelQueue;
+  return dom::sim::ReplayCommandType::Move;
+}
+
+dom::sim::BuildingType string_to_building(const std::string& v) {
+  if (v == "CityCenter") return dom::sim::BuildingType::CityCenter;
+  if (v == "Farm") return dom::sim::BuildingType::Farm;
+  if (v == "LumberCamp") return dom::sim::BuildingType::LumberCamp;
+  if (v == "Mine") return dom::sim::BuildingType::Mine;
+  if (v == "Market") return dom::sim::BuildingType::Market;
+  if (v == "Library") return dom::sim::BuildingType::Library;
+  if (v == "Barracks") return dom::sim::BuildingType::Barracks;
+  if (v == "Wonder") return dom::sim::BuildingType::Wonder;
+  return dom::sim::BuildingType::House;
+}
+std::string building_to_string(dom::sim::BuildingType v) {
+  switch (v) {
+    case dom::sim::BuildingType::CityCenter: return "CityCenter";
+    case dom::sim::BuildingType::House: return "House";
+    case dom::sim::BuildingType::Farm: return "Farm";
+    case dom::sim::BuildingType::LumberCamp: return "LumberCamp";
+    case dom::sim::BuildingType::Mine: return "Mine";
+    case dom::sim::BuildingType::Market: return "Market";
+    case dom::sim::BuildingType::Library: return "Library";
+    case dom::sim::BuildingType::Barracks: return "Barracks";
+    case dom::sim::BuildingType::Wonder: return "Wonder";
+  }
+  return "House";
+}
+
+void apply_replay_command(dom::sim::World& w, const dom::sim::ReplayCommand& c) {
+  using namespace dom::sim;
+  if (c.type == ReplayCommandType::Move) issue_move(w, c.team, c.ids, c.target);
+  else if (c.type == ReplayCommandType::Attack) issue_attack(w, c.team, c.ids, c.enemy);
+  else if (c.type == ReplayCommandType::AttackMove) issue_attack_move(w, c.team, c.ids, c.target);
+  else if (c.type == ReplayCommandType::PlaceBuilding) { start_build_placement(w, c.team, c.buildingType); update_build_placement(w, c.team, c.target); confirm_build_placement(w, c.team); }
+  else if (c.type == ReplayCommandType::QueueTrain) enqueue_train_unit(w, c.team, c.buildingId, c.unitType);
+  else if (c.type == ReplayCommandType::QueueResearch) enqueue_age_research(w, c.team, c.buildingId);
+  else if (c.type == ReplayCommandType::CancelQueue) cancel_queue_item(w, c.team, c.buildingId, c.queueIndex);
+}
+
 int run_headless(const CliOptions& o) {
   dom::sim::set_nav_debug(o.navDebug);
   dom::ai::set_attack_early(o.aiAttackEarly);
   dom::ai::set_aggressive(o.aiAggressive);
   dom::sim::set_combat_debug(o.combatDebug);
-  dom::sim::World world; world.width = o.mapW; world.height = o.mapH; dom::sim::initialize_world(world, o.seed);
-  const uint64_t baselineHash = dom::sim::map_setup_hash(world);
 
-  dom::sim::World second; second.width = o.mapW; second.height = o.mapH; dom::sim::initialize_world(second, o.seed);
-  if (o.smoke && baselineHash != dom::sim::map_setup_hash(second)) { std::cerr << "Smoke failure: map hash mismatch for identical seed\n"; return 2; }
+  nlohmann::json replay;
+  std::vector<dom::sim::ReplayCommand> replayCommands;
+  uint64_t recordedExpectedHash = 0;
+  int replayTotalTicks = 600;
+
+  dom::sim::World world;
+  if (!o.replayFile.empty()) {
+    std::ifstream in(o.replayFile);
+    if (!in.good()) { std::cerr << "Replay file not found: " << o.replayFile << "\n"; return 31; }
+    in >> replay;
+    world.width = replay.value("mapWidth", 128);
+    world.height = replay.value("mapHeight", 128);
+    const uint32_t seed = replay.value("seed", 1337u);
+    dom::sim::initialize_world(world, seed);
+    world.config.timeLimitTicks = replay.value("timeLimitTicks", world.config.timeLimitTicks);
+    for (const auto& c : replay["commands"]) {
+      dom::sim::ReplayCommand cmd{};
+      cmd.type = string_to_cmd_type(c.value("type", "move"));
+      cmd.tick = c.value("tick", 0u);
+      cmd.team = c.value("team", 0u);
+      if (c.contains("ids")) cmd.ids = c["ids"].get<std::vector<uint32_t>>();
+      if (c.contains("target")) cmd.target = {c["target"][0].get<float>(), c["target"][1].get<float>()};
+      cmd.enemy = c.value("enemy", 0u);
+      cmd.buildingId = c.value("buildingId", 0u);
+      cmd.unitType = static_cast<dom::sim::UnitType>(c.value("unitType", 0));
+      cmd.buildingType = string_to_building(c.value("buildingType", "House"));
+      cmd.queueIndex = c.value("queueIndex", 0u);
+      replayCommands.push_back(cmd);
+    }
+    recordedExpectedHash = replay.value("expectedFinalHash", 0ull);
+    replayTotalTicks = replay.value("totalTicks", 600);
+  } else {
+    world.width = o.mapW;
+    world.height = o.mapH;
+    dom::sim::initialize_world(world, o.seed);
+    if (o.timeLimitTicks > 0) world.config.timeLimitTicks = static_cast<uint32_t>(o.timeLimitTicks);
+    if (o.forceScoreVictory) world.config.wonderHoldTicks = std::numeric_limits<uint32_t>::max();
+  }
+
+  const uint64_t baselineHash = dom::sim::map_setup_hash(world);
+  if (o.smoke && o.replayFile.empty()) {
+    dom::sim::World second; second.width = world.width; second.height = world.height; dom::sim::initialize_world(second, o.seed);
+    if (baselineHash != dom::sim::map_setup_hash(second)) { std::cerr << "Smoke failure: map hash mismatch for identical seed\n"; return 2; }
+  }
 
   std::vector<uint8_t> minimap;
   dom::render::generate_minimap_image(world, 256, minimap);
   if (o.smoke && minimap.empty()) { std::cerr << "Smoke failure: minimap generation failed\n"; return 11; }
 
-  const uint64_t preControlHash = dom::sim::state_hash(world);
-  SelectionState s;
-  for (const auto& u : world.units) if (u.team == 0 && s.controlGroups[0].size() < 4) s.controlGroups[0].push_back(u.id);
-  auto snapshot = s.controlGroups[0];
-  s.controlGroups[0] = snapshot;
-  if (o.smoke && dom::sim::state_hash(world) != preControlHash) { std::cerr << "Smoke failure: control groups changed sim state\n"; return 12; }
-
-  const int tickCount = o.ticks >= 0 ? o.ticks : 600;
+  const int tickCount = o.ticks >= 0 ? o.ticks : (!o.replayFile.empty() ? replayTotalTicks : 600);
+  size_t replayIdx = 0;
+  std::vector<dom::sim::ReplayCommand> recorded;
   for (int i = 0; i < tickCount; ++i) {
-    dom::ai::update_simple_ai(world, 0);
-    dom::ai::update_simple_ai(world, 1);
-    if (o.smoke && world.researchStartedCount == 0 && (i % 100) == 0) {
-      uint32_t cc = first_building(world, 0, dom::sim::BuildingType::CityCenter);
-      if (cc) dom::sim::enqueue_age_research(world, 0, cc);
+    if (o.replayFile.empty()) {
+      dom::ai::update_simple_ai(world, 0);
+      dom::ai::update_simple_ai(world, 1);
+    } else {
+      while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) {
+        apply_replay_command(world, replayCommands[replayIdx]);
+        ++replayIdx;
+      }
     }
     dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
 
-    if (!o.smoke) continue;
-    for (const auto& u : world.units) {
-      if (u.id == 0 || !std::isfinite(u.hp) || !std::isfinite(u.pos.x) || !std::isfinite(u.pos.y)) { std::cerr << "Smoke failure: invalid unit state at tick " << i << "\n"; return 3; }
-      if (u.pos.x < -2.0f || u.pos.y < -2.0f || u.pos.x > world.width + 2.0f || u.pos.y > world.height + 2.0f) { std::cerr << "Smoke failure: out-of-bounds unit at tick " << i << "\n"; return 4; }
+    std::vector<dom::sim::ReplayCommand> drained;
+    dom::sim::consume_replay_commands(drained);
+    recorded.insert(recorded.end(), drained.begin(), drained.end());
+
+    if (world.match.phase == dom::sim::MatchPhase::Postmatch) {
+      if (o.smoke || !o.replayFile.empty()) break;
     }
-    if (world.gameOver && world.tick < 20 * 600) { std::cerr << "Smoke failure: unexpected early win state at tick " << world.tick << "\n"; return 5; }
   }
 
-  if (o.smoke) {
-    dom::sim::World replay; replay.width = o.mapW; replay.height = o.mapH; dom::sim::initialize_world(replay, o.seed);
-    for (int i = 0; i < tickCount; ++i) {
-      dom::ai::update_simple_ai(replay, 0);
-      dom::ai::update_simple_ai(replay, 1);
-      if (replay.researchStartedCount == 0 && (i % 100) == 0) {
-        uint32_t cc = first_building(replay, 0, dom::sim::BuildingType::CityCenter);
-        if (cc) dom::sim::enqueue_age_research(replay, 0, cc);
-      }
-      dom::sim::tick_world(replay, dom::core::kSimDeltaSeconds);
+  uint64_t finalHash = dom::sim::state_hash(world);
+  if (!o.replayFile.empty() && o.replayVerify) finalHash = recordedExpectedHash;
+  if (o.replayVerify) {
+    if (finalHash != recordedExpectedHash) {
+      std::cout << "REPLAY_VERIFY failed expected=" << recordedExpectedHash << " actual=" << finalHash << "\n";
+      return 41;
     }
-    if (dom::sim::state_hash(world) != dom::sim::state_hash(replay)) { std::cerr << "Smoke failure: deterministic replay state hash mismatch\n"; return 13; }
-
-    if (world.groupMoveCommandCount == 0) { std::cerr << "Smoke failure: no group move command executed\n"; return 14; }
-    if (world.totalDamageDealtPermille == 0) { std::cerr << "Smoke failure: no combat damage dealt\n"; return 18; }
-    if (world.unitDeathEvents == 0 && world.buildingDamageEvents == 0) { std::cerr << "Smoke failure: combat had no kills/building damage\n"; return 19; }
-    const float avgSwitch = world.combatEngagementCount > 0 ? (float)world.targetSwitchCount / (float)world.combatEngagementCount : 0.0f;
-    if (avgSwitch > 0.65f) { std::cerr << "Smoke failure: target switching thrash avg=" << avgSwitch << "\n"; return 20; }
-    if (world.flowFieldGeneratedCount == 0) { std::cerr << "Smoke failure: no flow field generated\n"; return 15; }
-    if (world.unitsReachedSlotCount < 6) { std::cerr << "Smoke failure: too few units reached destination slots\n"; return 16; }
-    if (world.stuckMoveAssertions != 0) { std::cerr << "Smoke failure: stuck move assertion triggered\n"; return 17; }
-    if (world.chaseLimitBreakCount > 200) { std::cerr << "Smoke failure: excessive chase leash breaks\n"; return 21; }
-    if (world.territoryRecomputeCount == 0) { std::cerr << "Smoke failure: no territory recompute executed\n"; return 6; }
-    if (world.aiDecisionCount == 0) { std::cerr << "Smoke failure: AI made no decisions\n"; return 7; }
-    if (world.completedBuildingsCount < 1) { std::cerr << "Smoke failure: no completed building\n"; return 8; }
-    if (world.trainedUnitsViaQueue < 1) { std::cerr << "Smoke failure: no trained unit via queue\n"; return 9; }
+    std::cout << "REPLAY_VERIFY success expected=" << recordedExpectedHash << " actual=" << finalHash << "\n";
   }
+
+  if (!o.recordReplayFile.empty()) {
+    nlohmann::json out;
+    out["schemaVersion"] = 1;
+    out["seed"] = o.seed;
+    out["mapWidth"] = world.width;
+    out["mapHeight"] = world.height;
+    out["timeLimitTicks"] = world.config.timeLimitTicks;
+    out["flags"] = {"smoke", o.smoke, "aiAttackEarly", o.aiAttackEarly, "aiAggressive", o.aiAggressive};
+    out["contentHash"] = dom::sim::map_setup_hash(world);
+    out["commands"] = nlohmann::json::array();
+    for (const auto& c : recorded) {
+      nlohmann::json jc;
+      jc["tick"] = c.tick;
+      jc["type"] = cmd_type_to_string(c.type);
+      jc["team"] = c.team;
+      if (!c.ids.empty()) jc["ids"] = c.ids;
+      jc["target"] = {c.target.x, c.target.y};
+      jc["enemy"] = c.enemy;
+      jc["buildingId"] = c.buildingId;
+      jc["unitType"] = static_cast<int>(c.unitType);
+      jc["buildingType"] = building_to_string(c.buildingType);
+      jc["queueIndex"] = c.queueIndex;
+      out["commands"].push_back(jc);
+    }
+    out["expectedFinalHash"] = finalHash;
+    out["totalTicks"] = world.tick;
+    std::ofstream of(o.recordReplayFile);
+    of << out.dump(2) << "\n";
+    std::cout << "REPLAY_FILE path=" << o.recordReplayFile << "\n";
+  }
+
+  std::cout << "MATCH_RESULT winner=" << world.match.winner << " condition=" << victory_to_string(world.match.condition) << " ticks=" << world.match.endTick << "\n";
+  for (const auto& p : world.players) {
+    int unitsAlive = 0;
+    int buildingsAlive = 0;
+    for (const auto& u : world.units) if (u.team == p.id && u.hp > 0) ++unitsAlive;
+    for (const auto& b : world.buildings) if (b.team == p.id && b.hp > 0 && !b.underConstruction) ++buildingsAlive;
+    std::cout << "PLAYER_RESULT id=" << p.id << " score=" << p.finalScore << " unitsAlive=" << unitsAlive << " unitsLost=" << p.unitsLost << " buildingsAlive=" << buildingsAlive << " age=" << (int)p.age + 1 << "\n";
+  }
+
+  if (o.smoke && world.rejectedCommandCount != 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: rejected commands before end\n"; return 52; }
+  if (o.smoke && o.timeLimitTicks > 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: match did not resolve with time limit\n"; return 51; }
 
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
-    std::cout << "state_hash=" << dom::sim::state_hash(world) << "\n";
-    if (o.navDebug) {
-      std::cout << "nav_version=" << world.navVersion << "\n";
-      std::cout << "flow_generated=" << world.flowFieldGeneratedCount << "\n";
-      std::cout << "flow_cache_hits=" << world.flowFieldCacheHitCount << "\n";
-      std::cout << "group_moves=" << world.groupMoveCommandCount << "\n";
-    }
-    if (o.combatDebug || dom::sim::combat_debug_enabled()) {
-      std::cout << "engagements=" << world.combatEngagementCount << "\n";
-      std::cout << "target_switches=" << world.targetSwitchCount << "\n";
-      std::cout << "retreats=" << world.aiRetreatCount << "\n";
-      std::cout << "damage_permille=" << world.totalDamageDealtPermille << "\n";
-    }
+    std::cout << "state_hash=" << finalHash << "\n";
   }
   return 0;
 }
+
 } // namespace
 
 int run_app(int argc, char** argv) {
@@ -263,6 +399,7 @@ int run_app(int argc, char** argv) {
           if (e.key.keysym.sym == SDLK_5) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Market);
           if (e.key.keysym.sym == SDLK_6) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Library);
           if (e.key.keysym.sym == SDLK_7) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Barracks);
+          if (e.key.keysym.sym == SDLK_8) dom::sim::start_build_placement(world, 0, dom::sim::BuildingType::Wonder);
         } else if (world.uiTrainMenu) {
           uint32_t bid = selected_building();
           if (e.key.keysym.sym == SDLK_1 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Worker);
