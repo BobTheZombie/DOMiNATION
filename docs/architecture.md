@@ -140,3 +140,12 @@ Replay recording drains authoritative command events emitted from sim order APIs
 ### Determinism and validation
 - Required validation compares final authoritative hash for `--threads 1/4/8` over identical seeds, scenarios, commands, and tick counts.
 - Perf diagnostics expose `THREADS`, `JOB_COUNT`, `CHUNK_COUNT`, `MOVEMENT_TASKS`, `FOG_TASKS`, `TERRITORY_TASKS`, `NAV_REQUESTS`, `NAV_COMPLETIONS`, `NAV_STALE_DROPS`, and `EVENT_COUNT` in console and `--perf-log` CSV.
+
+
+## Logistics layer
+
+- **Road network**: authoritative `roads` segment list. Roads accelerate friendly movement, improve trade efficiency, and improve supply range.
+- **Trade routes**: deterministic city-to-city routes recomputed on cadence (`tick % 50`). Active routes grant wealth (and minor knowledge for science-leaning civs).
+- **Supply propagation**: deterministic distance model from cities/city-centers/markets with road and territory modifiers, producing in/low/out-of-supply unit states.
+- **Operations**: authoritative per-team operation orders (`ASSAULT_CITY`, `DEFEND_BORDER`, `SECURE_ROUTE`, `RAID_ECONOMY`, `RALLY_AND_PUSH`) consumed by AI for army behavior.
+- **Determinism**: logistics authoritative state is included in state hash/save-load/replay relevant fields.

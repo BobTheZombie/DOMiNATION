@@ -256,7 +256,7 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
       {"renderPos", {u.renderPos.x, u.renderPos.y}}, {"target", {u.target.x, u.target.y}}, {"slotTarget", {u.slotTarget.x, u.slotTarget.y}}, {"moveDir", {u.moveDir.x, u.moveDir.y}},
       {"targetUnit", u.targetUnit}, {"moveOrder", u.moveOrder}, {"attackMoveOrder", u.attackMoveOrder}, {"targetLockTicks", u.targetLockTicks}, {"chaseTicks", u.chaseTicks},
       {"attackCooldownTicks", u.attackCooldownTicks}, {"lastTargetSwitchTick", u.lastTargetSwitchTick}, {"stuckTicks", u.stuckTicks}, {"orderPathLingerTicks", u.orderPathLingerTicks},
-      {"hasMoveOrder", u.hasMoveOrder}, {"attackMove", u.attackMove}});
+      {"supplyState", (int)u.supplyState}, {"hasMoveOrder", u.hasMoveOrder}, {"attackMove", u.attackMove}});
   }
   j["buildings"] = nlohmann::json::array();
   for (const auto& b : w.buildings) {
@@ -267,6 +267,10 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   }
   j["resourceNodes"] = nlohmann::json::array();
   for (const auto& r : w.resourceNodes) j["resourceNodes"].push_back({{"id", r.id}, {"type", (int)r.type}, {"pos", {r.pos.x, r.pos.y}}, {"amount", r.amount}, {"owner", r.owner}});
+  j["roads"] = nlohmann::json::array();
+  for (const auto& r : w.roads) j["roads"].push_back({{"id", r.id}, {"owner", r.owner}, {"a", {r.a.x, r.a.y}}, {"b", {r.b.x, r.b.y}}, {"quality", r.quality}});
+  j["operations"] = nlohmann::json::array();
+  for (const auto& o : w.operations) j["operations"].push_back({{"id", o.id}, {"team", o.team}, {"type", (int)o.type}, {"target", {o.target.x, o.target.y}}, {"assignedTick", o.assignedTick}, {"active", o.active}});
   j["triggerAreas"] = nlohmann::json::array();
   for (const auto& a : w.triggerAreas) j["triggerAreas"].push_back({{"id", a.id}, {"min", {a.min.x, a.min.y}}, {"max", {a.max.x, a.max.y}}});
   j["objectives"] = nlohmann::json::array();
@@ -321,7 +325,7 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
     u.slotTarget = {ju["slotTarget"][0].get<float>(), ju["slotTarget"][1].get<float>()}; u.moveDir = {ju["moveDir"][0].get<float>(), ju["moveDir"][1].get<float>()};
     u.targetUnit = ju.value("targetUnit", 0u); u.moveOrder = ju.value("moveOrder", 0u); u.attackMoveOrder = ju.value("attackMoveOrder", 0u); u.targetLockTicks = ju.value("targetLockTicks", 0);
     u.chaseTicks = ju.value("chaseTicks", 0); u.attackCooldownTicks = ju.value("attackCooldownTicks", 0); u.lastTargetSwitchTick = ju.value("lastTargetSwitchTick", 0); u.stuckTicks = ju.value("stuckTicks", 0);
-    u.orderPathLingerTicks = ju.value("orderPathLingerTicks", 0); u.hasMoveOrder = ju.value("hasMoveOrder", false); u.attackMove = ju.value("attackMove", false); u.selected = false; w.units.push_back(u);
+    u.orderPathLingerTicks = ju.value("orderPathLingerTicks", 0); u.supplyState = static_cast<dom::sim::SupplyState>(ju.value("supplyState", 0)); u.hasMoveOrder = ju.value("hasMoveOrder", false); u.attackMove = ju.value("attackMove", false); u.selected = false; w.units.push_back(u);
   }
   w.buildings.clear();
   for (const auto& jb : j.at("buildings")) {
@@ -333,6 +337,10 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   }
   w.resourceNodes.clear();
   if (j.contains("resourceNodes")) for (const auto& jr : j.at("resourceNodes")) { dom::sim::ResourceNode r{}; r.id = jr.value("id", 0u); r.type = static_cast<dom::sim::ResourceNodeType>(jr.value("type", 0)); r.pos = {jr["pos"][0].get<float>(), jr["pos"][1].get<float>()}; r.amount = jr.value("amount", 0.0f); r.owner = jr.value("owner", (uint16_t)UINT16_MAX); w.resourceNodes.push_back(r); }
+  w.roads.clear();
+  if (j.contains("roads")) for (const auto& jr : j.at("roads")) { dom::sim::RoadSegment r{}; r.id = jr.value("id", 0u); r.owner = jr.value("owner", (uint16_t)UINT16_MAX); r.a = {jr["a"][0].get<int>(), jr["a"][1].get<int>()}; r.b = {jr["b"][0].get<int>(), jr["b"][1].get<int>()}; r.quality = jr.value("quality", 1); w.roads.push_back(r); }
+  w.operations.clear();
+  if (j.contains("operations")) for (const auto& jo : j.at("operations")) { dom::sim::OperationOrder o{}; o.id = jo.value("id", 0u); o.team = jo.value("team", 0u); o.type = static_cast<dom::sim::OperationType>(jo.value("type", 0)); o.target = {jo["target"][0].get<float>(), jo["target"][1].get<float>()}; o.assignedTick = jo.value("assignedTick", 0u); o.active = jo.value("active", true); w.operations.push_back(o); }
   w.triggerAreas.clear();
   if (j.contains("triggerAreas")) for (const auto& ja : j.at("triggerAreas")) { dom::sim::TriggerArea a{}; a.id = ja.value("id", 0u); a.min = {ja["min"][0].get<float>(), ja["min"][1].get<float>()}; a.max = {ja["max"][0].get<float>(), ja["max"][1].get<float>()}; w.triggerAreas.push_back(a); }
   w.objectives.clear();
@@ -485,7 +493,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -535,8 +543,14 @@ int run_headless(const CliOptions& o) {
                 << " NAV_REQUESTS=" << stats.navRequests
                 << " NAV_COMPLETIONS=" << stats.navCompletions
                 << " NAV_STALE_DROPS=" << stats.navStaleDrops
-                << " EVENT_COUNT=" << stats.eventCount << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "\n";
+                << " EVENT_COUNT=" << stats.eventCount
+                << " ROAD_COUNT=" << stats.roadCount
+                << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes
+                << " SUPPLIED_UNITS=" << stats.suppliedUnits
+                << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits
+                << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits
+                << " OPERATION_COUNT=" << stats.operationCount << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -928,7 +942,7 @@ int run_app(int argc, char** argv) {
         " sim=" + std::to_string((int)std::round(lastSimMs)) + "ms render=" + std::to_string((int)std::round(dom::render::last_draw_ms())) +
         "ms entities=" + std::to_string(world.units.size() + world.buildings.size()) + " ai=" + std::to_string((int)std::round(lastAiMs)) + "ms");
       const auto stats = dom::sim::last_simulation_stats();
-      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << "\n";
+      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << "\n";
     }
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);

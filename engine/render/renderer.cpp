@@ -53,6 +53,13 @@ std::array<uint8_t, 3> team_rgb(uint16_t team) {
   return {static_cast<uint8_t>(c[0] * 255.0f), static_cast<uint8_t>(c[1] * 255.0f), static_cast<uint8_t>(c[2] * 255.0f)};
 }
 
+std::array<float,3> unit_color(const dom::sim::Unit& u) {
+  auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
+  if (u.supplyState == dom::sim::SupplyState::LowSupply) return {tc[0], tc[1] * 0.75f, tc[2] * 0.55f};
+  if (u.supplyState == dom::sim::SupplyState::OutOfSupply) return {0.95f, 0.2f, 0.2f};
+  return tc;
+}
+
 void ensure_overlay_textures(const dom::sim::World& w) {
   if (gOverlay.texW == w.width && gOverlay.texH == w.height && gOverlay.territoryTex != 0) return;
   gOverlay.texW = w.width;
@@ -344,6 +351,32 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   if (gOverlay.showBorders) draw_textured_overlay(gOverlay.borderTex, w, 0.45f, {0.98f, 0.95f, 0.5f}, true);
   if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 0.55f, {0.0f, 0.0f, 0.0f}, true);
 
+
+  glLineWidth(c.zoom > 30.0f ? 1.0f : 2.0f);
+  glBegin(GL_LINES);
+  for (const auto& r : w.roads) {
+    if (r.owner == 0) glColor3f(0.95f, 0.85f, 0.35f);
+    else if (r.owner == 1) glColor3f(0.35f, 0.8f, 0.95f);
+    else glColor3f(0.7f, 0.7f, 0.7f);
+    glVertex2f((float)r.a.x + 0.5f, (float)r.a.y + 0.5f);
+    glVertex2f((float)r.b.x + 0.5f, (float)r.b.y + 0.5f);
+  }
+  glEnd();
+
+  glLineWidth(1.0f);
+  glBegin(GL_LINES);
+  for (const auto& tr : w.tradeRoutes) {
+    if (!tr.active) continue;
+    const dom::sim::City* a = nullptr;
+    const dom::sim::City* b = nullptr;
+    for (const auto& c2 : w.cities) { if (c2.id == tr.fromCity) a = &c2; if (c2.id == tr.toCity) b = &c2; }
+    if (!a || !b) continue;
+    glColor3f(0.95f, 0.95f, 0.2f);
+    glVertex2f(a->pos.x, a->pos.y);
+    glVertex2f(b->pos.x, b->pos.y);
+  }
+  glEnd();
+
   glBegin(GL_QUADS);
   for (const auto& b : w.buildings) {
     float r = 0.6f, g = 0.6f, bl = 0.65f;
@@ -412,7 +445,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
           int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
           if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
         }
-        auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
+        auto tc = unit_color(u);
         glColor3f(tc[0], tc[1], tc[2]);
         float s = 0.35f;
         glVertex2f(u.renderPos.x, u.renderPos.y + s);
@@ -428,7 +461,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
           int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
           if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
         }
-        auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
+        auto tc = unit_color(u);
         glColor3f(tc[0], tc[1], tc[2]);
         float s = 0.42f;
         glVertex2f(u.renderPos.x - s, u.renderPos.y - s);

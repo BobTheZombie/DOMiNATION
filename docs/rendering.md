@@ -5,3 +5,10 @@
 - CLI controls: `--width`, `--height`, `--fullscreen`, `--borderless`, `--render-scale`, `--ui-scale`.
 - Render scaling uses offscreen framebuffer rendering then blits/upscales to display resolution.
 - HUD and debug overlays scale with `--ui-scale` for 4K readability.
+
+
+## Logistics overlays
+
+- Roads render as strategic colored line segments.
+- Active trade routes render as yellow strategic lines.
+- Low/out-of-supply units are tinted (amber/red).

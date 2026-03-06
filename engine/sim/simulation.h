@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <glm/vec2.hpp>
+#include <glm/ivec2.hpp>
 
 namespace dom::sim {
 
@@ -31,6 +32,9 @@ enum class GameplayEventType : uint8_t {
   PlayerEliminated,
   ObjectiveCompleted,
 };
+
+enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
+enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush };
 
 struct GameplayEvent {
   GameplayEventType type{GameplayEventType::UnitDied};
@@ -63,7 +67,11 @@ struct ProductionItem {
   int targetAge{0};
 };
 
-struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint8_t orderPathLingerTicks{}; bool hasMoveOrder{false}; bool attackMove{false}; bool selected{false}; };
+struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; bool hasMoveOrder{false}; bool attackMove{false}; bool selected{false}; };
+
+struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
+struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
+struct OperationOrder { uint32_t id{}; uint16_t team{}; OperationType type{OperationType::RallyAndPush}; glm::vec2 target{}; uint32_t assignedTick{0}; bool active{true}; };
 
 struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
@@ -112,6 +120,12 @@ struct SimulationStats {
   uint32_t navCompletions{0};
   uint32_t navStaleDrops{0};
   uint32_t eventCount{0};
+  uint32_t roadCount{0};
+  uint32_t activeTradeRoutes{0};
+  uint32_t suppliedUnits{0};
+  uint32_t lowSupplyUnits{0};
+  uint32_t outOfSupplyUnits{0};
+  uint32_t operationCount{0};
 };
 
 struct ChunkCoord {
@@ -136,12 +150,15 @@ struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
   std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
+  std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   std::vector<PlayerState> players;
   bool godMode{false}; uint32_t tick{0}; bool gameOver{false}; uint16_t winner{0}; MatchConfig config{}; MatchResult match{}; WonderState wonder{};
   bool uiBuildMenu{false}; bool uiTrainMenu{false}; bool uiResearchMenu{false}; bool placementActive{false}; BuildingType placementType{BuildingType::House}; glm::vec2 placementPos{}; bool placementValid{false};
   uint32_t territoryRecomputeCount{0}; uint32_t aiDecisionCount{0}; uint32_t completedBuildingsCount{0}; uint32_t trainedUnitsViaQueue{0}; uint32_t researchStartedCount{0}; uint32_t navVersion{1}; uint32_t flowFieldGeneratedCount{0}; uint32_t flowFieldCacheHitCount{0}; uint32_t groupMoveCommandCount{0}; uint32_t unitsReachedSlotCount{0}; uint32_t stuckMoveAssertions{0}; uint32_t totalDamageDealtPermille{0}; uint32_t combatEngagementCount{0}; uint32_t targetSwitchCount{0}; uint32_t chaseLimitBreakCount{0}; uint32_t buildingDamageEvents{0}; uint32_t unitDeathEvents{0}; uint32_t aiRetreatCount{0}; uint32_t focusFireEvents{0}; uint32_t combatTicks{0}; uint32_t rejectedCommandCount{0};
   uint32_t triggerExecutionCount{0}; uint32_t objectiveStateChangeCount{0};
+  uint32_t logisticsRoadCount{0}; uint32_t logisticsTradeActiveCount{0}; uint32_t logisticsOperationIssuedCount{0};
+  uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 

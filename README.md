@@ -141,3 +141,17 @@ Expected outcome:
 - no deadlock/crash,
 - combat and deaths observed,
 - perf output includes: `THREADS`, `JOB_COUNT`, `CHUNK_COUNT`, `MOVEMENT_TASKS`, `FOG_TASKS`, `TERRITORY_TASKS`, `NAV_REQUESTS`, `NAV_COMPLETIONS`, `NAV_STALE_DROPS`, `EVENT_COUNT`.
+
+
+## Logistics smoke checks
+
+```bash
+./build/rts --headless --ticks 1600 --seed 1234 --dump-hash
+./build/rts --headless --spawn-army 500 --cpu-only-battle --threads 8 --ticks 1200 --dump-hash
+./build/rts --headless --ticks 1600 --threads 1 --hash-only
+./build/rts --headless --ticks 1600 --threads 4 --hash-only
+./build/rts --headless --ticks 1600 --threads 8 --hash-only
+./build/rts --headless --scenario scenarios/logistics_test.json --ticks 1400 --dump-hash
+```
+
+Perf counters now include `ROAD_COUNT`, `ACTIVE_TRADE_ROUTES`, `SUPPLIED_UNITS`, `LOW_SUPPLY_UNITS`, `OUT_OF_SUPPLY_UNITS`, `OPERATION_COUNT`.
