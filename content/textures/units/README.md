@@ -18,3 +18,12 @@ Generated via `python3 tools/generate_worker_unit.py`.
 - Gameplay target: remains recognizable at small size with strong contour and a visible team-color accent.
 
 Generated via `python3 tools/generate_infantry_unit.py`.
+
+## `transport_ship_rts_sprite_256.png`
+- Resolution: 256x256.
+- Background: transparent (RGBA) for placement over terrain/water tiles.
+- Perspective: top-down/isometric RTS sprite.
+- Style target: wooden transport vessel with an open cargo deck.
+- Gameplay target: simple, readable ship silhouette at strategic zoom.
+
+Generated via `python3 tools/generate_transport_ship.py`.
