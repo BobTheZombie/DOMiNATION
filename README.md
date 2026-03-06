@@ -52,6 +52,12 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--record-replay <file>` record authoritative command replay JSON
 - `--replay <file>` play replay JSON deterministically
 - `--replay-verify` compare replay final hash against recorded expected hash
+- `--replay-stop-tick <N>` stop replay run at absolute tick `N`
+- `--replay-speed <multiplier>` replay speed multiplier (interactive pacing)
+- `--replay-summary-only` run replay and emit summary/hash output only
+- `--save <file>` save authoritative game state JSON
+- `--load <file>` load authoritative game state JSON
+- `--autosave-tick <N>` autosave when tick reaches `N`
 - `--force-score-victory` disable wonder win pressure for score-smoke helper
 - `--force-wonder-progress` helper flag reserved for wonder smoke shaping
 - `--match-debug` print match-flow diagnostics
@@ -64,12 +70,13 @@ Headless deterministic smoke mode (CI/container friendly):
 - **G**: toggle GOD Mode (full reveal + high zoom cap)
 - **B**: toggle build menu (`1..7` pick building: House/Farm/Lumber/Mine/Market/Library/Barracks)
 - **T**: toggle train menu (`1` Worker at City Center, `2` Infantry at Barracks, `Backspace` cancel queue front)
-- **R**: toggle research panel (`1` Age Up)
+- **R**: toggle research panel (`1` Age Up); in replay mode restart replay
 - **Esc**: cancel active build placement
 - **Ctrl+1..9**: assign control group
 - **1..9**: select control group (double tap focuses camera on group)
 - **M**: toggle minimap visibility
 - **F1/F2/F3**: territory / border / fog overlays
+- **Replay mode controls**: `Space` pause/resume, `Right` step forward (paused), `Left` rewind fallback (restart+seek), `[`/`]` jump ticks, `+`/`-` speed
 
 ## Victory conditions
 - **Conquest**: eliminate all enemy capitals/city centers.
@@ -79,3 +86,9 @@ Headless deterministic smoke mode (CI/container friendly):
 ## Replay
 - Record: `./build/rts --headless --smoke --ticks 2200 --seed 1234 --time-limit-ticks 1800 --record-replay /tmp/test_replay.json --dump-hash`
 - Playback+verify: `./build/rts --headless --replay /tmp/test_replay.json --replay-verify`
+
+## Save / load
+- Save during headless smoke: `./build/rts --headless --smoke --ticks 1400 --seed 1234 --autosave-tick 900 --save /tmp/state.json --dump-hash`
+- Continue from save: `./build/rts --headless --load /tmp/state.json --smoke --ticks 1400 --dump-hash`
+
+Headless output adds `SAVE_RESULT` / `LOAD_RESULT` / `REPLAY_RESULT` lines for automation.

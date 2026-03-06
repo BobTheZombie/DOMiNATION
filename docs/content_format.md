@@ -55,3 +55,18 @@ Optional `matchRules` object:
 Replay JSON fields:
 - `schemaVersion`, `seed`, `mapWidth`, `mapHeight`, `timeLimitTicks`, `flags`, `contentHash`, `expectedFinalHash`
 - `commands[]`: `{tick,type,team,ids?,target?,enemy?,buildingId?,unitType?,buildingType?,queueIndex?}`
+
+
+## Save format
+Authoritative save JSON fields:
+- `schemaVersion` (currently `1`, required)
+- `seed`, `tick`, `mapWidth`, `mapHeight`
+- `heightmap`, `fertility`, `territoryOwner`, `fog`
+- `players[]`, `cities[]`, `units[]`, `buildings[]` (including production queues)
+- `match`, `config`, `wonder`
+- `stateHash` authoritative hash at save tick (used by loader validation)
+
+Excluded from saves:
+- flow-field/nav caches
+- minimap/renderer/UI transient data
+- debug-only counters

@@ -11,7 +11,7 @@ const char* victory_name(dom::sim::VictoryCondition c) {
   return "none";
 }
 }
-void draw_hud(SDL_Window* window, const dom::sim::World& world) {
+void draw_hud(SDL_Window* window, const dom::sim::World& world, const std::string& overlay) {
   const auto& p = world.players[0];
   int capitals = 0;
   for (const auto& city : world.cities) if (city.capital) ++capitals;
@@ -37,6 +37,7 @@ void draw_hud(SDL_Window* window, const dom::sim::World& world) {
     }
     if (world.wonder.owner != UINT16_MAX) title += " | Wonder P" + std::to_string(world.wonder.owner) + " hold=" + std::to_string(world.wonder.heldTicks);
   }
+  if (!overlay.empty()) title += " | " + overlay;
   SDL_SetWindowTitle(window, title.c_str());
 }
 }

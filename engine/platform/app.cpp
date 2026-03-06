@@ -7,6 +7,7 @@
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <glm/vec2.hpp>
 #include <glm/geometric.hpp>
 #include <iostream>
@@ -27,6 +28,7 @@ struct CliOptions {
   bool aiAggressive{false};
   bool combatDebug{false};
   bool replayVerify{false};
+  bool replaySummaryOnly{false};
   bool forceScoreVictory{false};
   bool forceWonderProgress{false};
   bool matchDebug{false};
@@ -35,8 +37,13 @@ struct CliOptions {
   int mapW{128};
   int mapH{128};
   int timeLimitTicks{-1};
+  int autosaveTick{-1};
+  int replayStopTick{-1};
+  float replaySpeed{1.0f};
   std::string recordReplayFile;
   std::string replayFile;
+  std::string saveFile;
+  std::string loadFile;
 };
 
 struct SelectionState {
@@ -49,6 +56,7 @@ struct SelectionState {
 };
 
 bool parse_int(const std::string& s, int& out) { try { out = std::stoi(s); return true; } catch (...) { return false; } }
+bool parse_float(const std::string& s, float& out) { char* e = nullptr; out = std::strtof(s.c_str(), &e); return e && *e == 0; }
 bool parse_u32(const std::string& s, uint32_t& out) {
   try { unsigned long v = std::stoul(s); if (v > std::numeric_limits<uint32_t>::max()) return false; out = static_cast<uint32_t>(v); return true; }
   catch (...) { return false; }
@@ -67,13 +75,19 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--combat-debug") o.combatDebug = true;
     else if (a == "--match-debug") o.matchDebug = true;
     else if (a == "--replay-verify") o.replayVerify = true;
+    else if (a == "--replay-summary-only") o.replaySummaryOnly = true;
     else if (a == "--force-score-victory") o.forceScoreVictory = true;
     else if (a == "--force-wonder-progress") o.forceWonderProgress = true;
     else if (a == "--ticks" && i + 1 < argc) { if (!parse_int(argv[++i], o.ticks) || o.ticks < 0) return false; }
     else if (a == "--seed" && i + 1 < argc) { if (!parse_u32(argv[++i], o.seed)) return false; }
     else if (a == "--time-limit-ticks" && i + 1 < argc) { if (!parse_int(argv[++i], o.timeLimitTicks) || o.timeLimitTicks <= 0) return false; }
+    else if (a == "--autosave-tick" && i + 1 < argc) { if (!parse_int(argv[++i], o.autosaveTick) || o.autosaveTick < 0) return false; }
+    else if (a == "--replay-stop-tick" && i + 1 < argc) { if (!parse_int(argv[++i], o.replayStopTick) || o.replayStopTick < 0) return false; }
+    else if (a == "--replay-speed" && i + 1 < argc) { float v = 1.0f; if (!parse_float(argv[++i], v) || v <= 0.0f) return false; o.replaySpeed = std::max(0.1f, v); }
     else if (a == "--record-replay" && i + 1 < argc) { o.recordReplayFile = argv[++i]; }
     else if (a == "--replay" && i + 1 < argc) { o.replayFile = argv[++i]; }
+    else if (a == "--save" && i + 1 < argc) { o.saveFile = argv[++i]; }
+    else if (a == "--load" && i + 1 < argc) { o.loadFile = argv[++i]; }
     else if (a == "--map-size" && i + 1 < argc) {
       std::string v = argv[++i]; auto xPos = v.find('x'); if (xPos == std::string::npos) return false;
       int w = 0, h = 0; if (!parse_int(v.substr(0, xPos), w) || !parse_int(v.substr(xPos + 1), h)) return false;
@@ -179,6 +193,112 @@ std::string building_to_string(dom::sim::BuildingType v) {
   return "House";
 }
 
+
+constexpr uint32_t kSaveSchemaVersion = 1;
+
+nlohmann::json save_world_json(const dom::sim::World& w) {
+  nlohmann::json j;
+  j["schemaVersion"] = kSaveSchemaVersion;
+  j["seed"] = w.seed;
+  j["tick"] = w.tick;
+  j["mapWidth"] = w.width;
+  j["mapHeight"] = w.height;
+  j["heightmap"] = w.heightmap;
+  j["fertility"] = w.fertility;
+  j["territoryOwner"] = w.territoryOwner;
+  j["fog"] = w.fog;
+  j["players"] = nlohmann::json::array();
+  for (const auto& p : w.players) {
+    j["players"].push_back({{"id", p.id}, {"age", (int)p.age}, {"resources", p.resources}, {"popUsed", p.popUsed}, {"popCap", p.popCap}, {"score", p.score}, {"alive", p.alive}, {"unitsLost", p.unitsLost}, {"buildingsLost", p.buildingsLost}, {"finalScore", p.finalScore}});
+  }
+  j["cities"] = nlohmann::json::array();
+  for (const auto& c : w.cities) j["cities"].push_back({{"id", c.id}, {"team", c.team}, {"pos", {c.pos.x, c.pos.y}}, {"level", c.level}, {"capital", c.capital}});
+  j["units"] = nlohmann::json::array();
+  for (const auto& u : w.units) {
+    j["units"].push_back({{"id", u.id}, {"team", u.team}, {"type", (int)u.type}, {"hp", u.hp}, {"attack", u.attack}, {"range", u.range}, {"speed", u.speed}, {"role", (int)u.role},
+      {"attackType", (int)u.attackType}, {"preferredTargetRole", (int)u.preferredTargetRole}, {"vsRoleMultiplierPermille", u.vsRoleMultiplierPermille}, {"pos", {u.pos.x, u.pos.y}},
+      {"renderPos", {u.renderPos.x, u.renderPos.y}}, {"target", {u.target.x, u.target.y}}, {"slotTarget", {u.slotTarget.x, u.slotTarget.y}}, {"moveDir", {u.moveDir.x, u.moveDir.y}},
+      {"targetUnit", u.targetUnit}, {"moveOrder", u.moveOrder}, {"attackMoveOrder", u.attackMoveOrder}, {"targetLockTicks", u.targetLockTicks}, {"chaseTicks", u.chaseTicks},
+      {"attackCooldownTicks", u.attackCooldownTicks}, {"lastTargetSwitchTick", u.lastTargetSwitchTick}, {"stuckTicks", u.stuckTicks}, {"orderPathLingerTicks", u.orderPathLingerTicks},
+      {"hasMoveOrder", u.hasMoveOrder}, {"attackMove", u.attackMove}});
+  }
+  j["buildings"] = nlohmann::json::array();
+  for (const auto& b : w.buildings) {
+    nlohmann::json q = nlohmann::json::array();
+    for (const auto& it : b.queue) q.push_back({{"kind", (int)it.kind}, {"unitType", (int)it.unitType}, {"remaining", it.remaining}, {"targetAge", it.targetAge}});
+    j["buildings"].push_back({{"id", b.id}, {"team", b.team}, {"type", (int)b.type}, {"pos", {b.pos.x, b.pos.y}}, {"size", {b.size.x, b.size.y}}, {"underConstruction", b.underConstruction},
+      {"buildProgress", b.buildProgress}, {"buildTime", b.buildTime}, {"hp", b.hp}, {"maxHp", b.maxHp}, {"queue", q}});
+  }
+  j["match"] = {{"phase", (int)w.match.phase}, {"condition", (int)w.match.condition}, {"winner", w.match.winner}, {"endTick", w.match.endTick}, {"scoreTieBreak", w.match.scoreTieBreak}};
+  j["config"] = {{"timeLimitTicks", w.config.timeLimitTicks}, {"wonderHoldTicks", w.config.wonderHoldTicks}, {"scoreResourceWeight", w.config.scoreResourceWeight},
+    {"scoreUnitWeight", w.config.scoreUnitWeight}, {"scoreBuildingWeight", w.config.scoreBuildingWeight}, {"scoreAgeWeight", w.config.scoreAgeWeight}, {"scoreCapitalWeight", w.config.scoreCapitalWeight}};
+  j["wonder"] = {{"owner", w.wonder.owner}, {"heldTicks", w.wonder.heldTicks}};
+  j["stateHash"] = dom::sim::state_hash(w);
+  return j;
+}
+
+bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& err) {
+  if (j.value("schemaVersion", 0u) != kSaveSchemaVersion) { err = "save schema mismatch"; return false; }
+  w.seed = j.value("seed", 1337u);
+  w.tick = j.value("tick", 0u);
+  w.width = j.value("mapWidth", 128);
+  w.height = j.value("mapHeight", 128);
+  w.heightmap = j.at("heightmap").get<std::vector<float>>();
+  w.fertility = j.at("fertility").get<std::vector<float>>();
+  w.territoryOwner = j.at("territoryOwner").get<std::vector<uint16_t>>();
+  w.fog = j.at("fog").get<std::vector<uint8_t>>();
+  w.players.clear();
+  for (const auto& jp : j.at("players")) {
+    dom::sim::PlayerState p{};
+    p.id = jp.value("id", 0u); p.age = static_cast<dom::sim::Age>(jp.value("age", 0));
+    p.resources = jp.at("resources").get<decltype(p.resources)>(); p.popUsed = jp.value("popUsed", 0); p.popCap = jp.value("popCap", 0); p.score = jp.value("score", 0);
+    p.alive = jp.value("alive", true); p.unitsLost = jp.value("unitsLost", 0u); p.buildingsLost = jp.value("buildingsLost", 0u); p.finalScore = jp.value("finalScore", 0);
+    w.players.push_back(p);
+  }
+  w.cities.clear();
+  for (const auto& jc : j.at("cities")) {
+    dom::sim::City c{}; c.id = jc.value("id", 0u); c.team = jc.value("team", 0u); c.pos = {jc["pos"][0].get<float>(), jc["pos"][1].get<float>()}; c.level = jc.value("level", 1); c.capital = jc.value("capital", false); w.cities.push_back(c);
+  }
+  w.units.clear();
+  for (const auto& ju : j.at("units")) {
+    dom::sim::Unit u{}; u.id = ju.value("id", 0u); u.team = ju.value("team", 0u); u.type = static_cast<dom::sim::UnitType>(ju.value("type", 0)); u.hp = ju.value("hp", 0.0f);
+    u.attack = ju.value("attack", 0.0f); u.range = ju.value("range", 0.0f); u.speed = ju.value("speed", 0.0f); u.role = static_cast<dom::sim::UnitRole>(ju.value("role", 0));
+    u.attackType = static_cast<dom::sim::AttackType>(ju.value("attackType", 0)); u.preferredTargetRole = static_cast<dom::sim::UnitRole>(ju.value("preferredTargetRole", 0));
+    u.vsRoleMultiplierPermille = ju.at("vsRoleMultiplierPermille").get<decltype(u.vsRoleMultiplierPermille)>(); u.pos = {ju["pos"][0].get<float>(), ju["pos"][1].get<float>()};
+    u.renderPos = {ju["renderPos"][0].get<float>(), ju["renderPos"][1].get<float>()}; u.target = {ju["target"][0].get<float>(), ju["target"][1].get<float>()};
+    u.slotTarget = {ju["slotTarget"][0].get<float>(), ju["slotTarget"][1].get<float>()}; u.moveDir = {ju["moveDir"][0].get<float>(), ju["moveDir"][1].get<float>()};
+    u.targetUnit = ju.value("targetUnit", 0u); u.moveOrder = ju.value("moveOrder", 0u); u.attackMoveOrder = ju.value("attackMoveOrder", 0u); u.targetLockTicks = ju.value("targetLockTicks", 0);
+    u.chaseTicks = ju.value("chaseTicks", 0); u.attackCooldownTicks = ju.value("attackCooldownTicks", 0); u.lastTargetSwitchTick = ju.value("lastTargetSwitchTick", 0); u.stuckTicks = ju.value("stuckTicks", 0);
+    u.orderPathLingerTicks = ju.value("orderPathLingerTicks", 0); u.hasMoveOrder = ju.value("hasMoveOrder", false); u.attackMove = ju.value("attackMove", false); u.selected = false; w.units.push_back(u);
+  }
+  w.buildings.clear();
+  for (const auto& jb : j.at("buildings")) {
+    dom::sim::Building b{}; b.id = jb.value("id", 0u); b.team = jb.value("team", 0u); b.type = static_cast<dom::sim::BuildingType>(jb.value("type", 0));
+    b.pos = {jb["pos"][0].get<float>(), jb["pos"][1].get<float>()}; b.size = {jb["size"][0].get<float>(), jb["size"][1].get<float>()}; b.underConstruction = jb.value("underConstruction", false);
+    b.buildProgress = jb.value("buildProgress", 0.0f); b.buildTime = jb.value("buildTime", 0.0f); b.hp = jb.value("hp", 0.0f); b.maxHp = jb.value("maxHp", 0.0f);
+    for (const auto& jq : jb.at("queue")) { dom::sim::ProductionItem qi{}; qi.kind = static_cast<dom::sim::QueueKind>(jq.value("kind", 0)); qi.unitType = static_cast<dom::sim::UnitType>(jq.value("unitType", 0)); qi.remaining = jq.value("remaining", 0.0f); qi.targetAge = jq.value("targetAge", 0); b.queue.push_back(qi); }
+    w.buildings.push_back(b);
+  }
+  const auto& jm = j.at("match");
+  w.match.phase = static_cast<dom::sim::MatchPhase>(jm.value("phase", 0)); w.match.condition = static_cast<dom::sim::VictoryCondition>(jm.value("condition", 0));
+  w.match.winner = jm.value("winner", 0u); w.match.endTick = jm.value("endTick", 0u); w.match.scoreTieBreak = jm.value("scoreTieBreak", false);
+  const auto& jc = j.at("config");
+  w.config.timeLimitTicks = jc.value("timeLimitTicks", w.config.timeLimitTicks); w.config.wonderHoldTicks = jc.value("wonderHoldTicks", w.config.wonderHoldTicks);
+  w.config.scoreResourceWeight = jc.value("scoreResourceWeight", w.config.scoreResourceWeight); w.config.scoreUnitWeight = jc.value("scoreUnitWeight", w.config.scoreUnitWeight);
+  w.config.scoreBuildingWeight = jc.value("scoreBuildingWeight", w.config.scoreBuildingWeight); w.config.scoreAgeWeight = jc.value("scoreAgeWeight", w.config.scoreAgeWeight); w.config.scoreCapitalWeight = jc.value("scoreCapitalWeight", w.config.scoreCapitalWeight);
+  w.wonder.owner = j.at("wonder").value("owner", UINT16_MAX); w.wonder.heldTicks = j.at("wonder").value("heldTicks", 0u);
+  dom::sim::on_authoritative_state_loaded(w);
+  const uint64_t expected = j.value("stateHash", 0ull);
+  if (expected != 0ull && dom::sim::state_hash(w) != expected) { err = "save hash mismatch"; return false; }
+  return true;
+}
+
+bool save_world_file(const std::string& path, const dom::sim::World& w) {
+  std::ofstream of(path);
+  if (!of.good()) return false;
+  of << save_world_json(w).dump(2) << "\n";  return true;
+}
+
 void apply_replay_command(dom::sim::World& w, const dom::sim::ReplayCommand& c) {
   using namespace dom::sim;
   if (c.type == ReplayCommandType::Move) issue_move(w, c.team, c.ids, c.target);
@@ -202,7 +322,14 @@ int run_headless(const CliOptions& o) {
   int replayTotalTicks = 600;
 
   dom::sim::World world;
-  if (!o.replayFile.empty()) {
+  if (!o.loadFile.empty()) {
+    std::ifstream in(o.loadFile);
+    if (!in.good()) { std::cerr << "Save file not found: " << o.loadFile << "\n"; return 61; }
+    nlohmann::json inSave; in >> inSave;
+    std::string err;
+    if (!load_world_json(inSave, world, err)) { std::cerr << "Failed to load save: " << err << "\n"; return 62; }
+    std::cout << "LOAD_RESULT path=" << o.loadFile << " tick=" << world.tick << " ok=1\n";
+  } else if (!o.replayFile.empty()) {
     std::ifstream in(o.replayFile);
     if (!in.good()) { std::cerr << "Replay file not found: " << o.replayFile << "\n"; return 31; }
     in >> replay;
@@ -236,7 +363,7 @@ int run_headless(const CliOptions& o) {
   }
 
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
-  if (o.smoke && o.replayFile.empty()) {
+  if (o.smoke && o.replayFile.empty() && o.loadFile.empty()) {
     dom::sim::World second; second.width = world.width; second.height = world.height; dom::sim::initialize_world(second, o.seed);
     if (baselineHash != dom::sim::map_setup_hash(second)) { std::cerr << "Smoke failure: map hash mismatch for identical seed\n"; return 2; }
   }
@@ -245,13 +372,17 @@ int run_headless(const CliOptions& o) {
   dom::render::generate_minimap_image(world, 256, minimap);
   if (o.smoke && minimap.empty()) { std::cerr << "Smoke failure: minimap generation failed\n"; return 11; }
 
-  const int tickCount = o.ticks >= 0 ? o.ticks : (!o.replayFile.empty() ? replayTotalTicks : 600);
+  const int requestedTicks = o.ticks >= 0 ? o.ticks : (!o.replayFile.empty() ? replayTotalTicks : 600);
+  const uint32_t stopTick = o.replayStopTick >= 0 ? (uint32_t)o.replayStopTick : (uint32_t)requestedTicks;
   size_t replayIdx = 0;
   std::vector<dom::sim::ReplayCommand> recorded;
-  for (int i = 0; i < tickCount; ++i) {
+  bool autosaved = false;
+  while (world.tick < stopTick) {
     if (o.replayFile.empty()) {
-      dom::ai::update_simple_ai(world, 0);
-      dom::ai::update_simple_ai(world, 1);
+      if (dom::sim::gameplay_orders_allowed(world)) {
+        dom::ai::update_simple_ai(world, 0);
+        dom::ai::update_simple_ai(world, 1);
+      }
     } else {
       while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) {
         apply_replay_command(world, replayCommands[replayIdx]);
@@ -260,29 +391,41 @@ int run_headless(const CliOptions& o) {
     }
     dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
 
+    if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
+      const uint64_t saveHash = dom::sim::state_hash(world);
+      if (!save_world_file(o.saveFile, world)) { std::cerr << "Failed to write save: " << o.saveFile << "\n"; return 63; }
+      std::cout << "SAVE_RESULT path=" << o.saveFile << " tick=" << world.tick << " hash=" << saveHash << "\n";
+      autosaved = true;
+    }
+
     std::vector<dom::sim::ReplayCommand> drained;
     dom::sim::consume_replay_commands(drained);
     recorded.insert(recorded.end(), drained.begin(), drained.end());
 
-    if (world.match.phase == dom::sim::MatchPhase::Postmatch) {
-      if (o.smoke || !o.replayFile.empty()) break;
-    }
+    if (world.match.phase == dom::sim::MatchPhase::Postmatch && (o.smoke || !o.replayFile.empty() || o.replaySummaryOnly)) break;
+  }
+
+  if (!o.saveFile.empty() && !autosaved) {
+    const uint64_t saveHash = dom::sim::state_hash(world);
+    if (!save_world_file(o.saveFile, world)) { std::cerr << "Failed to write save: " << o.saveFile << "\n"; return 63; }
+    std::cout << "SAVE_RESULT path=" << o.saveFile << " tick=" << world.tick << " hash=" << saveHash << "\n";
   }
 
   uint64_t finalHash = dom::sim::state_hash(world);
-  if (!o.replayFile.empty() && o.replayVerify) finalHash = recordedExpectedHash;
   if (o.replayVerify) {
     if (finalHash != recordedExpectedHash) {
       std::cout << "REPLAY_VERIFY failed expected=" << recordedExpectedHash << " actual=" << finalHash << "\n";
+      std::cout << "REPLAY_RESULT tick=" << world.tick << " verify=fail hash=" << finalHash << "\n";
       return 41;
     }
     std::cout << "REPLAY_VERIFY success expected=" << recordedExpectedHash << " actual=" << finalHash << "\n";
   }
+  if (!o.replayFile.empty()) std::cout << "REPLAY_RESULT tick=" << world.tick << " verify=" << (o.replayVerify ? "ok" : "skip") << " hash=" << finalHash << "\n";
 
   if (!o.recordReplayFile.empty()) {
     nlohmann::json out;
     out["schemaVersion"] = 1;
-    out["seed"] = o.seed;
+    out["seed"] = world.seed;
     out["mapWidth"] = world.width;
     out["mapHeight"] = world.height;
     out["timeLimitTicks"] = world.config.timeLimitTicks;
@@ -346,7 +489,38 @@ int run_app(int argc, char** argv) {
 
   dom::sim::set_nav_debug(opts.navDebug);
   dom::ai::set_attack_early(opts.aiAttackEarly);
-  dom::sim::World world; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed);
+  dom::sim::World world;
+  std::vector<dom::sim::ReplayCommand> replayCommands;
+  bool replayMode = false;
+  bool replayPaused = false;
+  float replaySpeed = std::max(0.1f, opts.replaySpeed);
+  size_t replayIdx = 0;
+  world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed);
+  if (!opts.loadFile.empty()) {
+    std::ifstream in(opts.loadFile);
+    if (in.good()) {
+      nlohmann::json inSave; in >> inSave; std::string err;
+      if (load_world_json(inSave, world, err)) std::cout << "LOAD_RESULT path=" << opts.loadFile << " tick=" << world.tick << " ok=1\n";
+      else std::cerr << "Failed to load save: " << err << "\n";
+    }
+  }
+  if (!opts.replayFile.empty()) {
+    std::ifstream in(opts.replayFile);
+    if (in.good()) {
+      nlohmann::json replay; in >> replay;
+      world.width = replay.value("mapWidth", world.width); world.height = replay.value("mapHeight", world.height);
+      dom::sim::initialize_world(world, replay.value("seed", world.seed));
+      world.config.timeLimitTicks = replay.value("timeLimitTicks", world.config.timeLimitTicks);
+      for (const auto& c : replay["commands"]) {
+        dom::sim::ReplayCommand cmd{}; cmd.type = string_to_cmd_type(c.value("type", "move")); cmd.tick = c.value("tick", 0u); cmd.team = c.value("team", 0u);
+        if (c.contains("ids")) cmd.ids = c["ids"].get<std::vector<uint32_t>>();
+        if (c.contains("target")) cmd.target = {c["target"][0].get<float>(), c["target"][1].get<float>()};
+        cmd.enemy = c.value("enemy", 0u); cmd.buildingId = c.value("buildingId", 0u); cmd.unitType = static_cast<dom::sim::UnitType>(c.value("unitType", 0));
+        cmd.buildingType = string_to_building(c.value("buildingType", "House")); cmd.queueIndex = c.value("queueIndex", 0u); replayCommands.push_back(cmd);
+      }
+      replayMode = true;
+    }
+  }
   dom::render::Camera camera;
   if (opts.flowVisualize) std::cout << "flow visualization requested (debug overlay path not wired in this slice)\n";
   std::vector<uint32_t> selected;
@@ -375,13 +549,39 @@ int run_app(int argc, char** argv) {
       if (e.type == SDL_KEYDOWN) {
         SDL_Keymod mod = SDL_GetModState();
         if (e.key.keysym.sym == SDLK_g) dom::sim::toggle_god_mode(world);
+        if (replayMode) {
+          if (e.key.keysym.sym == SDLK_SPACE) replayPaused = !replayPaused;
+          if (e.key.keysym.sym == SDLK_EQUALS || e.key.keysym.sym == SDLK_PLUS) replaySpeed = std::min(16.0f, replaySpeed * 2.0f);
+          if (e.key.keysym.sym == SDLK_MINUS) replaySpeed = std::max(0.25f, replaySpeed * 0.5f);
+          if (e.key.keysym.sym == SDLK_RIGHT && replayPaused) {
+            while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) { apply_replay_command(world, replayCommands[replayIdx]); ++replayIdx; }
+            dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+          }
+          if (e.key.keysym.sym == SDLK_LEFT && replayPaused) {
+            uint32_t target = world.tick > 20 ? world.tick - 20 : 0;
+            dom::sim::initialize_world(world, world.seed); replayIdx = 0;
+            while (world.tick < target) {
+              while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) { apply_replay_command(world, replayCommands[replayIdx]); ++replayIdx; }
+              dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+            }
+          }
+          if (e.key.keysym.sym == SDLK_LEFTBRACKET || e.key.keysym.sym == SDLK_RIGHTBRACKET || e.key.keysym.sym == SDLK_r) {
+            int delta = (e.key.keysym.sym == SDLK_LEFTBRACKET ? -200 : (e.key.keysym.sym == SDLK_RIGHTBRACKET ? 200 : -1000000000));
+            uint32_t target = e.key.keysym.sym == SDLK_r ? 0u : static_cast<uint32_t>(std::max(0, (int)world.tick + delta));
+            dom::sim::initialize_world(world, world.seed); replayIdx = 0;
+            while (world.tick < target) {
+              while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) { apply_replay_command(world, replayCommands[replayIdx]); ++replayIdx; }
+              dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+            }
+          }
+        }
         if (e.key.keysym.sym == SDLK_F1) dom::render::toggle_territory_overlay();
         if (e.key.keysym.sym == SDLK_F2) dom::render::toggle_border_overlay();
         if (e.key.keysym.sym == SDLK_F3) dom::render::toggle_fog_overlay();
         if (e.key.keysym.sym == SDLK_m) dom::render::toggle_minimap();
         if (e.key.keysym.sym == SDLK_b) { world.uiBuildMenu = !world.uiBuildMenu; world.uiTrainMenu = false; world.uiResearchMenu = false; }
         if (e.key.keysym.sym == SDLK_t) { world.uiTrainMenu = !world.uiTrainMenu; world.uiBuildMenu = false; world.uiResearchMenu = false; }
-        if (e.key.keysym.sym == SDLK_r) { world.uiResearchMenu = !world.uiResearchMenu; world.uiBuildMenu = false; world.uiTrainMenu = false; }
+        if (!replayMode && e.key.keysym.sym == SDLK_r) { world.uiResearchMenu = !world.uiResearchMenu; world.uiBuildMenu = false; world.uiTrainMenu = false; }
         if (e.key.keysym.sym == SDLK_ESCAPE) dom::sim::cancel_build_placement(world);
 
         auto group_index = [&](SDL_Keycode k) -> int {
@@ -487,15 +687,36 @@ int run_app(int argc, char** argv) {
     if (keys[SDL_SCANCODE_D]) camera.center.x += pan;
 
     while (accum >= dom::core::kSimDeltaSeconds) {
-      dom::ai::update_simple_ai(world, 1);
-      dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
-      accum -= dom::core::kSimDeltaSeconds;
+      if (replayMode) {
+        if (!replayPaused) {
+          while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) { apply_replay_command(world, replayCommands[replayIdx]); ++replayIdx; }
+          dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+          accum -= dom::core::kSimDeltaSeconds / replaySpeed;
+        } else {
+          accum = 0.0f;
+        }
+      } else {
+        dom::ai::update_simple_ai(world, 1);
+        dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+        accum -= dom::core::kSimDeltaSeconds;
+      }
+      if (!opts.saveFile.empty() && opts.autosaveTick >= 0 && world.tick == (uint32_t)opts.autosaveTick) {
+        const uint64_t saveHash = dom::sim::state_hash(world);
+        if (save_world_file(opts.saveFile, world)) std::cout << "SAVE_RESULT path=" << opts.saveFile << " tick=" << world.tick << " hash=" << saveHash << "\n";
+      }
     }
 
     int w, h; SDL_GetWindowSize(window, &w, &h);
     dom::render::draw(world, camera, w, h, sel.dragHighlight);
-    dom::ui::draw_hud(window, world);
+    std::string replayOverlay;
+    if (replayMode) replayOverlay = "REPLAY tick=" + std::to_string(world.tick) + (replayPaused ? " paused" : " running") + " speed=" + std::to_string(replaySpeed) + "x";
+    dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);
+  }
+
+  if (!opts.saveFile.empty()) {
+    const uint64_t saveHash = dom::sim::state_hash(world);
+    if (save_world_file(opts.saveFile, world)) std::cout << "SAVE_RESULT path=" << opts.saveFile << " tick=" << world.tick << " hash=" << saveHash << "\n";
   }
 
   SDL_GL_DeleteContext(ctx); SDL_DestroyWindow(window); SDL_Quit(); return 0;
