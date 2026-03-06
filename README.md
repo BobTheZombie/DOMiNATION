@@ -46,6 +46,8 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--nav-debug` print navigation diagnostics counters in headless dump output
 - `--flow-visualize` request flow-field overlay in interactive mode (currently routed to debug path)
 - `--ai-attack-early` lower AI attack threshold for fast testing
+- `--ai-aggressive` reduce AI retreat sensitivity
+- `--combat-debug` print combat smoke diagnostics (engagements/switches/retreats/damage)
 
 ## Controls
 - **WASD**: pan camera

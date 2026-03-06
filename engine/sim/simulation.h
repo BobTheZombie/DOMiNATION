@@ -8,8 +8,10 @@ namespace dom::sim {
 
 enum class Resource : uint8_t { Food, Wood, Metal, Wealth, Knowledge, Oil, Count };
 enum class Age : uint8_t { Ancient, Classical, Medieval, Gunpowder, Enlightenment, Industrial, Modern, Information };
-enum class UnitType : uint8_t { Worker, Infantry };
+enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege };
 enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks };
+enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building };
+enum class AttackType : uint8_t { Melee, Ranged };
 
 enum class QueueKind : uint8_t { TrainUnit, AgeResearch };
 
@@ -28,6 +30,10 @@ struct Unit {
   float attack{8.0f};
   float range{2.5f};
   float speed{4.0f};
+  UnitRole role{UnitRole::Infantry};
+  AttackType attackType{AttackType::Melee};
+  UnitRole preferredTargetRole{UnitRole::Infantry};
+  std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000};
   glm::vec2 pos{};
   glm::vec2 renderPos{};
   glm::vec2 target{};
@@ -35,8 +41,15 @@ struct Unit {
   glm::vec2 moveDir{};
   uint32_t targetUnit{0};
   uint32_t moveOrder{0};
+  uint32_t attackMoveOrder{0};
+  uint16_t targetLockTicks{0};
+  uint16_t chaseTicks{0};
+  uint16_t attackCooldownTicks{0};
+  uint16_t lastTargetSwitchTick{0};
   uint16_t stuckTicks{0};
+  uint8_t orderPathLingerTicks{0};
   bool hasMoveOrder{false};
+  bool attackMove{false};
   bool selected{false};
 };
 
@@ -57,6 +70,8 @@ struct Building {
   bool underConstruction{true};
   float buildProgress{0.0f};
   float buildTime{10.0f};
+  float hp{1000.0f};
+  float maxHp{1000.0f};
   std::vector<ProductionItem> queue;
 };
 
@@ -105,6 +120,15 @@ struct World {
   uint32_t groupMoveCommandCount{0};
   uint32_t unitsReachedSlotCount{0};
   uint32_t stuckMoveAssertions{0};
+  uint32_t totalDamageDealtPermille{0};
+  uint32_t combatEngagementCount{0};
+  uint32_t targetSwitchCount{0};
+  uint32_t chaseLimitBreakCount{0};
+  uint32_t buildingDamageEvents{0};
+  uint32_t unitDeathEvents{0};
+  uint32_t aiRetreatCount{0};
+  uint32_t focusFireEvents{0};
+  uint32_t combatTicks{0};
   bool territoryDirty{true};
   bool fogDirty{true};
 };
@@ -113,9 +137,12 @@ void initialize_world(World& world, uint32_t seed);
 void tick_world(World& world, float dt);
 void issue_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);
 void issue_attack(World& world, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy);
+void issue_attack_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);
 void toggle_god_mode(World& world);
 void set_nav_debug(bool enabled);
 bool nav_debug_enabled();
+void set_combat_debug(bool enabled);
+bool combat_debug_enabled();
 
 bool start_build_placement(World& world, uint16_t team, BuildingType type);
 void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos);

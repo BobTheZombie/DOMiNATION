@@ -57,3 +57,16 @@
 - Flow fields are cached by `(targetCell, navVersion, grid size)` and reused across units/orders.
 - `navVersion` is incremented on building placement/completion to invalidate cached navigation data cheaply.
 - Flow-field caches are derived runtime data and are excluded from authoritative sim hash/state.
+
+
+## Combat targeting / attack-move (new)
+- Deterministic target selection uses integer threat scoring with stable ID tie-breakers.
+- Hysteresis keeps targets locked until invalid/dead/out-of-chase or a significantly better target appears.
+- Attack-move is a sim order: follow flow-field path, opportunistically engage nearby enemies, then resume movement.
+- Group cohesion applies a centroid leash so single units do not over-chase.
+- Siege units bias target scoring toward buildings and apply stronger building multipliers.
+
+## AI combat tactics (new)
+- AI composes mixed army groups and issues deterministic group attack-move on enemy capital objective.
+- AI retreat/rally triggers when army HP is low or local strength ratio is unfavorable; then regroups and re-engages.
+- Ranged/focus behavior is modeled through stable target lock + switching threshold to reduce thrash and overkill churn.
