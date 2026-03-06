@@ -28,14 +28,31 @@ struct UnitDef {
   float trainTime{10.0f};
   int popCost{1};
   std::array<float, static_cast<size_t>(Resource::Count)> cost{};
+  UnitRole role{UnitRole::Infantry};
+  AttackType attackType{AttackType::Melee};
+  UnitRole preferredTargetRole{UnitRole::Infantry};
+  std::array<uint16_t, 6> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000};
+  int attackCooldownTicks{12};
+  int buildingHp{1000};
 };
 
 BuildDef gBuildDefs[8];
-UnitDef gUnitDefs[2];
+UnitDef gUnitDefs[5];
 float gAgeResearchTime{30.0f};
 std::array<float, static_cast<size_t>(Resource::Count)> gAgeResearchCost{};
 bool gDefsLoaded{false};
 bool gNavDebug{false};
+bool gCombatDebug{false};
+
+constexpr uint16_t kRoleCount = 6;
+constexpr int kTargetBetterThreshold = 220;
+constexpr int kAttackMoveAggroPermille = 8500;
+constexpr int kAttackMoveChasePermille = 12000;
+constexpr int kTargetLockMinTicks = 18;
+constexpr int kCentroidLeashPermille = 18000;
+constexpr int kMaxOrderPathLingerTicks = 90;
+
+int role_idx(UnitRole role) { return static_cast<int>(role); }
 
 struct FlowField {
   int targetCell{-1};
@@ -110,10 +127,47 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Worker)].trainTime = 10.0f;
   gUnitDefs[uidx(UnitType::Worker)].cost[ridx(Resource::Food)] = 60;
   gUnitDefs[uidx(UnitType::Worker)].popCost = 1;
+  gUnitDefs[uidx(UnitType::Worker)].role = UnitRole::Worker;
+  gUnitDefs[uidx(UnitType::Worker)].attackType = AttackType::Melee;
+  gUnitDefs[uidx(UnitType::Worker)].preferredTargetRole = UnitRole::Worker;
+
   gUnitDefs[uidx(UnitType::Infantry)].trainTime = 12.0f;
   gUnitDefs[uidx(UnitType::Infantry)].cost[ridx(Resource::Food)] = 70;
   gUnitDefs[uidx(UnitType::Infantry)].cost[ridx(Resource::Metal)] = 30;
   gUnitDefs[uidx(UnitType::Infantry)].popCost = 1;
+  gUnitDefs[uidx(UnitType::Infantry)].role = UnitRole::Infantry;
+  gUnitDefs[uidx(UnitType::Infantry)].attackType = AttackType::Melee;
+  gUnitDefs[uidx(UnitType::Infantry)].preferredTargetRole = UnitRole::Ranged;
+  gUnitDefs[uidx(UnitType::Infantry)].vsRoleMultiplierPermille = {1000, 1300, 900, 900, 1000, 1000};
+
+  gUnitDefs[uidx(UnitType::Archer)].trainTime = 13.0f;
+  gUnitDefs[uidx(UnitType::Archer)].cost[ridx(Resource::Food)] = 65;
+  gUnitDefs[uidx(UnitType::Archer)].cost[ridx(Resource::Wood)] = 35;
+  gUnitDefs[uidx(UnitType::Archer)].popCost = 1;
+  gUnitDefs[uidx(UnitType::Archer)].role = UnitRole::Ranged;
+  gUnitDefs[uidx(UnitType::Archer)].attackType = AttackType::Ranged;
+  gUnitDefs[uidx(UnitType::Archer)].preferredTargetRole = UnitRole::Cavalry;
+  gUnitDefs[uidx(UnitType::Archer)].vsRoleMultiplierPermille = {1000, 900, 1300, 1000, 1000, 900};
+  gUnitDefs[uidx(UnitType::Archer)].attackCooldownTicks = 16;
+
+  gUnitDefs[uidx(UnitType::Cavalry)].trainTime = 16.0f;
+  gUnitDefs[uidx(UnitType::Cavalry)].cost[ridx(Resource::Food)] = 95;
+  gUnitDefs[uidx(UnitType::Cavalry)].cost[ridx(Resource::Metal)] = 45;
+  gUnitDefs[uidx(UnitType::Cavalry)].popCost = 2;
+  gUnitDefs[uidx(UnitType::Cavalry)].role = UnitRole::Cavalry;
+  gUnitDefs[uidx(UnitType::Cavalry)].attackType = AttackType::Melee;
+  gUnitDefs[uidx(UnitType::Cavalry)].preferredTargetRole = UnitRole::Siege;
+  gUnitDefs[uidx(UnitType::Cavalry)].vsRoleMultiplierPermille = {1000, 1000, 900, 1300, 1100, 900};
+
+  gUnitDefs[uidx(UnitType::Siege)].trainTime = 18.0f;
+  gUnitDefs[uidx(UnitType::Siege)].cost[ridx(Resource::Wood)] = 90;
+  gUnitDefs[uidx(UnitType::Siege)].cost[ridx(Resource::Metal)] = 100;
+  gUnitDefs[uidx(UnitType::Siege)].popCost = 2;
+  gUnitDefs[uidx(UnitType::Siege)].role = UnitRole::Siege;
+  gUnitDefs[uidx(UnitType::Siege)].attackType = AttackType::Ranged;
+  gUnitDefs[uidx(UnitType::Siege)].preferredTargetRole = UnitRole::Building;
+  gUnitDefs[uidx(UnitType::Siege)].vsRoleMultiplierPermille = {900, 900, 900, 1000, 900, 1800};
+  gUnitDefs[uidx(UnitType::Siege)].attackCooldownTicks = 22;
 
   gAgeResearchTime = 35.0f;
   gAgeResearchCost[ridx(Resource::Knowledge)] = 130;
@@ -153,7 +207,11 @@ void load_defs_once() {
   if (j.contains("unitDefs")) {
     for (const auto& ud : j["unitDefs"]) {
       std::string id = ud.value("id", "");
-      UnitType t = (id == "Worker") ? UnitType::Worker : UnitType::Infantry;
+      UnitType t = UnitType::Infantry;
+      if (id == "Worker") t = UnitType::Worker;
+      else if (id == "Archer") t = UnitType::Archer;
+      else if (id == "Cavalry") t = UnitType::Cavalry;
+      else if (id == "Siege") t = UnitType::Siege;
       UnitDef& d = gUnitDefs[uidx(t)];
       d.trainTime = ud.value("trainTime", d.trainTime);
       d.popCost = ud.value("popCost", d.popCost);
@@ -347,12 +405,72 @@ void recompute_fog(World& w) {
   w.fogDirty = true;
 }
 
+
+
+uint32_t find_enemy_near(const World& w, const Unit& u, float radius) {
+  uint32_t bestId = 0;
+  int bestScore = -1;
+  for (const auto& e : w.units) {
+    if (e.team == u.team || e.hp <= 0) continue;
+    float d = dist(u.pos, e.pos);
+    if (d > radius) continue;
+    int score = 5000 - static_cast<int>(d * 800.0f);
+    if (e.hp < 40.0f) score += 250;
+    if (e.role == u.preferredTargetRole) score += 400;
+    score += static_cast<int>(u.vsRoleMultiplierPermille[role_idx(e.role)]) - 1000;
+    if (u.role == UnitRole::Siege && e.role == UnitRole::Building) score += 600;
+    if (score > bestScore || (score == bestScore && e.id < bestId)) { bestScore = score; bestId = e.id; }
+  }
+  return bestId;
+}
+
+int find_building_target(const World& w, const Unit& u, float radius) {
+  int best = -1;
+  int bestScore = -1;
+  for (int i = 0; i < static_cast<int>(w.buildings.size()); ++i) {
+    const auto& b = w.buildings[i];
+    if (b.team == u.team || b.underConstruction || b.hp <= 0.0f) continue;
+    float d = dist(u.pos, b.pos);
+    if (d > radius) continue;
+    int score = 4800 - static_cast<int>(d * 800.0f);
+    if (u.role == UnitRole::Siege) score += 900;
+    if (score > bestScore || (score == bestScore && b.id < w.buildings[best].id)) { bestScore = score; best = i; }
+  }
+  return best;
+}
+
+Unit* find_unit(World& w, uint32_t id) {
+  for (auto& u : w.units) if (u.id == id && u.hp > 0) return &u;
+  return nullptr;
+}
+
+glm::vec2 group_centroid_for_order(const World& w, const Unit& member) {
+  if (member.moveOrder == 0) return member.pos;
+  glm::vec2 c{0.0f, 0.0f};
+  int n = 0;
+  for (const auto& u : w.units) {
+    if (u.team != member.team || u.hp <= 0 || u.moveOrder != member.moveOrder) continue;
+    c += u.pos;
+    ++n;
+  }
+  return n > 0 ? c / static_cast<float>(n) : member.pos;
+}
+
 uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   uint32_t id = 1;
   for (const auto& u : w.units) id = std::max(id, u.id + 1);
-  Unit nu{}; nu.id = id; nu.team = team; nu.type = type; nu.pos = nu.renderPos = nu.target = p;
+  Unit nu{}; nu.id = id; nu.team = team; nu.type = type; nu.pos = nu.renderPos = nu.target = nu.slotTarget = p;
+  const UnitDef& ud = gUnitDefs[uidx(type)];
+  nu.role = ud.role;
+  nu.attackType = ud.attackType;
+  nu.preferredTargetRole = ud.preferredTargetRole;
+  nu.vsRoleMultiplierPermille = ud.vsRoleMultiplierPermille;
+  nu.attackCooldownTicks = 0;
   if (type == UnitType::Worker) { nu.hp = 70; nu.attack = 3.0f; nu.range = 1.5f; nu.speed = 4.3f; }
-  else { nu.hp = 100; nu.attack = 8.5f; nu.range = 2.7f; nu.speed = 4.8f; }
+  else if (type == UnitType::Infantry) { nu.hp = 105; nu.attack = 8.5f; nu.range = 2.0f; nu.speed = 4.8f; }
+  else if (type == UnitType::Archer) { nu.hp = 80; nu.attack = 7.0f; nu.range = 5.4f; nu.speed = 4.4f; }
+  else if (type == UnitType::Cavalry) { nu.hp = 130; nu.attack = 9.2f; nu.range = 1.8f; nu.speed = 5.6f; }
+  else { nu.hp = 110; nu.attack = 13.0f; nu.range = 6.2f; nu.speed = 3.2f; }
   w.units.push_back(nu);
   return id;
 }
@@ -379,8 +497,8 @@ void initialize_world(World& w, uint32_t seed) {
   w.players = {{0, Age::Ancient}, {1, Age::Ancient}};
   w.cities = {{1, 0, {20, 20}, 1, true}, {2, 1, {95, 95}, 1, true}};
   w.buildings.clear();
-  w.buildings.push_back({1, 0, BuildingType::CityCenter, {20, 20}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, {}});
-  w.buildings.push_back({2, 1, BuildingType::CityCenter, {95, 95}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, {}});
+  w.buildings.push_back({1, 0, BuildingType::CityCenter, {20, 20}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
+  w.buildings.push_back({2, 1, BuildingType::CityCenter, {95, 95}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
   for (int i = 0; i < 3; ++i) {
     spawn_unit(w, 0, UnitType::Worker, {18.0f + i * 0.8f, 24.0f});
     spawn_unit(w, 1, UnitType::Worker, {92.0f + i * 0.8f, 89.0f});
@@ -444,19 +562,74 @@ void tick_world(World& w, float dt) {
 
   for (auto& u : w.units) {
     if (u.hp <= 0) continue;
-    if (u.targetUnit != 0) {
-      auto it = std::find_if(w.units.begin(), w.units.end(), [&](const Unit& e) { return e.id == u.targetUnit && e.hp > 0; });
-      if (it != w.units.end()) u.target = it->pos;
+    if (u.attackCooldownTicks > 0) --u.attackCooldownTicks;
+    bool engagedThisTick = false;
+
+    Unit* locked = u.targetUnit ? find_unit(w, u.targetUnit) : nullptr;
+    const glm::vec2 centroid = group_centroid_for_order(w, u);
+
+    const float aggro = u.attackMove ? (kAttackMoveAggroPermille / 1000.0f) : 7.0f;
+    const float chase = u.attackMove ? (kAttackMoveChasePermille / 1000.0f) : 10.0f;
+
+    uint32_t candidate = find_enemy_near(w, u, aggro);
+    if (!locked && candidate != 0) {
+      u.targetUnit = candidate;
+      u.targetLockTicks = 0;
+      ++w.targetSwitchCount;
+      locked = find_unit(w, candidate);
+    } else if (locked && candidate != 0 && candidate != u.targetUnit && u.targetLockTicks >= kTargetLockMinTicks) {
+      Unit* better = find_unit(w, candidate);
+      if (better) {
+        float ddOld = dist(u.pos, locked->pos);
+        float ddNew = dist(u.pos, better->pos);
+        int oldScore = 5000 - static_cast<int>(ddOld * 800.0f) + static_cast<int>(u.vsRoleMultiplierPermille[role_idx(locked->role)] - 1000);
+        int newScore = 5000 - static_cast<int>(ddNew * 800.0f) + static_cast<int>(u.vsRoleMultiplierPermille[role_idx(better->role)] - 1000);
+        if (newScore > oldScore + kTargetBetterThreshold) {
+          u.targetUnit = better->id;
+          u.targetLockTicks = 0;
+          ++w.targetSwitchCount;
+          locked = better;
+        }
+      }
     }
 
     glm::vec2 desired = u.target - u.pos;
-    if (u.hasMoveOrder && u.moveOrder != 0) {
-      if (FlowField* ff = get_flow_field(w, cell_of(w, u.target))) {
+    if (locked) {
+      u.target = locked->pos;
+      const float dd = dist(u.pos, locked->pos);
+      const float dc = dist(u.pos, centroid);
+      if (dd > chase || (u.attackMove && dc > (kCentroidLeashPermille / 1000.0f))) {
+        u.targetUnit = 0;
+        u.chaseTicks = 0;
+        if (u.attackMove) ++w.chaseLimitBreakCount;
+      } else {
+        engagedThisTick = true;
+        ++u.targetLockTicks;
+        ++u.chaseTicks;
+      }
+    }
+
+    int buildingTarget = -1;
+    if (u.role == UnitRole::Siege && (!locked || u.attackMove)) {
+      buildingTarget = find_building_target(w, u, aggro + 4.0f);
+      if (buildingTarget >= 0 && (!locked || dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 1.5f)) {
+        u.target = w.buildings[buildingTarget].pos;
+        engagedThisTick = true;
+      }
+    }
+
+    if (!engagedThisTick && u.hasMoveOrder && u.moveOrder != 0) {
+      if (FlowField* ff = get_flow_field(w, cell_of(w, u.slotTarget))) {
         const int cc = cell_of(w, u.pos);
         desired = glm::vec2{(float)ff->dirX[cc], (float)ff->dirY[cc]};
         if (glm::length(desired) < 0.1f) desired = u.slotTarget - u.pos;
       }
+      if (u.orderPathLingerTicks > 0) --u.orderPathLingerTicks;
+    } else if (engagedThisTick) {
+      u.orderPathLingerTicks = kMaxOrderPathLingerTicks;
+      desired = u.target - u.pos;
     }
+
     glm::vec2 repulse{0.0f, 0.0f};
     for (const auto& other : w.units) {
       if (other.id == u.id || other.team != u.team || other.hp <= 0) continue;
@@ -465,6 +638,7 @@ void tick_world(World& w, float dt) {
       if (l > 0.001f && l < 1.2f) repulse += (delta / l) * (1.2f - l);
     }
     desired += repulse * 0.65f;
+
     float len = glm::length(desired);
     if (len > 0.05f) {
       glm::vec2 dir = desired / len;
@@ -478,29 +652,40 @@ void tick_world(World& w, float dt) {
         if (u.stuckTicks > 80) ++w.stuckMoveAssertions;
       } else u.stuckTicks = 0;
     }
-    if (u.hasMoveOrder && dist(u.pos, u.slotTarget) < 1.1f) {
+
+    if (u.hasMoveOrder && dist(u.pos, u.slotTarget) < 1.1f && !engagedThisTick) {
       ++w.unitsReachedSlotCount;
       u.hasMoveOrder = false;
       u.moveOrder = 0;
       u.target = u.pos;
+      u.attackMove = false;
+      u.attackMoveOrder = 0;
     }
 
-    if (u.type != UnitType::Worker) {
-      for (auto& e : w.units) {
-        if (e.team == u.team || e.hp <= 0) continue;
-        float dd = dist(u.pos, e.pos);
-        if (dd <= u.range) {
-          float mult = 1.0f;
-          int tx = std::clamp((int)u.pos.x, 0, w.width - 1), ty = std::clamp((int)u.pos.y, 0, w.height - 1);
-          if (!w.godMode && w.territoryOwner[ty * w.width + tx] == e.team) mult = 0.85f;
-          e.hp -= u.attack * mult * dt;
-        }
+    if (u.type != UnitType::Worker && u.attackCooldownTicks == 0) {
+      if (locked && dist(u.pos, locked->pos) <= u.range + 0.2f) {
+        int mult = (int)u.vsRoleMultiplierPermille[role_idx(locked->role)];
+        float damage = u.attack * (mult / 1000.0f);
+        locked->hp -= damage;
+        w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
+        ++w.combatEngagementCount;
+        u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
+      } else if (buildingTarget >= 0 && dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 0.8f) {
+        float mult = (u.role == UnitRole::Siege) ? 1.8f : 0.8f;
+        float damage = u.attack * mult;
+        w.buildings[buildingTarget].hp -= damage;
+        w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
+        ++w.buildingDamageEvents;
+        ++w.combatEngagementCount;
+        u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
       }
     }
+    if (engagedThisTick) ++w.combatTicks;
     u.renderPos = glm::mix(u.renderPos, u.pos, 0.35f);
   }
-
+  const size_t beforeUnits = w.units.size();
   w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [](const Unit& u) { return u.hp <= 0; }), w.units.end());
+  w.unitDeathEvents += static_cast<uint32_t>(beforeUnits - w.units.size());
   recompute_population(w);
   recompute_fog(w);
 
@@ -530,19 +715,37 @@ void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::
       u.moveOrder = moveOrder;
       u.hasMoveOrder = true;
       u.stuckTicks = 0;
+      u.attackMove = false;
+      u.attackMoveOrder = 0;
+      u.chaseTicks = 0;
+      u.orderPathLingerTicks = 0;
       break;
     }
   }
 }
 
 void issue_attack(World& w, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy) {
-  for (auto& u : w.units) if (u.team == team && std::find(ids.begin(), ids.end(), u.id) != ids.end()) u.targetUnit = enemy;
+  for (auto& u : w.units) if (u.team == team && std::find(ids.begin(), ids.end(), u.id) != ids.end()) {
+    u.targetUnit = enemy;
+    u.attackMove = false;
+    u.attackMoveOrder = 0;
+  }
+}
+
+void issue_attack_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
+  issue_move(w, team, ids, target);
+  for (auto& u : w.units) if (u.team == team && std::find(ids.begin(), ids.end(), u.id) != ids.end()) {
+    u.attackMove = true;
+    u.attackMoveOrder = u.moveOrder;
+  }
 }
 
 void toggle_god_mode(World& w) { w.godMode = !w.godMode; w.fogDirty = true; }
 
 void set_nav_debug(bool enabled) { gNavDebug = enabled; }
 bool nav_debug_enabled() { return gNavDebug; }
+void set_combat_debug(bool enabled) { gCombatDebug = enabled; }
+bool combat_debug_enabled() { return gCombatDebug; }
 
 bool start_build_placement(World& world, uint16_t, BuildingType type) {
   world.placementActive = true; world.placementType = type; return true;
@@ -556,7 +759,7 @@ bool confirm_build_placement(World& world, uint16_t team) {
   if (!spend(world.players[team].resources, gBuildDefs[bidx(world.placementType)].cost)) return false;
   uint32_t id = 1; for (const auto& b : world.buildings) id = std::max(id, b.id + 1);
   const auto& d = gBuildDefs[bidx(world.placementType)];
-  world.buildings.push_back({id, team, world.placementType, world.placementPos, d.size, true, 0.0f, d.buildTime, {}});
+  world.buildings.push_back({id, team, world.placementType, world.placementPos, d.size, true, 0.0f, d.buildTime, 1000.0f, 1000.0f, {}});
   ++world.navVersion;
   gNav.cache.clear();
   world.placementActive = false;
@@ -567,7 +770,8 @@ void cancel_build_placement(World& world) { world.placementActive = false; }
 bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitType type) {
   auto it = std::find_if(world.buildings.begin(), world.buildings.end(), [&](const Building& b) { return b.id == buildingId && b.team == team && !b.underConstruction; });
   if (it == world.buildings.end()) return false;
-  if ((it->type == BuildingType::CityCenter && type != UnitType::Worker) || (it->type == BuildingType::Barracks && type != UnitType::Infantry)) return false;
+  if (it->type == BuildingType::CityCenter && type != UnitType::Worker) return false;
+  if (it->type == BuildingType::Barracks && type == UnitType::Worker) return false;
   auto& p = world.players[team];
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
   if (!spend(p.resources, gUnitDefs[uidx(type)].cost)) return false;

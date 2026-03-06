@@ -22,6 +22,8 @@ struct CliOptions {
   bool navDebug{false};
   bool flowVisualize{false};
   bool aiAttackEarly{false};
+  bool aiAggressive{false};
+  bool combatDebug{false};
   uint32_t seed{1337};
   int ticks{-1};
   int mapW{128};
@@ -52,6 +54,8 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--nav-debug") o.navDebug = true;
     else if (a == "--flow-visualize") o.flowVisualize = true;
     else if (a == "--ai-attack-early") o.aiAttackEarly = true;
+    else if (a == "--ai-aggressive") o.aiAggressive = true;
+    else if (a == "--combat-debug") o.combatDebug = true;
     else if (a == "--ticks" && i + 1 < argc) { if (!parse_int(argv[++i], o.ticks) || o.ticks < 0) return false; }
     else if (a == "--seed" && i + 1 < argc) { if (!parse_u32(argv[++i], o.seed)) return false; }
     else if (a == "--map-size" && i + 1 < argc) {
@@ -106,6 +110,8 @@ void update_drag_highlight(dom::sim::World& world, SelectionState& s, const dom:
 int run_headless(const CliOptions& o) {
   dom::sim::set_nav_debug(o.navDebug);
   dom::ai::set_attack_early(o.aiAttackEarly);
+  dom::ai::set_aggressive(o.aiAggressive);
+  dom::sim::set_combat_debug(o.combatDebug);
   dom::sim::World world; world.width = o.mapW; world.height = o.mapH; dom::sim::initialize_world(world, o.seed);
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
 
@@ -155,9 +161,14 @@ int run_headless(const CliOptions& o) {
     if (dom::sim::state_hash(world) != dom::sim::state_hash(replay)) { std::cerr << "Smoke failure: deterministic replay state hash mismatch\n"; return 13; }
 
     if (world.groupMoveCommandCount == 0) { std::cerr << "Smoke failure: no group move command executed\n"; return 14; }
+    if (world.totalDamageDealtPermille == 0) { std::cerr << "Smoke failure: no combat damage dealt\n"; return 18; }
+    if (world.unitDeathEvents == 0 && world.buildingDamageEvents == 0) { std::cerr << "Smoke failure: combat had no kills/building damage\n"; return 19; }
+    const float avgSwitch = world.combatEngagementCount > 0 ? (float)world.targetSwitchCount / (float)world.combatEngagementCount : 0.0f;
+    if (avgSwitch > 0.65f) { std::cerr << "Smoke failure: target switching thrash avg=" << avgSwitch << "\n"; return 20; }
     if (world.flowFieldGeneratedCount == 0) { std::cerr << "Smoke failure: no flow field generated\n"; return 15; }
     if (world.unitsReachedSlotCount < 6) { std::cerr << "Smoke failure: too few units reached destination slots\n"; return 16; }
     if (world.stuckMoveAssertions != 0) { std::cerr << "Smoke failure: stuck move assertion triggered\n"; return 17; }
+    if (world.chaseLimitBreakCount > 200) { std::cerr << "Smoke failure: excessive chase leash breaks\n"; return 21; }
     if (world.territoryRecomputeCount == 0) { std::cerr << "Smoke failure: no territory recompute executed\n"; return 6; }
     if (world.aiDecisionCount == 0) { std::cerr << "Smoke failure: AI made no decisions\n"; return 7; }
     if (world.completedBuildingsCount < 1) { std::cerr << "Smoke failure: no completed building\n"; return 8; }
@@ -172,6 +183,12 @@ int run_headless(const CliOptions& o) {
       std::cout << "flow_generated=" << world.flowFieldGeneratedCount << "\n";
       std::cout << "flow_cache_hits=" << world.flowFieldCacheHitCount << "\n";
       std::cout << "group_moves=" << world.groupMoveCommandCount << "\n";
+    }
+    if (o.combatDebug || dom::sim::combat_debug_enabled()) {
+      std::cout << "engagements=" << world.combatEngagementCount << "\n";
+      std::cout << "target_switches=" << world.targetSwitchCount << "\n";
+      std::cout << "retreats=" << world.aiRetreatCount << "\n";
+      std::cout << "damage_permille=" << world.totalDamageDealtPermille << "\n";
     }
   }
   return 0;
@@ -250,6 +267,9 @@ int run_app(int argc, char** argv) {
           uint32_t bid = selected_building();
           if (e.key.keysym.sym == SDLK_1 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Worker);
           if (e.key.keysym.sym == SDLK_2 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Infantry);
+          if (e.key.keysym.sym == SDLK_3 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Archer);
+          if (e.key.keysym.sym == SDLK_4 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Cavalry);
+          if (e.key.keysym.sym == SDLK_5 && bid) dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Siege);
           if (e.key.keysym.sym == SDLK_BACKSPACE && bid) dom::sim::cancel_queue_item(world, 0, bid, 0);
         } else if (world.uiResearchMenu) {
           uint32_t bid = selected_building();

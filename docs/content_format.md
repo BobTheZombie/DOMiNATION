@@ -33,3 +33,12 @@ Object with optional keys:
 ## Notes
 - Unlocks by age are currently minimal (age-up implemented, hard gate expansions can be added through future `requiredAge` fields).
 - Unknown fields are ignored by current loader.
+
+
+## Combat role fields (new)
+- `role`: one of `INFANTRY`, `RANGED`, `CAVALRY`, `SIEGE`, `WORKER`.
+- `attackType`: `melee` or `ranged`.
+- `preferredTargetRole`: optional role hint.
+- `vsRoleMultiplier`: optional object keyed by role (`INFANTRY`, `RANGED`, `CAVALRY`, `SIEGE`, `WORKER`, `BUILDING`) using float multipliers.
+
+Counter defaults used by current content: infantry>ranged, ranged>cavalry, cavalry>siege/support, siege>building.
