@@ -17,3 +17,12 @@ Generated via `python3 tools/generate_fish_resource_node.py`.
 - Gameplay target: clear, high-contrast silhouette at strategic zoom.
 
 Generated via `python3 tools/generate_ore_resource_node.py`.
+
+## `forest_resource_cluster_rts_sprite_256.png`
+- Resolution: 256x256.
+- Background: transparent (RGBA) for placement over terrain tiles.
+- Perspective: top-down RTS sprite.
+- Style target: stylized dense tree cluster with varied greens and distinct canopies.
+- Gameplay target: readable forest resource node silhouette without becoming overly dense.
+
+Generated via `python3 tools/generate_forest_resource_cluster.py`.
