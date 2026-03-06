@@ -5,9 +5,10 @@ Dependencies (Ubuntu example):
 
 SDL2 detection order in CMake:
 1. `find_package(SDL2 CONFIG QUIET)`
-2. Fallback to `pkg-config` (`sdl2.pc`) and expose compatible target `SDL2::SDL2`
+2. `find_package(SDL2 MODULE QUIET)` (CMake FindSDL2 module)
+3. Fallback to `pkg-config` (`sdl2.pc`) and expose compatible target `SDL2::SDL2`
 
-This allows standard Ubuntu `libsdl2-dev` installations (which often omit `SDL2Config.cmake`) to build without extra setup.
+This allows standard Ubuntu `libsdl2-dev` installations (which often omit `SDL2Config.cmake`) and environments that only provide CMake's FindSDL2 module to build without extra setup.
 
 Build:
 ```bash

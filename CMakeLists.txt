@@ -6,15 +6,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(SDL2 CONFIG QUIET)
+
+# Some environments ship CMake's FindSDL2 module but not SDL2Config.cmake.
+if(NOT TARGET SDL2::SDL2)
+  find_package(SDL2 MODULE QUIET)
+endif()
+
+# Ubuntu/Debian often provide sdl2.pc without a CMake package.
 if(NOT TARGET SDL2::SDL2)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
-
   add_library(SDL2::SDL2 ALIAS PkgConfig::SDL2)
 endif()
 
 if(NOT TARGET SDL2::SDL2)
-  message(FATAL_ERROR "Unable to find SDL2 via CMake config package or pkg-config")
+  message(FATAL_ERROR "Unable to find SDL2 via CMake config package, FindSDL2 module, or pkg-config")
 endif()
 
 find_package(OpenGL REQUIRED)

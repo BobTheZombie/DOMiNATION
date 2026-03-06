@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (SDL2 config + pkg-config fallback)
         run: |
           sudo apt-get update
           sudo apt-get install -y \

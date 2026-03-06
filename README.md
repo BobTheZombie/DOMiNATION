@@ -17,7 +17,7 @@ sudo apt-get install -y \
   libsdl2-dev pkg-config libglm-dev nlohmann-json3-dev mesa-common-dev libgl1-mesa-dev ninja-build cmake g++
 ```
 
-SDL2 is discovered via `find_package(SDL2 CONFIG)` when available, with an automatic fallback to `pkg-config` (`sdl2.pc`) for distros/packages that do not ship `SDL2Config.cmake`.
+SDL2 is discovered in this order: `find_package(SDL2 CONFIG)`, then CMake's `FindSDL2` module, then `pkg-config` (`sdl2.pc`). This covers common Ubuntu/Debian setups that may omit `SDL2Config.cmake`.
 
 ## Build
 ```bash
