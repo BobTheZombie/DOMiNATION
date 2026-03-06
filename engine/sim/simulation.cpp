@@ -176,10 +176,6 @@ void ensure_chunk_layout(const World& w);
 void process_nav_requests(World& w);
 void apply_nav_results(World& w);
 void rebuild_chunk_membership_impl(const World& w);
-bool players_allied(const World& world, uint16_t a, uint16_t b);
-bool players_at_war(const World& world, uint16_t a, uint16_t b);
-bool trade_access_allowed(const World& world, uint16_t a, uint16_t b);
-const char* posture_name(StrategicPosture posture);
 
 void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subject, uint32_t entityId, std::string text = {}) {
   gGameplayEvents.push_back({type, w.tick, actor, subject, entityId, std::move(text)});
