@@ -67,6 +67,15 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   for (const auto& c : world.cities) if (c.team == team && c.capital) { base = c.pos; break; }
   uint16_t enemyTeam = team;
   for (const auto& p : world.players) { if (p.id != team && !dom::sim::players_allied(world, p.id, team) && p.alive) { enemyTeam = p.id; break; } }
+  if (enemyTeam == team) {
+    for (const auto& p : world.players) {
+      if (p.id == team || !p.alive) continue;
+      if (dom::sim::trade_access_allowed(world, team, p.id) && world.worldTension < 40.0f) {
+        dom::sim::establish_trade_agreement(world, team, p.id);
+        break;
+      }
+    }
+  }
   glm::vec2 enemyBase = base + glm::vec2{20.0f,20.0f};
   for (const auto& c : world.cities) if (c.team == enemyTeam && c.capital) { enemyBase = c.pos; break; }
   glm::vec2 rally = base + glm::vec2{10.0f, 8.0f};
@@ -134,7 +143,8 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   std::sort(army.begin(), army.end());
   if (army.empty()) return;
 
-  int attackThreshold = std::clamp((int)std::round((gAttackEarly ? 5.0f : 8.0f) / std::max(0.7f, civ.aggression)), 3, 12);
+  float tensionFactor = std::clamp(1.0f - world.worldTension / 180.0f, 0.5f, 1.2f);
+  int attackThreshold = std::clamp((int)std::round(((gAttackEarly ? 5.0f : 8.0f) / std::max(0.7f, civ.aggression)) * tensionFactor), 3, 12);
   if ((int)army.size() < attackThreshold) { ++world.aiDecisionCount; return; }
 
   TeamStrength ours = strength_near(world, team, enemyBase, 30.0f);

@@ -249,7 +249,7 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["fog"] = w.fog;
   j["players"] = nlohmann::json::array();
   for (const auto& p : w.players) {
-    j["players"].push_back({{"id", p.id}, {"age", (int)p.age}, {"resources", p.resources}, {"popUsed", p.popUsed}, {"popCap", p.popCap}, {"score", p.score}, {"alive", p.alive}, {"unitsLost", p.unitsLost}, {"buildingsLost", p.buildingsLost}, {"finalScore", p.finalScore}});
+    j["players"].push_back({{"id", p.id}, {"age", (int)p.age}, {"resources", p.resources}, {"popUsed", p.popUsed}, {"popCap", p.popCap}, {"score", p.score}, {"alive", p.alive}, {"unitsLost", p.unitsLost}, {"buildingsLost", p.buildingsLost}, {"finalScore", p.finalScore}, {"team", p.teamId}});
   }
   j["cities"] = nlohmann::json::array();
   for (const auto& c : w.cities) j["cities"].push_back({{"id", c.id}, {"team", c.team}, {"pos", {c.pos.x, c.pos.y}}, {"level", c.level}, {"capital", c.capital}});
@@ -275,6 +275,37 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   for (const auto& r : w.roads) j["roads"].push_back({{"id", r.id}, {"owner", r.owner}, {"a", {r.a.x, r.a.y}}, {"b", {r.b.x, r.b.y}}, {"quality", r.quality}});
   j["operations"] = nlohmann::json::array();
   for (const auto& o : w.operations) j["operations"].push_back({{"id", o.id}, {"team", o.team}, {"type", (int)o.type}, {"target", {o.target.x, o.target.y}}, {"assignedTick", o.assignedTick}, {"active", o.active}});
+  j["worldTension"] = w.worldTension;
+  j["diplomacyRelations"] = nlohmann::json::array();
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    for (size_t k = i + 1; k < w.players.size(); ++k) {
+      auto rel = w.diplomacy[i * w.players.size() + k];
+      const char* name = "Neutral";
+      if (rel == dom::sim::DiplomacyRelation::Allied) name = "Allied";
+      else if (rel == dom::sim::DiplomacyRelation::War) name = "War";
+      else if (rel == dom::sim::DiplomacyRelation::Ceasefire) name = "Ceasefire";
+      j["diplomacyRelations"].push_back({{"a", (uint16_t)i}, {"b", (uint16_t)k}, {"relation", name}});
+    }
+  }
+  j["treaties"] = nlohmann::json::array();
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    for (size_t k = i + 1; k < w.players.size(); ++k) {
+      const auto& t = w.treaties[i * w.players.size() + k];
+      j["treaties"].push_back({{"a", (uint16_t)i}, {"b", (uint16_t)k}, {"tradeAgreement", t.tradeAgreement}, {"openBorders", t.openBorders}, {"alliance", t.alliance}, {"nonAggression", t.nonAggression}, {"lastChangedTick", t.lastChangedTick}});
+    }
+  }
+  j["espionageOps"] = nlohmann::json::array();
+  for (const auto& op : w.espionageOps) {
+    const char* type = "RECON_CITY";
+    if (op.type == dom::sim::EspionageOpType::RevealRoute) type = "REVEAL_ROUTE";
+    else if (op.type == dom::sim::EspionageOpType::SabotageEconomy) type = "SABOTAGE_ECONOMY";
+    else if (op.type == dom::sim::EspionageOpType::SabotageSupply) type = "SABOTAGE_SUPPLY";
+    else if (op.type == dom::sim::EspionageOpType::CounterIntel) type = "COUNTERINTEL";
+    const char* state = op.state == dom::sim::EspionageOpState::Completed ? "COMPLETED" : (op.state == dom::sim::EspionageOpState::Failed ? "FAILED" : "ACTIVE");
+    j["espionageOps"].push_back({{"id", op.id}, {"actor", op.actor}, {"target", op.target}, {"type", type}, {"startTick", op.startTick}, {"durationTicks", op.durationTicks}, {"state", state}, {"effectStrength", op.effectStrength}});
+  }
+  j["strategicPosture"] = nlohmann::json::array();
+  for (size_t i = 0; i < w.strategicPosture.size(); ++i) j["strategicPosture"].push_back({{"player", (uint16_t)i}, {"posture", dom::sim::posture_name(w.strategicPosture[i])}});
   j["triggerAreas"] = nlohmann::json::array();
   for (const auto& a : w.triggerAreas) j["triggerAreas"].push_back({{"id", a.id}, {"min", {a.min.x, a.min.y}}, {"max", {a.max.x, a.max.y}}});
   j["objectives"] = nlohmann::json::array();
@@ -292,6 +323,8 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
     {"scoreUnitWeight", w.config.scoreUnitWeight}, {"scoreBuildingWeight", w.config.scoreBuildingWeight}, {"scoreAgeWeight", w.config.scoreAgeWeight}, {"scoreCapitalWeight", w.config.scoreCapitalWeight}, {"allowConquest", w.config.allowConquest}, {"allowScore", w.config.allowScore}, {"allowWonder", w.config.allowWonder}};
   j["triggerExecutionCount"] = w.triggerExecutionCount;
   j["objectiveStateChangeCount"] = w.objectiveStateChangeCount;
+  j["diplomacyEventCount"] = w.diplomacyEventCount;
+  j["postureChangeCount"] = w.postureChangeCount;
   j["wonder"] = {{"owner", w.wonder.owner}, {"heldTicks", w.wonder.heldTicks}};
   j["stateHash"] = dom::sim::state_hash(w);
   return j;
@@ -313,7 +346,68 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
     p.id = jp.value("id", 0u); p.age = static_cast<dom::sim::Age>(jp.value("age", 0));
     p.resources = jp.at("resources").get<decltype(p.resources)>(); p.popUsed = jp.value("popUsed", 0); p.popCap = jp.value("popCap", 0); p.score = jp.value("score", 0);
     p.alive = jp.value("alive", true); p.unitsLost = jp.value("unitsLost", 0u); p.buildingsLost = jp.value("buildingsLost", 0u); p.finalScore = jp.value("finalScore", 0);
+    p.teamId = jp.value("team", p.id);
     w.players.push_back(p);
+  }
+  w.worldTension = j.value("worldTension", 0.0f);
+  w.diplomacy.assign(w.players.size() * w.players.size(), dom::sim::DiplomacyRelation::Neutral);
+  for (size_t i = 0; i < w.players.size(); ++i) w.diplomacy[i * w.players.size() + i] = dom::sim::DiplomacyRelation::Allied;
+  if (j.contains("diplomacyRelations")) {
+    for (const auto& d : j.at("diplomacyRelations")) {
+      const uint16_t a = d.value("a", (uint16_t)0), b = d.value("b", (uint16_t)0);
+      if (a >= w.players.size() || b >= w.players.size()) continue;
+      std::string rel = d.value("relation", std::string("Neutral"));
+      dom::sim::DiplomacyRelation r = dom::sim::DiplomacyRelation::Neutral;
+      if (rel == "Allied") r = dom::sim::DiplomacyRelation::Allied;
+      else if (rel == "War") r = dom::sim::DiplomacyRelation::War;
+      else if (rel == "Ceasefire") r = dom::sim::DiplomacyRelation::Ceasefire;
+      w.diplomacy[a * w.players.size() + b] = r;
+      w.diplomacy[b * w.players.size() + a] = r;
+    }
+  }
+  w.treaties.assign(w.players.size() * w.players.size(), dom::sim::DiplomacyTreaty{});
+  if (j.contains("treaties")) {
+    for (const auto& d : j.at("treaties")) {
+      const uint16_t a = d.value("a", (uint16_t)0), b = d.value("b", (uint16_t)0);
+      if (a >= w.players.size() || b >= w.players.size()) continue;
+      dom::sim::DiplomacyTreaty t{};
+      t.tradeAgreement = d.value("tradeAgreement", false);
+      t.openBorders = d.value("openBorders", false);
+      t.alliance = d.value("alliance", false);
+      t.nonAggression = d.value("nonAggression", false);
+      t.lastChangedTick = d.value("lastChangedTick", 0u);
+      w.treaties[a * w.players.size() + b] = t;
+      w.treaties[b * w.players.size() + a] = t;
+    }
+  }
+  w.strategicPosture.assign(w.players.size(), dom::sim::StrategicPosture::Defensive);
+  if (j.contains("strategicPosture")) {
+    for (const auto& p : j.at("strategicPosture")) {
+      uint16_t id = p.value("player", (uint16_t)0);
+      if (id >= w.strategicPosture.size()) continue;
+      std::string s = p.value("posture", std::string("DEFENSIVE"));
+      if (s == "EXPANSIONIST") w.strategicPosture[id] = dom::sim::StrategicPosture::Expansionist;
+      else if (s == "TRADE_FOCUSED") w.strategicPosture[id] = dom::sim::StrategicPosture::TradeFocused;
+      else if (s == "ESCALATING") w.strategicPosture[id] = dom::sim::StrategicPosture::Escalating;
+      else if (s == "TOTAL_WAR") w.strategicPosture[id] = dom::sim::StrategicPosture::TotalWar;
+    }
+  }
+  w.espionageOps.clear();
+  if (j.contains("espionageOps")) {
+    for (const auto& e : j.at("espionageOps")) {
+      dom::sim::EspionageOp op{};
+      op.id = e.value("id", 0u); op.actor = e.value("actor", (uint16_t)0); op.target = e.value("target", (uint16_t)0);
+      std::string type = e.value("type", std::string("RECON_CITY"));
+      if (type == "REVEAL_ROUTE") op.type = dom::sim::EspionageOpType::RevealRoute;
+      else if (type == "SABOTAGE_ECONOMY") op.type = dom::sim::EspionageOpType::SabotageEconomy;
+      else if (type == "SABOTAGE_SUPPLY") op.type = dom::sim::EspionageOpType::SabotageSupply;
+      else if (type == "COUNTERINTEL") op.type = dom::sim::EspionageOpType::CounterIntel;
+      op.startTick = e.value("startTick", 0u); op.durationTicks = e.value("durationTicks", 0u); op.effectStrength = e.value("effectStrength", 0);
+      std::string state = e.value("state", std::string("ACTIVE"));
+      if (state == "COMPLETED") op.state = dom::sim::EspionageOpState::Completed;
+      else if (state == "FAILED") op.state = dom::sim::EspionageOpState::Failed;
+      w.espionageOps.push_back(op);
+    }
   }
   w.cities.clear();
   for (const auto& jc : j.at("cities")) {
@@ -362,6 +456,8 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.config.scoreBuildingWeight = jc.value("scoreBuildingWeight", w.config.scoreBuildingWeight); w.config.scoreAgeWeight = jc.value("scoreAgeWeight", w.config.scoreAgeWeight); w.config.scoreCapitalWeight = jc.value("scoreCapitalWeight", w.config.scoreCapitalWeight); w.config.allowConquest = jc.value("allowConquest", true); w.config.allowScore = jc.value("allowScore", true); w.config.allowWonder = jc.value("allowWonder", true);
   w.triggerExecutionCount = j.value("triggerExecutionCount", 0u);
   w.objectiveStateChangeCount = j.value("objectiveStateChangeCount", 0u);
+  w.diplomacyEventCount = j.value("diplomacyEventCount", 0u);
+  w.postureChangeCount = j.value("postureChangeCount", 0u);
   w.wonder.owner = j.at("wonder").value("owner", UINT16_MAX); w.wonder.heldTicks = j.at("wonder").value("heldTicks", 0u);
   dom::sim::on_authoritative_state_loaded(w);
   const uint64_t expected = j.value("stateHash", 0ull);
@@ -497,7 +593,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -553,8 +649,15 @@ int run_headless(const CliOptions& o) {
                 << " SUPPLIED_UNITS=" << stats.suppliedUnits
                 << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits
                 << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits
-                << " OPERATION_COUNT=" << stats.operationCount << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "\n";
+                << " OPERATION_COUNT=" << stats.operationCount
+                << " WORLD_TENSION=" << stats.worldTension
+                << " ALLIANCE_COUNT=" << stats.allianceCount
+                << " WAR_COUNT=" << stats.warCount
+                << " ACTIVE_ESPIONAGE_OPS=" << stats.activeEspionageOps
+                << " POSTURE_CHANGES=" << stats.postureChanges
+                << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents
+                << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -638,6 +741,13 @@ int run_headless(const CliOptions& o) {
   if (o.spawnArmy > 0 && world.stuckMoveAssertions > 0) { std::cerr << "Smoke failure: stuck unit assertions detected\n"; return 68; }
 
   if (!o.hashOnly) std::cout << "TRIGGER_RESULT count=" << world.triggerExecutionCount << " objectiveTransitions=" << world.objectiveStateChangeCount << " log=" << world.objectiveLog.size() << "\n";
+  int allianceCount = 0, warCount = 0, activeEspionage = 0;
+  for (size_t i = 0; i < world.players.size(); ++i) for (size_t k = i + 1; k < world.players.size(); ++k) {
+    if (world.diplomacy[i * world.players.size() + k] == dom::sim::DiplomacyRelation::Allied) ++allianceCount;
+    if (world.diplomacy[i * world.players.size() + k] == dom::sim::DiplomacyRelation::War) ++warCount;
+  }
+  for (const auto& op : world.espionageOps) if (op.state != dom::sim::EspionageOpState::Failed) ++activeEspionage;
+  if (!o.hashOnly) std::cout << "DIPLOMACY_RESULT tension=" << world.worldTension << " alliances=" << allianceCount << " wars=" << warCount << " espionageOps=" << activeEspionage << " postureChanges=" << world.postureChangeCount << " events=" << world.diplomacyEventCount << "\n";
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("naval") != std::string::npos) {
     int navalUnits = 0;
@@ -645,6 +755,13 @@ int run_headless(const CliOptions& o) {
     if (navalUnits < 1) { std::cerr << "Smoke failure: no naval units\n"; return 69; }
     if (world.embarkEvents + world.disembarkEvents < 1) { std::cerr << "Smoke failure: no embark/disembark\n"; return 70; }
     if (world.navalCombatEvents < 1) { std::cerr << "Smoke failure: no naval combat\n"; return 71; }
+  }
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("diplomacy") != std::string::npos) {
+    if (world.diplomacyEventCount < 1) { std::cerr << "Smoke failure: no diplomacy state changes/events\n"; return 72; }
+    if (allianceCount + warCount < 1) { std::cerr << "Smoke failure: no treaty/war state\n"; return 73; }
+    if (world.worldTension <= 0.0f) { std::cerr << "Smoke failure: world tension unchanged\n"; return 74; }
+    if (world.postureChangeCount < 1) { std::cerr << "Smoke failure: no AI posture transition\n"; return 75; }
+    if (activeEspionage < 1) { std::cerr << "Smoke failure: no espionage operation\n"; return 76; }
   }
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
@@ -953,7 +1070,7 @@ int run_app(int argc, char** argv) {
         " sim=" + std::to_string((int)std::round(lastSimMs)) + "ms render=" + std::to_string((int)std::round(dom::render::last_draw_ms())) +
         "ms entities=" + std::to_string(world.units.size() + world.buildings.size()) + " ai=" + std::to_string((int)std::round(lastAiMs)) + "ms");
       const auto stats = dom::sim::last_simulation_stats();
-      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
+      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << " WORLD_TENSION=" << stats.worldTension << " ALLIANCE_COUNT=" << stats.allianceCount << " WAR_COUNT=" << stats.warCount << " ACTIVE_ESPIONAGE_OPS=" << stats.activeEspionageOps << " POSTURE_CHANGES=" << stats.postureChanges << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
     }
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);

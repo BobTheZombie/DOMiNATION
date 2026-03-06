@@ -30,7 +30,20 @@ enum class GameplayEventType : uint8_t {
   WonderCompleted,
   PlayerEliminated,
   ObjectiveCompleted,
+  WarDeclared,
+  AllianceFormed,
+  AllianceBroken,
+  TradeAgreementCreated,
+  TradeAgreementBroken,
+  EspionageSuccess,
+  EspionageFailure,
+  PostureChanged,
 };
+
+enum class DiplomacyRelation : uint8_t { Allied, Neutral, War, Ceasefire };
+enum class EspionageOpType : uint8_t { ReconCity, RevealRoute, SabotageEconomy, SabotageSupply, CounterIntel };
+enum class EspionageOpState : uint8_t { Active, Completed, Failed };
+enum class StrategicPosture : uint8_t { Expansionist, Defensive, TradeFocused, Escalating, TotalWar };
 
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
@@ -72,6 +85,8 @@ struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry};
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
 struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
 struct OperationOrder { uint32_t id{}; uint16_t team{}; OperationType type{OperationType::RallyAndPush}; glm::vec2 target{}; uint32_t assignedTick{0}; bool active{true}; };
+struct DiplomacyTreaty { bool tradeAgreement{false}; bool openBorders{false}; bool alliance{false}; bool nonAggression{false}; uint32_t lastChangedTick{0}; };
+struct EspionageOp { uint32_t id{0}; uint16_t actor{0}; uint16_t target{0}; EspionageOpType type{EspionageOpType::ReconCity}; uint32_t startTick{0}; uint32_t durationTicks{0}; EspionageOpState state{EspionageOpState::Active}; int effectStrength{0}; };
 
 struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
@@ -126,6 +141,12 @@ struct SimulationStats {
   uint32_t lowSupplyUnits{0};
   uint32_t outOfSupplyUnits{0};
   uint32_t operationCount{0};
+  float worldTension{0.0f};
+  uint32_t allianceCount{0};
+  uint32_t warCount{0};
+  uint32_t activeEspionageOps{0};
+  uint32_t postureChanges{0};
+  uint32_t diplomacyEvents{0};
   uint32_t navalUnitCount{0};
   uint32_t transportCount{0};
   uint32_t embarkedUnitCount{0};
@@ -157,6 +178,8 @@ struct World {
   std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint8_t> terrainClass; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
+  std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
+  std::vector<EspionageOp> espionageOps; std::vector<StrategicPosture> strategicPosture;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   std::vector<PlayerState> players;
   bool godMode{false}; uint32_t tick{0}; bool gameOver{false}; uint16_t winner{0}; MatchConfig config{}; MatchResult match{}; WonderState wonder{};
@@ -164,6 +187,7 @@ struct World {
   uint32_t territoryRecomputeCount{0}; uint32_t aiDecisionCount{0}; uint32_t completedBuildingsCount{0}; uint32_t trainedUnitsViaQueue{0}; uint32_t researchStartedCount{0}; uint32_t navVersion{1}; uint32_t flowFieldGeneratedCount{0}; uint32_t flowFieldCacheHitCount{0}; uint32_t groupMoveCommandCount{0}; uint32_t unitsReachedSlotCount{0}; uint32_t stuckMoveAssertions{0}; uint32_t totalDamageDealtPermille{0}; uint32_t combatEngagementCount{0}; uint32_t targetSwitchCount{0}; uint32_t chaseLimitBreakCount{0}; uint32_t buildingDamageEvents{0}; uint32_t unitDeathEvents{0}; uint32_t aiRetreatCount{0}; uint32_t focusFireEvents{0}; uint32_t combatTicks{0}; uint32_t rejectedCommandCount{0};
   uint32_t triggerExecutionCount{0}; uint32_t objectiveStateChangeCount{0};
   uint32_t logisticsRoadCount{0}; uint32_t logisticsTradeActiveCount{0}; uint32_t logisticsOperationIssuedCount{0};
+  uint32_t diplomacyEventCount{0}; uint32_t postureChangeCount{0};
   uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
   uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};
   bool territoryDirty{true}; bool fogDirty{true};
@@ -199,6 +223,13 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
 bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId);
 bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t index);
 bool players_allied(const World& world, uint16_t a, uint16_t b);
+bool players_at_war(const World& world, uint16_t a, uint16_t b);
+bool trade_access_allowed(const World& world, uint16_t a, uint16_t b);
+bool declare_war(World& world, uint16_t actor, uint16_t target);
+bool form_alliance(World& world, uint16_t a, uint16_t b);
+bool establish_trade_agreement(World& world, uint16_t a, uint16_t b);
+bool break_treaty(World& world, uint16_t a, uint16_t b);
+const char* posture_name(StrategicPosture posture);
 
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);

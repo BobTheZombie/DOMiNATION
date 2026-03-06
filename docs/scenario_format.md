@@ -37,3 +37,13 @@ Scenario JSON supports:
 - Optional `waterMask`: byte grid matching `map.width * map.height` with terrain classes (`0=land`, `1=shallow`, `2=deep`).
 - New building: `Port`.
 - New units: `TransportShip`, `LightWarship`, `HeavyWarship`, `BombardShip`.
+
+## Diplomacy/geopolitics additions
+
+- `worldTension`: initial global tension value.
+- `diplomacyRelations`: array entries `{a, b, relation}` where `relation` is `Allied|Neutral|War|Ceasefire`.
+- `treaties`: array entries `{a, b, alliance, tradeAgreement, openBorders, nonAggression, lastChangedTick}`.
+- `strategicPosture`: optional initial posture labels per player (`EXPANSIONIST|DEFENSIVE|TRADE_FOCUSED|ESCALATING|TOTAL_WAR`).
+- `espionageOps`: optional pre-seeded operation list with `{id, actor, target, type, startTick, durationTicks, state, effectStrength}` where `type` is `RECON_CITY|REVEAL_ROUTE|SABOTAGE_ECONOMY|SABOTAGE_SUPPLY|COUNTERINTEL`.
+
+Reference sample: `scenarios/diplomacy_test.json`.

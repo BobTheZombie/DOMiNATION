@@ -156,3 +156,36 @@ Replay recording drains authoritative command events emitted from sim order APIs
 - Naval units are simulated in deterministic chunk passes with water-only movement constraints.
 - Transport cargo (`Unit.cargo`, `transportId`, `embarked`) is authoritative and serialized.
 - Added naval perf counters: `NAVAL_UNIT_COUNT`, `TRANSPORT_COUNT`, `EMBARKED_UNIT_COUNT`, `ACTIVE_NAVAL_OPERATIONS`, `COASTAL_TARGETS`, `NAVAL_COMBAT_EVENTS`.
+
+## Diplomacy and geopolitics authoritative state
+
+- Authoritative diplomacy is represented by an explicit bilateral relation matrix (`Allied`, `Neutral`, `War`, `Ceasefire`) and bilateral treaty matrix.
+- Treaty fields currently include: `alliance`, `tradeAgreement`, `openBorders`, `nonAggression` plus `lastChangedTick`.
+- Team IDs can initialize default alliances, but simulation queries use explicit diplomacy state.
+- Diplomacy affects:
+  - hostile targeting validity (`players_allied` / `players_at_war`)
+  - route/trade/supply access (`trade_access_allowed`)
+  - operation targeting and AI threat evaluation
+- Global authoritative `worldTension` escalates/de-escalates deterministically and influences AI posture selection and diplomatic actions.
+- Authoritative espionage operations are timed and deterministic; outcomes feed diplomacy events and world tension.
+- Authoritative AI strategic posture labels: `EXPANSIONIST`, `DEFENSIVE`, `TRADE_FOCUSED`, `ESCALATING`, `TOTAL_WAR`.
+- Authoritative diplomacy-affecting fields are serialized and included in state hash/replay validation.
+
+### Diplomacy gameplay events
+
+- `WarDeclared`
+- `AllianceFormed` / `AllianceBroken`
+- `TradeAgreementCreated` / `TradeAgreementBroken`
+- `EspionageSuccess` / `EspionageFailure`
+- `PostureChanged`
+
+### Perf/debug counters
+
+Headless/interactive perf outputs now include:
+
+- `WORLD_TENSION`
+- `ALLIANCE_COUNT`
+- `WAR_COUNT`
+- `ACTIVE_ESPIONAGE_OPS`
+- `POSTURE_CHANGES`
+- `DIPLOMACY_EVENTS`
