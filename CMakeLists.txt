@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(RTS_ENABLE_IMGUI "Enable Dear ImGui tooling/debug UI" ON)
+
 find_package(SDL2 CONFIG QUIET)
 
 # Some environments ship CMake's FindSDL2 module but not SDL2Config.cmake.
@@ -26,13 +28,42 @@ endif()
 find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(imgui QUIET)
+
+if(RTS_ENABLE_IMGUI)
+  if(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/imgui/imgui.cpp")
+    message(FATAL_ERROR "RTS_ENABLE_IMGUI is ON but third_party/imgui is missing. Run: git submodule update --init --recursive")
+  endif()
+
+  add_library(thirdparty_imgui STATIC
+    third_party/imgui/imgui.cpp
+    third_party/imgui/imgui_draw.cpp
+    third_party/imgui/imgui_tables.cpp
+    third_party/imgui/imgui_widgets.cpp
+    third_party/imgui/backends/imgui_impl_sdl2.cpp
+    third_party/imgui/backends/imgui_impl_opengl3.cpp
+  )
+
+  target_include_directories(thirdparty_imgui PUBLIC
+    third_party/imgui
+    third_party/imgui/backends
+  )
+
+  target_link_libraries(thirdparty_imgui PUBLIC SDL2::SDL2 OpenGL::GL)
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_sources(thirdparty_imgui PRIVATE third_party/imgui/imgui_demo.cpp)
+  endif()
+endif()
 
 add_executable(rts
   engine/core/time.cpp
   engine/platform/app.cpp
   engine/render/renderer.cpp
   engine/sim/simulation.cpp
+  engine/assets/asset_manager.cpp
+  engine/assets/asset_registry.cpp
+  engine/assets/texture_atlas.cpp
+  engine/tools/asset_browser.cpp
   game/rules/game_rules.cpp
   game/ai/simple_ai.cpp
   game/ui/hud.cpp
@@ -41,9 +72,8 @@ add_executable(rts
 
 target_include_directories(rts PRIVATE .)
 target_link_libraries(rts PRIVATE SDL2::SDL2 OpenGL::GL glm::glm nlohmann_json::nlohmann_json)
-if(imgui_FOUND)
-  target_link_libraries(rts PRIVATE imgui::imgui)
+
+if(RTS_ENABLE_IMGUI)
+  target_link_libraries(rts PRIVATE thirdparty_imgui)
   target_compile_definitions(rts PRIVATE DOM_HAS_IMGUI=1)
-else()
-  message(WARNING "imgui package not found; building without debug overlay")
 endif()

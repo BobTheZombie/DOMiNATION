@@ -31,3 +31,19 @@ Additional examples:
 ./build/rts --headless --ticks 1200 --seed 99
 ./build/rts --headless --smoke --map-size 192x192 --ticks 400 --seed 777
 ```
+
+
+## ImGui dependency
+
+- Included via pinned git submodule: `third_party/imgui`.
+- Initialize submodules before configure/build: `git submodule update --init --recursive`.
+- Default dev build includes ImGui (`RTS_ENABLE_IMGUI=ON`).
+- Disable if needed: `cmake -S . -B build -G Ninja -DRTS_ENABLE_IMGUI=OFF`.
+
+## Asset ingestion pipeline
+
+```bash
+python tools/asset_pipeline/build_atlases.py
+python tools/asset_pipeline/package_assets.py
+python tools/validate_content_pipeline.py
+```

@@ -4,6 +4,8 @@
 #include "engine/sim/simulation.h"
 #include "game/ai/simple_ai.h"
 #include "game/ui/hud.h"
+#include "engine/assets/asset_manager.h"
+#include "engine/tools/asset_browser.h"
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <chrono>
@@ -20,6 +22,12 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+
+#ifdef DOM_HAS_IMGUI
+#include <imgui.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_sdl2.h>
+#endif
 
 namespace {
 struct CliOptions {
@@ -847,6 +855,11 @@ int run_app(int argc, char** argv) {
   bool editorMode = opts.editor;
   int editorTool = 0;
   uint16_t editorOwner = 0;
+  dom::assets::AssetManager assetManager;
+  dom::tools::AssetBrowser assetBrowser;
+  if (!assetManager.load_all("content")) {
+    std::cerr << "ASSET_WARN failed to fully load asset manifests\n";
+  }
 
   auto selected_building = [&]() -> uint32_t {
     if (selected.empty()) return 0;
@@ -861,6 +874,14 @@ int run_app(int argc, char** argv) {
     return first_building(world, 0, dom::sim::BuildingType::CityCenter);
   };
 
+#ifdef DOM_HAS_IMGUI
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui::StyleColorsDark();
+  ImGui_ImplSDL2_InitForOpenGL(window, ctx);
+  ImGui_ImplOpenGL3_Init("#version 130");
+#endif
+
   bool running = true; Uint64 prev = SDL_GetPerformanceCounter(); float accum = 0.0f;
   double lastSimMs = 0.0;
   double lastAiMs = 0.0;
@@ -869,12 +890,16 @@ int run_app(int argc, char** argv) {
 
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
+#ifdef DOM_HAS_IMGUI
+      ImGui_ImplSDL2_ProcessEvent(&e);
+#endif
       if (e.type == SDL_QUIT) running = false;
       if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
         dom::render::set_resolution(e.window.data1, e.window.data2);
       }
       if (e.type == SDL_KEYDOWN) {
         if (e.key.keysym.sym == SDLK_F9) editorMode = !editorMode;
+        if (e.key.keysym.sym == SDLK_F10) assetBrowser.toggle();
         if (editorMode && e.key.keysym.sym == SDLK_TAB) editorTool = (editorTool + 1) % 6;
         if (editorMode && e.key.keysym.sym == SDLK_o) editorOwner = (uint16_t)((editorOwner + 1) % std::max<size_t>(1, world.players.size()));
         if (editorMode && e.key.keysym.sym == SDLK_F5) { std::string err; if (dom::sim::save_scenario_file(opts.editorSaveFile, world, err)) std::cout << "SCENARIO_SAVE path=" << opts.editorSaveFile << "\n"; else std::cerr << "SCENARIO_SAVE failed: " << err << "\n"; }
@@ -1059,10 +1084,16 @@ int run_app(int argc, char** argv) {
     }
 
     int w, h; SDL_GetWindowSize(window, &w, &h);
+#ifdef DOM_HAS_IMGUI
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+#endif
     dom::render::draw(world, camera, w, h, sel.dragHighlight);
     std::string replayOverlay;
     if (replayMode) replayOverlay = "REPLAY tick=" + std::to_string(world.tick) + (replayPaused ? " paused" : " running") + " speed=" + std::to_string(replaySpeed) + "x";
     if (editorMode) replayOverlay += (replayOverlay.empty()?"":" | ") + ("EDITOR tool=" + std::to_string(editorTool) + " owner=" + std::to_string(editorOwner) + " [Tab tool][O owner][F5 save]");
+    replayOverlay += (replayOverlay.empty()?"":" | ") + std::string("AssetBrowser[F10]=") + (assetBrowser.visible() ? "On" : "Off");
     if (!world.objectiveLog.empty()) replayOverlay += (replayOverlay.empty()?"":" | ") + ("OBJ: " + world.objectiveLog.back().text);
     if (opts.perf) {
       const auto p = dom::sim::last_tick_profile();
@@ -1073,6 +1104,11 @@ int run_app(int argc, char** argv) {
       std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << " WORLD_TENSION=" << stats.worldTension << " ALLIANCE_COUNT=" << stats.allianceCount << " WAR_COUNT=" << stats.warCount << " ACTIVE_ESPIONAGE_OPS=" << stats.activeEspionageOps << " POSTURE_CHANGES=" << stats.postureChanges << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
     }
     dom::ui::draw_hud(window, world, replayOverlay);
+#ifdef DOM_HAS_IMGUI
+    assetBrowser.draw(assetManager);
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
     SDL_GL_SwapWindow(window);
   }
 
@@ -1080,6 +1116,12 @@ int run_app(int argc, char** argv) {
     const uint64_t saveHash = dom::sim::state_hash(world);
     if (save_world_file(opts.saveFile, world)) std::cout << "SAVE_RESULT path=" << opts.saveFile << " tick=" << world.tick << " hash=" << saveHash << "\n";
   }
+
+#ifdef DOM_HAS_IMGUI
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL2_Shutdown();
+  ImGui::DestroyContext();
+#endif
 
   SDL_GL_DeleteContext(ctx); SDL_DestroyWindow(window); SDL_Quit(); return 0;
 }

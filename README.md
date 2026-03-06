@@ -10,6 +10,32 @@ Linux-first original RTS vertical slice inspired by classic nation-building RTS 
 - GLM
 - JSON content files
 
+
+## Dear ImGui integration
+- ImGui is vendored as a pinned git submodule at `third_party/imgui` (official `ocornut/imgui`).
+- Bootstrap after fresh clone:
+  - `git submodule update --init --recursive`
+- CMake builds ImGui internally by default (`RTS_ENABLE_IMGUI=ON`) with SDL2 + OpenGL3 backends.
+- Disable only when needed: `-DRTS_ENABLE_IMGUI=OFF`.
+- To update/pin: checkout desired commit in `third_party/imgui`, commit the submodule pointer update.
+
+## Asset pipeline runtime ingestion
+Required runtime manifests in `content/`:
+- `asset_manifest.json`
+- `atlas_manifest.json`
+- `biome_manifest.json`
+- `civilization_theme_manifest.json`
+- `lod_manifest.json`
+
+Commands:
+```bash
+python tools/asset_pipeline/build_atlases.py
+python tools/asset_pipeline/package_assets.py
+python tools/validate_content_pipeline.py
+```
+
+Asset browser (ImGui):
+- Press `F10` in-game to toggle the Asset Browser panel.
 ## Build dependencies (Ubuntu)
 ```bash
 sudo apt-get update

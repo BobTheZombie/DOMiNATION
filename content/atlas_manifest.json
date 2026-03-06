@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "atlases": [
+    {
+      "atlas_id": "buildings_atlas",
+      "image": "assets_final/atlases/buildings_atlas.png",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "atlas_id": "units_atlas",
+      "image": "assets_final/atlases/units_atlas.png",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "atlas_id": "ui_atlas",
+      "image": "assets_final/atlases/ui_atlas.png",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "atlas_id": "fx_atlas",
+      "image": "assets_final/atlases/fx_atlas.png",
+      "size": [
+        512,
+        512
+      ]
+    }
+  ],
+  "sprites": [
+    {
+      "sprite_id": "medieval_house_rts_sprite_256",
+      "atlas": "buildings_atlas",
+      "rect": [
+        2,
+        2,
+        256,
+        256
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "tags": [
+        "building",
+        "buildings"
+      ]
+    },
+    {
+      "sprite_id": "archer_unit_rts_sprite_256",
+      "atlas": "units_atlas",
+      "rect": [
+        2,
+        2,
+        256,
+        256
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "tags": [
+        "unit",
+        "units"
+      ]
+    },
+    {
+      "sprite_id": "fish_resource_node_rts_sprite_256",
+      "atlas": "ui_atlas",
+      "rect": [
+        2,
+        2,
+        256,
+        256
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "tags": [
+        "ui"
+      ]
+    },
+    {
+      "sprite_id": "explosion_fire_smoke_shockwave_rts_sprite_256",
+      "atlas": "fx_atlas",
+      "rect": [
+        2,
+        2,
+        256,
+        256
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "tags": [
+        "fx"
+      ]
+    },
+    {
+      "sprite_id": "missing_texture",
+      "atlas": "ui_atlas",
+      "rect": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "tags": [
+        "fallback"
+      ]
+    },
+    {
+      "sprite_id": "missing_icon",
+      "atlas": "ui_atlas",
+      "rect": [
+        64,
+        0,
+        64,
+        64
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "tags": [
+        "fallback"
+      ]
+    }
+  ]
+}

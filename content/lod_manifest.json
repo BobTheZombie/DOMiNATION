@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "lod_entries": [
+    {
+      "lod_id": "rome_house_a_lod0",
+      "asset_id": "rome_house_a",
+      "mesh": "export/meshes/rome_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_house_a_lod1",
+      "asset_id": "rome_house_a",
+      "mesh": "export/meshes/rome_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "neutral_fish_node_a_lod0",
+      "asset_id": "neutral_fish_node_a",
+      "mesh": "export/meshes/neutral_fish_node_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "missing_mesh",
+      "asset_id": "missing_mesh",
+      "mesh": "assets_final/fallback/missing_mesh.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "neutral_fish_node_a_lod1",
+      "asset_id": "neutral_fish_node_a",
+      "mesh": "export/meshes/neutral_fish_node_a_lod1.glb",
+      "screen_size": 0.5
+    }
+  ]
+}

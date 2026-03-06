@@ -5,11 +5,21 @@
       "asset_id": "rome_house_a",
       "type": "building",
       "civilization_theme": "rome",
-      "biome_tags": ["mediterranean", "temperate_grassland"],
+      "biome_tags": [
+        "mediterranean",
+        "temperate_grassland"
+      ],
       "mesh": "export/meshes/rome_house_a.glb",
       "material_set": "rome_stone_01",
-      "bounds": [2.2, 2.2, 3.0],
-      "lods": ["rome_house_a_lod0", "rome_house_a_lod1"],
+      "bounds": [
+        2.2,
+        2.2,
+        3.0
+      ],
+      "lods": [
+        "rome_house_a_lod0",
+        "rome_house_a_lod1"
+      ],
       "icon": "assets_processed/icons/rome_house_a.png",
       "construction_state_asset": "rome_house_a_under_construction",
       "damaged_state_asset": "rome_house_a_damaged"
@@ -18,12 +28,48 @@
       "asset_id": "neutral_fish_node_a",
       "type": "resource_node",
       "civilization_theme": "neutral",
-      "biome_tags": ["coast_littoral"],
+      "biome_tags": [
+        "coast_littoral"
+      ],
       "mesh": "export/meshes/neutral_fish_node_a.glb",
       "material_set": "water_fish_01",
-      "bounds": [1.0, 1.0, 0.8],
-      "lods": ["neutral_fish_node_a_lod0", "neutral_fish_node_a_lod1"],
+      "bounds": [
+        1.0,
+        1.0,
+        0.8
+      ],
+      "lods": [
+        "neutral_fish_node_a_lod0",
+        "neutral_fish_node_a_lod1"
+      ],
       "icon": "assets_processed/icons/neutral_fish_node_a.png"
+    },
+    {
+      "asset_id": "missing_icon",
+      "type": "ui",
+      "civilization_theme": "neutral",
+      "biome_tags": [],
+      "mesh": "",
+      "icon": "",
+      "lods": []
+    },
+    {
+      "asset_id": "missing_mesh",
+      "type": "fallback",
+      "civilization_theme": "neutral",
+      "biome_tags": [],
+      "mesh": "",
+      "icon": "",
+      "lods": []
+    },
+    {
+      "asset_id": "missing_texture",
+      "type": "fallback",
+      "civilization_theme": "neutral",
+      "biome_tags": [],
+      "mesh": "",
+      "icon": "",
+      "lods": []
     }
   ]
 }

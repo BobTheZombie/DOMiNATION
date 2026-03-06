@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "themes": [
+    {
+      "id": "rome",
+      "display_name": "Rome / Classical Mediterranean",
+      "silhouette_language": "rectilinear_stone_mass",
+      "roof_shapes": [
+        "terracotta_gable",
+        "flat_tile"
+      ],
+      "wall_materials": [
+        "travertine",
+        "plaster"
+      ],
+      "accent_colors": [
+        "crimson",
+        "ochre"
+      ],
+      "banner_motifs": [
+        "laurel",
+        "eagle"
+      ],
+      "decorative_props": [
+        "column",
+        "amphora",
+        "statue"
+      ],
+      "biome_preferences": [
+        "mediterranean",
+        "temperate_grassland",
+        "coast_littoral"
+      ],
+      "building_family_mappings": {
+        "House": "rome_house_a",
+        "Farm": "rome_farm_a",
+        "Granary": "rome_granary_a",
+        "LumberCamp": "rome_lumber_camp_a",
+        "Mine": "rome_mine_a",
+        "Market": "rome_market_a",
+        "Barracks": "rome_barracks_a",
+        "Stable": "rome_stable_a",
+        "SiegeWorkshop": "rome_siege_workshop_a",
+        "CityCenter": "rome_city_center_a",
+        "Port": "rome_port_a",
+        "Wonder": "rome_wonder_a",
+        "Wall": "rome_wall_a",
+        "Tower": "rome_tower_a"
+      }
+    },
+    {
+      "id": "china",
+      "display_name": "China / East Asian Imperial",
+      "silhouette_language": "tiered_roof_compound",
+      "roof_shapes": [
+        "curved_eave",
+        "hipped"
+      ],
+      "wall_materials": [
+        "timber_frame",
+        "painted_plaster"
+      ],
+      "accent_colors": [
+        "vermilion",
+        "jade"
+      ],
+      "banner_motifs": [
+        "dragon",
+        "cloud"
+      ],
+      "decorative_props": [
+        "lantern",
+        "stone_lion",
+        "gate_arch"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "forest",
+        "wetlands_marsh"
+      ],
+      "building_family_mappings": {
+        "House": "china_house_a",
+        "Farm": "china_farm_a",
+        "Granary": "china_granary_a",
+        "LumberCamp": "china_lumber_camp_a",
+        "Mine": "china_mine_a",
+        "Market": "china_market_a",
+        "Barracks": "china_barracks_a",
+        "Stable": "china_stable_a",
+        "SiegeWorkshop": "china_siege_workshop_a",
+        "CityCenter": "china_city_center_a",
+        "Port": "china_port_a",
+        "Wonder": "china_wonder_a",
+        "Wall": "china_wall_a",
+        "Tower": "china_tower_a"
+      }
+    },
+    {
+      "id": "europe",
+      "display_name": "Europe / Medieval-Western",
+      "silhouette_language": "steep_roof_stone_timber",
+      "roof_shapes": [
+        "steep_gable",
+        "slate_hip"
+      ],
+      "wall_materials": [
+        "timber",
+        "stone_block"
+      ],
+      "accent_colors": [
+        "blue",
+        "white"
+      ],
+      "banner_motifs": [
+        "cross",
+        "lion"
+      ],
+      "decorative_props": [
+        "well",
+        "fence",
+        "cart"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "forest",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "europe_house_a",
+        "Farm": "europe_farm_a",
+        "Granary": "europe_granary_a",
+        "LumberCamp": "europe_lumber_camp_a",
+        "Mine": "europe_mine_a",
+        "Market": "europe_market_a",
+        "Barracks": "europe_barracks_a",
+        "Stable": "europe_stable_a",
+        "SiegeWorkshop": "europe_siege_workshop_a",
+        "CityCenter": "europe_city_center_a",
+        "Port": "europe_port_a",
+        "Wonder": "europe_wonder_a",
+        "Wall": "europe_wall_a",
+        "Tower": "europe_tower_a"
+      }
+    },
+    {
+      "id": "middleeast",
+      "display_name": "Middle East / Islamic-Persian-Arabic inspired",
+      "silhouette_language": "courtyard_dome_minaret",
+      "roof_shapes": [
+        "dome",
+        "flat_parapet"
+      ],
+      "wall_materials": [
+        "sandstone",
+        "stucco"
+      ],
+      "accent_colors": [
+        "turquoise",
+        "gold"
+      ],
+      "banner_motifs": [
+        "geometric",
+        "calligraphic"
+      ],
+      "decorative_props": [
+        "archway",
+        "fountain",
+        "market_canopy"
+      ],
+      "biome_preferences": [
+        "desert",
+        "mediterranean",
+        "coast_littoral"
+      ],
+      "building_family_mappings": {
+        "House": "middleeast_house_a",
+        "Farm": "middleeast_farm_a",
+        "Granary": "middleeast_granary_a",
+        "LumberCamp": "middleeast_lumber_camp_a",
+        "Mine": "middleeast_mine_a",
+        "Market": "middleeast_market_a",
+        "Barracks": "middleeast_barracks_a",
+        "Stable": "middleeast_stable_a",
+        "SiegeWorkshop": "middleeast_siege_workshop_a",
+        "CityCenter": "middleeast_city_center_a",
+        "Port": "middleeast_port_a",
+        "Wonder": "middleeast_wonder_a",
+        "Wall": "middleeast_wall_a",
+        "Tower": "middleeast_tower_a"
+      }
+    },
+    {
+      "id": "steppe",
+      "display_name": "Steppe / Nomadic-Eurasian",
+      "silhouette_language": "portable_tent_fortified_corral",
+      "roof_shapes": [
+        "felt_tent"
+      ],
+      "wall_materials": [
+        "timber",
+        "hide"
+      ],
+      "accent_colors": [
+        "tan",
+        "red"
+      ],
+      "banner_motifs": [
+        "horse"
+      ],
+      "decorative_props": [
+        "totem",
+        "wagon"
+      ],
+      "biome_preferences": [
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "steppe_house_a",
+        "Farm": "steppe_farm_a",
+        "Granary": "steppe_granary_a",
+        "LumberCamp": "steppe_lumber_camp_a",
+        "Mine": "steppe_mine_a",
+        "Market": "steppe_market_a",
+        "Barracks": "steppe_barracks_a",
+        "Stable": "steppe_stable_a",
+        "SiegeWorkshop": "steppe_siege_workshop_a",
+        "CityCenter": "steppe_city_center_a",
+        "Port": "steppe_port_a",
+        "Wonder": "steppe_wonder_a",
+        "Wall": "steppe_wall_a",
+        "Tower": "steppe_tower_a"
+      }
+    },
+    {
+      "id": "african_sahel",
+      "display_name": "African Sahel / North African inspired",
+      "silhouette_language": "buttressed_mudbrick_compound",
+      "roof_shapes": [
+        "flat_timber"
+      ],
+      "wall_materials": [
+        "mudbrick",
+        "plaster"
+      ],
+      "accent_colors": [
+        "sand",
+        "indigo"
+      ],
+      "banner_motifs": [
+        "sunburst"
+      ],
+      "decorative_props": [
+        "mat",
+        "storage_jar"
+      ],
+      "biome_preferences": [
+        "desert",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "african_house_a",
+        "Farm": "african_farm_a",
+        "Granary": "african_granary_a",
+        "LumberCamp": "african_lumber_camp_a",
+        "Mine": "african_mine_a",
+        "Market": "african_market_a",
+        "Barracks": "african_barracks_a",
+        "Stable": "african_stable_a",
+        "SiegeWorkshop": "african_siege_workshop_a",
+        "CityCenter": "african_city_center_a",
+        "Port": "african_port_a",
+        "Wonder": "african_wonder_a",
+        "Wall": "african_wall_a",
+        "Tower": "african_tower_a"
+      }
+    }
+  ]
+}
