@@ -1,5 +1,13 @@
-Optional debug tooling lives here.
+# Tooling
 
-## Asset generation
+## Content pipeline validation
 
-- `generate_complete_rts_asset_pack.py`: generates a full stylized RTS sprite/texture/icon pack under `content/textures/complete_rts_pack` with transparent sprite backgrounds and tile-friendly terrain textures.
+- `python tools/validate_content_pipeline.py`
+- `python tools/blender/validate_asset_conventions.py`
+
+## Blender pipeline
+
+- `tools/blender/setup_reference_scene.py`
+- `tools/blender/export_selected_assets.py`
+- `tools/blender/render_preview_icons.py`
+- `tools/blender/render_billboard_sheet.py`

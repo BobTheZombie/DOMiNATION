@@ -72,3 +72,8 @@ Excluded from saves:
 - debug-only counters
 
 See also: `docs/scenario_format.md` and `docs/trigger_format.md` for authored scenario content.
+
+## New content pipeline files
+- content/biomes.json
+- content/civilization_themes.json
+- content/asset_manifest.json
