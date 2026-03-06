@@ -265,6 +265,50 @@ const char* objective_state_name(ObjectiveState s) {
   return "inactive";
 }
 
+BiomeType parse_biome_type(const std::string& id) {
+  if (id == "temperate_grassland") return BiomeType::TemperateGrassland;
+  if (id == "plains_steppe") return BiomeType::Steppe;
+  if (id == "forest") return BiomeType::Forest;
+  if (id == "desert") return BiomeType::Desert;
+  if (id == "mediterranean") return BiomeType::Mediterranean;
+  if (id == "jungle") return BiomeType::Jungle;
+  if (id == "tundra") return BiomeType::Tundra;
+  if (id == "snow_arctic") return BiomeType::Arctic;
+  if (id == "coast_littoral") return BiomeType::Coast;
+  if (id == "wetlands_marsh") return BiomeType::Wetlands;
+  if (id == "mountain_highlands") return BiomeType::Mountain;
+  return BiomeType::TemperateGrassland;
+}
+
+const char* building_family_name(BuildingType t) {
+  switch (t) {
+    case BuildingType::CityCenter: return "CityCenter";
+    case BuildingType::House: return "House";
+    case BuildingType::Farm: return "Farm";
+    case BuildingType::LumberCamp: return "LumberCamp";
+    case BuildingType::Mine: return "Mine";
+    case BuildingType::Market: return "Market";
+    case BuildingType::Library: return "Granary";
+    case BuildingType::Barracks: return "Barracks";
+    case BuildingType::Wonder: return "Wonder";
+    case BuildingType::Port: return "Port";
+    default: return "House";
+  }
+}
+
+struct BiomeDef {
+  BiomeType type{BiomeType::TemperateGrassland};
+  std::string id{"temperate_grassland"};
+  std::string displayName{"Temperate Grassland"};
+  std::array<float, 3> palette{0.32f, 0.62f, 0.28f};
+  std::array<float, static_cast<size_t>(Resource::Count)> resourceWeight{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+struct ThemeDef {
+  std::string id{"default"};
+  std::unordered_map<std::string, std::string> familyToVariant;
+};
+
 struct CivilizationDef {
   std::string id{"default"};
   std::string displayName{"Default"};
@@ -276,6 +320,8 @@ struct CivilizationDef {
 };
 
 std::vector<CivilizationDef> gCivilizations;
+std::array<BiomeDef, static_cast<size_t>(BiomeType::Count)> gBiomes{};
+std::unordered_map<std::string, ThemeDef> gThemes;
 
 void load_civilizations_once() {
   if (!gCivilizations.empty()) return;
@@ -305,6 +351,42 @@ CivilizationRuntime civilization_runtime_for(const std::string& id) {
   return {"default", 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 }
 
+void load_biomes_once() {
+  if (!gBiomes[0].id.empty()) return;
+  std::ifstream f("content/biomes.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.contains("biomes") || !j["biomes"].is_array()) return;
+  for (const auto& b : j["biomes"]) {
+    std::string id = b.value("id", std::string("temperate_grassland"));
+    BiomeType bt = parse_biome_type(id);
+    auto& out = gBiomes[static_cast<size_t>(bt)];
+    out.type = bt;
+    out.id = id;
+    out.displayName = b.value("display_name", id);
+    if (b.contains("color_palette_hint") && b["color_palette_hint"].is_array() && b["color_palette_hint"].size() >= 3) {
+      out.palette = {b["color_palette_hint"][0].get<float>(), b["color_palette_hint"][1].get<float>(), b["color_palette_hint"][2].get<float>()};
+    }
+  }
+}
+
+void load_civilization_themes_once() {
+  if (!gThemes.empty()) return;
+  std::ifstream f("content/civilization_themes.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.contains("themes") || !j["themes"].is_array()) return;
+  for (const auto& t : j["themes"]) {
+    ThemeDef theme{};
+    theme.id = t.value("id", std::string("default"));
+    if (t.contains("building_family_mappings") && t["building_family_mappings"].is_object()) {
+      for (auto it = t["building_family_mappings"].begin(); it != t["building_family_mappings"].end(); ++it) {
+        theme.familyToVariant[it.key()] = it.value().get<std::string>();
+      }
+    }
+    gThemes[theme.id] = std::move(theme);
+  }
+}
 
 void hash_u32(uint64_t& h, uint32_t v) { h ^= static_cast<uint64_t>(v); h *= kFNVPrime; }
 void hash_float(uint64_t& h, float v) { hash_u32(h, static_cast<uint32_t>(v * 1000.0f)); }
@@ -548,6 +630,51 @@ bool has_adjacent_coast(const World& w, glm::vec2 p) {
     if (tc == TerrainClass::ShallowWater) return true;
   }
   return false;
+}
+
+float sample_noise_2d(uint32_t seed, int x, int y, float scale) {
+  const float fx = static_cast<float>(x) * scale;
+  const float fy = static_cast<float>(y) * scale;
+  const float v = std::sin(fx * 12.9898f + fy * 78.233f + seed * 0.0031f) * 43758.5453f;
+  return v - std::floor(v);
+}
+
+void assign_biomes(World& w) {
+  load_biomes_once();
+  w.biomeMap.assign(static_cast<size_t>(w.width) * static_cast<size_t>(w.height), static_cast<uint8_t>(BiomeType::TemperateGrassland));
+  for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
+    const int i = y * w.width + x;
+    const float h = w.heightmap[i];
+    const float moisture = std::clamp(w.fertility[i] * 0.7f + sample_noise_2d(w.seed + 17, x, y, 0.13f) * 0.3f, 0.0f, 1.0f);
+    const float lat = std::abs((float)y / std::max(1, w.height - 1) - 0.5f) * 2.0f;
+    const float temp = std::clamp((1.0f - lat) * 0.8f + sample_noise_2d(w.seed + 51, x, y, 0.09f) * 0.2f - std::max(0.0f, h) * 0.3f, 0.0f, 1.0f);
+    BiomeType b = BiomeType::TemperateGrassland;
+    TerrainClass tc = static_cast<TerrainClass>(w.terrainClass[i]);
+    if (tc != TerrainClass::Land) b = BiomeType::Coast;
+    else if (h > 0.65f) b = BiomeType::Mountain;
+    else if (temp < 0.18f) b = BiomeType::Arctic;
+    else if (temp < 0.28f) b = BiomeType::Tundra;
+    else if (temp > 0.75f && moisture < 0.25f) b = BiomeType::Desert;
+    else if (temp > 0.68f && moisture > 0.72f) b = BiomeType::Jungle;
+    else if (moisture > 0.78f) b = BiomeType::Wetlands;
+    else if (moisture > 0.62f) b = BiomeType::Forest;
+    else if (temp > 0.56f && moisture > 0.35f && moisture < 0.6f) b = BiomeType::Mediterranean;
+    else if (moisture < 0.32f) b = BiomeType::Steppe;
+    w.biomeMap[i] = static_cast<uint8_t>(b);
+  }
+}
+
+void spawn_biome_resources(World& w) {
+  w.resourceNodes.clear();
+  uint32_t nextId = 1;
+  for (int y = 3; y < w.height - 3; y += 8) for (int x = 3; x < w.width - 3; x += 8) {
+    int i = y * w.width + x;
+    BiomeType b = biome_at(w, i);
+    if (b == BiomeType::Coast) { w.resourceNodes.push_back({nextId++, ResourceNodeType::Ruins, {(float)x + 0.5f, (float)y + 0.5f}, 1200.0f, UINT16_MAX}); continue; }
+    if (b == BiomeType::Forest || b == BiomeType::Jungle || b == BiomeType::Wetlands) w.resourceNodes.push_back({nextId++, ResourceNodeType::Forest, {(float)x + 0.5f, (float)y + 0.5f}, 1500.0f, UINT16_MAX});
+    else if (b == BiomeType::Mountain || b == BiomeType::Steppe || b == BiomeType::Desert) w.resourceNodes.push_back({nextId++, ResourceNodeType::Ore, {(float)x + 0.5f, (float)y + 0.5f}, 1300.0f, UINT16_MAX});
+    else w.resourceNodes.push_back({nextId++, ResourceNodeType::Farmable, {(float)x + 0.5f, (float)y + 0.5f}, 1400.0f, UINT16_MAX});
+  }
 }
 
 void rebuild_terrain_classes(World& w) {
@@ -1570,6 +1697,7 @@ void initialize_world(World& w, uint32_t seed) {
     w.fertility[y * w.width + x] = std::clamp(1.0f - std::abs(h), 0.1f, 1.0f);
   }
   rebuild_terrain_classes(w);
+  assign_biomes(w);
 
   apply_world_defaults(w);
   w.resourceNodes.clear();
@@ -1589,8 +1717,7 @@ void initialize_world(World& w, uint32_t seed) {
     spawn_unit(w, 0, UnitType::Infantry, {17.0f + i * 0.8f, 22.0f});
     spawn_unit(w, 1, UnitType::Infantry, {91.0f + i * 0.8f, 87.0f});
   }
-  w.resourceNodes.push_back({1, ResourceNodeType::Forest, {28.0f, 26.0f}, 1500.0f, UINT16_MAX});
-  w.resourceNodes.push_back({2, ResourceNodeType::Ore, {86.0f, 82.0f}, 1400.0f, UINT16_MAX});
+  spawn_biome_resources(w);
   ensure_base_roads(w);
   recompute_trade_routes(w);
   recompute_supply(w);
@@ -1616,6 +1743,12 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     if (to.contains("fertility") && to["fertility"].is_array()) { w.fertility = to["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "terrainOverrides.fertility size mismatch"; return false; } }
   }
   rebuild_terrain_classes(w);
+  assign_biomes(w);
+  if (j.contains("biomeMap")) {
+    auto bm = j["biomeMap"].get<std::vector<uint8_t>>();
+    if (!validate_size_u8(w, bm)) { err = "biomeMap size mismatch"; return false; }
+    w.biomeMap = std::move(bm);
+  }
   if (j.contains("waterMask")) {
     auto m = j["waterMask"].get<std::vector<uint8_t>>();
     if (!validate_size_u8(w, m)) { err = "waterMask size mismatch"; return false; }
@@ -1752,6 +1885,7 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp}});
   j["resourceNodes"] = nlohmann::json::array(); for (const auto& r : w.resourceNodes) { std::string t="Forest"; if (r.type==ResourceNodeType::Ore) t="Ore"; else if (r.type==ResourceNodeType::Farmable) t="Farmable"; else if (r.type==ResourceNodeType::Ruins) t="Ruins"; j["resourceNodes"].push_back({{"id",r.id},{"type",t},{"pos",{r.pos.x,r.pos.y}},{"amount",r.amount},{"owner",r.owner}}); }
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
+  j["biomeMap"] = w.biomeMap;
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"title",o.title},{"text",o.text},{"primary",o.primary},{"state",objective_state_name(o.state)},{"owner",o.owner}});
   j["triggers"] = nlohmann::json::array();
@@ -2287,11 +2421,41 @@ bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t 
   return true;
 }
 
+const BiomeRuntime& biome_runtime(BiomeType biome) {
+  load_biomes_once();
+  static BiomeRuntime fallback{"temperate_grassland", "Temperate Grassland", {0.32f, 0.62f, 0.28f}};
+  const size_t i = static_cast<size_t>(biome);
+  if (i >= gBiomes.size() || gBiomes[i].id.empty()) return fallback;
+  static BiomeRuntime out;
+  out.id = gBiomes[i].id;
+  out.displayName = gBiomes[i].displayName;
+  out.palette = gBiomes[i].palette;
+  return out;
+}
+
+BiomeType biome_at(const World& world, int cellIndex) {
+  if (cellIndex < 0 || cellIndex >= (int)world.biomeMap.size()) return BiomeType::TemperateGrassland;
+  return static_cast<BiomeType>(world.biomeMap[cellIndex]);
+}
+
+std::string building_visual_variant_id(const World& world, const Building& building) {
+  load_civilization_themes_once();
+  if (building.team >= world.players.size()) return std::string("default_") + building_family_name(building.type);
+  const std::string& civId = world.players[building.team].civilization.id;
+  auto it = gThemes.find(civId);
+  if (it == gThemes.end()) return std::string(civId) + "_" + building_family_name(building.type);
+  const char* family = building_family_name(building.type);
+  auto fit = it->second.familyToVariant.find(family);
+  if (fit == it->second.familyToVariant.end()) return std::string(civId) + "_" + family;
+  return fit->second;
+}
+
 uint64_t map_setup_hash(const World& w) {
   uint64_t h = kFNVOffset;
   for (float v : w.heightmap) hash_float(h, v);
   for (float v : w.fertility) hash_float(h, v);
   for (uint8_t v : w.terrainClass) hash_u32(h, v);
+  for (uint8_t v : w.biomeMap) hash_u32(h, v);
   for (const auto& c : w.cities) { hash_u32(h, c.id); hash_u32(h, c.team); hash_float(h, c.pos.x); hash_float(h, c.pos.y); }
   for (const auto& b : w.buildings) { hash_u32(h, b.id); hash_u32(h, b.team); hash_u32(h, (uint32_t)b.type); hash_float(h, b.pos.x); hash_float(h, b.pos.y); }
   for (const auto& u : w.units) { hash_u32(h, u.id); hash_u32(h, u.team); hash_u32(h, (uint32_t)u.type); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }

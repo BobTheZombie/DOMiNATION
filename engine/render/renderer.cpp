@@ -202,6 +202,13 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       float b = 0.16f + 0.08f * (h + 1.0f);
       if (tc == dom::sim::TerrainClass::ShallowWater) { r = 0.16f; g = 0.38f; b = 0.68f; }
       else if (tc == dom::sim::TerrainClass::DeepWater) { r = 0.08f; g = 0.24f; b = 0.55f; }
+      else {
+        auto biome = dom::sim::biome_at(w, gi);
+        auto br = dom::sim::biome_runtime(biome);
+        r = std::clamp(br.palette[0] * (0.82f + 0.18f * f), 0.0f, 1.0f);
+        g = std::clamp(br.palette[1] * (0.82f + 0.18f * f), 0.0f, 1.0f);
+        b = std::clamp(br.palette[2] * (0.85f + 0.15f * (h + 1.0f)), 0.0f, 1.0f);
+      }
 
       uint16_t owner = w.territoryOwner[gi];
       if (owner > 0) {
@@ -346,7 +353,14 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       auto tc = static_cast<dom::sim::TerrainClass>(w.terrainClass.empty() ? 0 : w.terrainClass[i]);
       if (tc == dom::sim::TerrainClass::ShallowWater) glColor3f(0.18f, 0.40f, 0.72f);
       else if (tc == dom::sim::TerrainClass::DeepWater) glColor3f(0.10f, 0.26f, 0.58f);
-      else glColor3f(0.15f + 0.2f * f, 0.35f + 0.4f * f, 0.15f + 0.1f * (h + 1.0f));
+      else {
+        auto biome = dom::sim::biome_at(w, static_cast<int>(i));
+        auto br = dom::sim::biome_runtime(biome);
+        float r = std::clamp(br.palette[0] * (0.8f + 0.2f * f), 0.0f, 1.0f);
+        float g = std::clamp(br.palette[1] * (0.8f + 0.2f * f), 0.0f, 1.0f);
+        float b = std::clamp(br.palette[2] * (0.8f + 0.2f * (h + 1.0f)), 0.0f, 1.0f);
+        glColor3f(r, g, b);
+      }
       glVertex2f(x, y); glVertex2f(x + 1, y); glVertex2f(x + 1, y + 1); glVertex2f(x, y + 1);
     }
   }
@@ -386,8 +400,13 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glBegin(GL_QUADS);
   for (const auto& b : w.buildings) {
     float r = 0.6f, g = 0.6f, bl = 0.65f;
-    if (b.team == 0) { r = 0.82f; g = 0.32f; bl = 0.32f; }
-    if (b.team == 1) { r = 0.28f; g = 0.45f; bl = 0.88f; }
+    const std::string visualId = dom::sim::building_visual_variant_id(w, b);
+    const bool warm = visualId.find("rome") != std::string::npos || visualId.find("middleeast") != std::string::npos;
+    const bool east = visualId.find("china") != std::string::npos;
+    if (warm) { r = 0.78f; g = 0.62f; bl = 0.42f; }
+    else if (east) { r = 0.56f; g = 0.45f; bl = 0.34f; }
+    else if (b.team == 0) { r = 0.82f; g = 0.32f; bl = 0.32f; }
+    else if (b.team == 1) { r = 0.28f; g = 0.45f; bl = 0.88f; }
     if (b.underConstruction) { r *= 0.6f; g *= 0.6f; bl *= 0.6f; }
     glColor3f(r, g, bl);
     float sx = b.size.x * 0.5f;

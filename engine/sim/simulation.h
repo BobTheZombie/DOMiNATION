@@ -48,6 +48,7 @@ enum class StrategicPosture : uint8_t { Expansionist, Defensive, TradeFocused, E
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
 enum class TerrainClass : uint8_t { Land, ShallowWater, DeepWater };
+enum class BiomeType : uint8_t { TemperateGrassland, Steppe, Forest, Desert, Mediterranean, Jungle, Tundra, Arctic, Coast, Wetlands, Mountain, Count };
 
 struct GameplayEvent {
   GameplayEventType type{GameplayEventType::UnitDied};
@@ -107,6 +108,12 @@ struct CivilizationRuntime {
   float scienceBias{1.0f};
   float aggression{1.0f};
   float defense{1.0f};
+};
+
+struct BiomeRuntime {
+  std::string id;
+  std::string displayName;
+  std::array<float, 3> palette{0.25f, 0.55f, 0.25f};
 };
 
 struct PlayerState { uint16_t id{}; Age age{Age::Ancient}; std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0}; int popUsed{0}; int popCap{10}; int score{0}; bool alive{true}; uint32_t unitsLost{0}; uint32_t buildingsLost{0}; int finalScore{0}; bool isHuman{false}; bool isCPU{true}; uint16_t teamId{0}; std::array<float, 3> color{0.8f, 0.8f, 0.8f}; CivilizationRuntime civilization{}; };
@@ -175,7 +182,7 @@ struct TaskGraph {
 
 struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
-  std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint8_t> terrainClass; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
+  std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint8_t> terrainClass; std::vector<uint8_t> biomeMap; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
@@ -218,6 +225,9 @@ bool start_build_placement(World& world, uint16_t team, BuildingType type);
 void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos);
 bool confirm_build_placement(World& world, uint16_t team);
 void cancel_build_placement(World& world);
+const BiomeRuntime& biome_runtime(BiomeType biome);
+BiomeType biome_at(const World& world, int cellIndex);
+std::string building_visual_variant_id(const World& world, const Building& building);
 
 bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitType type);
 bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId);
