@@ -92,3 +92,13 @@ Headless deterministic smoke mode (CI/container friendly):
 - Continue from save: `./build/rts --headless --load /tmp/state.json --smoke --ticks 1400 --dump-hash`
 
 Headless output adds `SAVE_RESULT` / `LOAD_RESULT` / `REPLAY_RESULT` lines for automation.
+
+## Scenarios and editor
+- Launch authored scenario: `./build/rts --scenario scenarios/test_scenario.json`
+- List shipped scenarios: `./build/rts --list-scenarios`
+- Headless scenario smoke: `./build/rts --headless --scenario scenarios/test_scenario.json --smoke --ticks 1200 --dump-hash`
+- Trigger smoke: `./build/rts --headless --scenario scenarios/trigger_test.json --smoke --ticks 1800 --dump-hash`
+- Editor mode: `./build/rts --editor --scenario scenarios/test_scenario.json`
+  - `F9` toggle editor, `Tab` cycle tool, `O` change owner, LMB place/remove, `F5` save scenario JSON (`--editor-save <file>`).
+
+Objectives/triggers are simulation-authoritative and visible via HUD/objective log overlays.

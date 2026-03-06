@@ -13,6 +13,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <filesystem>
 #include <limits>
 #include <string>
 #include <vector>
@@ -32,6 +33,8 @@ struct CliOptions {
   bool forceScoreVictory{false};
   bool forceWonderProgress{false};
   bool matchDebug{false};
+  bool editor{false};
+  bool listScenarios{false};
   uint32_t seed{1337};
   int ticks{-1};
   int mapW{128};
@@ -44,6 +47,8 @@ struct CliOptions {
   std::string replayFile;
   std::string saveFile;
   std::string loadFile;
+  std::string scenarioFile;
+  std::string editorSaveFile{"scenario_editor_output.json"};
 };
 
 struct SelectionState {
@@ -74,6 +79,8 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--ai-aggressive") o.aiAggressive = true;
     else if (a == "--combat-debug") o.combatDebug = true;
     else if (a == "--match-debug") o.matchDebug = true;
+    else if (a == "--editor") o.editor = true;
+    else if (a == "--list-scenarios") o.listScenarios = true;
     else if (a == "--replay-verify") o.replayVerify = true;
     else if (a == "--replay-summary-only") o.replaySummaryOnly = true;
     else if (a == "--force-score-victory") o.forceScoreVictory = true;
@@ -88,6 +95,8 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--replay" && i + 1 < argc) { o.replayFile = argv[++i]; }
     else if (a == "--save" && i + 1 < argc) { o.saveFile = argv[++i]; }
     else if (a == "--load" && i + 1 < argc) { o.loadFile = argv[++i]; }
+    else if (a == "--scenario" && i + 1 < argc) { o.scenarioFile = argv[++i]; }
+    else if (a == "--editor-save" && i + 1 < argc) { o.editorSaveFile = argv[++i]; }
     else if (a == "--map-size" && i + 1 < argc) {
       std::string v = argv[++i]; auto xPos = v.find('x'); if (xPos == std::string::npos) return false;
       int w = 0, h = 0; if (!parse_int(v.substr(0, xPos), w) || !parse_int(v.substr(xPos + 1), h)) return false;
@@ -229,9 +238,25 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
     j["buildings"].push_back({{"id", b.id}, {"team", b.team}, {"type", (int)b.type}, {"pos", {b.pos.x, b.pos.y}}, {"size", {b.size.x, b.size.y}}, {"underConstruction", b.underConstruction},
       {"buildProgress", b.buildProgress}, {"buildTime", b.buildTime}, {"hp", b.hp}, {"maxHp", b.maxHp}, {"queue", q}});
   }
+  j["resourceNodes"] = nlohmann::json::array();
+  for (const auto& r : w.resourceNodes) j["resourceNodes"].push_back({{"id", r.id}, {"type", (int)r.type}, {"pos", {r.pos.x, r.pos.y}}, {"amount", r.amount}, {"owner", r.owner}});
+  j["triggerAreas"] = nlohmann::json::array();
+  for (const auto& a : w.triggerAreas) j["triggerAreas"].push_back({{"id", a.id}, {"min", {a.min.x, a.min.y}}, {"max", {a.max.x, a.max.y}}});
+  j["objectives"] = nlohmann::json::array();
+  for (const auto& o : w.objectives) j["objectives"].push_back({{"id", o.id}, {"title", o.title}, {"text", o.text}, {"primary", o.primary}, {"state", (int)o.state}, {"owner", o.owner}});
+  j["triggers"] = nlohmann::json::array();
+  for (const auto& t : w.triggers) {
+    nlohmann::json actions = nlohmann::json::array();
+    for (const auto& a : t.actions) actions.push_back({{"type", (int)a.type}, {"text", a.text}, {"objectiveId", a.objectiveId}, {"objectiveState", (int)a.objectiveState}, {"player", a.player}, {"resources", a.resources}, {"spawnUnitType", (int)a.spawnUnitType}, {"spawnCount", a.spawnCount}, {"spawnPos", {a.spawnPos.x, a.spawnPos.y}}, {"winner", a.winner}, {"areaId", a.areaId}});
+    j["triggers"].push_back({{"id", t.id}, {"once", t.once}, {"fired", t.fired}, {"condition", {{"type", (int)t.condition.type}, {"tick", t.condition.tick}, {"entityId", t.condition.entityId}, {"buildingType", (int)t.condition.buildingType}, {"areaId", t.condition.areaId}, {"player", t.condition.player}}}, {"actions", actions}});
+  }
+  j["objectiveLog"] = nlohmann::json::array();
+  for (const auto& l : w.objectiveLog) j["objectiveLog"].push_back({{"tick", l.tick}, {"text", l.text}});
   j["match"] = {{"phase", (int)w.match.phase}, {"condition", (int)w.match.condition}, {"winner", w.match.winner}, {"endTick", w.match.endTick}, {"scoreTieBreak", w.match.scoreTieBreak}};
   j["config"] = {{"timeLimitTicks", w.config.timeLimitTicks}, {"wonderHoldTicks", w.config.wonderHoldTicks}, {"scoreResourceWeight", w.config.scoreResourceWeight},
-    {"scoreUnitWeight", w.config.scoreUnitWeight}, {"scoreBuildingWeight", w.config.scoreBuildingWeight}, {"scoreAgeWeight", w.config.scoreAgeWeight}, {"scoreCapitalWeight", w.config.scoreCapitalWeight}};
+    {"scoreUnitWeight", w.config.scoreUnitWeight}, {"scoreBuildingWeight", w.config.scoreBuildingWeight}, {"scoreAgeWeight", w.config.scoreAgeWeight}, {"scoreCapitalWeight", w.config.scoreCapitalWeight}, {"allowConquest", w.config.allowConquest}, {"allowScore", w.config.allowScore}, {"allowWonder", w.config.allowWonder}};
+  j["triggerExecutionCount"] = w.triggerExecutionCount;
+  j["objectiveStateChangeCount"] = w.objectiveStateChangeCount;
   j["wonder"] = {{"owner", w.wonder.owner}, {"heldTicks", w.wonder.heldTicks}};
   j["stateHash"] = dom::sim::state_hash(w);
   return j;
@@ -279,13 +304,25 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
     for (const auto& jq : jb.at("queue")) { dom::sim::ProductionItem qi{}; qi.kind = static_cast<dom::sim::QueueKind>(jq.value("kind", 0)); qi.unitType = static_cast<dom::sim::UnitType>(jq.value("unitType", 0)); qi.remaining = jq.value("remaining", 0.0f); qi.targetAge = jq.value("targetAge", 0); b.queue.push_back(qi); }
     w.buildings.push_back(b);
   }
+  w.resourceNodes.clear();
+  if (j.contains("resourceNodes")) for (const auto& jr : j.at("resourceNodes")) { dom::sim::ResourceNode r{}; r.id = jr.value("id", 0u); r.type = static_cast<dom::sim::ResourceNodeType>(jr.value("type", 0)); r.pos = {jr["pos"][0].get<float>(), jr["pos"][1].get<float>()}; r.amount = jr.value("amount", 0.0f); r.owner = jr.value("owner", (uint16_t)UINT16_MAX); w.resourceNodes.push_back(r); }
+  w.triggerAreas.clear();
+  if (j.contains("triggerAreas")) for (const auto& ja : j.at("triggerAreas")) { dom::sim::TriggerArea a{}; a.id = ja.value("id", 0u); a.min = {ja["min"][0].get<float>(), ja["min"][1].get<float>()}; a.max = {ja["max"][0].get<float>(), ja["max"][1].get<float>()}; w.triggerAreas.push_back(a); }
+  w.objectives.clear();
+  if (j.contains("objectives")) for (const auto& jo : j.at("objectives")) { dom::sim::Objective o{}; o.id = jo.value("id", 0u); o.title = jo.value("title", ""); o.text = jo.value("text", ""); o.primary = jo.value("primary", true); o.state = static_cast<dom::sim::ObjectiveState>(jo.value("state", 0)); o.owner = jo.value("owner", (uint16_t)UINT16_MAX); w.objectives.push_back(o); }
+  w.triggers.clear();
+  if (j.contains("triggers")) for (const auto& jt : j.at("triggers")) { dom::sim::Trigger t{}; t.id = jt.value("id", 0u); t.once = jt.value("once", true); t.fired = jt.value("fired", false); const auto& jcnd = jt.at("condition"); t.condition.type = static_cast<dom::sim::TriggerType>(jcnd.value("type", 0)); t.condition.tick = jcnd.value("tick", 0u); t.condition.entityId = jcnd.value("entityId", 0u); t.condition.buildingType = static_cast<dom::sim::BuildingType>(jcnd.value("buildingType", 0)); t.condition.areaId = jcnd.value("areaId", 0u); t.condition.player = jcnd.value("player", (uint16_t)UINT16_MAX); for (const auto& ja : jt.at("actions")) { dom::sim::TriggerAction a{}; a.type = static_cast<dom::sim::TriggerActionType>(ja.value("type", 0)); a.text = ja.value("text", ""); a.objectiveId = ja.value("objectiveId", 0u); a.objectiveState = static_cast<dom::sim::ObjectiveState>(ja.value("objectiveState", 0)); a.player = ja.value("player", (uint16_t)UINT16_MAX); a.resources = ja.at("resources").get<decltype(a.resources)>(); a.spawnUnitType = static_cast<dom::sim::UnitType>(ja.value("spawnUnitType", 0)); a.spawnCount = ja.value("spawnCount", 0u); a.spawnPos = {ja["spawnPos"][0].get<float>(), ja["spawnPos"][1].get<float>()}; a.winner = ja.value("winner", 0u); a.areaId = ja.value("areaId", 0u); t.actions.push_back(a);} w.triggers.push_back(t);} 
+  w.objectiveLog.clear();
+  if (j.contains("objectiveLog")) for (const auto& jl : j.at("objectiveLog")) { w.objectiveLog.push_back({jl.value("tick", 0u), jl.value("text", "")}); }
   const auto& jm = j.at("match");
   w.match.phase = static_cast<dom::sim::MatchPhase>(jm.value("phase", 0)); w.match.condition = static_cast<dom::sim::VictoryCondition>(jm.value("condition", 0));
   w.match.winner = jm.value("winner", 0u); w.match.endTick = jm.value("endTick", 0u); w.match.scoreTieBreak = jm.value("scoreTieBreak", false);
   const auto& jc = j.at("config");
   w.config.timeLimitTicks = jc.value("timeLimitTicks", w.config.timeLimitTicks); w.config.wonderHoldTicks = jc.value("wonderHoldTicks", w.config.wonderHoldTicks);
   w.config.scoreResourceWeight = jc.value("scoreResourceWeight", w.config.scoreResourceWeight); w.config.scoreUnitWeight = jc.value("scoreUnitWeight", w.config.scoreUnitWeight);
-  w.config.scoreBuildingWeight = jc.value("scoreBuildingWeight", w.config.scoreBuildingWeight); w.config.scoreAgeWeight = jc.value("scoreAgeWeight", w.config.scoreAgeWeight); w.config.scoreCapitalWeight = jc.value("scoreCapitalWeight", w.config.scoreCapitalWeight);
+  w.config.scoreBuildingWeight = jc.value("scoreBuildingWeight", w.config.scoreBuildingWeight); w.config.scoreAgeWeight = jc.value("scoreAgeWeight", w.config.scoreAgeWeight); w.config.scoreCapitalWeight = jc.value("scoreCapitalWeight", w.config.scoreCapitalWeight); w.config.allowConquest = jc.value("allowConquest", true); w.config.allowScore = jc.value("allowScore", true); w.config.allowWonder = jc.value("allowWonder", true);
+  w.triggerExecutionCount = j.value("triggerExecutionCount", 0u);
+  w.objectiveStateChangeCount = j.value("objectiveStateChangeCount", 0u);
   w.wonder.owner = j.at("wonder").value("owner", UINT16_MAX); w.wonder.heldTicks = j.at("wonder").value("heldTicks", 0u);
   dom::sim::on_authoritative_state_loaded(w);
   const uint64_t expected = j.value("stateHash", 0ull);
@@ -329,6 +366,10 @@ int run_headless(const CliOptions& o) {
     std::string err;
     if (!load_world_json(inSave, world, err)) { std::cerr << "Failed to load save: " << err << "\n"; return 62; }
     std::cout << "LOAD_RESULT path=" << o.loadFile << " tick=" << world.tick << " ok=1\n";
+  } else if (!o.scenarioFile.empty()) {
+    std::string err;
+    if (!dom::sim::load_scenario_file(world, o.scenarioFile, o.seed, err)) { std::cerr << "Failed to load scenario: " << err << "\n"; return 64; }
+    std::cout << "SCENARIO_LOAD path=" << o.scenarioFile << " ok=1\n";
   } else if (!o.replayFile.empty()) {
     std::ifstream in(o.replayFile);
     if (!in.good()) { std::cerr << "Replay file not found: " << o.replayFile << "\n"; return 31; }
@@ -363,7 +404,7 @@ int run_headless(const CliOptions& o) {
   }
 
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
-  if (o.smoke && o.replayFile.empty() && o.loadFile.empty()) {
+  if (o.smoke && o.replayFile.empty() && o.loadFile.empty() && o.scenarioFile.empty()) {
     dom::sim::World second; second.width = world.width; second.height = world.height; dom::sim::initialize_world(second, o.seed);
     if (baselineHash != dom::sim::map_setup_hash(second)) { std::cerr << "Smoke failure: map hash mismatch for identical seed\n"; return 2; }
   }
@@ -465,6 +506,8 @@ int run_headless(const CliOptions& o) {
   if (o.smoke && world.rejectedCommandCount != 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: rejected commands before end\n"; return 52; }
   if (o.smoke && o.timeLimitTicks > 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: match did not resolve with time limit\n"; return 51; }
 
+  std::cout << "TRIGGER_RESULT count=" << world.triggerExecutionCount << " objectiveTransitions=" << world.objectiveStateChangeCount << " log=" << world.objectiveLog.size() << "\n";
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
     std::cout << "state_hash=" << finalHash << "\n";
@@ -475,7 +518,14 @@ int run_headless(const CliOptions& o) {
 } // namespace
 
 int run_app(int argc, char** argv) {
-  CliOptions opts; if (!parse_cli(argc, argv, opts)) return 1; if (opts.headless) return run_headless(opts);
+  CliOptions opts; if (!parse_cli(argc, argv, opts)) return 1;
+  if (opts.listScenarios) {
+    namespace fs = std::filesystem;
+    if (!fs::exists("scenarios")) { std::cout << "No scenarios directory\n"; return 0; }
+    for (const auto& e : fs::directory_iterator("scenarios")) if (e.path().extension() == ".json") std::cout << e.path().string() << "\n";
+    return 0;
+  }
+  if (opts.headless) return run_headless(opts);
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) return 1;
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -495,7 +545,12 @@ int run_app(int argc, char** argv) {
   bool replayPaused = false;
   float replaySpeed = std::max(0.1f, opts.replaySpeed);
   size_t replayIdx = 0;
-  world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed);
+  if (!opts.scenarioFile.empty()) {
+    std::string err;
+    if (!dom::sim::load_scenario_file(world, opts.scenarioFile, opts.seed, err)) { std::cerr << "Failed to load scenario: " << err << "\n"; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed); }
+  } else {
+    world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed);
+  }
   if (!opts.loadFile.empty()) {
     std::ifstream in(opts.loadFile);
     if (in.good()) {
@@ -525,6 +580,9 @@ int run_app(int argc, char** argv) {
   if (opts.flowVisualize) std::cout << "flow visualization requested (debug overlay path not wired in this slice)\n";
   std::vector<uint32_t> selected;
   SelectionState sel;
+  bool editorMode = opts.editor;
+  int editorTool = 0;
+  uint16_t editorOwner = 0;
 
   auto selected_building = [&]() -> uint32_t {
     if (selected.empty()) return 0;
@@ -547,6 +605,10 @@ int run_app(int argc, char** argv) {
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) running = false;
       if (e.type == SDL_KEYDOWN) {
+        if (e.key.keysym.sym == SDLK_F9) editorMode = !editorMode;
+        if (editorMode && e.key.keysym.sym == SDLK_TAB) editorTool = (editorTool + 1) % 6;
+        if (editorMode && e.key.keysym.sym == SDLK_o) editorOwner = (uint16_t)((editorOwner + 1) % std::max<size_t>(1, world.players.size()));
+        if (editorMode && e.key.keysym.sym == SDLK_F5) { std::string err; if (dom::sim::save_scenario_file(opts.editorSaveFile, world, err)) std::cout << "SCENARIO_SAVE path=" << opts.editorSaveFile << "\n"; else std::cerr << "SCENARIO_SAVE failed: " << err << "\n"; }
         SDL_Keymod mod = SDL_GetModState();
         if (e.key.keysym.sym == SDLK_g) dom::sim::toggle_god_mode(world);
         if (replayMode) {
@@ -637,7 +699,16 @@ int run_app(int argc, char** argv) {
       if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
         int w, h; SDL_GetWindowSize(window, &w, &h);
         glm::vec2 screen{(float)e.button.x, (float)e.button.y};
-        if (world.placementActive) {
+        if (editorMode) {
+          auto wp = dom::render::screen_to_world(camera, w, h, screen);
+          if (editorTool == 0) { dom::sim::UnitType ut = dom::sim::UnitType::Infantry; if (world.units.size() % 2 == 0) ut = dom::sim::UnitType::Worker; world.units.push_back({(uint32_t)(world.units.empty()?1:world.units.back().id+1), editorOwner, ut, 100.0f, 8.0f, 2.5f, 4.0f, ut==dom::sim::UnitType::Worker?dom::sim::UnitRole::Worker:dom::sim::UnitRole::Infantry, dom::sim::AttackType::Melee, dom::sim::UnitRole::Infantry, {1000,1000,1000,1000,1000,1000}, wp, wp, wp, wp, {0,0},0,0,0,0,0,0,0,0,0,false,false,false}); }
+          else if (editorTool == 1) { world.buildings.push_back({(uint32_t)(world.buildings.empty()?1:world.buildings.back().id+1), editorOwner, dom::sim::BuildingType::Barracks, wp, {3.0f,3.0f}, false, 1.0f, 20.0f, 1000.0f, 1000.0f, {}}); }
+          else if (editorTool == 2) { world.resourceNodes.push_back({(uint32_t)(world.resourceNodes.empty()?1:world.resourceNodes.back().id+1), dom::sim::ResourceNodeType::Forest, wp, 1000.0f, UINT16_MAX}); }
+          else if (editorTool == 3) { world.cities.push_back({(uint32_t)(world.cities.empty()?1:world.cities.back().id+1), editorOwner, wp, 1, true}); }
+          else if (editorTool == 4) { glm::vec2 p2{wp.x+6.0f, wp.y+6.0f}; world.triggerAreas.push_back({(uint32_t)(world.triggerAreas.empty()?1:world.triggerAreas.back().id+1), wp, p2}); }
+          else if (editorTool == 5) { if (!world.units.empty()) world.units.pop_back(); else if (!world.buildings.empty()) world.buildings.pop_back(); else if (!world.resourceNodes.empty()) world.resourceNodes.pop_back(); }
+          dom::sim::on_authoritative_state_loaded(world);
+        } else if (world.placementActive) {
           auto wp = dom::render::screen_to_world(camera, w, h, screen);
           dom::sim::update_build_placement(world, 0, wp);
           dom::sim::confirm_build_placement(world, 0);
@@ -710,6 +781,8 @@ int run_app(int argc, char** argv) {
     dom::render::draw(world, camera, w, h, sel.dragHighlight);
     std::string replayOverlay;
     if (replayMode) replayOverlay = "REPLAY tick=" + std::to_string(world.tick) + (replayPaused ? " paused" : " running") + " speed=" + std::to_string(replaySpeed) + "x";
+    if (editorMode) replayOverlay += (replayOverlay.empty()?"":" | ") + ("EDITOR tool=" + std::to_string(editorTool) + " owner=" + std::to_string(editorOwner) + " [Tab tool][O owner][F5 save]");
+    if (!world.objectiveLog.empty()) replayOverlay += (replayOverlay.empty()?"":" | ") + ("OBJ: " + world.objectiveLog.back().text);
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);
   }

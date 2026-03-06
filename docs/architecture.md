@@ -91,3 +91,9 @@ Replay recording drains authoritative command events emitted from sim order APIs
 - Paused right-arrow does deterministic single-tick stepping.
 - Back-step fallback uses restart + fast-seek to prior tick chunk (no in-place reverse sim mutation).
 - Headless replay controls support partial stop (`--replay-stop-tick`) and summary-only execution.
+
+## Scenario and trigger flow
+- Startup path: CLI parser chooses procedural init or `load_scenario_file` JSON ingest.
+- Scenario load is authoritative: players/entities/rules/objectives/triggers are baked into world state before first tick.
+- Tick loop phase: combat/economy -> victory checks -> trigger evaluation (`eval_triggers`) -> recompute derived fog/population.
+- Editor path: runtime placement mutates world in editor mode and exports authored data via `save_scenario_file`; editor-only tool state is never serialized as authoritative save state.
