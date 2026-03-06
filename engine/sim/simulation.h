@@ -101,6 +101,29 @@ struct TickProfile {
   double combatMs{0.0};
 };
 
+struct SimulationStats {
+  uint32_t threads{1};
+  uint32_t jobCount{0};
+  uint32_t chunkCount{0};
+  uint32_t movementTasks{0};
+  uint32_t fogTasks{0};
+  uint32_t territoryTasks{0};
+  uint32_t navRequests{0};
+  uint32_t navCompletions{0};
+  uint32_t navStaleDrops{0};
+  uint32_t eventCount{0};
+};
+
+struct ChunkCoord {
+  int x{0};
+  int y{0};
+};
+
+struct ChunkRange {
+  int start{0};
+  int end{0};
+};
+
 struct Job {
   std::function<void()> execute;
 };
@@ -156,6 +179,11 @@ bool players_allied(const World& world, uint16_t a, uint16_t b);
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);
 TickProfile last_tick_profile();
+SimulationStats last_simulation_stats();
 void consume_gameplay_events(std::vector<GameplayEvent>& out);
+
+void rebuild_chunk_membership(const World& world);
+ChunkRange query_chunk_range(int beginChunk, int maxChunkCount);
+void process_chunk_range(const World& world, ChunkRange range, const std::function<void(int chunkIndex)>& fn);
 
 } // namespace dom::sim

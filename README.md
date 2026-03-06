@@ -62,6 +62,7 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--force-wonder-progress` helper flag reserved for wonder smoke shaping
 - `--match-debug` print match-flow diagnostics
 - `--threads <N>` set deterministic worker pool size for job graph execution
+- `--hash-only` print only final hash line (plus required diagnostics/errors)
 
 ## Controls
 - **WASD**: pan camera
@@ -121,3 +122,22 @@ Civilization data: `content/civilizations.json`.
 
 
 Headless perf mode also emits deterministic `EVENT_COUNT` lines sourced from the gameplay event stream.
+
+## Deterministic threaded simulation validation
+
+Chunked deterministic simulation now parallelizes movement integration, fog updates, territory updates, and async navigation generation while committing authoritative state in stable order.
+
+Validation commands:
+
+```bash
+./build/rts --headless --spawn-army 500 --cpu-only-battle --threads 1 --ticks 1200 --dump-hash
+./build/rts --headless --spawn-army 500 --cpu-only-battle --threads 4 --ticks 1200 --dump-hash
+./build/rts --headless --spawn-army 500 --cpu-only-battle --threads 8 --ticks 1200 --dump-hash
+./build/rts --headless --spawn-army 1000 --cpu-only-battle --threads 8 --ticks 600 --dump-hash
+```
+
+Expected outcome:
+- identical final hash for thread counts 1/4/8 for same seed/inputs/ticks,
+- no deadlock/crash,
+- combat and deaths observed,
+- perf output includes: `THREADS`, `JOB_COUNT`, `CHUNK_COUNT`, `MOVEMENT_TASKS`, `FOG_TASKS`, `TERRITORY_TASKS`, `NAV_REQUESTS`, `NAV_COMPLETIONS`, `NAV_STALE_DROPS`, `EVENT_COUNT`.

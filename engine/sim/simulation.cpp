@@ -81,6 +81,35 @@ struct NavRuntime {
   uint32_t nextMoveOrder{1};
 } gNav;
 
+struct NavRequest {
+  uint64_t requestId{0};
+  uint32_t tickIssued{0};
+  uint32_t navVersion{0};
+  int targetCell{0};
+};
+
+struct NavCompletion {
+  uint64_t requestId{0};
+  uint32_t navVersion{0};
+  FlowField field{};
+};
+
+struct ChunkData {
+  std::vector<uint32_t> unitIds;
+  std::vector<uint32_t> buildingIds;
+  std::vector<uint32_t> resourceIds;
+  std::vector<int> fogTiles;
+  std::vector<int> territoryTiles;
+};
+
+struct ChunkRuntime {
+  int chunkWidth{16};
+  int chunkHeight{16};
+  int cols{0};
+  int rows{0};
+  std::vector<ChunkData> chunks;
+} gChunks;
+
 struct SpatialCell {
   std::vector<uint32_t> unitIds;
   std::vector<uint32_t> buildingIds;
@@ -100,9 +129,18 @@ struct SpatialGrid {
 
 SpatialGrid gSpatial;
 TickProfile gLastTickProfile{};
+SimulationStats gLastStats{};
+uint64_t gNextNavRequestId{1};
+std::vector<NavRequest> gPendingNavRequests;
+std::vector<NavCompletion> gCompletedNavResults;
 
 constexpr int32_t kInfCost = 1 << 29;
 constexpr std::array<std::pair<int,int>, 8> kNeighborOrder{{{1,0},{0,1},{-1,0},{0,-1},{1,1},{-1,1},{-1,-1},{1,-1}}};
+
+void queue_flow_field_request(World& w, int targetCell);
+void process_nav_requests(World& w);
+void apply_nav_results(World& w);
+void rebuild_chunk_membership_impl(const World& w);
 
 void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subject, uint32_t entityId, std::string text = {}) {
   gGameplayEvents.push_back({type, w.tick, actor, subject, entityId, std::move(text)});
@@ -480,54 +518,8 @@ FlowField* get_flow_field(World& w, int targetCell) {
       return &f;
     }
   }
-  FlowField f{};
-  f.targetCell = targetCell;
-  f.navVersion = w.navVersion;
-  f.width = w.width;
-  f.height = w.height;
-  const int cells = w.width * w.height;
-  f.integration.assign(cells, kInfCost);
-  f.dirX.assign(cells, 0);
-  f.dirY.assign(cells, 0);
-  build_blocked_grid(w);
-  std::queue<int> q;
-  f.integration[targetCell] = 0;
-  q.push(targetCell);
-  while (!q.empty()) {
-    const int cur = q.front(); q.pop();
-    const int cx = cur % w.width;
-    const int cy = cur / w.width;
-    const int32_t base = f.integration[cur];
-    for (const auto& n : kNeighborOrder) {
-      int nx = cx + n.first;
-      int ny = cy + n.second;
-      if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
-      const int ni = ny * w.width + nx;
-      if (gNav.blocked[ni]) continue;
-      int32_t cand = base + cell_step_cost(w, cur, ni);
-      if (cand < f.integration[ni]) { f.integration[ni] = cand; q.push(ni); }
-    }
-  }
-  for (int y = 0; y < w.height; ++y) {
-    for (int x = 0; x < w.width; ++x) {
-      const int idx = y * w.width + x;
-      int32_t best = f.integration[idx];
-      int8_t bx = 0, by = 0;
-      for (const auto& n : kNeighborOrder) {
-        int nx = x + n.first;
-        int ny = y + n.second;
-        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
-        const int ni = ny * w.width + nx;
-        if (f.integration[ni] < best) { best = f.integration[ni]; bx = (int8_t)n.first; by = (int8_t)n.second; }
-      }
-      f.dirX[idx] = bx;
-      f.dirY[idx] = by;
-    }
-  }
-  ++w.flowFieldGeneratedCount;
-  gNav.cache.push_back(std::move(f));
-  if (gNav.cache.size() > 32) gNav.cache.erase(gNav.cache.begin());
-  return &gNav.cache.back();
+  queue_flow_field_request(w, targetCell);
+  return nullptr;
 }
 
 void recompute_population(World& w) {
@@ -562,18 +554,39 @@ bool placeable(const World& w, uint16_t team, BuildingType type, glm::vec2 pos) 
 }
 
 void recompute_territory(World& w) {
-  std::fill(w.territoryOwner.begin(), w.territoryOwner.end(), 0);
-  for (int y = 0; y < w.height; ++y) {
-    for (int x = 0; x < w.width; ++x) {
-      float best = 1e9f;
-      uint16_t owner = 0;
-      glm::vec2 p{x + 0.5f, y + 0.5f};
-      for (const auto& c : w.cities) {
-        float d = dist(c.pos, p) / (c.capital ? 1.4f : 1.0f);
-        if (d < best && d < 22.0f + c.level * 2.0f) { best = d; owner = c.team; }
+  ensure_chunk_layout(w);
+  std::vector<std::vector<std::pair<int, uint16_t>>> chunkWrites(gChunks.chunks.size());
+  TaskGraph graph;
+  for (size_t chunkIdx = 0; chunkIdx < gChunks.chunks.size(); ++chunkIdx) {
+    graph.jobs.push_back({[&w, &chunkWrites, chunkIdx]() {
+      const int cx = static_cast<int>(chunkIdx) % gChunks.cols;
+      const int cy = static_cast<int>(chunkIdx) / gChunks.cols;
+      const int minX = cx * gChunks.chunkWidth;
+      const int minY = cy * gChunks.chunkHeight;
+      const int maxX = std::min(w.width, minX + gChunks.chunkWidth);
+      const int maxY = std::min(w.height, minY + gChunks.chunkHeight);
+      auto& out = chunkWrites[chunkIdx];
+      out.reserve(static_cast<size_t>((maxX - minX) * (maxY - minY)));
+      for (int y = minY; y < maxY; ++y) {
+        for (int x = minX; x < maxX; ++x) {
+          float best = 1e9f;
+          uint16_t owner = 0;
+          glm::vec2 p{x + 0.5f, y + 0.5f};
+          for (const auto& c : w.cities) {
+            float d = dist(c.pos, p) / (c.capital ? 1.4f : 1.0f);
+            if (d < best && d < 22.0f + c.level * 2.0f) { best = d; owner = c.team; }
+          }
+          out.push_back({y * w.width + x, owner});
+        }
       }
-      w.territoryOwner[y * w.width + x] = owner;
-    }
+    }});
+  }
+  gLastStats.territoryTasks += static_cast<uint32_t>(graph.jobs.size());
+  gLastStats.jobCount += static_cast<uint32_t>(graph.jobs.size());
+  run_task_graph(graph);
+  std::fill(w.territoryOwner.begin(), w.territoryOwner.end(), 0);
+  for (size_t i = 0; i < chunkWrites.size(); ++i) {
+    for (const auto& entry : chunkWrites[i]) w.territoryOwner[entry.first] = entry.second;
   }
   ++w.territoryRecomputeCount;
   w.territoryDirty = true;
@@ -582,17 +595,222 @@ void recompute_territory(World& w) {
 void recompute_fog(World& w) {
   std::fill(w.fog.begin(), w.fog.end(), w.godMode ? 255 : 0);
   if (w.godMode) { w.fogDirty = true; return; }
-  for (const auto& c : w.cities) if (c.team == 0) {
-    for (int y = std::max(0, static_cast<int>(c.pos.y) - 10); y <= std::min(w.height - 1, static_cast<int>(c.pos.y) + 10); ++y)
-      for (int x = std::max(0, static_cast<int>(c.pos.x) - 10); x <= std::min(w.width - 1, static_cast<int>(c.pos.x) + 10); ++x)
-        if (dist({x + 0.5f, y + 0.5f}, c.pos) < 10.5f) w.fog[y * w.width + x] = 255;
+  ensure_chunk_layout(w);
+  std::vector<std::vector<std::pair<int, uint8_t>>> chunkWrites(gChunks.chunks.size());
+  TaskGraph graph;
+  for (size_t chunkIdx = 0; chunkIdx < gChunks.chunks.size(); ++chunkIdx) {
+    graph.jobs.push_back({[&w, &chunkWrites, chunkIdx]() {
+      const int cx = static_cast<int>(chunkIdx) % gChunks.cols;
+      const int cy = static_cast<int>(chunkIdx) / gChunks.cols;
+      const int minX = cx * gChunks.chunkWidth;
+      const int minY = cy * gChunks.chunkHeight;
+      const int maxX = std::min(w.width, minX + gChunks.chunkWidth);
+      const int maxY = std::min(w.height, minY + gChunks.chunkHeight);
+      auto& out = chunkWrites[chunkIdx];
+      out.reserve(static_cast<size_t>((maxX - minX) * (maxY - minY)));
+      for (int y = minY; y < maxY; ++y) {
+        for (int x = minX; x < maxX; ++x) {
+          uint8_t vis = 0;
+          for (const auto& c : w.cities) if (c.team == 0 && dist({x + 0.5f, y + 0.5f}, c.pos) < 10.5f) { vis = 255; break; }
+          if (!vis) {
+            for (const auto& u : w.units) {
+              if (u.team == 0 && u.hp > 0 && dist({x + 0.5f, y + 0.5f}, u.pos) < 7.5f) { vis = 255; break; }
+            }
+          }
+          if (vis) out.push_back({y * w.width + x, vis});
+        }
+      }
+    }});
   }
-  for (const auto& u : w.units) if (u.team == 0 && u.hp > 0) {
-    for (int y = std::max(0, static_cast<int>(u.pos.y) - 7); y <= std::min(w.height - 1, static_cast<int>(u.pos.y) + 7); ++y)
-      for (int x = std::max(0, static_cast<int>(u.pos.x) - 7); x <= std::min(w.width - 1, static_cast<int>(u.pos.x) + 7); ++x)
-        if (dist({x + 0.5f, y + 0.5f}, u.pos) < 7.5f) w.fog[y * w.width + x] = 255;
+  gLastStats.fogTasks += static_cast<uint32_t>(graph.jobs.size());
+  gLastStats.jobCount += static_cast<uint32_t>(graph.jobs.size());
+  run_task_graph(graph);
+  for (size_t i = 0; i < chunkWrites.size(); ++i) {
+    for (const auto& entry : chunkWrites[i]) w.fog[entry.first] = entry.second;
   }
   w.fogDirty = true;
+}
+
+void ensure_chunk_layout(const World& w) {
+  gChunks.cols = std::max(1, (w.width + gChunks.chunkWidth - 1) / gChunks.chunkWidth);
+  gChunks.rows = std::max(1, (w.height + gChunks.chunkHeight - 1) / gChunks.chunkHeight);
+  const int count = gChunks.cols * gChunks.rows;
+  if ((int)gChunks.chunks.size() != count) gChunks.chunks.assign(count, {});
+}
+
+int chunk_index_of_tile(const World& w, int tx, int ty) {
+  ensure_chunk_layout(w);
+  const int cx = std::clamp(tx / gChunks.chunkWidth, 0, gChunks.cols - 1);
+  const int cy = std::clamp(ty / gChunks.chunkHeight, 0, gChunks.rows - 1);
+  return cy * gChunks.cols + cx;
+}
+
+int chunk_index_of_pos(const World& w, glm::vec2 p) {
+  const int tx = std::clamp((int)p.x, 0, w.width - 1);
+  const int ty = std::clamp((int)p.y, 0, w.height - 1);
+  return chunk_index_of_tile(w, tx, ty);
+}
+
+void rebuild_chunk_membership_impl(const World& w) {
+  ensure_chunk_layout(w);
+  for (auto& c : gChunks.chunks) {
+    c.unitIds.clear();
+    c.buildingIds.clear();
+    c.resourceIds.clear();
+    c.fogTiles.clear();
+    c.territoryTiles.clear();
+  }
+  for (const auto& u : w.units) {
+    if (u.hp <= 0) continue;
+    gChunks.chunks[chunk_index_of_pos(w, u.pos)].unitIds.push_back(u.id);
+  }
+  for (const auto& b : w.buildings) {
+    if (b.hp <= 0.0f) continue;
+    gChunks.chunks[chunk_index_of_pos(w, b.pos)].buildingIds.push_back(b.id);
+  }
+  for (const auto& r : w.resourceNodes) {
+    if (r.amount <= 0.0f) continue;
+    gChunks.chunks[chunk_index_of_pos(w, r.pos)].resourceIds.push_back(r.id);
+  }
+  for (int y = 0; y < w.height; ++y) {
+    for (int x = 0; x < w.width; ++x) {
+      const int tile = y * w.width + x;
+      auto& c = gChunks.chunks[chunk_index_of_tile(w, x, y)];
+      c.fogTiles.push_back(tile);
+      c.territoryTiles.push_back(tile);
+    }
+  }
+  for (auto& c : gChunks.chunks) {
+    std::sort(c.unitIds.begin(), c.unitIds.end());
+    std::sort(c.buildingIds.begin(), c.buildingIds.end());
+    std::sort(c.resourceIds.begin(), c.resourceIds.end());
+    std::sort(c.fogTiles.begin(), c.fogTiles.end());
+    std::sort(c.territoryTiles.begin(), c.territoryTiles.end());
+  }
+}
+
+struct MovementResult {
+  bool valid{false};
+  uint32_t id{0};
+  glm::vec2 pos{};
+  glm::vec2 moveDir{};
+  uint16_t stuckTicks{0};
+  bool reachedSlot{false};
+};
+
+void enqueue_nav_request(World& w, int targetCell) {
+  NavRequest req{};
+  req.requestId = gNextNavRequestId++;
+  req.tickIssued = w.tick;
+  req.navVersion = w.navVersion;
+  req.targetCell = targetCell;
+  gPendingNavRequests.push_back(req);
+}
+
+void queue_flow_field_request(World& w, int targetCell) {
+  for (const auto& f : gNav.cache) {
+    if (f.targetCell == targetCell && f.navVersion == w.navVersion && f.width == w.width && f.height == w.height) return;
+  }
+  for (const auto& p : gPendingNavRequests) {
+    if (p.targetCell == targetCell && p.navVersion == w.navVersion) return;
+  }
+  enqueue_nav_request(w, targetCell);
+}
+
+void process_nav_requests(World& w) {
+  if (gPendingNavRequests.empty()) return;
+  std::vector<NavRequest> requests = std::move(gPendingNavRequests);
+  std::sort(requests.begin(), requests.end(), [](const NavRequest& a, const NavRequest& b) { return a.requestId < b.requestId; });
+
+  TaskGraph navGraph;
+  std::mutex doneMutex;
+  for (const auto& req : requests) {
+    navGraph.jobs.push_back({[&w, &doneMutex, req]() {
+      if (req.navVersion != w.navVersion) return;
+      FlowField f{};
+      f.targetCell = req.targetCell;
+      f.navVersion = req.navVersion;
+      f.width = w.width;
+      f.height = w.height;
+      const int cells = w.width * w.height;
+      f.integration.assign(cells, kInfCost);
+      f.dirX.assign(cells, 0);
+      f.dirY.assign(cells, 0);
+      std::vector<uint8_t> blocked(cells, 0);
+      for (const auto& b : w.buildings) {
+        int minX = std::max(0, (int)std::floor(b.pos.x - b.size.x * 0.5f));
+        int maxX = std::min(w.width - 1, (int)std::ceil(b.pos.x + b.size.x * 0.5f));
+        int minY = std::max(0, (int)std::floor(b.pos.y - b.size.y * 0.5f));
+        int maxY = std::min(w.height - 1, (int)std::ceil(b.pos.y + b.size.y * 0.5f));
+        for (int y = minY; y <= maxY; ++y) for (int x = minX; x <= maxX; ++x) blocked[y * w.width + x] = 1;
+      }
+      std::queue<int> q;
+      f.integration[req.targetCell] = 0;
+      q.push(req.targetCell);
+      while (!q.empty()) {
+        const int cur = q.front(); q.pop();
+        const int cx = cur % w.width;
+        const int cy = cur / w.width;
+        const int32_t base = f.integration[cur];
+        for (const auto& n : kNeighborOrder) {
+          int nx = cx + n.first;
+          int ny = cy + n.second;
+          if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+          const int ni = ny * w.width + nx;
+          if (blocked[ni]) continue;
+          int32_t cand = base + cell_step_cost(w, cur, ni);
+          if (cand < f.integration[ni]) { f.integration[ni] = cand; q.push(ni); }
+        }
+      }
+      for (int y = 0; y < w.height; ++y) {
+        for (int x = 0; x < w.width; ++x) {
+          const int idx = y * w.width + x;
+          int32_t best = f.integration[idx];
+          int8_t bx = 0, by = 0;
+          for (const auto& n : kNeighborOrder) {
+            int nx = x + n.first;
+            int ny = y + n.second;
+            if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+            const int ni = ny * w.width + nx;
+            if (f.integration[ni] < best) { best = f.integration[ni]; bx = (int8_t)n.first; by = (int8_t)n.second; }
+          }
+          f.dirX[idx] = bx;
+          f.dirY[idx] = by;
+        }
+      }
+      std::lock_guard<std::mutex> lock(doneMutex);
+      gCompletedNavResults.push_back({req.requestId, req.navVersion, std::move(f)});
+    }});
+  }
+  gLastStats.navRequests += static_cast<uint32_t>(requests.size());
+  gLastStats.jobCount += static_cast<uint32_t>(navGraph.jobs.size());
+  run_task_graph(navGraph);
+}
+
+void apply_nav_results(World& w) {
+  if (gCompletedNavResults.empty()) return;
+  std::sort(gCompletedNavResults.begin(), gCompletedNavResults.end(), [](const NavCompletion& a, const NavCompletion& b) {
+    return a.requestId < b.requestId;
+  });
+  for (auto& done : gCompletedNavResults) {
+    if (done.navVersion != w.navVersion) {
+      ++gLastStats.navStaleDrops;
+      continue;
+    }
+    bool replaced = false;
+    for (auto& cached : gNav.cache) {
+      if (cached.targetCell == done.field.targetCell && cached.navVersion == done.field.navVersion && cached.width == done.field.width && cached.height == done.field.height) {
+        cached = std::move(done.field);
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced) gNav.cache.push_back(std::move(done.field));
+    ++w.flowFieldGeneratedCount;
+    ++gLastStats.navCompletions;
+  }
+  if (gNav.cache.size() > 32) gNav.cache.erase(gNav.cache.begin(), gNav.cache.begin() + (gNav.cache.size() - 32));
+  gCompletedNavResults.clear();
 }
 
 
@@ -833,6 +1051,9 @@ void initialize_world(World& w, uint32_t seed) {
 
   load_defs_once();
   gNav.cache.clear();
+  gPendingNavRequests.clear();
+  gCompletedNavResults.clear();
+  gNextNavRequestId = 1;
   gNav.nextMoveOrder = 1;
   gSpatial.cells.clear();
   w.navVersion = 1;
@@ -974,6 +1195,9 @@ void on_authoritative_state_loaded(World& w) {
   load_defs_once();
   gReplayCommands.clear();
   gNav.cache.clear();
+  gPendingNavRequests.clear();
+  gCompletedNavResults.clear();
+  gNextNavRequestId = 1;
   gNav.nextMoveOrder = 1;
   gSpatial.cells.clear();
   ++w.navVersion;
@@ -990,12 +1214,17 @@ void on_authoritative_state_loaded(World& w) {
 void tick_world(World& w, float dt) {
   using Clock = std::chrono::steady_clock;
   const auto tickStart = Clock::now();
+  gLastStats = {};
+  gLastStats.threads = static_cast<uint32_t>(worker_threads());
   ++w.tick;
   if (w.match.phase != MatchPhase::Running) {
     if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
     return;
   }
   if (w.tick % 10 == 0) recompute_territory(w);
+
+  process_nav_requests(w);
+  apply_nav_results(w);
 
   spatial_prepare(w);
 
@@ -1044,16 +1273,99 @@ void tick_world(World& w, float dt) {
   }
 
   const auto combatStart = Clock::now();
+  rebuild_chunk_membership_impl(w);
+  gLastStats.chunkCount = static_cast<uint32_t>(gChunks.chunks.size());
+
+  std::vector<Unit> unitSnapshot = w.units;
+  std::unordered_map<uint32_t, size_t> unitIndexById;
+  unitIndexById.reserve(unitSnapshot.size());
+  for (size_t i = 0; i < unitSnapshot.size(); ++i) unitIndexById[unitSnapshot[i].id] = i;
+
+  std::vector<MovementResult> movementResults(w.units.size());
+  TaskGraph movementGraph;
+  for (size_t chunkIdx = 0; chunkIdx < gChunks.chunks.size(); ++chunkIdx) {
+    movementGraph.jobs.push_back({[&w, &unitSnapshot, &unitIndexById, &movementResults, chunkIdx, dt]() {
+      const auto& chunk = gChunks.chunks[chunkIdx];
+      for (uint32_t uid : chunk.unitIds) {
+        auto it = unitIndexById.find(uid);
+        if (it == unitIndexById.end()) continue;
+        const Unit& src = unitSnapshot[it->second];
+        if (src.hp <= 0) continue;
+        MovementResult out{};
+        out.valid = true;
+        out.id = src.id;
+        glm::vec2 desired = src.target - src.pos;
+        if (src.hasMoveOrder && src.moveOrder != 0) {
+          if (FlowField* ff = get_flow_field(w, cell_of(w, src.slotTarget))) {
+            const int cc = cell_of(w, src.pos);
+            desired = glm::vec2{(float)ff->dirX[cc], (float)ff->dirY[cc]};
+            if (glm::length(desired) < 0.1f) desired = src.slotTarget - src.pos;
+          } else {
+            desired = src.slotTarget - src.pos;
+          }
+        }
+        glm::vec2 repulse{0.0f, 0.0f};
+        for (const auto& other : unitSnapshot) {
+          if (other.id == src.id || other.team != src.team || other.hp <= 0) continue;
+          glm::vec2 delta = src.pos - other.pos;
+          float l = glm::length(delta);
+          if (l > 0.001f && l < 1.2f) repulse += (delta / l) * (1.2f - l);
+        }
+        desired += repulse * 0.65f;
+        out.pos = src.pos;
+        out.moveDir = src.moveDir;
+        out.stuckTicks = src.stuckTicks;
+        float len = glm::length(desired);
+        if (len > 0.05f) {
+          glm::vec2 dir = desired / len;
+          out.moveDir = glm::mix(src.moveDir, dir, 0.35f);
+          float ml = glm::length(out.moveDir);
+          if (ml > 0.001f) out.moveDir /= ml;
+          glm::vec2 prev = out.pos;
+          out.pos += out.moveDir * src.speed * dt;
+          if (glm::length(out.pos - prev) < 0.005f && src.hasMoveOrder) {
+            out.stuckTicks = (uint16_t)std::min<int>(src.stuckTicks + 1, 65535);
+          } else out.stuckTicks = 0;
+        }
+        out.reachedSlot = src.hasMoveOrder && dist(out.pos, src.slotTarget) < 1.1f;
+        movementResults[it->second] = out;
+      }
+    }});
+  }
+  gLastStats.movementTasks += static_cast<uint32_t>(movementGraph.jobs.size());
+  gLastStats.jobCount += static_cast<uint32_t>(movementGraph.jobs.size());
+  run_task_graph(movementGraph);
+
+  std::vector<std::pair<uint32_t, size_t>> commitOrder;
+  commitOrder.reserve(w.units.size());
+  for (size_t i = 0; i < w.units.size(); ++i) if (movementResults[i].valid) commitOrder.push_back({movementResults[i].id, i});
+  std::sort(commitOrder.begin(), commitOrder.end(), [](const auto& a, const auto& b){ return a.first < b.first; });
+  for (const auto& entry : commitOrder) {
+    auto& u = w.units[entry.second];
+    const auto& r = movementResults[entry.second];
+    u.pos = r.pos;
+    u.moveDir = r.moveDir;
+    u.stuckTicks = r.stuckTicks;
+    if (u.stuckTicks > 80) ++w.stuckMoveAssertions;
+    if (r.reachedSlot) {
+      ++w.unitsReachedSlotCount;
+      u.hasMoveOrder = false;
+      u.moveOrder = 0;
+      u.target = u.pos;
+      u.attackMove = false;
+      u.attackMoveOrder = 0;
+    }
+  }
+
+  spatial_prepare(w);
+
   for (auto& u : w.units) {
     if (u.hp <= 0) continue;
     if (u.attackCooldownTicks > 0) --u.attackCooldownTicks;
     bool engagedThisTick = false;
 
     Unit* locked = u.targetUnit ? find_unit(w, u.targetUnit) : nullptr;
-    const glm::vec2 centroid = group_centroid_for_order(w, u);
-
     const float aggro = u.attackMove ? (kAttackMoveAggroPermille / 1000.0f) : 7.0f;
-    const float chase = u.attackMove ? (kAttackMoveChasePermille / 1000.0f) : 10.0f;
 
     uint32_t candidate = find_enemy_near(w, u, aggro);
     if (!locked && candidate != 0) {
@@ -1061,94 +1373,12 @@ void tick_world(World& w, float dt) {
       u.targetLockTicks = 0;
       ++w.targetSwitchCount;
       locked = find_unit(w, candidate);
-    } else if (locked && candidate != 0 && candidate != u.targetUnit && u.targetLockTicks >= kTargetLockMinTicks) {
-      Unit* better = find_unit(w, candidate);
-      if (better) {
-        float ddOld = dist(u.pos, locked->pos);
-        float ddNew = dist(u.pos, better->pos);
-        int oldScore = 5000 - static_cast<int>(ddOld * 800.0f) + static_cast<int>(u.vsRoleMultiplierPermille[role_idx(locked->role)] - 1000);
-        int newScore = 5000 - static_cast<int>(ddNew * 800.0f) + static_cast<int>(u.vsRoleMultiplierPermille[role_idx(better->role)] - 1000);
-        if (newScore > oldScore + kTargetBetterThreshold) {
-          u.targetUnit = better->id;
-          u.targetLockTicks = 0;
-          ++w.targetSwitchCount;
-          locked = better;
-        }
-      }
-    }
-
-    glm::vec2 desired = u.target - u.pos;
-    if (locked) {
-      u.target = locked->pos;
-      const float dd = dist(u.pos, locked->pos);
-      const float dc = dist(u.pos, centroid);
-      if (dd > chase || (u.attackMove && dc > (kCentroidLeashPermille / 1000.0f))) {
-        u.targetUnit = 0;
-        u.chaseTicks = 0;
-        if (u.attackMove) ++w.chaseLimitBreakCount;
-      } else {
-        engagedThisTick = true;
-        ++u.targetLockTicks;
-        ++u.chaseTicks;
-      }
     }
 
     int buildingTarget = -1;
     if (u.role == UnitRole::Siege && (!locked || u.attackMove)) {
       buildingTarget = find_building_target(w, u, aggro + 4.0f);
-      if (buildingTarget >= 0 && (!locked || dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 1.5f)) {
-        u.target = w.buildings[buildingTarget].pos;
-        engagedThisTick = true;
-      }
-    }
-
-    if (!engagedThisTick && u.hasMoveOrder && u.moveOrder != 0) {
-      if (FlowField* ff = get_flow_field(w, cell_of(w, u.slotTarget))) {
-        const int cc = cell_of(w, u.pos);
-        desired = glm::vec2{(float)ff->dirX[cc], (float)ff->dirY[cc]};
-        if (glm::length(desired) < 0.1f) desired = u.slotTarget - u.pos;
-      }
-      if (u.orderPathLingerTicks > 0) --u.orderPathLingerTicks;
-    } else if (engagedThisTick) {
-      u.orderPathLingerTicks = kMaxOrderPathLingerTicks;
-      desired = u.target - u.pos;
-    }
-
-    glm::vec2 repulse{0.0f, 0.0f};
-    spatial_query_radius(w, u.pos, 1.2f, false);
-    for (uint32_t otherId : gSpatial.queryUnits) {
-      if (otherId == u.id) continue;
-      auto oit = gSpatial.unitIndexById.find(otherId);
-      if (oit == gSpatial.unitIndexById.end()) continue;
-      const Unit* other = &w.units[oit->second];
-      if (other->team != u.team || other->hp <= 0) continue;
-      glm::vec2 delta = u.pos - other->pos;
-      float l = glm::length(delta);
-      if (l > 0.001f && l < 1.2f) repulse += (delta / l) * (1.2f - l);
-    }
-    desired += repulse * 0.65f;
-
-    float len = glm::length(desired);
-    if (len > 0.05f) {
-      glm::vec2 dir = desired / len;
-      u.moveDir = glm::mix(u.moveDir, dir, 0.35f);
-      float ml = glm::length(u.moveDir);
-      if (ml > 0.001f) u.moveDir /= ml;
-      glm::vec2 prev = u.pos;
-      u.pos += u.moveDir * u.speed * dt;
-      if (glm::length(u.pos - prev) < 0.005f && u.hasMoveOrder) {
-        u.stuckTicks = (uint16_t)std::min<int>(u.stuckTicks + 1, 65535);
-        if (u.stuckTicks > 80) ++w.stuckMoveAssertions;
-      } else u.stuckTicks = 0;
-    }
-
-    if (u.hasMoveOrder && dist(u.pos, u.slotTarget) < 1.1f && !engagedThisTick) {
-      ++w.unitsReachedSlotCount;
-      u.hasMoveOrder = false;
-      u.moveOrder = 0;
-      u.target = u.pos;
-      u.attackMove = false;
-      u.attackMoveOrder = 0;
+      if (buildingTarget >= 0 && (!locked || dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 1.5f)) engagedThisTick = true;
     }
 
     if (u.type != UnitType::Worker && u.attackCooldownTicks == 0) {
@@ -1159,6 +1389,7 @@ void tick_world(World& w, float dt) {
         w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
         ++w.combatEngagementCount;
         u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
+        engagedThisTick = true;
       } else if (buildingTarget >= 0 && dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 0.8f) {
         float mult = (u.role == UnitRole::Siege) ? 1.8f : 0.8f;
         float damage = u.attack * mult;
@@ -1167,6 +1398,7 @@ void tick_world(World& w, float dt) {
         ++w.buildingDamageEvents;
         ++w.combatEngagementCount;
         u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
+        engagedThisTick = true;
       }
     }
     if (engagedThisTick) ++w.combatTicks;
@@ -1242,6 +1474,28 @@ void tick_world(World& w, float dt) {
 }
 
 TickProfile last_tick_profile() { return gLastTickProfile; }
+
+SimulationStats last_simulation_stats() {
+  gLastStats.eventCount = static_cast<uint32_t>(gGameplayEvents.size());
+  return gLastStats;
+}
+
+void rebuild_chunk_membership(const World& world) { rebuild_chunk_membership_impl(world); }
+
+ChunkRange query_chunk_range(int beginChunk, int maxChunkCount) {
+  const int chunkCount = static_cast<int>(gChunks.chunks.size());
+  ChunkRange range{};
+  range.start = std::clamp(beginChunk, 0, chunkCount);
+  range.end = std::clamp(range.start + std::max(0, maxChunkCount), range.start, chunkCount);
+  return range;
+}
+
+void process_chunk_range(const World& world, ChunkRange range, const std::function<void(int chunkIndex)>& fn) {
+  rebuild_chunk_membership_impl(world);
+  const int start = std::clamp(range.start, 0, static_cast<int>(gChunks.chunks.size()));
+  const int end = std::clamp(range.end, start, static_cast<int>(gChunks.chunks.size()));
+  for (int i = start; i < end; ++i) fn(i);
+}
 
 void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
   if (!gameplay_orders_allowed(w)) { ++w.rejectedCommandCount; return; }
