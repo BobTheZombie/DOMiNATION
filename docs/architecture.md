@@ -78,3 +78,16 @@ Authoritative orders are rejected outside `RUNNING`. Ended matches persist winne
 
 ## Replay architecture
 Replay recording drains authoritative command events emitted from sim order APIs each tick. Playback injects those commands at exact recorded ticks in headless/interactive loops. Replay metadata stores seed/map/time-limit/flags/content hash and expected final deterministic state hash for `--replay-verify`.
+
+
+## Save/load architecture
+- Save/load serializes authoritative `World` data only (seed/tick/map grids/players/units/buildings/queues/match/wonder/config).
+- Save files are versioned with `schemaVersion`; mismatches fail fast with a clear error.
+- Derived runtime systems are rebuilt after load via `on_authoritative_state_loaded` (nav cache invalidation, replay command drain reset, UI placement reset).
+- Loader validates stored save `stateHash` against recomputed hash at load tick before continuing.
+
+## Replay viewer control model
+- Replay viewer state (paused/running/speed/seek index) is non-authoritative and stays outside sim hash.
+- Paused right-arrow does deterministic single-tick stepping.
+- Back-step fallback uses restart + fast-seek to prior tick chunk (no in-place reverse sim mutation).
+- Headless replay controls support partial stop (`--replay-stop-tick`) and summary-only execution.

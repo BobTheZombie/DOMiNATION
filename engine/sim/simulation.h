@@ -129,6 +129,7 @@ struct MatchConfig {
 };
 
 struct World {
+  uint32_t seed{1337};
   int width{128};
   int height{128};
   std::vector<float> heightmap;
@@ -181,6 +182,7 @@ struct World {
 };
 
 void initialize_world(World& world, uint32_t seed);
+void on_authoritative_state_loaded(World& world);
 void tick_world(World& world, float dt);
 bool gameplay_orders_allowed(const World& world);
 void set_match_phase(World& world, MatchPhase phase);

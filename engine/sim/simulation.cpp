@@ -539,6 +539,7 @@ void initialize_world(World& w, uint32_t seed) {
   gNav.cache.clear();
   gNav.nextMoveOrder = 1;
   w.navVersion = 1;
+  w.seed = seed;
   std::mt19937 rng(seed);
   std::uniform_real_distribution<float> n(0.f, 1.f);
   w.heightmap.resize(w.width * w.height);
@@ -574,6 +575,23 @@ void initialize_world(World& w, uint32_t seed) {
   recompute_population(w);
   recompute_territory(w);
   recompute_fog(w);
+}
+
+
+void on_authoritative_state_loaded(World& w) {
+  load_defs_once();
+  gReplayCommands.clear();
+  gNav.cache.clear();
+  gNav.nextMoveOrder = 1;
+  ++w.navVersion;
+  w.territoryDirty = true;
+  w.fogDirty = true;
+  w.uiBuildMenu = false;
+  w.uiTrainMenu = false;
+  w.uiResearchMenu = false;
+  w.placementActive = false;
+  w.gameOver = w.match.phase != MatchPhase::Running;
+  w.winner = w.match.winner;
 }
 
 void tick_world(World& w, float dt) {
