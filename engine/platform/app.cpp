@@ -4,6 +4,9 @@
 #include "engine/sim/simulation.h"
 #include "game/ai/simple_ai.h"
 #include "game/ui/hud.h"
+#include "engine/editor/scenario_editor.h"
+#include "engine/debug/debug_panels.h"
+#include "engine/debug/debug_visuals.h"
 #include "engine/assets/asset_manager.h"
 #include "engine/tools/asset_browser.h"
 #include <SDL2/SDL.h>
@@ -857,6 +860,9 @@ int run_app(int argc, char** argv) {
   uint16_t editorOwner = 0;
   dom::assets::AssetManager assetManager;
   dom::tools::AssetBrowser assetBrowser;
+  dom::ui::UiState uiState;
+  dom::editor::ScenarioEditorState scenarioEditorState;
+  dom::debug::DebugVisualState debugVisualState;
   if (!assetManager.load_all("content")) {
     std::cerr << "ASSET_WARN failed to fully load asset manifests\n";
   }
@@ -898,11 +904,15 @@ int run_app(int argc, char** argv) {
         dom::render::set_resolution(e.window.data1, e.window.data2);
       }
       if (e.type == SDL_KEYDOWN) {
-        if (e.key.keysym.sym == SDLK_F9) editorMode = !editorMode;
+        if (e.key.keysym.sym == SDLK_F1) uiState.showHudDebug = !uiState.showHudDebug;
+        if (e.key.keysym.sym == SDLK_F2) { uiState.showProductionMenu = !uiState.showProductionMenu; world.uiTrainMenu = uiState.showProductionMenu; }
+        if (e.key.keysym.sym == SDLK_F3) { uiState.showResearchPanel = !uiState.showResearchPanel; world.uiResearchMenu = uiState.showResearchPanel; }
+        if (e.key.keysym.sym == SDLK_F4) uiState.showDiplomacyPanel = !uiState.showDiplomacyPanel;
+        if (e.key.keysym.sym == SDLK_F5) uiState.showOperationsPanel = !uiState.showOperationsPanel;
+        if (e.key.keysym.sym == SDLK_F9) uiState.showScenarioEditor = !uiState.showScenarioEditor;
         if (e.key.keysym.sym == SDLK_F10) assetBrowser.toggle();
         if (editorMode && e.key.keysym.sym == SDLK_TAB) editorTool = (editorTool + 1) % 6;
         if (editorMode && e.key.keysym.sym == SDLK_o) editorOwner = (uint16_t)((editorOwner + 1) % std::max<size_t>(1, world.players.size()));
-        if (editorMode && e.key.keysym.sym == SDLK_F5) { std::string err; if (dom::sim::save_scenario_file(opts.editorSaveFile, world, err)) std::cout << "SCENARIO_SAVE path=" << opts.editorSaveFile << "\n"; else std::cerr << "SCENARIO_SAVE failed: " << err << "\n"; }
         SDL_Keymod mod = SDL_GetModState();
         if (e.key.keysym.sym == SDLK_g) dom::sim::toggle_god_mode(world);
         if (replayMode) {
@@ -931,9 +941,6 @@ int run_app(int argc, char** argv) {
             }
           }
         }
-        if (e.key.keysym.sym == SDLK_F1) dom::render::toggle_territory_overlay();
-        if (e.key.keysym.sym == SDLK_F2) dom::render::toggle_border_overlay();
-        if (e.key.keysym.sym == SDLK_F3) dom::render::toggle_fog_overlay();
         if (e.key.keysym.sym == SDLK_m) dom::render::toggle_minimap();
         if (e.key.keysym.sym == SDLK_b) { world.uiBuildMenu = !world.uiBuildMenu; world.uiTrainMenu = false; world.uiResearchMenu = false; }
         if (e.key.keysym.sym == SDLK_t) { world.uiTrainMenu = !world.uiTrainMenu; world.uiBuildMenu = false; world.uiResearchMenu = false; }
@@ -1092,7 +1099,7 @@ int run_app(int argc, char** argv) {
     dom::render::draw(world, camera, w, h, sel.dragHighlight);
     std::string replayOverlay;
     if (replayMode) replayOverlay = "REPLAY tick=" + std::to_string(world.tick) + (replayPaused ? " paused" : " running") + " speed=" + std::to_string(replaySpeed) + "x";
-    if (editorMode) replayOverlay += (replayOverlay.empty()?"":" | ") + ("EDITOR tool=" + std::to_string(editorTool) + " owner=" + std::to_string(editorOwner) + " [Tab tool][O owner][F5 save]");
+    if (uiState.showScenarioEditor) replayOverlay += (replayOverlay.empty()?"":" | ") + std::string("SCENARIO_EDITOR[F9]");
     replayOverlay += (replayOverlay.empty()?"":" | ") + std::string("AssetBrowser[F10]=") + (assetBrowser.visible() ? "On" : "Off");
     if (!world.objectiveLog.empty()) replayOverlay += (replayOverlay.empty()?"":" | ") + ("OBJ: " + world.objectiveLog.back().text);
     if (opts.perf) {
@@ -1103,7 +1110,11 @@ int run_app(int argc, char** argv) {
       const auto stats = dom::sim::last_simulation_stats();
       std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << " WORLD_TENSION=" << stats.worldTension << " ALLIANCE_COUNT=" << stats.allianceCount << " WAR_COUNT=" << stats.warCount << " ACTIVE_ESPIONAGE_OPS=" << stats.activeEspionageOps << " POSTURE_CHANGES=" << stats.postureChanges << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << "\n";
     }
-    dom::ui::draw_hud(window, world, replayOverlay);
+    dom::ui::push_gameplay_notifications(world, uiState);
+    dom::ui::draw_hud(window, world, selected, uiState, replayOverlay);
+    if (uiState.showScenarioEditor) dom::editor::draw_scenario_editor(world, camera.center, scenarioEditorState);
+    if (uiState.showHudDebug || uiState.showDebugPanels) dom::debug::draw_debug_panels(world, debugVisualState);
+    dom::debug::sync_debug_visuals(debugVisualState);
 #ifdef DOM_HAS_IMGUI
     assetBrowser.draw(assetManager);
     ImGui::Render();

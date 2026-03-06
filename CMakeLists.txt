@@ -64,9 +64,17 @@ add_executable(rts
   engine/assets/asset_registry.cpp
   engine/assets/texture_atlas.cpp
   engine/tools/asset_browser.cpp
+  engine/ui/hud.cpp
+  engine/ui/production_menu.cpp
+  engine/ui/research_panel.cpp
+  engine/ui/diplomacy_panel.cpp
+  engine/editor/scenario_editor.cpp
+  engine/editor/terrain_editor.cpp
+  engine/editor/object_placement.cpp
+  engine/debug/debug_panels.cpp
+  engine/debug/debug_visuals.cpp
   game/rules/game_rules.cpp
   game/ai/simple_ai.cpp
-  game/ui/hud.cpp
   main.cpp
 )
 
