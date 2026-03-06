@@ -47,3 +47,9 @@ Scenario JSON supports:
 - `espionageOps`: optional pre-seeded operation list with `{id, actor, target, type, startTick, durationTicks, state, effectStrength}` where `type` is `RECON_CITY|REVEAL_ROUTE|SABOTAGE_ECONOMY|SABOTAGE_SUPPLY|COUNTERINTEL`.
 
 Reference sample: `scenarios/diplomacy_test.json`.
+
+## Editor round-trip notes
+- Scenario editor save/load uses the deterministic scenario ingest/export path (`load_scenario_file` / `save_scenario_file`).
+- Authored fields currently include map dimensions, players, units, cities, buildings, resource nodes, roads, biome map, trigger areas/objectives/triggers, diplomacy/treaties/world tension where present.
+- Unsupported authoring fields are surfaced in-editor; they are not silently mutated by panel-only UI state.
+- Round-trip expectation: save -> reload -> resave keeps stable human-readable JSON with minimal unrelated churn.

@@ -189,3 +189,8 @@ Headless/interactive perf outputs now include:
 - `ACTIVE_ESPIONAGE_OPS`
 - `POSTURE_CHANGES`
 - `DIPLOMACY_EVENTS`
+
+## UI and editor authoritative flow
+- ImGui gameplay panels issue validated authoritative simulation commands; panel code does not directly mutate arbitrary gameplay state.
+- Scenario editor interactions author world state through editor actions and persist through deterministic scenario export, then re-enter via deterministic scenario ingest.
+- Event log and notifications are presentation layers sourced from deterministic gameplay event stream and remain non-authoritative.

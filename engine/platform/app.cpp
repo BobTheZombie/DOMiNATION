@@ -21,7 +21,10 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <cstdio>
 #include <mutex>
+#include <deque>
+#include <sstream>
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -82,6 +85,26 @@ struct SelectionState {
   glm::vec2 dragCurrent{};
   std::vector<uint32_t> dragHighlight;
 };
+
+struct UiCommandLogEntry {
+  uint32_t tick{0};
+  std::string panel;
+  std::string command;
+  bool success{false};
+  std::string detail;
+};
+
+struct UiNotification {
+  uint32_t tick{0};
+  std::string text;
+};
+
+const char* relation_name(dom::sim::DiplomacyRelation r) {
+  if (r == dom::sim::DiplomacyRelation::Allied) return "Allied";
+  if (r == dom::sim::DiplomacyRelation::War) return "War";
+  if (r == dom::sim::DiplomacyRelation::Ceasefire) return "Ceasefire";
+  return "Neutral";
+}
 
 bool parse_int(const std::string& s, int& out) { try { out = std::stoi(s); return true; } catch (...) { return false; } }
 bool parse_float(const std::string& s, float& out) { char* e = nullptr; out = std::strtof(s.c_str(), &e); return e && *e == 0; }
@@ -771,6 +794,18 @@ int run_headless(const CliOptions& o) {
     if (world.postureChangeCount < 1) { std::cerr << "Smoke failure: no AI posture transition\n"; return 75; }
     if (activeEspionage < 1) { std::cerr << "Smoke failure: no espionage operation\n"; return 76; }
   }
+  if (o.smoke && !o.scenarioFile.empty()) {
+    const std::string tmpPath = "scenarios/.roundtrip_tmp.json";
+    std::string serr;
+    if (!dom::sim::save_scenario_file(tmpPath, world, serr)) { std::cerr << "Smoke failure: scenario save failed " << serr << "\n"; return 77; }
+    dom::sim::World roundtrip;
+    std::string lerr;
+    if (!dom::sim::load_scenario_file(roundtrip, tmpPath, world.seed, lerr)) { std::cerr << "Smoke failure: scenario reload failed " << lerr << "\n"; return 78; }
+    std::ifstream rtIn(tmpPath);
+    nlohmann::json rtj; rtIn >> rtj;
+    if (!rtj.contains("players") || !rtj.contains("mapWidth") || !rtj.contains("mapHeight") || !rtj.contains("biomeMap")) { std::cerr << "Smoke failure: scenario fields missing\n"; return 79; }
+    std::filesystem::remove(tmpPath);
+  }
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
     std::cout << "state_hash=" << finalHash << "\n";
@@ -855,6 +890,23 @@ int run_app(int argc, char** argv) {
   bool editorMode = opts.editor;
   int editorTool = 0;
   uint16_t editorOwner = 0;
+  bool showHudPanels = true;
+  bool showProductionPanel = false;
+  bool showResearchPanel = false;
+  bool showDiplomacyPanel = false;
+  bool showOperationsPanel = false;
+  bool showEventLogPanel = false;
+  bool showCommandHistoryPanel = false;
+  bool showSelectionPanel = true;
+  bool showEditorPanel = true;
+  bool eventFilterDiplomacy = true;
+  bool eventFilterProduction = true;
+  bool eventFilterCombat = true;
+  std::deque<UiNotification> notifications;
+  std::vector<dom::sim::GameplayEvent> eventLog;
+  std::vector<UiCommandLogEntry> commandHistory;
+  std::string editorScenarioPath = opts.editorSaveFile;
+  std::string editorLoadPath = opts.editorSaveFile;
   dom::assets::AssetManager assetManager;
   dom::tools::AssetBrowser assetBrowser;
   if (!assetManager.load_all("content")) {
@@ -872,6 +924,16 @@ int run_app(int argc, char** argv) {
       return id;
     }
     return first_building(world, 0, dom::sim::BuildingType::CityCenter);
+  };
+
+  auto log_command = [&](const std::string& panel, const std::string& command, bool ok, const std::string& detail = std::string()) {
+    commandHistory.push_back({world.tick, panel, command, ok, detail});
+    if (commandHistory.size() > 128) commandHistory.erase(commandHistory.begin());
+  };
+  auto editor_place_unit = [&](glm::vec2 wp) {
+    dom::sim::UnitType ut = dom::sim::UnitType::Infantry;
+    if (world.units.size() % 2 == 0) ut = dom::sim::UnitType::Worker;
+    dom::sim::Unit nu{}; nu.id=(uint32_t)(world.units.empty()?1:world.units.back().id+1); nu.team=editorOwner; nu.type=ut; nu.hp=100.0f; nu.attack=8.0f; nu.range=2.5f; nu.speed=4.0f; nu.role=ut==dom::sim::UnitType::Worker?dom::sim::UnitRole::Worker:dom::sim::UnitRole::Infantry; nu.attackType=dom::sim::AttackType::Melee; nu.preferredTargetRole=dom::sim::UnitRole::Infantry; nu.pos=nu.renderPos=nu.target=nu.slotTarget=wp; world.units.push_back(nu);
   };
 
 #ifdef DOM_HAS_IMGUI
@@ -931,9 +993,11 @@ int run_app(int argc, char** argv) {
             }
           }
         }
-        if (e.key.keysym.sym == SDLK_F1) dom::render::toggle_territory_overlay();
-        if (e.key.keysym.sym == SDLK_F2) dom::render::toggle_border_overlay();
-        if (e.key.keysym.sym == SDLK_F3) dom::render::toggle_fog_overlay();
+        if (e.key.keysym.sym == SDLK_F1) showHudPanels = !showHudPanels;
+        if (e.key.keysym.sym == SDLK_F2) showProductionPanel = !showProductionPanel;
+        if (e.key.keysym.sym == SDLK_F3) showResearchPanel = !showResearchPanel;
+        if (e.key.keysym.sym == SDLK_F4) showDiplomacyPanel = !showDiplomacyPanel;
+        if (e.key.keysym.sym == SDLK_F5) showOperationsPanel = !showOperationsPanel;
         if (e.key.keysym.sym == SDLK_m) dom::render::toggle_minimap();
         if (e.key.keysym.sym == SDLK_b) { world.uiBuildMenu = !world.uiBuildMenu; world.uiTrainMenu = false; world.uiResearchMenu = false; }
         if (e.key.keysym.sym == SDLK_t) { world.uiTrainMenu = !world.uiTrainMenu; world.uiBuildMenu = false; world.uiResearchMenu = false; }
@@ -995,7 +1059,7 @@ int run_app(int argc, char** argv) {
         glm::vec2 screen{(float)e.button.x, (float)e.button.y};
         if (editorMode) {
           auto wp = dom::render::screen_to_world(camera, w, h, screen);
-          if (editorTool == 0) { dom::sim::UnitType ut = dom::sim::UnitType::Infantry; if (world.units.size() % 2 == 0) ut = dom::sim::UnitType::Worker; dom::sim::Unit nu{}; nu.id=(uint32_t)(world.units.empty()?1:world.units.back().id+1); nu.team=editorOwner; nu.type=ut; nu.hp=100.0f; nu.attack=8.0f; nu.range=2.5f; nu.speed=4.0f; nu.role=ut==dom::sim::UnitType::Worker?dom::sim::UnitRole::Worker:dom::sim::UnitRole::Infantry; nu.attackType=dom::sim::AttackType::Melee; nu.preferredTargetRole=dom::sim::UnitRole::Infantry; nu.pos=nu.renderPos=nu.target=nu.slotTarget=wp; world.units.push_back(nu); }
+          if (editorTool == 0) editor_place_unit(wp);
           else if (editorTool == 1) { world.buildings.push_back({(uint32_t)(world.buildings.empty()?1:world.buildings.back().id+1), editorOwner, dom::sim::BuildingType::Barracks, wp, {3.0f,3.0f}, false, 1.0f, 20.0f, 1000.0f, 1000.0f, {}}); }
           else if (editorTool == 2) { world.resourceNodes.push_back({(uint32_t)(world.resourceNodes.empty()?1:world.resourceNodes.back().id+1), dom::sim::ResourceNodeType::Forest, wp, 1000.0f, UINT16_MAX}); }
           else if (editorTool == 3) { world.cities.push_back({(uint32_t)(world.cities.empty()?1:world.cities.back().id+1), editorOwner, wp, 1, true}); }
@@ -1044,6 +1108,15 @@ int run_app(int argc, char** argv) {
       }
     }
 
+    std::vector<dom::sim::GameplayEvent> newEvents;
+    dom::sim::consume_gameplay_events(newEvents);
+    for (const auto& ev : newEvents) {
+      eventLog.push_back(ev);
+      if (eventLog.size() > 512) eventLog.erase(eventLog.begin());
+      notifications.push_front({ev.tick, ev.text.empty() ? std::string("event") : ev.text});
+      while (notifications.size() > 8) notifications.pop_back();
+    }
+
     const Uint8* keys = SDL_GetKeyboardState(nullptr);
     float pan = frameDt * camera.zoom * 1.2f;
     if (keys[SDL_SCANCODE_W]) camera.center.y += pan;
@@ -1089,6 +1162,19 @@ int run_app(int argc, char** argv) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 #endif
+    dom::render::EditorPreview editorPreview{};
+    if (editorMode) {
+      int mx = 0, my = 0;
+      SDL_GetMouseState(&mx, &my);
+      editorPreview.enabled = true;
+      editorPreview.pos = dom::render::screen_to_world(camera, w, h, {(float)mx, (float)my});
+      editorPreview.radius = editorTool == 2 ? 2.5f : 1.2f;
+      editorPreview.r = 0.25f;
+      editorPreview.g = 0.85f;
+      editorPreview.b = 0.3f;
+      editorPreview.valid = editorPreview.pos.x >= 0.0f && editorPreview.pos.y >= 0.0f && editorPreview.pos.x < world.width && editorPreview.pos.y < world.height;
+    }
+    dom::render::set_editor_preview(editorPreview);
     dom::render::draw(world, camera, w, h, sel.dragHighlight);
     std::string replayOverlay;
     if (replayMode) replayOverlay = "REPLAY tick=" + std::to_string(world.tick) + (replayPaused ? " paused" : " running") + " speed=" + std::to_string(replaySpeed) + "x";
@@ -1105,6 +1191,120 @@ int run_app(int argc, char** argv) {
     }
     dom::ui::draw_hud(window, world, replayOverlay);
 #ifdef DOM_HAS_IMGUI
+    if (showHudPanels) {
+      if (showProductionPanel) {
+        ImGui::Begin("Production [F2]", &showProductionPanel);
+        uint32_t bid = selected_building();
+        ImGui::Text("Building: %u", bid);
+        bool ok = bid != 0;
+        if (!ok) ImGui::TextDisabled("Select worker/city for queue actions.");
+        if (ImGui::Button("Train Worker") && ok) { bool r = dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Worker); log_command("production", "train_worker", r); }
+        ImGui::SameLine();
+        if (ImGui::Button("Train Infantry") && ok) { bool r = dom::sim::enqueue_train_unit(world, 0, bid, dom::sim::UnitType::Infantry); log_command("production", "train_infantry", r); }
+        if (ImGui::Button("Cancel Front") && ok) { bool r = dom::sim::cancel_queue_item(world, 0, bid, 0); log_command("production", "cancel_front", r); }
+        for (const auto& b : world.buildings) if (b.id == bid) {
+          ImGui::Separator();
+          for (size_t i = 0; i < b.queue.size(); ++i) ImGui::Text("%zu: %s", i, b.queue[i].kind == dom::sim::QueueKind::AgeResearch ? "Age Research" : "Train Unit");
+        }
+        ImGui::End();
+      }
+      if (showResearchPanel) {
+        ImGui::Begin("Research [F3]", &showResearchPanel);
+        uint32_t bid = selected_building();
+        const auto& p0 = world.players[0];
+        bool canAge = p0.age < dom::sim::Age::Information;
+        ImGui::Text("Age: %d", (int)p0.age + 1);
+        ImGui::Text("Knowledge: %.1f", p0.resources[(size_t)dom::sim::Resource::Knowledge]);
+        if (!canAge) ImGui::TextDisabled("Locked: max age reached");
+        if (ImGui::Button("Start Age Up") && bid) { bool r = dom::sim::enqueue_age_research(world, 0, bid); log_command("research", "start_age_up", r); }
+        ImGui::End();
+      }
+      if (showDiplomacyPanel) {
+        ImGui::Begin("Diplomacy [F4]", &showDiplomacyPanel);
+        for (size_t i = 1; i < world.players.size(); ++i) {
+          auto rel = world.diplomacy[0 * world.players.size() + i];
+          ImGui::Separator();
+          ImGui::Text("Player %zu relation: %s", i, relation_name(rel));
+          bool canWar = rel != dom::sim::DiplomacyRelation::War;
+          if (!canWar) ImGui::BeginDisabled();
+          if (ImGui::Button((std::string("Declare War##") + std::to_string(i)).c_str())) { bool r = dom::sim::declare_war(world, 0, (uint16_t)i); log_command("diplomacy", "declare_war", r); }
+          if (!canWar) { ImGui::EndDisabled(); ImGui::SameLine(); ImGui::TextDisabled("already at war"); }
+          ImGui::SameLine();
+          if (ImGui::Button((std::string("Alliance##") + std::to_string(i)).c_str())) { bool r = dom::sim::form_alliance(world, 0, (uint16_t)i); log_command("diplomacy", "alliance", r); }
+          ImGui::SameLine();
+          if (ImGui::Button((std::string("Trade##") + std::to_string(i)).c_str())) { bool r = dom::sim::establish_trade_agreement(world, 0, (uint16_t)i); log_command("diplomacy", "trade", r); }
+        }
+        ImGui::End();
+      }
+      if (showOperationsPanel) {
+        ImGui::Begin("Operations [F5]", &showOperationsPanel);
+        ImGui::Text("Active operations from authoritative state");
+        for (const auto& op : world.operations) {
+          if (!op.active) continue;
+          ImGui::BulletText("team=%u type=%d target=(%.1f,%.1f)", op.team, (int)op.type, op.target.x, op.target.y);
+        }
+        ImGui::TextDisabled("Read-only (issuing operations not exposed in UI yet).");
+        ImGui::End();
+      }
+      if (showSelectionPanel) {
+        ImGui::Begin("Selection", &showSelectionPanel);
+        ImGui::Text("Mode: %s", editorMode ? "Editor selection" : "Gameplay selection");
+        ImGui::Text("Selected units: %zu", selected.size());
+        if (selected.size() > 1) ImGui::Text("Multi-select summary active");
+        if (!selected.empty()) {
+          for (const auto& u : world.units) if (u.id == selected[0]) {
+            ImGui::Text("Unit %u owner=%u hp=%.1f role=%d cargo=%zu", u.id, u.team, u.hp, (int)u.role, u.cargo.size());
+            if (u.team < world.players.size()) ImGui::Text("Diplomacy to local: %s", relation_name(world.diplomacy[0 * world.players.size() + u.team]));
+          }
+        }
+        ImGui::End();
+      }
+      showEventLogPanel = true;
+      showCommandHistoryPanel = true;
+      if (showEventLogPanel) {
+        ImGui::Begin("Event Log", &showEventLogPanel);
+        ImGui::Checkbox("Production", &eventFilterProduction); ImGui::SameLine();
+        ImGui::Checkbox("Diplomacy", &eventFilterDiplomacy); ImGui::SameLine();
+        ImGui::Checkbox("Combat", &eventFilterCombat);
+        for (auto it = eventLog.rbegin(); it != eventLog.rend(); ++it) {
+          bool keep = true;
+          if (it->type == dom::sim::GameplayEventType::BuildingCompleted || it->type == dom::sim::GameplayEventType::ObjectiveCompleted) keep = eventFilterProduction;
+          if (it->type == dom::sim::GameplayEventType::WarDeclared || it->type == dom::sim::GameplayEventType::AllianceFormed || it->type == dom::sim::GameplayEventType::AllianceBroken || it->type == dom::sim::GameplayEventType::TradeAgreementCreated || it->type == dom::sim::GameplayEventType::TradeAgreementBroken) keep = eventFilterDiplomacy;
+          if (it->type == dom::sim::GameplayEventType::UnitDied) keep = eventFilterCombat;
+          if (keep) ImGui::Text("[%u] %s", it->tick, it->text.c_str());
+        }
+        ImGui::End();
+      }
+      if (showCommandHistoryPanel) {
+        ImGui::Begin("Command History", &showCommandHistoryPanel);
+        for (auto it = commandHistory.rbegin(); it != commandHistory.rend(); ++it) {
+          ImGui::Text("[%u] %s %s %s", it->tick, it->panel.c_str(), it->command.c_str(), it->success ? "ok" : "rejected");
+        }
+        ImGui::End();
+      }
+      if (editorMode && showEditorPanel) {
+        ImGui::Begin("Scenario Editor [F9]", &showEditorPanel);
+        ImGui::Text("Tool=%d Owner=%u", editorTool, editorOwner);
+        static char saveBuf[256]{}; static char loadBuf[256]{};
+        if (saveBuf[0] == '\0') std::snprintf(saveBuf, sizeof(saveBuf), "%s", editorScenarioPath.c_str());
+        if (loadBuf[0] == '\0') std::snprintf(loadBuf, sizeof(loadBuf), "%s", editorLoadPath.c_str());
+        ImGui::InputText("Save As", saveBuf, sizeof(saveBuf));
+        if (ImGui::Button("Save Scenario")) { std::string err; bool r = dom::sim::save_scenario_file(saveBuf, world, err); log_command("editor", "save_scenario", r, err); }
+        ImGui::InputText("Load", loadBuf, sizeof(loadBuf));
+        if (ImGui::Button("Load Scenario")) { std::string err; bool r = dom::sim::load_scenario_file(world, loadBuf, world.seed, err); if (r) dom::sim::on_authoritative_state_loaded(world); log_command("editor", "load_scenario", r, err); }
+        ImGui::TextDisabled("Unsupported fields are not authored by this editor and may be omitted.");
+        ImGui::End();
+      }
+      ImGui::SetNextWindowBgAlpha(0.35f);
+      ImGui::Begin("Notifications", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+      ImGui::SetWindowPos(ImVec2(12.0f, 12.0f));
+      int n = 0;
+      for (const auto& note : notifications) {
+        if (n++ >= 5) break;
+        ImGui::Text("[%u] %s", note.tick, note.text.c_str());
+      }
+      ImGui::End();
+    }
     assetBrowser.draw(assetManager);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
