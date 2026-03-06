@@ -77,6 +77,11 @@ struct MatchConfig {
   bool allowConquest{true}; bool allowScore{true}; bool allowWonder{true};
 };
 
+struct TickProfile {
+  double navMs{0.0};
+  double combatMs{0.0};
+};
+
 struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
   std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
@@ -120,5 +125,6 @@ bool players_allied(const World& world, uint16_t a, uint16_t b);
 
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);
+TickProfile last_tick_profile();
 
 } // namespace dom::sim

@@ -8,6 +8,8 @@
 #include <sstream>
 #include <tuple>
 #include <limits>
+#include <chrono>
+#include <unordered_map>
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
@@ -74,6 +76,26 @@ struct NavRuntime {
   std::vector<uint8_t> blocked;
   uint32_t nextMoveOrder{1};
 } gNav;
+
+struct SpatialCell {
+  std::vector<uint32_t> unitIds;
+  std::vector<uint32_t> buildingIds;
+};
+
+struct SpatialGrid {
+  float cellSize{6.0f};
+  std::vector<SpatialCell> cells;
+  std::vector<int> unitCell;
+  std::vector<int> buildingCell;
+  std::vector<int> queryCells;
+  std::vector<uint32_t> queryUnits;
+  std::vector<uint32_t> queryBuildings;
+  std::unordered_map<uint32_t, size_t> unitIndexById;
+  std::unordered_map<uint32_t, size_t> buildingIndexById;
+};
+
+SpatialGrid gSpatial;
+TickProfile gLastTickProfile{};
 
 constexpr int32_t kInfCost = 1 << 29;
 constexpr std::array<std::pair<int,int>, 8> kNeighborOrder{{{1,0},{0,1},{-1,0},{0,-1},{1,1},{-1,1},{-1,-1},{1,-1}}};
@@ -373,6 +395,50 @@ int cell_of(const World& w, glm::vec2 p) {
   return y * w.width + x;
 }
 
+int spatial_cols(const World& w) { return std::max(1, (int)std::ceil((float)w.width / gSpatial.cellSize)); }
+int spatial_rows(const World& w) { return std::max(1, (int)std::ceil((float)w.height / gSpatial.cellSize)); }
+int spatial_index(const World& w, glm::vec2 p) {
+  int cx = std::clamp((int)std::floor(p.x / gSpatial.cellSize), 0, spatial_cols(w) - 1);
+  int cy = std::clamp((int)std::floor(p.y / gSpatial.cellSize), 0, spatial_rows(w) - 1);
+  return cy * spatial_cols(w) + cx;
+}
+void spatial_prepare(const World& w) {
+  int count = spatial_cols(w) * spatial_rows(w);
+  if ((int)gSpatial.cells.size() != count) gSpatial.cells.assign(count, {});
+  for (auto& c : gSpatial.cells) { c.unitIds.clear(); c.buildingIds.clear(); }
+  gSpatial.unitIndexById.clear();
+  gSpatial.buildingIndexById.clear();
+  for (size_t i = 0; i < w.units.size(); ++i) { const auto& u = w.units[i]; if (u.hp <= 0) continue; gSpatial.unitIndexById[u.id] = i; gSpatial.cells[spatial_index(w, u.pos)].unitIds.push_back(u.id); }
+  for (size_t i = 0; i < w.buildings.size(); ++i) { const auto& b = w.buildings[i]; if (b.hp <= 0.0f || b.underConstruction) continue; gSpatial.buildingIndexById[b.id] = i; gSpatial.cells[spatial_index(w, b.pos)].buildingIds.push_back(b.id); }
+  for (auto& c : gSpatial.cells) { std::sort(c.unitIds.begin(), c.unitIds.end()); std::sort(c.buildingIds.begin(), c.buildingIds.end()); }
+}
+void spatial_collect_cells(const World& w, const glm::vec2& mn, const glm::vec2& mx) {
+  int cols = spatial_cols(w), rows = spatial_rows(w);
+  int minX = std::clamp((int)std::floor(mn.x / gSpatial.cellSize), 0, cols - 1);
+  int maxX = std::clamp((int)std::floor(mx.x / gSpatial.cellSize), 0, cols - 1);
+  int minY = std::clamp((int)std::floor(mn.y / gSpatial.cellSize), 0, rows - 1);
+  int maxY = std::clamp((int)std::floor(mx.y / gSpatial.cellSize), 0, rows - 1);
+  gSpatial.queryCells.clear();
+  for (int y = minY; y <= maxY; ++y) for (int x = minX; x <= maxX; ++x) gSpatial.queryCells.push_back(y * cols + x);
+}
+void spatial_query_radius(const World& w, glm::vec2 center, float radius, bool includeBuildings) {
+  spatial_collect_cells(w, center - glm::vec2{radius, radius}, center + glm::vec2{radius, radius});
+  gSpatial.queryUnits.clear(); gSpatial.queryBuildings.clear();
+  for (int idx : gSpatial.queryCells) {
+    const auto& c = gSpatial.cells[idx];
+    gSpatial.queryUnits.insert(gSpatial.queryUnits.end(), c.unitIds.begin(), c.unitIds.end());
+    if (includeBuildings) gSpatial.queryBuildings.insert(gSpatial.queryBuildings.end(), c.buildingIds.begin(), c.buildingIds.end());
+  }
+}
+void spatial_query_aabb(const World& w, const glm::vec2& mn, const glm::vec2& mx) {
+  spatial_collect_cells(w, mn, mx);
+  gSpatial.queryUnits.clear();
+  for (int idx : gSpatial.queryCells) {
+    const auto& c = gSpatial.cells[idx];
+    gSpatial.queryUnits.insert(gSpatial.queryUnits.end(), c.unitIds.begin(), c.unitIds.end());
+  }
+}
+
 glm::vec2 cell_center(const World& w, int idx) {
   int x = idx % w.width;
   int y = idx / w.width;
@@ -524,33 +590,40 @@ void recompute_fog(World& w) {
 
 
 uint32_t find_enemy_near(const World& w, const Unit& u, float radius) {
+  spatial_query_radius(w, u.pos, radius, false);
   uint32_t bestId = 0;
   int bestScore = -1;
-  for (const auto& e : w.units) {
-    if (players_allied(w, e.team, u.team) || e.hp <= 0) continue;
-    float d = dist(u.pos, e.pos);
+  for (uint32_t id : gSpatial.queryUnits) {
+    const Unit* e = nullptr;
+    auto it = gSpatial.unitIndexById.find(id); if (it != gSpatial.unitIndexById.end()) e = &w.units[it->second];
+    if (!e || players_allied(w, e->team, u.team) || e->hp <= 0) continue;
+    float d = dist(u.pos, e->pos);
     if (d > radius) continue;
     int score = 5000 - static_cast<int>(d * 800.0f);
-    if (e.hp < 40.0f) score += 250;
-    if (e.role == u.preferredTargetRole) score += 400;
-    score += static_cast<int>(u.vsRoleMultiplierPermille[role_idx(e.role)]) - 1000;
-    if (u.role == UnitRole::Siege && e.role == UnitRole::Building) score += 600;
-    if (score > bestScore || (score == bestScore && e.id < bestId)) { bestScore = score; bestId = e.id; }
+    if (e->hp < 40.0f) score += 250;
+    if (e->role == u.preferredTargetRole) score += 400;
+    score += static_cast<int>(u.vsRoleMultiplierPermille[role_idx(e->role)]) - 1000;
+    if (u.role == UnitRole::Siege && e->role == UnitRole::Building) score += 600;
+    if (score > bestScore || (score == bestScore && e->id < bestId)) { bestScore = score; bestId = e->id; }
   }
   return bestId;
 }
 
 int find_building_target(const World& w, const Unit& u, float radius) {
+  spatial_query_radius(w, u.pos, radius, true);
   int best = -1;
   int bestScore = -1;
-  for (int i = 0; i < static_cast<int>(w.buildings.size()); ++i) {
+  for (uint32_t id : gSpatial.queryBuildings) {
+    auto it = gSpatial.buildingIndexById.find(id);
+    if (it == gSpatial.buildingIndexById.end()) continue;
+    int i = static_cast<int>(it->second);
     const auto& b = w.buildings[i];
     if (players_allied(w, b.team, u.team) || b.underConstruction || b.hp <= 0.0f) continue;
     float d = dist(u.pos, b.pos);
     if (d > radius) continue;
     int score = 4800 - static_cast<int>(d * 800.0f);
     if (u.role == UnitRole::Siege) score += 900;
-    if (score > bestScore || (score == bestScore && b.id < w.buildings[best].id)) { bestScore = score; best = i; }
+    if (score > bestScore || (score == bestScore && (best < 0 || b.id < w.buildings[best].id))) { bestScore = score; best = i; }
   }
   return best;
 }
@@ -727,6 +800,7 @@ void initialize_world(World& w, uint32_t seed) {
   load_defs_once();
   gNav.cache.clear();
   gNav.nextMoveOrder = 1;
+  gSpatial.cells.clear();
   w.navVersion = 1;
   w.seed = seed;
   std::mt19937 rng(seed);
@@ -867,6 +941,7 @@ void on_authoritative_state_loaded(World& w) {
   gReplayCommands.clear();
   gNav.cache.clear();
   gNav.nextMoveOrder = 1;
+  gSpatial.cells.clear();
   ++w.navVersion;
   w.territoryDirty = true;
   w.fogDirty = true;
@@ -879,12 +954,16 @@ void on_authoritative_state_loaded(World& w) {
 }
 
 void tick_world(World& w, float dt) {
+  using Clock = std::chrono::steady_clock;
+  const auto tickStart = Clock::now();
   ++w.tick;
   if (w.match.phase != MatchPhase::Running) {
     if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
     return;
   }
   if (w.tick % 10 == 0) recompute_territory(w);
+
+  spatial_prepare(w);
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
 
@@ -930,6 +1009,7 @@ void tick_world(World& w, float dt) {
     c.level = 1 + teamBuildings / 4;
   }
 
+  const auto combatStart = Clock::now();
   for (auto& u : w.units) {
     if (u.hp <= 0) continue;
     if (u.attackCooldownTicks > 0) --u.attackCooldownTicks;
@@ -1001,9 +1081,14 @@ void tick_world(World& w, float dt) {
     }
 
     glm::vec2 repulse{0.0f, 0.0f};
-    for (const auto& other : w.units) {
-      if (other.id == u.id || other.team != u.team || other.hp <= 0) continue;
-      glm::vec2 delta = u.pos - other.pos;
+    spatial_query_radius(w, u.pos, 1.2f, false);
+    for (uint32_t otherId : gSpatial.queryUnits) {
+      if (otherId == u.id) continue;
+      auto oit = gSpatial.unitIndexById.find(otherId);
+      if (oit == gSpatial.unitIndexById.end()) continue;
+      const Unit* other = &w.units[oit->second];
+      if (other->team != u.team || other->hp <= 0) continue;
+      glm::vec2 delta = u.pos - other->pos;
       float l = glm::length(delta);
       if (l > 0.001f && l < 1.2f) repulse += (delta / l) * (1.2f - l);
     }
@@ -1053,6 +1138,7 @@ void tick_world(World& w, float dt) {
     if (engagedThisTick) ++w.combatTicks;
     u.renderPos = glm::mix(u.renderPos, u.pos, 0.35f);
   }
+  const auto combatEnd = Clock::now();
   const size_t beforeUnits = w.units.size();
   w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [&](const Unit& u) {
     if (u.hp > 0) return false;
@@ -1111,8 +1197,14 @@ void tick_world(World& w, float dt) {
   recompute_population(w);
   recompute_fog(w);
 
+  const auto tickEnd = Clock::now();
+  gLastTickProfile.combatMs = std::chrono::duration<double, std::milli>(combatEnd - combatStart).count();
+  gLastTickProfile.navMs = std::chrono::duration<double, std::milli>(tickEnd - tickStart).count() - gLastTickProfile.combatMs;
+
   if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
 }
+
+TickProfile last_tick_profile() { return gLastTickProfile; }
 
 void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
   if (!gameplay_orders_allowed(w)) { ++w.rejectedCommandCount; return; }

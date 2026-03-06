@@ -6,6 +6,7 @@
 #include "game/ui/hud.h"
 #include <SDL2/SDL.h>
 #include <algorithm>
+#include <chrono>
 #include <array>
 #include <cstdlib>
 #include <glm/vec2.hpp>
@@ -35,6 +36,10 @@ struct CliOptions {
   bool matchDebug{false};
   bool editor{false};
   bool listScenarios{false};
+  bool perf{false};
+  bool cpuOnlyBattle{false};
+  int spawnArmy{-1};
+  std::string perfLogFile;
   uint32_t seed{1337};
   int ticks{-1};
   int mapW{128};
@@ -87,6 +92,8 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--match-debug") o.matchDebug = true;
     else if (a == "--editor") o.editor = true;
     else if (a == "--list-scenarios") o.listScenarios = true;
+    else if (a == "--perf") o.perf = true;
+    else if (a == "--cpu-only-battle") o.cpuOnlyBattle = true;
     else if (a == "--replay-verify") o.replayVerify = true;
     else if (a == "--replay-summary-only") o.replaySummaryOnly = true;
     else if (a == "--force-score-victory") o.forceScoreVictory = true;
@@ -109,6 +116,8 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--render-scale" && i + 1 < argc) { if (!parse_float(argv[++i], o.renderScale) || o.renderScale <= 0.1f || o.renderScale > 1.0f) return false; }
     else if (a == "--ui-scale" && i + 1 < argc) { if (!parse_float(argv[++i], o.uiScale) || o.uiScale < 0.5f || o.uiScale > 3.0f) return false; }
     else if (a == "--editor-save" && i + 1 < argc) { o.editorSaveFile = argv[++i]; }
+    else if (a == "--perf-log" && i + 1 < argc) { o.perfLogFile = argv[++i]; }
+    else if (a == "--spawn-army" && i + 1 < argc) { if (!parse_int(argv[++i], o.spawnArmy) || o.spawnArmy < 0) return false; }
     else if (a == "--map-size" && i + 1 < argc) {
       std::string v = argv[++i]; auto xPos = v.find('x'); if (xPos == std::string::npos) return false;
       int w = 0, h = 0; if (!parse_int(v.substr(0, xPos), w) || !parse_int(v.substr(xPos + 1), h)) return false;
@@ -359,6 +368,40 @@ void apply_replay_command(dom::sim::World& w, const dom::sim::ReplayCommand& c) 
   else if (c.type == ReplayCommandType::CancelQueue) cancel_queue_item(w, c.team, c.buildingId, c.queueIndex);
 }
 
+
+
+dom::sim::Unit make_spawned_unit(uint32_t id, uint16_t team, dom::sim::UnitType type, const glm::vec2& p) {
+  dom::sim::Unit u{};
+  u.id = id; u.team = team; u.type = type; u.pos = u.renderPos = u.target = u.slotTarget = p;
+  u.role = (type == dom::sim::UnitType::Worker) ? dom::sim::UnitRole::Worker :
+           (type == dom::sim::UnitType::Archer) ? dom::sim::UnitRole::Ranged :
+           (type == dom::sim::UnitType::Cavalry) ? dom::sim::UnitRole::Cavalry :
+           (type == dom::sim::UnitType::Siege) ? dom::sim::UnitRole::Siege : dom::sim::UnitRole::Infantry;
+  u.attackType = (type == dom::sim::UnitType::Archer || type == dom::sim::UnitType::Siege) ? dom::sim::AttackType::Ranged : dom::sim::AttackType::Melee;
+  u.preferredTargetRole = dom::sim::UnitRole::Infantry;
+  u.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000};
+  if (type == dom::sim::UnitType::Worker) { u.hp = 70; u.attack = 3.0f; u.range = 1.5f; u.speed = 4.3f; }
+  else if (type == dom::sim::UnitType::Infantry) { u.hp = 105; u.attack = 8.5f; u.range = 2.0f; u.speed = 4.8f; }
+  else if (type == dom::sim::UnitType::Archer) { u.hp = 80; u.attack = 7.0f; u.range = 5.4f; u.speed = 4.4f; }
+  else if (type == dom::sim::UnitType::Cavalry) { u.hp = 130; u.attack = 9.2f; u.range = 1.8f; u.speed = 5.6f; }
+  else { u.hp = 110; u.attack = 13.0f; u.range = 6.2f; u.speed = 3.2f; }
+  return u;
+}
+
+void setup_cpu_battle(dom::sim::World& world, int perTeam) {
+  for (auto& p : world.players) { p.isCPU = true; p.isHuman = false; p.alive = true; }
+  world.units.clear();
+  uint32_t id = 1;
+  const int cols = std::max(1, (int)std::ceil(std::sqrt((float)std::max(1, perTeam))));
+  for (int i = 0; i < perTeam; ++i) {
+    int r = i / cols; int c = i % cols;
+    glm::vec2 a{20.0f + c * 1.2f, 20.0f + r * 1.2f};
+    glm::vec2 b{(float)world.width - 20.0f - c * 1.2f, (float)world.height - 20.0f - r * 1.2f};
+    world.units.push_back(make_spawned_unit(id++, 0, dom::sim::UnitType::Infantry, a));
+    world.units.push_back(make_spawned_unit(id++, 1, dom::sim::UnitType::Infantry, b));
+  }
+  dom::sim::on_authoritative_state_loaded(world);
+}
 int run_headless(const CliOptions& o) {
   dom::sim::set_nav_debug(o.navDebug);
   dom::ai::set_attack_early(o.aiAttackEarly);
@@ -415,6 +458,8 @@ int run_headless(const CliOptions& o) {
     if (o.forceScoreVictory) world.config.wonderHoldTicks = std::numeric_limits<uint32_t>::max();
   }
 
+  if (o.cpuOnlyBattle || o.spawnArmy > 0) setup_cpu_battle(world, std::max(1, o.spawnArmy > 0 ? o.spawnArmy : 250));
+
   const uint64_t baselineHash = dom::sim::map_setup_hash(world);
   if (o.smoke && o.replayFile.empty() && o.loadFile.empty() && o.scenarioFile.empty()) {
     dom::sim::World second; second.width = world.width; second.height = world.height; dom::sim::initialize_world(second, o.seed);
@@ -430,10 +475,17 @@ int run_headless(const CliOptions& o) {
   size_t replayIdx = 0;
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
+  std::ofstream perfLog;
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count\n"; }
   while (world.tick < stopTick) {
+    double aiMs = 0.0;
+    const auto simStart = std::chrono::steady_clock::now();
     if (o.replayFile.empty()) {
       if (dom::sim::gameplay_orders_allowed(world)) {
+        const auto aiStart = std::chrono::steady_clock::now();
         for (const auto& p : world.players) if (p.isCPU && p.alive) dom::ai::update_simple_ai(world, p.id);
+        const auto aiEnd = std::chrono::steady_clock::now();
+        aiMs = std::chrono::duration<double, std::milli>(aiEnd - aiStart).count();
       }
     } else {
       while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) {
@@ -442,6 +494,24 @@ int run_headless(const CliOptions& o) {
       }
     }
     dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+    const auto simEnd = std::chrono::steady_clock::now();
+    const double simMs = std::chrono::duration<double, std::milli>(simEnd - simStart).count();
+    const auto profile = dom::sim::last_tick_profile();
+    const int unitCount = (int)world.units.size();
+    const int buildingCount = (int)world.buildings.size();
+    const int entityCount = unitCount + buildingCount;
+    if (o.perf) {
+      std::cout << "PERF tick=" << world.tick
+                << " SIM_TICK_TIME=" << simMs
+                << " NAV_TIME=" << profile.navMs
+                << " COMBAT_TIME=" << profile.combatMs
+                << " AI_TIME=" << aiMs
+                << " RENDER_TIME=0"
+                << " ENTITY_COUNT=" << entityCount
+                << " UNIT_COUNT=" << unitCount
+                << " BUILDING_COUNT=" << buildingCount << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "\n";
+    }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
       const uint64_t saveHash = dom::sim::state_hash(world);
@@ -516,6 +586,9 @@ int run_headless(const CliOptions& o) {
 
   if (o.smoke && world.rejectedCommandCount != 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: rejected commands before end\n"; return 52; }
   if (o.smoke && o.timeLimitTicks > 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: match did not resolve with time limit\n"; return 51; }
+  if (o.spawnArmy > 0 && world.combatEngagementCount == 0) { std::cerr << "Smoke failure: no combat occurred\n"; return 66; }
+  if (o.spawnArmy > 0 && world.unitDeathEvents == 0) { std::cerr << "Smoke failure: no entities destroyed\n"; return 67; }
+  if (o.spawnArmy > 0 && world.stuckMoveAssertions > 0) { std::cerr << "Smoke failure: stuck unit assertions detected\n"; return 68; }
 
   std::cout << "TRIGGER_RESULT count=" << world.triggerExecutionCount << " objectiveTransitions=" << world.objectiveStateChangeCount << " log=" << world.objectiveLog.size() << "\n";
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
@@ -615,6 +688,8 @@ int run_app(int argc, char** argv) {
   };
 
   bool running = true; Uint64 prev = SDL_GetPerformanceCounter(); float accum = 0.0f;
+  double lastSimMs = 0.0;
+  double lastAiMs = 0.0;
   while (running) {
     Uint64 now = SDL_GetPerformanceCounter(); float frameDt = (now - prev) / static_cast<float>(SDL_GetPerformanceFrequency()); prev = now; accum += frameDt;
 
@@ -787,8 +862,14 @@ int run_app(int argc, char** argv) {
           accum = 0.0f;
         }
       } else {
+        const auto simStart = std::chrono::steady_clock::now();
+        const auto aiStart = std::chrono::steady_clock::now();
         for (const auto& p : world.players) if (p.isCPU && p.alive) dom::ai::update_simple_ai(world, p.id);
+        const auto aiEnd = std::chrono::steady_clock::now();
         dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+        const auto simEnd = std::chrono::steady_clock::now();
+        lastAiMs = std::chrono::duration<double, std::milli>(aiEnd - aiStart).count();
+        lastSimMs = std::chrono::duration<double, std::milli>(simEnd - simStart).count();
         accum -= dom::core::kSimDeltaSeconds;
       }
       if (!opts.saveFile.empty() && opts.autosaveTick >= 0 && world.tick == (uint32_t)opts.autosaveTick) {
@@ -803,6 +884,13 @@ int run_app(int argc, char** argv) {
     if (replayMode) replayOverlay = "REPLAY tick=" + std::to_string(world.tick) + (replayPaused ? " paused" : " running") + " speed=" + std::to_string(replaySpeed) + "x";
     if (editorMode) replayOverlay += (replayOverlay.empty()?"":" | ") + ("EDITOR tool=" + std::to_string(editorTool) + " owner=" + std::to_string(editorOwner) + " [Tab tool][O owner][F5 save]");
     if (!world.objectiveLog.empty()) replayOverlay += (replayOverlay.empty()?"":" | ") + ("OBJ: " + world.objectiveLog.back().text);
+    if (opts.perf) {
+      const auto p = dom::sim::last_tick_profile();
+      replayOverlay += (replayOverlay.empty()?"":" | ") + ("FPS ~" + std::to_string((int)std::round(1.0f / std::max(0.001f, frameDt))) +
+        " sim=" + std::to_string((int)std::round(lastSimMs)) + "ms render=" + std::to_string((int)std::round(dom::render::last_draw_ms())) +
+        "ms entities=" + std::to_string(world.units.size() + world.buildings.size()) + " ai=" + std::to_string((int)std::round(lastAiMs)) + "ms");
+      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << "\n";
+    }
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);
   }
