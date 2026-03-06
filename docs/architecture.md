@@ -97,3 +97,13 @@ Replay recording drains authoritative command events emitted from sim order APIs
 - Scenario load is authoritative: players/entities/rules/objectives/triggers are baked into world state before first tick.
 - Tick loop phase: combat/economy -> victory checks -> trigger evaluation (`eval_triggers`) -> recompute derived fog/population.
 - Editor path: runtime placement mutates world in editor mode and exports authored data via `save_scenario_file`; editor-only tool state is never serialized as authoritative save state.
+
+
+## Civilizations and teams
+- Scenario players carry civilization runtime coefficients used by CPU AI build, unit, and attack decisions.
+- Team IDs define alliances; allied players are excluded from hostile targeting/combat scans.
+
+
+## Resolution and render scaling
+- CLI exposes `--width/--height/--fullscreen/--borderless/--render-scale/--ui-scale`.
+- Renderer responds to `SDL_WINDOWEVENT_SIZE_CHANGED`, updates viewport/projection-dependent math, and supports offscreen scaled render blit to window framebuffer.

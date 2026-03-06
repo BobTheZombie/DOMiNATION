@@ -146,6 +146,46 @@ const char* objective_state_name(ObjectiveState s) {
   return "inactive";
 }
 
+struct CivilizationDef {
+  std::string id{"default"};
+  std::string displayName{"Default"};
+  float economyBias{1.0f};
+  float militaryBias{1.0f};
+  float scienceBias{1.0f};
+  float aggression{1.0f};
+  float defense{1.0f};
+};
+
+std::vector<CivilizationDef> gCivilizations;
+
+void load_civilizations_once() {
+  if (!gCivilizations.empty()) return;
+  gCivilizations.push_back({});
+  std::ifstream f("content/civilizations.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.is_array()) return;
+  gCivilizations.clear();
+  for (const auto& c : j) {
+    CivilizationDef d{};
+    d.id = c.value("id", std::string("default"));
+    d.displayName = c.value("displayName", d.id);
+    d.economyBias = c.value("economyBias", 1.0f);
+    d.militaryBias = c.value("militaryBias", 1.0f);
+    d.scienceBias = c.value("scienceBias", 1.0f);
+    d.aggression = c.value("aggression", 1.0f);
+    d.defense = c.value("defense", 1.0f);
+    gCivilizations.push_back(d);
+  }
+  if (gCivilizations.empty()) gCivilizations.push_back({});
+}
+
+CivilizationRuntime civilization_runtime_for(const std::string& id) {
+  load_civilizations_once();
+  for (const auto& c : gCivilizations) if (c.id == id) return {c.id, c.economyBias, c.militaryBias, c.scienceBias, c.aggression, c.defense};
+  return {"default", 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+}
+
 
 void hash_u32(uint64_t& h, uint32_t v) { h ^= static_cast<uint64_t>(v); h *= kFNVPrime; }
 void hash_float(uint64_t& h, float v) { hash_u32(h, static_cast<uint32_t>(v * 1000.0f)); }
@@ -487,7 +527,7 @@ uint32_t find_enemy_near(const World& w, const Unit& u, float radius) {
   uint32_t bestId = 0;
   int bestScore = -1;
   for (const auto& e : w.units) {
-    if (e.team == u.team || e.hp <= 0) continue;
+    if (players_allied(w, e.team, u.team) || e.hp <= 0) continue;
     float d = dist(u.pos, e.pos);
     if (d > radius) continue;
     int score = 5000 - static_cast<int>(d * 800.0f);
@@ -505,7 +545,7 @@ int find_building_target(const World& w, const Unit& u, float radius) {
   int bestScore = -1;
   for (int i = 0; i < static_cast<int>(w.buildings.size()); ++i) {
     const auto& b = w.buildings[i];
-    if (b.team == u.team || b.underConstruction || b.hp <= 0.0f) continue;
+    if (players_allied(w, b.team, u.team) || b.underConstruction || b.hp <= 0.0f) continue;
     float d = dist(u.pos, b.pos);
     if (d > radius) continue;
     int score = 4800 - static_cast<int>(d * 800.0f);
@@ -583,6 +623,11 @@ void set_match_phase(World& world, MatchPhase phase) { world.match.phase = phase
 
 void consume_replay_commands(std::vector<ReplayCommand>& out) { out = std::move(gReplayCommands); gReplayCommands.clear(); }
 
+bool players_allied(const World& world, uint16_t a, uint16_t b) {
+  if (a >= world.players.size() || b >= world.players.size()) return a == b;
+  return world.players[a].teamId == world.players[b].teamId;
+}
+
 int compute_player_score(const World& world, uint16_t playerId) {
   if (playerId >= world.players.size()) return 0;
   const auto& p = world.players[playerId];
@@ -604,6 +649,8 @@ int compute_player_score(const World& world, uint16_t playerId) {
 
 void apply_world_defaults(World& w) {
   w.players = {{0, Age::Ancient}, {1, Age::Ancient}};
+  w.players[0].isHuman = true; w.players[0].isCPU = false; w.players[0].teamId = 0; w.players[0].civilization = civilization_runtime_for("default");
+  w.players[1].isHuman = false; w.players[1].isCPU = true; w.players[1].teamId = 1; w.players[1].civilization = civilization_runtime_for("default");
   w.tick = 0;
   w.match = {};
   w.wonder = {};
@@ -723,21 +770,38 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (!in.good()) { err = "scenario not found"; return false; }
   nlohmann::json j; in >> j;
   if (j.value("schemaVersion", 0u) != 1u) { err = "scenario schema mismatch"; return false; }
-  w.width = j.value("mapWidth", 128);
-  w.height = j.value("mapHeight", 128);
+  if (j.contains("map")) { w.width = j["map"].value("width", 128); w.height = j["map"].value("height", 128); }
+  else { w.width = j.value("mapWidth", 128); w.height = j.value("mapHeight", 128); }
   w.seed = j.value("seed", fallbackSeed);
   initialize_world(w, w.seed);
   if (j.contains("heightmap")) { w.heightmap = j["heightmap"].get<std::vector<float>>(); if (!validate_size(w, w.heightmap)) { err = "heightmap size mismatch"; return false; } }
   if (j.contains("fertility")) { w.fertility = j["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "fertility size mismatch"; return false; } }
+  if (j.contains("terrainOverrides")) {
+    auto to = j["terrainOverrides"];
+    if (to.contains("height") && to["height"].is_array()) { w.heightmap = to["height"].get<std::vector<float>>(); if (!validate_size(w, w.heightmap)) { err = "terrainOverrides.height size mismatch"; return false; } }
+    if (to.contains("fertility") && to["fertility"].is_array()) { w.fertility = to["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "terrainOverrides.fertility size mismatch"; return false; } }
+  }
   if (j.contains("players")) {
     w.players.clear();
     for (const auto& p : j["players"]) {
       PlayerState ps{}; ps.id = p.value("id", (uint16_t)w.players.size()); ps.age = static_cast<Age>(p.value("age", 0));
       if (p.contains("resources")) ps.resources = p["resources"].get<decltype(ps.resources)>();
       ps.popCap = p.value("popCap", 10);
+      ps.isHuman = p.value("isHuman", ps.id == 0);
+      ps.isCPU = p.value("isCPU", !ps.isHuman);
+      ps.teamId = p.value("team", ps.id);
+      if (p.contains("color") && p["color"].is_array() && p["color"].size() >= 3) ps.color = {p["color"][0].get<float>(), p["color"][1].get<float>(), p["color"][2].get<float>()};
+      ps.civilization = civilization_runtime_for(p.value("civilization", std::string("default")));
+      if (p.contains("startingResources")) {
+        auto sr = p["startingResources"];
+        auto setR = [&](const char* k, Resource r){ if (sr.contains(k)) ps.resources[ridx(r)] = sr[k].get<float>(); };
+        setR("Food", Resource::Food); setR("Wood", Resource::Wood); setR("Metal", Resource::Metal);
+        setR("Wealth", Resource::Wealth); setR("Knowledge", Resource::Knowledge); setR("Oil", Resource::Oil);
+      }
       w.players.push_back(ps);
     }
   }
+  for (auto& p : w.players) if (p.civilization.id.empty()) p.civilization = civilization_runtime_for("default");
   w.cities.clear();
   if (j.contains("cities")) for (const auto& c : j["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
   w.units.clear();
@@ -746,8 +810,16 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb);} }
   w.resourceNodes.clear();
   if (j.contains("resourceNodes")) { uint32_t id=1; for (const auto& r : j["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",id++); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} }
+  if (j.contains("placements")) {
+    const auto& pl = j["placements"];
+    if (pl.contains("cities")) for (const auto& c : pl["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
+    if (pl.contains("units")) for (const auto& u : pl["units"]) spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()});
+    if (pl.contains("buildings")) for (const auto& b : pl["buildings"]) { Building bb{}; bb.id=b.value("id",(uint32_t)(w.buildings.size()+1)); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb); }
+    if (pl.contains("resourceNodes")) for (const auto& r : pl["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",(uint32_t)(w.resourceNodes.size()+1)); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} 
+  }
   if (j.contains("territoryOwner")) { w.territoryOwner = j["territoryOwner"].get<std::vector<uint16_t>>(); if ((int)w.territoryOwner.size()!=w.width*w.height) { err="territory size mismatch"; return false; } }
   if (j.contains("rules")) { auto rr=j["rules"]; w.config.timeLimitTicks=rr.value("timeLimitTicks", w.config.timeLimitTicks); w.config.wonderHoldTicks=rr.value("wonderHoldTicks", w.config.wonderHoldTicks); w.config.allowConquest=rr.value("allowConquest",true); w.config.allowScore=rr.value("allowScore",true); w.config.allowWonder=rr.value("allowWonder",true); }
+  if (j.contains("rulesOverrides")) { auto rr=j["rulesOverrides"]; w.config.timeLimitTicks=rr.value("timeLimit", w.config.timeLimitTicks); if (rr.contains("wonderRules")) w.config.allowWonder = rr["wonderRules"].value("enabled", w.config.allowWonder); if (rr.contains("disabledVictoryTypes")) { for (const auto& d : rr["disabledVictoryTypes"]) { std::string dv=d.get<std::string>(); if (dv=="conquest") w.config.allowConquest=false; if (dv=="score") w.config.allowScore=false; if (dv=="wonder") w.config.allowWonder=false; } } }
   w.triggerAreas.clear();
   if (j.contains("areas")) for (const auto& a : j["areas"]) { TriggerArea ta{}; ta.id=a.value("id",0u); ta.min={a["min"][0].get<float>(),a["min"][1].get<float>()}; ta.max={a["max"][0].get<float>(),a["max"][1].get<float>()}; w.triggerAreas.push_back(ta); }
   w.objectives.clear();
@@ -764,7 +836,7 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   nlohmann::json j;
   j["schemaVersion"] = 1; j["seed"] = w.seed; j["mapWidth"] = w.width; j["mapHeight"] = w.height;
   j["players"] = nlohmann::json::array();
-  for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap}});
+  for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap},{"isHuman",p.isHuman},{"isCPU",p.isCPU},{"team",p.teamId},{"civilization",p.civilization.id},{"color",{p.color[0],p.color[1],p.color[2]}},{"startingResources",{{"Food",p.resources[0]},{"Wood",p.resources[1]},{"Metal",p.resources[2]},{"Wealth",p.resources[3]},{"Knowledge",p.resources[4]},{"Oil",p.resources[5]}}}});
   j["cities"] = nlohmann::json::array(); for (const auto& c : w.cities) j["cities"].push_back({{"id",c.id},{"team",c.team},{"pos",{c.pos.x,c.pos.y}},{"level",c.level},{"capital",c.capital}});
   j["units"] = nlohmann::json::array(); for (const auto& u : w.units) j["units"].push_back({{"id",u.id},{"team",u.team},{"type",unit_name(u.type)},{"pos",{u.pos.x,u.pos.y}}});
   j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp}});

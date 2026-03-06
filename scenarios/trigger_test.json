@@ -1,62 +1,36 @@
 {
   "schemaVersion": 1,
   "seed": 777,
-  "mapWidth": 128,
-  "mapHeight": 128,
+  "map": {"width": 128, "height": 128},
   "players": [
-    {"id": 0, "age": 0, "resources": [500, 500, 300, 250, 120, 0], "popCap": 30},
-    {"id": 1, "age": 0, "resources": [500, 500, 300, 250, 120, 0], "popCap": 30}
+    {"id": 0, "isHuman": true, "isCPU": false, "civilization": "agrarian_league", "team": 0, "color": [0.92,0.25,0.25], "startingResources": {"Food": 500, "Wood": 500, "Metal": 300, "Wealth": 250, "Knowledge": 120, "Oil": 0}, "popCap": 30},
+    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "iron_phalanx", "team": 1, "color": [0.25,0.45,0.95], "startingResources": {"Food": 500, "Wood": 500, "Metal": 300, "Wealth": 250, "Knowledge": 120, "Oil": 0}, "popCap": 30}
   ],
-  "cities": [
-    {"id": 1, "team": 0, "pos": [20, 20], "level": 1, "capital": true},
-    {"id": 2, "team": 1, "pos": [104, 104], "level": 1, "capital": true}
-  ],
-  "buildings": [
-    {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 20], "underConstruction": false, "hp": 2200},
-    {"id": 11, "team": 0, "type": "Barracks", "pos": [28, 24], "underConstruction": false, "hp": 1000},
-    {"id": 20, "team": 1, "type": "CityCenter", "pos": [104, 104], "underConstruction": false, "hp": 2200}
-  ],
-  "units": [
-    {"id": 1, "team": 0, "type": "Infantry", "pos": [22, 22]},
-    {"id": 2, "team": 0, "type": "Infantry", "pos": [23, 22]},
-    {"id": 3, "team": 1, "type": "Infantry", "pos": [102, 102]}
-  ],
-  "areas": [
-    {"id": 1, "min": [24, 20], "max": [34, 30]}
-  ],
+  "placements": {
+    "cities": [
+      {"id": 1, "team": 0, "pos": [20, 20], "level": 1, "capital": true},
+      {"id": 2, "team": 1, "pos": [104, 104], "level": 1, "capital": true}
+    ],
+    "buildings": [
+      {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 20], "underConstruction": false, "hp": 2200},
+      {"id": 11, "team": 0, "type": "Barracks", "pos": [28, 24], "underConstruction": false, "hp": 1000},
+      {"id": 20, "team": 1, "type": "CityCenter", "pos": [104, 104], "underConstruction": false, "hp": 2200}
+    ],
+    "units": [
+      {"id": 1, "team": 0, "type": "Infantry", "pos": [22, 22]},
+      {"id": 2, "team": 0, "type": "Infantry", "pos": [23, 22]},
+      {"id": 3, "team": 1, "type": "Infantry", "pos": [102, 102]}
+    ]
+  },
+  "areas": [{"id": 1, "min": [24, 20], "max": [34, 30]}],
   "objectives": [
     {"id": 1, "title": "Hold the line", "text": "Survive until tick 1800", "primary": true, "state": "active", "owner": 0},
     {"id": 2, "title": "Reach mustering area", "text": "Move a unit into area 1", "primary": false, "state": "active", "owner": 0}
   ],
   "triggers": [
-    {
-      "id": 1,
-      "once": true,
-      "condition": {"type": "TickReached", "tick": 600},
-      "actions": [
-        {"type": "ShowObjectiveText", "text": "Reinforcements have arrived"},
-        {"type": "GrantResources", "player": 0, "resources": {"Food": 150, "Wood": 100}},
-        {"type": "SpawnUnits", "player": 0, "unitType": "Infantry", "count": 2, "pos": [26, 24]}
-      ]
-    },
-    {
-      "id": 2,
-      "once": true,
-      "condition": {"type": "AreaEntered", "areaId": 1, "player": 0},
-      "actions": [
-        {"type": "SetObjectiveState", "objectiveId": 2, "state": "completed"},
-        {"type": "ShowObjectiveText", "text": "Mustering area secured"}
-      ]
-    },
-    {
-      "id": 3,
-      "once": true,
-      "condition": {"type": "TickReached", "tick": 1800},
-      "actions": [
-        {"type": "SetObjectiveState", "objectiveId": 1, "state": "completed"},
-        {"type": "EndMatchWithVictory", "winner": 0}
-      ]
-    }
+    {"id": 1, "once": true, "condition": {"type": "TickReached", "tick": 600}, "actions": [{"type": "ShowObjectiveText", "text": "Reinforcements have arrived"}, {"type": "GrantResources", "player": 0, "resources": {"Food": 150, "Wood": 100}}, {"type": "SpawnUnits", "player": 0, "unitType": "Infantry", "count": 2, "pos": [26, 24]}]},
+    {"id": 2, "once": true, "condition": {"type": "AreaEntered", "areaId": 1, "player": 0}, "actions": [{"type": "SetObjectiveState", "objectiveId": 2, "state": "completed"}, {"type": "ShowObjectiveText", "text": "Mustering area secured"}]},
+    {"id": 3, "once": true, "condition": {"type": "TickReached", "tick": 1800}, "actions": [{"type": "SetObjectiveState", "objectiveId": 1, "state": "completed"}, {"type": "EndMatchWithVictory", "winner": 0}]}
   ],
-  "rules": {"timeLimitTicks": 4000, "allowConquest": true, "allowScore": true, "allowWonder": true}
+  "rulesOverrides": {"timeLimit": 4000}
 }

@@ -1,29 +1,60 @@
 {
   "schemaVersion": 1,
   "seed": 1337,
-  "mapWidth": 128,
-  "mapHeight": 128,
+  "map": {"width": 128, "height": 128},
   "players": [
-    {"id": 0, "age": 0, "resources": [500, 500, 300, 250, 120, 0], "popCap": 20},
-    {"id": 1, "age": 0, "resources": [500, 500, 300, 250, 120, 0], "popCap": 20}
+    {
+      "id": 0,
+      "isHuman": true,
+      "isCPU": false,
+      "civilization": "agrarian_league",
+      "team": 0,
+      "color": [0.92, 0.25, 0.25],
+      "startingResources": {"Food": 500, "Wood": 500, "Metal": 300, "Wealth": 250, "Knowledge": 120, "Oil": 0},
+      "popCap": 20
+    },
+    {
+      "id": 1,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "iron_phalanx",
+      "team": 1,
+      "color": [0.25, 0.45, 0.95],
+      "startingResources": {"Food": 500, "Wood": 500, "Metal": 320, "Wealth": 200, "Knowledge": 80, "Oil": 0},
+      "popCap": 20
+    },
+    {
+      "id": 2,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "scholar_dynasty",
+      "team": 1,
+      "color": [0.22, 0.8, 0.35],
+      "startingResources": {"Food": 480, "Wood": 420, "Metal": 260, "Wealth": 280, "Knowledge": 180, "Oil": 0},
+      "popCap": 20
+    }
   ],
-  "cities": [
-    {"id": 1, "team": 0, "pos": [20, 20], "level": 1, "capital": true},
-    {"id": 2, "team": 1, "pos": [100, 100], "level": 1, "capital": true}
-  ],
-  "units": [
-    {"id": 100, "team": 0, "type": "Worker", "pos": [22, 20]},
-    {"id": 101, "team": 0, "type": "Infantry", "pos": [24, 22]},
-    {"id": 200, "team": 1, "type": "Worker", "pos": [98, 100]},
-    {"id": 201, "team": 1, "type": "Infantry", "pos": [96, 98]}
-  ],
-  "buildings": [
-    {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 20], "underConstruction": false, "hp": 2200},
-    {"id": 20, "team": 1, "type": "CityCenter", "pos": [100, 100], "underConstruction": false, "hp": 2200}
-  ],
-  "resourceNodes": [
-    {"id": 1, "type": "Forest", "pos": [30, 28], "amount": 1800},
-    {"id": 2, "type": "Ore", "pos": [88, 86], "amount": 1500}
-  ],
-  "rules": {"timeLimitTicks": 5000, "allowConquest": true, "allowScore": true, "allowWonder": true}
+  "placements": {
+    "cities": [
+      {"id": 1, "team": 0, "pos": [20, 20], "level": 1, "capital": true},
+      {"id": 2, "team": 1, "pos": [100, 100], "level": 1, "capital": true},
+      {"id": 3, "team": 2, "pos": [100, 85], "level": 1, "capital": true}
+    ],
+    "units": [
+      {"id": 100, "team": 0, "type": "Worker", "pos": [22, 20]},
+      {"id": 101, "team": 0, "type": "Infantry", "pos": [24, 22]},
+      {"id": 200, "team": 1, "type": "Worker", "pos": [98, 100]},
+      {"id": 300, "team": 2, "type": "Worker", "pos": [99, 84]}
+    ],
+    "buildings": [
+      {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 20], "underConstruction": false, "hp": 2200},
+      {"id": 20, "team": 1, "type": "CityCenter", "pos": [100, 100], "underConstruction": false, "hp": 2200},
+      {"id": 30, "team": 2, "type": "CityCenter", "pos": [100, 85], "underConstruction": false, "hp": 2200}
+    ],
+    "resourceNodes": [
+      {"id": 1, "type": "Forest", "pos": [30, 28], "amount": 1800},
+      {"id": 2, "type": "Ore", "pos": [88, 86], "amount": 1500}
+    ]
+  },
+  "rulesOverrides": {"timeLimit": 5000, "disabledVictoryTypes": []}
 }

@@ -39,6 +39,12 @@ struct CliOptions {
   int ticks{-1};
   int mapW{128};
   int mapH{128};
+  int windowW{1920};
+  int windowH{1080};
+  bool fullscreen{false};
+  bool borderless{false};
+  float renderScale{1.0f};
+  float uiScale{1.0f};
   int timeLimitTicks{-1};
   int autosaveTick{-1};
   int replayStopTick{-1};
@@ -96,6 +102,12 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--save" && i + 1 < argc) { o.saveFile = argv[++i]; }
     else if (a == "--load" && i + 1 < argc) { o.loadFile = argv[++i]; }
     else if (a == "--scenario" && i + 1 < argc) { o.scenarioFile = argv[++i]; }
+    else if (a == "--width" && i + 1 < argc) { if (!parse_int(argv[++i], o.windowW) || o.windowW < 640) return false; }
+    else if (a == "--height" && i + 1 < argc) { if (!parse_int(argv[++i], o.windowH) || o.windowH < 480) return false; }
+    else if (a == "--fullscreen") { o.fullscreen = true; }
+    else if (a == "--borderless") { o.borderless = true; }
+    else if (a == "--render-scale" && i + 1 < argc) { if (!parse_float(argv[++i], o.renderScale) || o.renderScale <= 0.1f || o.renderScale > 1.0f) return false; }
+    else if (a == "--ui-scale" && i + 1 < argc) { if (!parse_float(argv[++i], o.uiScale) || o.uiScale < 0.5f || o.uiScale > 3.0f) return false; }
     else if (a == "--editor-save" && i + 1 < argc) { o.editorSaveFile = argv[++i]; }
     else if (a == "--map-size" && i + 1 < argc) {
       std::string v = argv[++i]; auto xPos = v.find('x'); if (xPos == std::string::npos) return false;
@@ -421,8 +433,7 @@ int run_headless(const CliOptions& o) {
   while (world.tick < stopTick) {
     if (o.replayFile.empty()) {
       if (dom::sim::gameplay_orders_allowed(world)) {
-        dom::ai::update_simple_ai(world, 0);
-        dom::ai::update_simple_ai(world, 1);
+        for (const auto& p : world.players) if (p.isCPU && p.alive) dom::ai::update_simple_ai(world, p.id);
       }
     } else {
       while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) {
@@ -531,11 +542,17 @@ int run_app(int argc, char** argv) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-  SDL_Window* window = SDL_CreateWindow("DOMiNATION RTS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1400, 900, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+  Uint32 windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+  if (opts.borderless) windowFlags |= SDL_WINDOW_BORDERLESS;
+  if (opts.fullscreen) windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+  SDL_Window* window = SDL_CreateWindow("DOMiNATION RTS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, opts.windowW, opts.windowH, windowFlags);
   if (!window) { SDL_Quit(); return 1; }
   SDL_GLContext ctx = SDL_GL_CreateContext(window);
   if (!ctx) { SDL_DestroyWindow(window); SDL_Quit(); return 1; }
   SDL_GL_SetSwapInterval(1); dom::render::init_renderer();
+  dom::render::set_render_scale(opts.renderScale);
+  dom::render::set_ui_scale(opts.uiScale);
+  dom::render::set_resolution(opts.windowW, opts.windowH);
 
   dom::sim::set_nav_debug(opts.navDebug);
   dom::ai::set_attack_early(opts.aiAttackEarly);
@@ -604,6 +621,9 @@ int run_app(int argc, char** argv) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) running = false;
+      if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+        dom::render::set_resolution(e.window.data1, e.window.data2);
+      }
       if (e.type == SDL_KEYDOWN) {
         if (e.key.keysym.sym == SDLK_F9) editorMode = !editorMode;
         if (editorMode && e.key.keysym.sym == SDLK_TAB) editorTool = (editorTool + 1) % 6;
@@ -767,7 +787,7 @@ int run_app(int argc, char** argv) {
           accum = 0.0f;
         }
       } else {
-        dom::ai::update_simple_ai(world, 1);
+        for (const auto& p : world.players) if (p.isCPU && p.alive) dom::ai::update_simple_ai(world, p.id);
         dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
         accum -= dom::core::kSimDeltaSeconds;
       }

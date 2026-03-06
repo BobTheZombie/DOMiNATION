@@ -26,6 +26,14 @@ struct OverlayState {
   std::vector<uint8_t> border;
   std::vector<uint8_t> fog;
   std::vector<uint8_t> minimap;
+  int windowW{1400};
+  int windowH{900};
+  float renderScale{1.0f};
+  float uiScale{1.0f};
+  GLuint sceneFbo{0};
+  GLuint sceneColorTex{0};
+  int sceneW{0};
+  int sceneH{0};
 };
 
 OverlayState gOverlay;
@@ -223,6 +231,23 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
   }
 }
 
+
+void ensure_scene_target(int width, int height) {
+  int rw = std::max(1, (int)std::round(width * gOverlay.renderScale));
+  int rh = std::max(1, (int)std::round(height * gOverlay.renderScale));
+  if (gOverlay.sceneW == rw && gOverlay.sceneH == rh && gOverlay.sceneFbo != 0) return;
+  gOverlay.sceneW = rw; gOverlay.sceneH = rh;
+  if (gOverlay.sceneFbo == 0) glGenFramebuffers(1, &gOverlay.sceneFbo);
+  if (gOverlay.sceneColorTex == 0) glGenTextures(1, &gOverlay.sceneColorTex);
+  glBindTexture(GL_TEXTURE_2D, gOverlay.sceneColorTex);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, rw, rh, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glBindFramebuffer(GL_FRAMEBUFFER, gOverlay.sceneFbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gOverlay.sceneColorTex, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<float, 3>& color) {
   glColor3f(color[0], color[1], color[2]);
   glBegin(GL_TRIANGLE_STRIP);
@@ -243,6 +268,15 @@ bool init_renderer() {
   return true;
 }
 
+void set_resolution(int width, int height) {
+  gOverlay.windowW = std::max(1, width);
+  gOverlay.windowH = std::max(1, height);
+  glViewport(0, 0, gOverlay.windowW, gOverlay.windowH);
+}
+
+void set_render_scale(float scale) { gOverlay.renderScale = std::clamp(scale, 0.5f, 1.0f); }
+void set_ui_scale(float scale) { gOverlay.uiScale = std::clamp(scale, 0.75f, 2.5f); }
+
 glm::vec2 screen_to_world(const Camera& camera, int width, int height, glm::vec2 s) {
   float aspect = static_cast<float>(width) / static_cast<float>(height);
   float wx = ((s.x / width) * 2.0f - 1.0f) * camera.zoom * aspect + camera.center.x;
@@ -262,8 +296,8 @@ uint32_t pick_unit(const dom::sim::World& world, const Camera& camera, int width
 }
 
 bool minimap_screen_to_world(const dom::sim::World& world, int width, int height, glm::vec2 screen, glm::vec2& outWorld) {
-  const int size = 210;
-  const int pad = 18;
+  const int size = std::max(140, (int)std::round(210.0f * gOverlay.uiScale));
+  const int pad = std::max(8, (int)std::round(18.0f * gOverlay.uiScale));
   int x0 = width - size - pad;
   int y0 = height - size - pad;
   if (!gOverlay.showMinimap) return false;
@@ -275,7 +309,10 @@ bool minimap_screen_to_world(const dom::sim::World& world, int width, int height
 }
 
 void draw(dom::sim::World& w, const Camera& c, int width, int height, const std::vector<uint32_t>& dragHighlight) {
-  glViewport(0, 0, width, height);
+  set_resolution(width, height);
+  ensure_scene_target(width, height);
+  glBindFramebuffer(GL_FRAMEBUFFER, gOverlay.sceneFbo);
+  glViewport(0, 0, gOverlay.sceneW, gOverlay.sceneH);
   glClear(GL_COLOR_BUFFER_BIT);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -436,8 +473,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glPushMatrix();
     glLoadIdentity();
 
-    const float size = 210.0f;
-    const float pad = 18.0f;
+    const float size = std::max(140.0f, 210.0f * gOverlay.uiScale);
+    const float pad = std::max(8.0f, 18.0f * gOverlay.uiScale);
     const float x0 = width - size - pad;
     const float y0 = height - size - pad;
 
@@ -481,13 +518,17 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
   }
+
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, gOverlay.sceneFbo);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, gOverlay.sceneW, gOverlay.sceneH, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void generate_minimap_image(const dom::sim::World& world, int resolution, std::vector<uint8_t>& outRgb) {
   int res = std::max(32, resolution);
   build_minimap_pixels(world, res, outRgb);
 }
-
 void toggle_minimap() { gOverlay.showMinimap = !gOverlay.showMinimap; }
 void toggle_territory_overlay() { gOverlay.showTerritory = !gOverlay.showTerritory; }
 void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }

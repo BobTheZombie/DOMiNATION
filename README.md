@@ -102,3 +102,18 @@ Headless output adds `SAVE_RESULT` / `LOAD_RESULT` / `REPLAY_RESULT` lines for a
   - `F9` toggle editor, `Tab` cycle tool, `O` change owner, LMB place/remove, `F5` save scenario JSON (`--editor-save <file>`).
 
 Objectives/triggers are simulation-authoritative and visible via HUD/objective log overlays.
+
+
+## Resolution and display flags
+- `--width <N> --height <N>`
+- `--fullscreen`
+- `--borderless`
+- `--render-scale <float>` (0.5-1.0)
+- `--ui-scale <float>`
+
+Examples:
+- `./build/rts --width 1920 --height 1080`
+- `./build/rts --width 2560 --height 1440 --render-scale 0.75`
+- `./build/rts --width 3840 --height 2160 --ui-scale 1.5`
+
+Civilization data: `content/civilizations.json`.
