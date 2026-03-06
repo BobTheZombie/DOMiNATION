@@ -26,6 +26,7 @@ struct CliOptions {
   bool headless{false};
   bool smoke{false};
   bool dumpHash{false};
+  bool hashOnly{false};
   bool navDebug{false};
   bool flowVisualize{false};
   bool aiAttackEarly{false};
@@ -87,6 +88,7 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     if (a == "--headless") o.headless = true;
     else if (a == "--smoke") o.smoke = true;
     else if (a == "--dump-hash") o.dumpHash = true;
+    else if (a == "--hash-only") o.hashOnly = true;
     else if (a == "--nav-debug") o.navDebug = true;
     else if (a == "--flow-visualize") o.flowVisualize = true;
     else if (a == "--ai-attack-early") o.aiAttackEarly = true;
@@ -483,7 +485,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -510,6 +512,7 @@ int run_headless(const CliOptions& o) {
     const auto simEnd = std::chrono::steady_clock::now();
     const double simMs = std::chrono::duration<double, std::milli>(simEnd - simStart).count();
     const auto profile = dom::sim::last_tick_profile();
+    const auto stats = dom::sim::last_simulation_stats();
     const int unitCount = (int)world.units.size();
     const int buildingCount = (int)world.buildings.size();
     const int entityCount = unitCount + buildingCount;
@@ -523,8 +526,17 @@ int run_headless(const CliOptions& o) {
                 << " ENTITY_COUNT=" << entityCount
                 << " UNIT_COUNT=" << unitCount
                 << " BUILDING_COUNT=" << buildingCount
-                << " THREADS=" << dom::sim::worker_threads() << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "\n";
+                << " THREADS=" << stats.threads
+                << " JOB_COUNT=" << stats.jobCount
+                << " CHUNK_COUNT=" << stats.chunkCount
+                << " MOVEMENT_TASKS=" << stats.movementTasks
+                << " FOG_TASKS=" << stats.fogTasks
+                << " TERRITORY_TASKS=" << stats.territoryTasks
+                << " NAV_REQUESTS=" << stats.navRequests
+                << " NAV_COMPLETIONS=" << stats.navCompletions
+                << " NAV_STALE_DROPS=" << stats.navStaleDrops
+                << " EVENT_COUNT=" << stats.eventCount << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -592,13 +604,13 @@ int run_headless(const CliOptions& o) {
     std::cout << "REPLAY_FILE path=" << o.recordReplayFile << "\n";
   }
 
-  std::cout << "MATCH_RESULT winner=" << world.match.winner << " condition=" << victory_to_string(world.match.condition) << " ticks=" << world.match.endTick << "\n";
+  if (!o.hashOnly) std::cout << "MATCH_RESULT winner=" << world.match.winner << " condition=" << victory_to_string(world.match.condition) << " ticks=" << world.match.endTick << "\n";
   for (const auto& p : world.players) {
     int unitsAlive = 0;
     int buildingsAlive = 0;
     for (const auto& u : world.units) if (u.team == p.id && u.hp > 0) ++unitsAlive;
     for (const auto& b : world.buildings) if (b.team == p.id && b.hp > 0 && !b.underConstruction) ++buildingsAlive;
-    std::cout << "PLAYER_RESULT id=" << p.id << " score=" << p.finalScore << " unitsAlive=" << unitsAlive << " unitsLost=" << p.unitsLost << " buildingsAlive=" << buildingsAlive << " age=" << (int)p.age + 1 << "\n";
+    if (!o.hashOnly) std::cout << "PLAYER_RESULT id=" << p.id << " score=" << p.finalScore << " unitsAlive=" << unitsAlive << " unitsLost=" << p.unitsLost << " buildingsAlive=" << buildingsAlive << " age=" << (int)p.age + 1 << "\n";
   }
 
   if (o.smoke && world.rejectedCommandCount != 0 && world.match.condition == dom::sim::VictoryCondition::None) { std::cerr << "Smoke failure: rejected commands before end\n"; return 52; }
@@ -607,12 +619,13 @@ int run_headless(const CliOptions& o) {
   if (o.spawnArmy > 0 && world.unitDeathEvents == 0) { std::cerr << "Smoke failure: no entities destroyed\n"; return 67; }
   if (o.spawnArmy > 0 && world.stuckMoveAssertions > 0) { std::cerr << "Smoke failure: stuck unit assertions detected\n"; return 68; }
 
-  std::cout << "TRIGGER_RESULT count=" << world.triggerExecutionCount << " objectiveTransitions=" << world.objectiveStateChangeCount << " log=" << world.objectiveLog.size() << "\n";
+  if (!o.hashOnly) std::cout << "TRIGGER_RESULT count=" << world.triggerExecutionCount << " objectiveTransitions=" << world.objectiveStateChangeCount << " log=" << world.objectiveLog.size() << "\n";
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
   if (o.dumpHash) {
     std::cout << "map_hash=" << baselineHash << "\n";
     std::cout << "state_hash=" << finalHash << "\n";
   }
+  if (o.hashOnly) std::cout << "state_hash=" << finalHash << "\n";
   return 0;
 }
 
@@ -914,7 +927,8 @@ int run_app(int argc, char** argv) {
       replayOverlay += (replayOverlay.empty()?"":" | ") + ("FPS ~" + std::to_string((int)std::round(1.0f / std::max(0.001f, frameDt))) +
         " sim=" + std::to_string((int)std::round(lastSimMs)) + "ms render=" + std::to_string((int)std::round(dom::render::last_draw_ms())) +
         "ms entities=" + std::to_string(world.units.size() + world.buildings.size()) + " ai=" + std::to_string((int)std::round(lastAiMs)) + "ms");
-      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << dom::sim::worker_threads() << "\n";
+      const auto stats = dom::sim::last_simulation_stats();
+      std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << "\n";
     }
     dom::ui::draw_hud(window, world, replayOverlay);
     SDL_GL_SwapWindow(window);

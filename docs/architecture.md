@@ -114,3 +114,29 @@ Replay recording drains authoritative command events emitted from sim order APIs
 - **Command/event stream**: replay commands plus deterministic gameplay events (`unit_died`, `building_completed`, `wonder_started`, `wonder_completed`, `player_eliminated`, `objective_completed`).
 - **Job graph**: `TaskGraph` + worker pool (`--threads <N>`) executes batched jobs with deterministic merge ordering.
 - **Presentation layer**: renderer/minimap/overlays remain derived runtime data and are never part of authoritative hash/save.
+
+## Deterministic parallel simulation pass (chunked)
+- World tiles are partitioned into fixed simulation chunks (`16x16` tiles) in stable row-major ordering.
+- Chunk membership is rebuilt deterministically (`rebuild_chunk_membership`) and tracks units, buildings/resources, fog tiles, and territory tiles.
+- Public helpers (`query_chunk_range`, `process_chunk_range`) expose stable chunk iteration windows.
+
+### Parallel movement integration model
+- Worker tasks process chunk-local unit ID sets and compute temporary movement outputs only (position, moveDir, stuck state, slot reached).
+- Workers never mutate authoritative `world.units` directly.
+- Main thread commits movement in stable unit-ID order, preserving deterministic outcomes across thread counts.
+
+### Parallel fog and territory model
+- Territory and fog passes execute chunk tasks that write per-chunk staging results.
+- Main thread merges chunk staging buffers in stable chunk order.
+- Chunk scratch/staging buffers are runtime-only and excluded from save/load authoritative data.
+
+### Async navigation lifecycle
+- Navigation requests are enqueued with deterministic monotonic request IDs.
+- Worker tasks compute flow-field integration/directions asynchronously into completion buffers.
+- Main thread applies completions at a stable tick point in request-ID order.
+- Stale completions (`navVersion` mismatch) are dropped deterministically.
+- Nav cache and queues remain derived runtime-only state.
+
+### Determinism and validation
+- Required validation compares final authoritative hash for `--threads 1/4/8` over identical seeds, scenarios, commands, and tick counts.
+- Perf diagnostics expose `THREADS`, `JOB_COUNT`, `CHUNK_COUNT`, `MOVEMENT_TASKS`, `FOG_TASKS`, `TERRITORY_TASKS`, `NAV_REQUESTS`, `NAV_COMPLETIONS`, `NAV_STALE_DROPS`, and `EVENT_COUNT` in console and `--perf-log` CSV.
