@@ -10,6 +10,8 @@
 #include <limits>
 #include <chrono>
 #include <unordered_map>
+#include <thread>
+#include <atomic>
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
@@ -49,6 +51,8 @@ bool gDefsLoaded{false};
 bool gNavDebug{false};
 bool gCombatDebug{false};
 std::vector<ReplayCommand> gReplayCommands;
+std::vector<GameplayEvent> gGameplayEvents;
+int gWorkerThreads = 1;
 
 constexpr uint16_t kRoleCount = 6;
 constexpr int kTargetBetterThreshold = 220;
@@ -99,6 +103,10 @@ TickProfile gLastTickProfile{};
 
 constexpr int32_t kInfCost = 1 << 29;
 constexpr std::array<std::pair<int,int>, 8> kNeighborOrder{{{1,0},{0,1},{-1,0},{0,-1},{1,1},{-1,1},{-1,-1},{1,-1}}};
+
+void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subject, uint32_t entityId, std::string text = {}) {
+  gGameplayEvents.push_back({type, w.tick, actor, subject, entityId, std::move(text)});
+}
 
 size_t ridx(Resource r) { return static_cast<size_t>(r); }
 int bidx(BuildingType t) { return static_cast<int>(t); }
@@ -696,6 +704,8 @@ void set_match_phase(World& world, MatchPhase phase) { world.match.phase = phase
 
 void consume_replay_commands(std::vector<ReplayCommand>& out) { out = std::move(gReplayCommands); gReplayCommands.clear(); }
 
+void consume_gameplay_events(std::vector<GameplayEvent>& out) { out = std::move(gGameplayEvents); gGameplayEvents.clear(); }
+
 bool players_allied(const World& world, uint16_t a, uint16_t b) {
   if (a >= world.players.size() || b >= world.players.size()) return a == b;
   return world.players[a].teamId == world.players[b].teamId;
@@ -774,7 +784,7 @@ void eval_triggers(World& w) {
     for (const auto& a : t.actions) {
       if (a.type == TriggerActionType::ShowObjectiveText) w.objectiveLog.push_back({w.tick, a.text});
       else if (a.type == TriggerActionType::SetObjectiveState) {
-        for (auto& o : w.objectives) if (o.id == a.objectiveId) { if (o.state != a.objectiveState) ++w.objectiveStateChangeCount; o.state = a.objectiveState; }
+        for (auto& o : w.objectives) if (o.id == a.objectiveId) { if (o.state != a.objectiveState) { ++w.objectiveStateChangeCount; if (a.objectiveState == ObjectiveState::Completed) emit_event(w, GameplayEventType::ObjectiveCompleted, a.player, o.owner, o.id, o.title); } o.state = a.objectiveState; }
       } else if (a.type == TriggerActionType::GrantResources) {
         if (a.player < w.players.size()) for (size_t i = 0; i < a.resources.size(); ++i) w.players[a.player].resources[i] += a.resources[i];
       } else if (a.type == TriggerActionType::SpawnUnits) {
@@ -793,6 +803,30 @@ void eval_triggers(World& w) {
       }
     }
   }
+}
+
+void set_worker_threads(int threads) { gWorkerThreads = std::max(1, threads); }
+int worker_threads() { return gWorkerThreads; }
+
+void run_task_graph(TaskGraph& graph) {
+  const size_t count = graph.jobs.size();
+  if (count == 0) return;
+  const int workers = std::min<int>(std::max(1, gWorkerThreads), static_cast<int>(count));
+  if (workers <= 1) { for (auto& j : graph.jobs) if (j.execute) j.execute(); return; }
+  std::vector<std::thread> pool;
+  pool.reserve(static_cast<size_t>(workers));
+  std::atomic<size_t> next{0};
+  for (int i = 0; i < workers; ++i) {
+    pool.emplace_back([&]() {
+      while (true) {
+        size_t idx = next.fetch_add(1, std::memory_order_relaxed);
+        if (idx >= count) break;
+        auto& job = graph.jobs[idx];
+        if (job.execute) job.execute();
+      }
+    });
+  }
+  for (auto& t : pool) t.join();
 }
 
 void initialize_world(World& w, uint32_t seed) {
@@ -973,7 +1007,7 @@ void tick_world(World& w, float dt) {
     if (b.underConstruction) {
       float workerFactor = has_nearby_builder(w, b.team, b.pos) ? 1.0f : 0.25f;
       b.buildProgress += dt / std::max(1.0f, b.buildTime) * workerFactor;
-      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; ++w.navVersion; gNav.cache.clear(); }
+      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; emit_event(w, GameplayEventType::BuildingCompleted, b.team, b.team, b.id); if (b.type == BuildingType::Wonder) emit_event(w, GameplayEventType::WonderStarted, b.team, b.team, b.id); ++w.navVersion; gNav.cache.clear(); }
       continue;
     }
 
@@ -1143,6 +1177,7 @@ void tick_world(World& w, float dt) {
   w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [&](const Unit& u) {
     if (u.hp > 0) return false;
     w.players[u.team].unitsLost += 1;
+    emit_event(w, GameplayEventType::UnitDied, u.team, u.team, u.id);
     return true;
   }), w.units.end());
   w.unitDeathEvents += static_cast<uint32_t>(beforeUnits - w.units.size());
@@ -1163,7 +1198,9 @@ void tick_world(World& w, float dt) {
   int alivePlayers = 0;
   uint16_t aliveId = 0;
   for (auto& p : w.players) {
+    const bool wasAlive = p.alive;
     p.alive = controlled_capitals(w, p.id) > 0;
+    if (wasAlive && !p.alive) emit_event(w, GameplayEventType::PlayerEliminated, p.id, p.id, 0);
     if (p.alive) { ++alivePlayers; aliveId = p.id; }
   }
   if (w.config.allowConquest && alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
@@ -1176,7 +1213,7 @@ void tick_world(World& w, float dt) {
   } else {
     if (w.wonder.owner != wonderOwner) { w.wonder.owner = wonderOwner; w.wonder.heldTicks = 0; }
     else ++w.wonder.heldTicks;
-    if (w.config.allowWonder && w.wonder.heldTicks >= w.config.wonderHoldTicks) apply_match_end(w, VictoryCondition::Wonder, wonderOwner, false);
+    if (w.config.allowWonder && w.wonder.heldTicks >= w.config.wonderHoldTicks) { emit_event(w, GameplayEventType::WonderCompleted, wonderOwner, wonderOwner, 0); apply_match_end(w, VictoryCondition::Wonder, wonderOwner, false); }
   }
 
   if (w.config.allowScore && w.tick >= w.config.timeLimitTicks && w.match.phase == MatchPhase::Running) {

@@ -107,3 +107,10 @@ Replay recording drains authoritative command events emitted from sim order APIs
 ## Resolution and render scaling
 - CLI exposes `--width/--height/--fullscreen/--borderless/--render-scale/--ui-scale`.
 - Renderer responds to `SDL_WINDOWEVENT_SIZE_CHANGED`, updates viewport/projection-dependent math, and supports offscreen scaled render blit to window framebuffer.
+
+
+## Deterministic simulation architecture layers
+- **Authoritative sim state**: players, units, buildings, resources, territory, fog, tech/ages, objectives, and match state.
+- **Command/event stream**: replay commands plus deterministic gameplay events (`unit_died`, `building_completed`, `wonder_started`, `wonder_completed`, `player_eliminated`, `objective_completed`).
+- **Job graph**: `TaskGraph` + worker pool (`--threads <N>`) executes batched jobs with deterministic merge ordering.
+- **Presentation layer**: renderer/minimap/overlays remain derived runtime data and are never part of authoritative hash/save.
