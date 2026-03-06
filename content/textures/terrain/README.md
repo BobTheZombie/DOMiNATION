@@ -7,3 +7,11 @@
 - Gameplay target: tuned for readable contrast against green grass terrain.
 
 Generated via `python3 tools/generate_dirt_tile.py`.
+
+## `farmland_tile_1024.png`
+- Resolution: 1024x1024.
+- Seam behavior: tileable on both axes.
+- Style target: tilled soil rows with emerging green crops in a recognizable farm pattern.
+- Gameplay target: readable as farmland from RTS camera distance.
+
+Generated via `python3 tools/generate_farmland_tile.py`.
