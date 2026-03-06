@@ -177,6 +177,13 @@ void process_nav_requests(World& w);
 void apply_nav_results(World& w);
 void rebuild_chunk_membership_impl(const World& w);
 
+float unit_vision_radius(const Unit& u);
+float building_vision_radius(BuildingType type);
+float unit_detection_radius(const Unit& u);
+bool unit_has_stealth(const Unit& u);
+bool unit_is_recon(const Unit& u);
+
+
 void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subject, uint32_t entityId, std::string text = {}) {
   gGameplayEvents.push_back({type, w.tick, actor, subject, entityId, std::move(text)});
 }
@@ -851,42 +858,100 @@ void recompute_territory(World& w) {
   w.territoryDirty = true;
 }
 
+float unit_vision_radius(const Unit& u) {
+  float radius = 7.0f;
+  if (u.type == UnitType::Cavalry) radius = 8.5f;
+  else if (u.type == UnitType::Worker) radius = 6.2f;
+  else if (u.type == UnitType::TransportShip) radius = 9.5f;
+  else if (u.type == UnitType::LightWarship) radius = 10.0f;
+  else if (u.type == UnitType::HeavyWarship) radius = 8.0f;
+  else if (u.type == UnitType::BombardShip) radius = 8.5f;
+  if (unit_is_recon(u)) radius += 4.0f;
+  return radius;
+}
+
+float building_vision_radius(BuildingType type) {
+  if (type == BuildingType::CityCenter) return 11.0f;
+  if (type == BuildingType::Port) return 12.0f;
+  if (type == BuildingType::Wonder) return 10.0f;
+  if (type == BuildingType::Library) return 12.5f;
+  return 7.0f;
+}
+
+bool unit_is_recon(const Unit& u) {
+  return u.type == UnitType::Cavalry || u.type == UnitType::TransportShip || u.type == UnitType::LightWarship || (u.type == UnitType::Worker && u.team != 0);
+}
+
+bool unit_has_stealth(const Unit& u) {
+  return u.type == UnitType::TransportShip || u.type == UnitType::BombardShip || (u.type == UnitType::Worker && u.team != 0);
+}
+
+float unit_detection_radius(const Unit& u) {
+  if (u.type == UnitType::LightWarship) return 10.5f;
+  if (u.type == UnitType::Worker) return 9.0f;
+  if (u.type == UnitType::Cavalry) return 7.5f;
+  return 0.0f;
+}
+
 void recompute_fog(World& w) {
-  std::fill(w.fog.begin(), w.fog.end(), w.godMode ? 255 : 0);
-  if (w.godMode) { w.fogDirty = true; return; }
-  ensure_chunk_layout(w);
-  std::vector<std::vector<std::pair<int, uint8_t>>> chunkWrites(gChunks.chunks.size());
-  TaskGraph graph;
-  for (size_t chunkIdx = 0; chunkIdx < gChunks.chunks.size(); ++chunkIdx) {
-    graph.jobs.push_back({[&w, &chunkWrites, chunkIdx]() {
-      const int cx = static_cast<int>(chunkIdx) % gChunks.cols;
-      const int cy = static_cast<int>(chunkIdx) / gChunks.cols;
-      const int minX = cx * gChunks.chunkWidth;
-      const int minY = cy * gChunks.chunkHeight;
-      const int maxX = std::min(w.width, minX + gChunks.chunkWidth);
-      const int maxY = std::min(w.height, minY + gChunks.chunkHeight);
-      auto& out = chunkWrites[chunkIdx];
-      out.reserve(static_cast<size_t>((maxX - minX) * (maxY - minY)));
-      for (int y = minY; y < maxY; ++y) {
-        for (int x = minX; x < maxX; ++x) {
-          uint8_t vis = 0;
-          for (const auto& c : w.cities) if (c.team == 0 && dist({x + 0.5f, y + 0.5f}, c.pos) < 10.5f) { vis = 255; break; }
-          if (!vis) {
-            for (const auto& u : w.units) {
-              if (u.team == 0 && u.hp > 0 && dist({x + 0.5f, y + 0.5f}, u.pos) < 7.5f) { vis = 255; break; }
-            }
-          }
-          if (vis) out.push_back({y * w.width + x, vis});
-        }
+  const int cells = w.width * w.height;
+  const size_t playerCount = w.players.size();
+  w.fogVisibilityByPlayer.assign(playerCount * static_cast<size_t>(cells), 0);
+  if (w.fogExploredByPlayer.size() != playerCount * static_cast<size_t>(cells)) {
+    w.fogExploredByPlayer.assign(playerCount * static_cast<size_t>(cells), 0);
+  }
+  w.fogMaskByPlayer.assign(playerCount * static_cast<size_t>(cells), 0);
+  if (w.fog.size() != static_cast<size_t>(cells)) w.fog.assign(cells, 0);
+
+  if (w.godMode) {
+    std::fill(w.fog.begin(), w.fog.end(), 0);
+    std::fill(w.fogVisibilityByPlayer.begin(), w.fogVisibilityByPlayer.end(), 255);
+    std::fill(w.fogExploredByPlayer.begin(), w.fogExploredByPlayer.end(), 255);
+    std::fill(w.fogMaskByPlayer.begin(), w.fogMaskByPlayer.end(), 0);
+    w.fogDirty = true;
+    return;
+  }
+
+  auto reveal_disc = [&](uint16_t player, glm::vec2 center, float radius) {
+    if (player >= playerCount) return;
+    const int minX = std::max(0, static_cast<int>(std::floor(center.x - radius)));
+    const int maxX = std::min(w.width - 1, static_cast<int>(std::ceil(center.x + radius)));
+    const int minY = std::max(0, static_cast<int>(std::floor(center.y - radius)));
+    const int maxY = std::min(w.height - 1, static_cast<int>(std::ceil(center.y + radius)));
+    const float r2 = radius * radius;
+    const size_t base = static_cast<size_t>(player) * static_cast<size_t>(cells);
+    for (int y = minY; y <= maxY; ++y) {
+      for (int x = minX; x <= maxX; ++x) {
+        const float dx = (x + 0.5f) - center.x;
+        const float dy = (y + 0.5f) - center.y;
+        if (dx * dx + dy * dy > r2) continue;
+        const size_t idx = base + static_cast<size_t>(y * w.width + x);
+        w.fogVisibilityByPlayer[idx] = 255;
       }
-    }});
+    }
+  };
+
+  for (const auto& b : w.buildings) {
+    if (b.hp <= 0.0f || b.underConstruction) continue;
+    reveal_disc(b.team, b.pos, building_vision_radius(b.type));
   }
-  gLastStats.fogTasks += static_cast<uint32_t>(graph.jobs.size());
-  gLastStats.jobCount += static_cast<uint32_t>(graph.jobs.size());
-  run_task_graph(graph);
-  for (size_t i = 0; i < chunkWrites.size(); ++i) {
-    for (const auto& entry : chunkWrites[i]) w.fog[entry.first] = entry.second;
+  for (const auto& u : w.units) {
+    if (u.hp <= 0.0f || u.embarked) continue;
+    reveal_disc(u.team, u.pos, unit_vision_radius(u));
   }
+
+  for (size_t p = 0; p < playerCount; ++p) {
+    const size_t base = p * static_cast<size_t>(cells);
+    for (int i = 0; i < cells; ++i) {
+      if (w.fogVisibilityByPlayer[base + static_cast<size_t>(i)] > 0) w.fogExploredByPlayer[base + static_cast<size_t>(i)] = 255;
+      const bool vis = w.fogVisibilityByPlayer[base + static_cast<size_t>(i)] > 0;
+      const bool exp = w.fogExploredByPlayer[base + static_cast<size_t>(i)] > 0;
+      w.fogMaskByPlayer[base + static_cast<size_t>(i)] = vis ? 0 : (exp ? 128 : 255);
+    }
+  }
+
+  const size_t localBase = playerCount > 0 ? 0 : 0;
+  for (int i = 0; i < cells; ++i) w.fog[i] = w.fogMaskByPlayer[localBase + static_cast<size_t>(i)];
   w.fogDirty = true;
 }
 
@@ -1082,6 +1147,7 @@ uint32_t find_enemy_near(const World& w, const Unit& u, float radius) {
     const Unit* e = nullptr;
     auto it = gSpatial.unitIndexById.find(id); if (it != gSpatial.unitIndexById.end()) e = &w.units[it->second];
     if (!e || players_allied(w, e->team, u.team) || e->hp <= 0) continue;
+    if (!is_unit_visible_to_player(w, *e, u.team)) continue;
     float d = dist(u.pos, e->pos);
     if (d > radius) continue;
     int score = 5000 - static_cast<int>(d * 800.0f);
@@ -1143,10 +1209,10 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   if (type == UnitType::Worker) { nu.hp = 70; nu.attack = 3.0f; nu.range = 1.5f; nu.speed = 4.3f; }
   else if (type == UnitType::Infantry) { nu.hp = 105; nu.attack = 8.5f; nu.range = 2.0f; nu.speed = 4.8f; }
   else if (type == UnitType::Archer) { nu.hp = 80; nu.attack = 7.0f; nu.range = 5.4f; nu.speed = 4.4f; }
-  else if (type == UnitType::Cavalry) { nu.hp = 130; nu.attack = 9.2f; nu.range = 1.8f; nu.speed = 5.6f; }
+  else if (type == UnitType::Cavalry) { nu.hp = 118; nu.attack = 6.8f; nu.range = 1.8f; nu.speed = 6.2f; }
   else if (type == UnitType::Siege) { nu.hp = 110; nu.attack = 13.0f; nu.range = 6.2f; nu.speed = 3.2f; }
-  else if (type == UnitType::TransportShip) { nu.hp = 220; nu.attack = 2.0f; nu.range = 2.2f; nu.speed = 4.2f; nu.role = UnitRole::Transport; }
-  else if (type == UnitType::LightWarship) { nu.hp = 200; nu.attack = 11.0f; nu.range = 4.8f; nu.speed = 4.8f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Transport; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1100,1500}; }
+  else if (type == UnitType::TransportShip) { nu.hp = 220; nu.attack = 1.5f; nu.range = 2.2f; nu.speed = 4.8f; nu.role = UnitRole::Transport; }
+  else if (type == UnitType::LightWarship) { nu.hp = 190; nu.attack = 8.0f; nu.range = 4.8f; nu.speed = 5.4f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Transport; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1100,1500}; }
   else if (type == UnitType::HeavyWarship) { nu.hp = 280; nu.attack = 16.0f; nu.range = 4.6f; nu.speed = 4.0f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Naval; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1450,1000}; }
   else if (type == UnitType::BombardShip) { nu.hp = 240; nu.attack = 18.0f; nu.range = 7.2f; nu.speed = 3.6f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Building; nu.vsRoleMultiplierPermille = {900,900,900,1000,900,1700,1000,1000}; }
   if (!unit_cell_valid(w, nu, cell_of(w, nu.pos))) {
@@ -1372,7 +1438,7 @@ void update_espionage(World& w) {
       for (const auto& c : w.cities) if (c.team == op.target) {
         const int minX = std::max(0, (int)std::floor(c.pos.x) - 4), maxX = std::min(w.width - 1, (int)std::floor(c.pos.x) + 4);
         const int minY = std::max(0, (int)std::floor(c.pos.y) - 4), maxY = std::min(w.height - 1, (int)std::floor(c.pos.y) + 4);
-        for (int y = minY; y <= maxY; ++y) for (int x = minX; x <= maxX; ++x) w.fog[y * w.width + x] = 255;
+        for (int y = minY; y <= maxY; ++y) for (int x = minX; x <= maxX; ++x) w.fog[y * w.width + x] = 0;
         break;
       }
     } else if (op.type == EspionageOpType::SabotageEconomy) {
@@ -1426,6 +1492,35 @@ void set_match_phase(World& world, MatchPhase phase) { world.match.phase = phase
 void consume_replay_commands(std::vector<ReplayCommand>& out) { out = std::move(gReplayCommands); gReplayCommands.clear(); }
 
 void consume_gameplay_events(std::vector<GameplayEvent>& out) { out = std::move(gGameplayEvents); gGameplayEvents.clear(); }
+
+bool is_unit_visible_to_player(const World& world, const Unit& unit, uint16_t playerId) {
+  if (playerId >= world.players.size()) return false;
+  if (playerId == unit.team || players_allied(world, playerId, unit.team)) return true;
+  if (world.godMode) return true;
+  const int gx = std::clamp(static_cast<int>(unit.pos.x), 0, world.width - 1);
+  const int gy = std::clamp(static_cast<int>(unit.pos.y), 0, world.height - 1);
+  const int tile = gy * world.width + gx;
+  const size_t base = static_cast<size_t>(playerId) * static_cast<size_t>(world.width * world.height);
+  if (base + static_cast<size_t>(tile) >= world.fogVisibilityByPlayer.size()) return false;
+  const bool inVision = world.fogVisibilityByPlayer[base + static_cast<size_t>(tile)] > 0;
+  if (!inVision) return false;
+  if (!unit_has_stealth(unit)) return true;
+  if (unit.stealthRevealTicks > 0) return true;
+  for (const auto& own : world.units) {
+    if (own.hp <= 0.0f || own.team != playerId || own.embarked) continue;
+    const float det = unit_detection_radius(own);
+    if (det <= 0.0f) continue;
+    if (dist(own.pos, unit.pos) <= det) return true;
+  }
+  for (const auto& b : world.buildings) {
+    if (b.hp <= 0.0f || b.underConstruction || b.team != playerId) continue;
+    float det = 0.0f;
+    if (b.type == BuildingType::Library) det = 14.0f;
+    else if (b.type == BuildingType::Port) det = 11.0f;
+    if (det > 0.0f && dist(b.pos, unit.pos) <= det) return true;
+  }
+  return false;
+}
 
 bool players_allied(const World& world, uint16_t a, uint16_t b) {
   if (a >= world.players.size() || b >= world.players.size()) return a == b;
@@ -1636,7 +1731,7 @@ void eval_triggers(World& w) {
         if (it != w.triggerAreas.end()) {
           int minX = std::max(0, (int)std::floor(it->min.x)); int maxX = std::min(w.width-1, (int)std::ceil(it->max.x));
           int minY = std::max(0, (int)std::floor(it->min.y)); int maxY = std::min(w.height-1, (int)std::ceil(it->max.y));
-          for (int y=minY;y<=maxY;++y) for (int x=minX;x<=maxX;++x) w.fog[y*w.width+x]=255;
+          for (int y=minY;y<=maxY;++y) for (int x=minX;x<=maxX;++x) w.fog[y*w.width+x]=0;
         }
       }
     }
@@ -1684,6 +1779,9 @@ void initialize_world(World& w, uint32_t seed) {
   w.fertility.resize(w.width * w.height);
   w.territoryOwner.resize(w.width * w.height);
   w.fog.assign(w.width * w.height, 0);
+  w.fogVisibilityByPlayer.clear();
+  w.fogExploredByPlayer.clear();
+  w.fogMaskByPlayer.clear();
   for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
     float nx = (float)x / std::max(1, w.width - 1) - 0.5f;
     float ny = (float)y / std::max(1, w.height - 1) - 0.5f;
@@ -2111,6 +2209,7 @@ void tick_world(World& w, float dt) {
   for (auto& u : w.units) {
     if (u.hp <= 0) continue;
     if (u.attackCooldownTicks > 0) --u.attackCooldownTicks;
+    if (u.stealthRevealTicks > 0) --u.stealthRevealTicks;
     bool engagedThisTick = false;
 
     Unit* locked = u.targetUnit ? find_unit(w, u.targetUnit) : nullptr;
@@ -2139,6 +2238,7 @@ void tick_world(World& w, float dt) {
         ++w.combatEngagementCount;
         if (unit_is_naval(u.type)) ++w.navalCombatEvents;
         u.attackCooldownTicks = (uint16_t)gUnitDefs[uidx(u.type)].attackCooldownTicks;
+        u.stealthRevealTicks = 90;
         engagedThisTick = true;
       } else if (buildingTarget >= 0 && dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 0.8f) {
         float mult = (u.role == UnitRole::Siege) ? 1.8f : 0.8f;
@@ -2518,6 +2618,10 @@ uint64_t state_hash(const World& w) {
   }
   hash_u32(h, w.diplomacyEventCount);
   hash_u32(h, w.postureChangeCount);
+  for (uint8_t v : w.fog) hash_u32(h, v);
+  for (uint8_t v : w.fogVisibilityByPlayer) hash_u32(h, v);
+  for (uint8_t v : w.fogExploredByPlayer) hash_u32(h, v);
+  for (uint8_t v : w.fogMaskByPlayer) hash_u32(h, v);
   return h;
 }
 

@@ -81,7 +81,7 @@ struct ProductionItem {
   int targetAge{0};
 };
 
-struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; uint32_t transportId{0}; std::vector<uint32_t> cargo; bool hasMoveOrder{false}; bool attackMove{false}; bool embarked{false}; bool selected{false}; };
+struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint16_t stealthRevealTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; uint32_t transportId{0}; std::vector<uint32_t> cargo; bool hasMoveOrder{false}; bool attackMove{false}; bool embarked{false}; bool selected{false}; };
 
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
 struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
@@ -183,6 +183,9 @@ struct TaskGraph {
 struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
   std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint8_t> terrainClass; std::vector<uint8_t> biomeMap; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
+  std::vector<uint8_t> fogVisibilityByPlayer;
+  std::vector<uint8_t> fogExploredByPlayer;
+  std::vector<uint8_t> fogMaskByPlayer;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
@@ -234,6 +237,7 @@ bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId);
 bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t index);
 bool players_allied(const World& world, uint16_t a, uint16_t b);
 bool players_at_war(const World& world, uint16_t a, uint16_t b);
+bool is_unit_visible_to_player(const World& world, const Unit& unit, uint16_t playerId);
 bool trade_access_allowed(const World& world, uint16_t a, uint16_t b);
 bool declare_war(World& world, uint16_t actor, uint16_t target);
 bool form_alliance(World& world, uint16_t a, uint16_t b);

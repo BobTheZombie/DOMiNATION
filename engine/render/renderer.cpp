@@ -40,6 +40,7 @@ struct OverlayState {
 
 OverlayState gOverlay;
 double gLastDrawMs = 0.0;
+EditorPreview gEditorPreview{};
 
 std::array<std::array<float, 3>, 4> kTeamColors{{
     {0.0f, 0.0f, 0.0f},
@@ -219,9 +220,10 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       }
 
       if (!w.godMode && w.fog[gi] > 0) {
-        r *= 0.2f;
-        g *= 0.2f;
-        b *= 0.24f;
+        const float fogMul = w.fog[gi] >= 200 ? 0.16f : 0.45f;
+        r *= fogMul;
+        g *= fogMul;
+        b *= fogMul + 0.04f;
       }
 
       size_t i = static_cast<size_t>(y * res + x) * 3;
@@ -242,9 +244,7 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
   }
 
   for (const auto& u : w.units) {
-    int gx = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
-    int gy = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
-    if (!w.godMode && w.fog[gy * w.width + gx] > 0 && u.team != 0) continue;
+    if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
     int px = world_to_minimap_px(u.pos.x, static_cast<float>(w.width), res);
     int py = world_to_minimap_px(u.pos.y, static_cast<float>(w.height), res);
     plot_dot(out, res, px, py, team_rgb(u.team), 0);
@@ -369,7 +369,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   update_overlay_textures(w);
   if (gOverlay.showTerritory) draw_textured_overlay(gOverlay.territoryTex, w, 0.20f, {0.55f, 0.55f, 0.95f}, true);
   if (gOverlay.showBorders) draw_textured_overlay(gOverlay.borderTex, w, 0.45f, {0.98f, 0.95f, 0.5f}, true);
-  if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 0.55f, {0.0f, 0.0f, 0.0f}, true);
+  if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 1.0f, {0.0f, 0.0f, 0.0f}, true);
 
 
   glLineWidth(c.zoom > 30.0f ? 1.0f : 2.0f);
@@ -466,9 +466,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       glBegin(GL_TRIANGLES);
       for (const auto& u : w.units) {
         if (!w.godMode) {
-          int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
-          int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
-          if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
+          if (!dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
         }
         auto tc = unit_color(u);
         glColor3f(tc[0], tc[1], tc[2]);
@@ -482,9 +480,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       glBegin(GL_QUADS);
       for (const auto& u : w.units) {
         if (!w.godMode) {
-          int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
-          int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
-          if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
+          if (!dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
         }
         auto tc = unit_color(u);
         glColor3f(tc[0], tc[1], tc[2]);
@@ -498,9 +494,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     } else {
       for (const auto& u : w.units) {
         if (!w.godMode) {
-          int x = std::clamp(static_cast<int>(u.pos.x), 0, w.width - 1);
-          int y = std::clamp(static_cast<int>(u.pos.y), 0, w.height - 1);
-          if (w.fog[y * w.width + x] > 0 && u.team != 0) continue;
+          if (!dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
         }
         auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
         glBegin(GL_TRIANGLE_FAN);
@@ -534,6 +528,24 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       glVertex2f(cty.pos.x - s, cty.pos.y + s);
     }
     glEnd();
+  }
+
+  if (gEditorPreview.enabled) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    float r = gEditorPreview.r;
+    float g = gEditorPreview.g;
+    float b = gEditorPreview.b;
+    if (!gEditorPreview.valid) { r = 0.95f; g = 0.25f; b = 0.2f; }
+    glColor4f(r, g, b, gEditorPreview.alpha);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(gEditorPreview.pos.x, gEditorPreview.pos.y);
+    for (int i = 0; i <= 32; ++i) {
+      float a = (float)i / 32.0f * 6.2831853f;
+      glVertex2f(gEditorPreview.pos.x + std::cos(a) * gEditorPreview.radius, gEditorPreview.pos.y + std::sin(a) * gEditorPreview.radius);
+    }
+    glEnd();
+    glDisable(GL_BLEND);
   }
 
   if (gOverlay.showMinimap) {
@@ -617,5 +629,7 @@ void toggle_territory_overlay() { gOverlay.showTerritory = !gOverlay.showTerrito
 void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }
 void toggle_fog_overlay() { gOverlay.showFog = !gOverlay.showFog; }
 double last_draw_ms() { return gLastDrawMs; }
+
+void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }
 
 } // namespace dom::render
