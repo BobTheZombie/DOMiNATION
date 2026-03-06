@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "seed": 2026,
+  "mapWidth": 128,
+  "mapHeight": 128,
+  "players": [
+    {"id": 0, "isHuman": false, "isCPU": true, "team": 0, "civilization": "mercantile"},
+    {"id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "militarist"}
+  ],
+  "cities": [
+    {"id": 1, "team": 0, "pos": [20, 20], "capital": true},
+    {"id": 2, "team": 0, "pos": [36, 26], "capital": false},
+    {"id": 3, "team": 1, "pos": [95, 95], "capital": true}
+  ],
+  "buildings": [
+    {"id": 1, "team": 0, "type": "CityCenter", "pos": [20, 20]},
+    {"id": 2, "team": 0, "type": "Market", "pos": [35, 24]},
+    {"id": 3, "team": 1, "type": "CityCenter", "pos": [95, 95]},
+    {"id": 4, "team": 1, "type": "Market", "pos": [88, 92]}
+  ],
+  "units": [
+    {"team": 0, "type": "Infantry", "pos": [28, 26]},
+    {"team": 0, "type": "Infantry", "pos": [78, 80]},
+    {"team": 1, "type": "Infantry", "pos": [89, 90]},
+    {"team": 1, "type": "Infantry", "pos": [45, 42]}
+  ],
+  "roads": [
+    {"id": 1, "owner": 0, "a": [20, 20], "b": [21, 20], "quality": 1},
+    {"id": 2, "owner": 0, "a": [21, 20], "b": [22, 20], "quality": 1},
+    {"id": 3, "owner": 0, "a": [22, 20], "b": [23, 21], "quality": 1},
+    {"id": 4, "owner": 0, "a": [23, 21], "b": [24, 22], "quality": 1},
+    {"id": 5, "owner": 0, "a": [24, 22], "b": [25, 22], "quality": 1}
+  ]
+}

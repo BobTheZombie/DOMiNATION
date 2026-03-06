@@ -103,14 +103,23 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   TeamStrength ours = strength_near(world, team, enemyBase, 30.0f);
   TeamStrength theirs = strength_near(world, enemyTeam, enemyBase, 30.0f);
 
+  dom::sim::OperationType opType = dom::sim::OperationType::RallyAndPush;
+  glm::vec2 opTarget = enemyBase;
+  for (const auto& op : world.operations) {
+    if (op.team == team && op.active) { opType = op.type; opTarget = op.target; break; }
+  }
+  if (opType == dom::sim::OperationType::DefendBorder || opType == dom::sim::OperationType::SecureRoute) opTarget = rally;
+
   const int retreatHpThreshold = (int)std::round((gAggressive ? 240.0f : 360.0f) * std::max(0.75f, civ.defense));
-  const bool shouldRetreat = ours.hp < retreatHpThreshold || (theirs.hp > 0 && ours.hp * 100 < theirs.hp * (gAggressive ? 60 : 80));
+  int outSupply = 0; for (const auto& u : world.units) if (u.team == team && u.type != dom::sim::UnitType::Worker && u.supplyState == dom::sim::SupplyState::OutOfSupply) ++outSupply;
+  const bool shouldRetreat = ours.hp < retreatHpThreshold || (theirs.hp > 0 && ours.hp * 100 < theirs.hp * (gAggressive ? 60 : 80)) || outSupply > (int)army.size() / 3;
 
   if (shouldRetreat) {
     dom::sim::issue_move(world, team, army, rally);
     ++world.aiRetreatCount;
   } else {
-    dom::sim::issue_attack_move(world, team, army, enemyBase);
+    if (opType == dom::sim::OperationType::RaidEconomy) dom::sim::issue_move(world, team, army, opTarget);
+    else dom::sim::issue_attack_move(world, team, army, opTarget);
   }
 
   ++world.aiDecisionCount;

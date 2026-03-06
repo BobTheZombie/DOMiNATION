@@ -915,6 +915,129 @@ int controlled_capitals(const World& w, uint16_t team) {
   return caps;
 }
 
+bool road_tile_owned(const World& w, uint16_t team, int tx, int ty) {
+  if (tx < 0 || ty < 0 || tx >= w.width || ty >= w.height) return false;
+  const uint16_t owner = w.territoryOwner[ty * w.width + tx];
+  return owner == team;
+}
+
+bool has_road_on_tile(const World& w, uint16_t team, int tx, int ty) {
+  for (const auto& r : w.roads) {
+    if (r.owner != team) continue;
+    if ((r.a.x == tx && r.a.y == ty) || (r.b.x == tx && r.b.y == ty)) return true;
+  }
+  return false;
+}
+
+bool near_friendly_road(const World& w, uint16_t team, glm::vec2 p) {
+  int tx = std::clamp((int)std::round(p.x), 0, w.width - 1);
+  int ty = std::clamp((int)std::round(p.y), 0, w.height - 1);
+  for (int oy = -1; oy <= 1; ++oy) for (int ox = -1; ox <= 1; ++ox) {
+    if (has_road_on_tile(w, team, tx + ox, ty + oy)) return true;
+  }
+  return false;
+}
+
+void ensure_base_roads(World& w) {
+  if (!w.roads.empty()) return;
+  uint32_t nextId = 1;
+  for (const auto& city : w.cities) {
+    for (const auto& b : w.buildings) {
+      if (b.team != city.team || b.type != BuildingType::Market) continue;
+      glm::ivec2 a{(int)std::round(city.pos.x), (int)std::round(city.pos.y)};
+      glm::ivec2 c{(int)std::round(b.pos.x), (int)std::round(b.pos.y)};
+      int x = a.x;
+      int y = a.y;
+      while (x != c.x || y != c.y) {
+        int nx = x + (x < c.x ? 1 : (x > c.x ? -1 : 0));
+        int ny = y + (y < c.y ? 1 : (y > c.y ? -1 : 0));
+        w.roads.push_back({nextId++, city.team, {x, y}, {nx, ny}, 1});
+        x = nx;
+        y = ny;
+      }
+    }
+  }
+}
+
+void recompute_trade_routes(World& w) {
+  if (w.tick % 50 != 0 && !w.tradeRoutes.empty()) return;
+  w.tradeRoutes.clear();
+  uint32_t nextId = 1;
+  for (size_t i = 0; i < w.cities.size(); ++i) {
+    for (size_t j = i + 1; j < w.cities.size(); ++j) {
+      const auto& a = w.cities[i];
+      const auto& b = w.cities[j];
+      if (a.team != b.team) continue;
+      float d = dist(a.pos, b.pos);
+      float roadBonus = (near_friendly_road(w, a.team, a.pos) && near_friendly_road(w, b.team, b.pos)) ? 1.3f : 1.0f;
+      int ax = std::clamp((int)a.pos.x, 0, w.width - 1), ay = std::clamp((int)a.pos.y, 0, w.height - 1);
+      int bx = std::clamp((int)b.pos.x, 0, w.width - 1), by = std::clamp((int)b.pos.y, 0, w.height - 1);
+      bool contested = (w.territoryOwner[ay * w.width + ax] != a.team) || (w.territoryOwner[by * w.width + bx] != b.team);
+      float eff = std::clamp((80.0f / std::max(25.0f, d)) * roadBonus * (contested ? 0.35f : 1.0f), 0.0f, 1.25f);
+      bool active = eff > 0.2f;
+      float wealth = active ? eff * 0.08f : 0.0f;
+      w.tradeRoutes.push_back({nextId++, a.team, a.id, b.id, active, eff, wealth, w.tick});
+    }
+  }
+}
+
+void apply_trade_income(World& w, float dt) {
+  w.logisticsTradeActiveCount = 0;
+  for (const auto& r : w.tradeRoutes) {
+    if (!r.active || r.team >= w.players.size()) continue;
+    w.players[r.team].resources[ridx(Resource::Wealth)] += r.wealthPerTick * dt * 20.0f;
+    if (w.players[r.team].civilization.scienceBias > 1.1f) {
+      w.players[r.team].resources[ridx(Resource::Knowledge)] += r.wealthPerTick * 0.2f * dt * 20.0f;
+    }
+    ++w.logisticsTradeActiveCount;
+  }
+}
+
+void recompute_supply(World& w) {
+  if (w.tick % 20 != 0) return;
+  w.suppliedUnits = 0;
+  w.lowSupplyUnits = 0;
+  w.outOfSupplyUnits = 0;
+  for (auto& u : w.units) {
+    float best = 1e9f;
+    for (const auto& c : w.cities) if (c.team == u.team) best = std::min(best, dist(u.pos, c.pos));
+    for (const auto& b : w.buildings) if (b.team == u.team && (b.type == BuildingType::CityCenter || b.type == BuildingType::Market)) best = std::min(best, dist(u.pos, b.pos));
+    if (near_friendly_road(w, u.team, u.pos)) best *= 0.8f;
+    int tx = std::clamp((int)u.pos.x, 0, w.width - 1), ty = std::clamp((int)u.pos.y, 0, w.height - 1);
+    if (w.territoryOwner[ty * w.width + tx] != u.team) best *= 1.2f;
+    if (best < 24.0f) u.supplyState = SupplyState::InSupply;
+    else if (best < 44.0f) u.supplyState = SupplyState::LowSupply;
+    else u.supplyState = SupplyState::OutOfSupply;
+    if (u.supplyState == SupplyState::InSupply) ++w.suppliedUnits;
+    else if (u.supplyState == SupplyState::LowSupply) ++w.lowSupplyUnits;
+    else ++w.outOfSupplyUnits;
+  }
+}
+
+void apply_supply_effects(World& w, float dt) {
+  for (auto& u : w.units) {
+    if (u.supplyState == SupplyState::LowSupply) u.hp = std::max(1.0f, u.hp - 0.02f * dt * 20.0f);
+    if (u.supplyState == SupplyState::OutOfSupply) u.hp -= 0.14f * dt * 20.0f;
+  }
+}
+
+void update_operations(World& w) {
+  if (w.tick % 80 != 0) return;
+  w.operations.clear();
+  uint32_t nextId = 1;
+  for (const auto& p : w.players) {
+    if (!p.isCPU || !p.alive) continue;
+    OperationType t = OperationType::RallyAndPush;
+    if (p.civilization.defense > 1.1f) t = OperationType::DefendBorder;
+    else if (p.civilization.economyBias > 1.1f) t = OperationType::SecureRoute;
+    else if (p.civilization.aggression > 1.1f) t = OperationType::AssaultCity;
+    glm::vec2 target{(p.id == 0) ? 85.0f : 20.0f, (p.id == 0) ? 85.0f : 20.0f};
+    for (const auto& c : w.cities) if (c.team != p.id) { target = c.pos; break; }
+    w.operations.push_back({nextId++, p.id, t, target, w.tick, true});
+    ++w.logisticsOperationIssuedCount;
+  }
+}
+
 } // namespace
 
 bool gameplay_orders_allowed(const World& world) { return world.match.phase == MatchPhase::Running; }
@@ -961,6 +1084,15 @@ void apply_world_defaults(World& w) {
   w.triggerExecutionCount = 0;
   w.objectiveStateChangeCount = 0;
   w.objectiveLog.clear();
+  w.roads.clear();
+  w.tradeRoutes.clear();
+  w.operations.clear();
+  w.logisticsRoadCount = 0;
+  w.logisticsTradeActiveCount = 0;
+  w.logisticsOperationIssuedCount = 0;
+  w.suppliedUnits = 0;
+  w.lowSupplyUnits = 0;
+  w.outOfSupplyUnits = 0;
   gReplayCommands.clear();
 }
 
@@ -1072,6 +1204,7 @@ void initialize_world(World& w, uint32_t seed) {
 
   apply_world_defaults(w);
   w.resourceNodes.clear();
+  w.roads.clear();
   w.triggerAreas.clear();
   w.objectives.clear();
   w.triggers.clear();
@@ -1089,6 +1222,9 @@ void initialize_world(World& w, uint32_t seed) {
   }
   w.resourceNodes.push_back({1, ResourceNodeType::Forest, {28.0f, 26.0f}, 1500.0f, UINT16_MAX});
   w.resourceNodes.push_back({2, ResourceNodeType::Ore, {86.0f, 82.0f}, 1400.0f, UINT16_MAX});
+  ensure_base_roads(w);
+  recompute_trade_routes(w);
+  recompute_supply(w);
   recompute_population(w);
   recompute_territory(w);
   recompute_fog(w);
@@ -1138,6 +1274,8 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   w.buildings.clear();
   if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb);} }
   w.resourceNodes.clear();
+  w.roads.clear();
+  if (j.contains("roads")) { uint32_t rid=1; for (const auto& rr : j["roads"]) { RoadSegment r{}; r.id = rr.value("id", rid++); r.owner = rr.value("owner", (uint16_t)UINT16_MAX); r.a = {rr["a"][0].get<int>(), rr["a"][1].get<int>()}; r.b = {rr["b"][0].get<int>(), rr["b"][1].get<int>()}; r.quality = rr.value("quality", 1); w.roads.push_back(r);} }
   if (j.contains("resourceNodes")) { uint32_t id=1; for (const auto& r : j["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",id++); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} }
   if (j.contains("placements")) {
     const auto& pl = j["placements"];
@@ -1170,6 +1308,7 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["units"] = nlohmann::json::array(); for (const auto& u : w.units) j["units"].push_back({{"id",u.id},{"team",u.team},{"type",unit_name(u.type)},{"pos",{u.pos.x,u.pos.y}}});
   j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp}});
   j["resourceNodes"] = nlohmann::json::array(); for (const auto& r : w.resourceNodes) { std::string t="Forest"; if (r.type==ResourceNodeType::Ore) t="Ore"; else if (r.type==ResourceNodeType::Farmable) t="Farmable"; else if (r.type==ResourceNodeType::Ruins) t="Ruins"; j["resourceNodes"].push_back({{"id",r.id},{"type",t},{"pos",{r.pos.x,r.pos.y}},{"amount",r.amount},{"owner",r.owner}}); }
+  j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"title",o.title},{"text",o.text},{"primary",o.primary},{"state",objective_state_name(o.state)},{"owner",o.owner}});
   j["triggers"] = nlohmann::json::array();
@@ -1227,8 +1366,13 @@ void tick_world(World& w, float dt) {
   apply_nav_results(w);
 
   spatial_prepare(w);
+  ensure_base_roads(w);
+  recompute_trade_routes(w);
+  recompute_supply(w);
+  update_operations(w);
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
+  apply_trade_income(w, dt);
 
   for (auto& b : w.buildings) {
     auto& owner = w.players[b.team];
@@ -1322,7 +1466,11 @@ void tick_world(World& w, float dt) {
           float ml = glm::length(out.moveDir);
           if (ml > 0.001f) out.moveDir /= ml;
           glm::vec2 prev = out.pos;
-          out.pos += out.moveDir * src.speed * dt;
+          float supplyMul = 1.0f;
+          if (src.supplyState == SupplyState::LowSupply) supplyMul = 0.9f;
+          else if (src.supplyState == SupplyState::OutOfSupply) supplyMul = 0.75f;
+          float roadMul = near_friendly_road(w, src.team, src.pos) ? 1.2f : 1.0f;
+          out.pos += out.moveDir * src.speed * supplyMul * roadMul * dt;
           if (glm::length(out.pos - prev) < 0.005f && src.hasMoveOrder) {
             out.stuckTicks = (uint16_t)std::min<int>(src.stuckTicks + 1, 65535);
           } else out.stuckTicks = 0;
@@ -1405,6 +1553,7 @@ void tick_world(World& w, float dt) {
     u.renderPos = glm::mix(u.renderPos, u.pos, 0.35f);
   }
   const auto combatEnd = Clock::now();
+  apply_supply_effects(w, dt);
   const size_t beforeUnits = w.units.size();
   w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [&](const Unit& u) {
     if (u.hp > 0) return false;
@@ -1469,6 +1618,14 @@ void tick_world(World& w, float dt) {
   const auto tickEnd = Clock::now();
   gLastTickProfile.combatMs = std::chrono::duration<double, std::milli>(combatEnd - combatStart).count();
   gLastTickProfile.navMs = std::chrono::duration<double, std::milli>(tickEnd - tickStart).count() - gLastTickProfile.combatMs;
+
+  w.logisticsRoadCount = static_cast<uint32_t>(w.roads.size());
+  gLastStats.roadCount = w.logisticsRoadCount;
+  gLastStats.activeTradeRoutes = w.logisticsTradeActiveCount;
+  gLastStats.suppliedUnits = w.suppliedUnits;
+  gLastStats.lowSupplyUnits = w.lowSupplyUnits;
+  gLastStats.outOfSupplyUnits = w.outOfSupplyUnits;
+  gLastStats.operationCount = static_cast<uint32_t>(w.operations.size());
 
   if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
 }
@@ -1632,6 +1789,7 @@ uint64_t map_setup_hash(const World& w) {
   for (const auto& u : w.units) { hash_u32(h, u.id); hash_u32(h, u.team); hash_u32(h, (uint32_t)u.type); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }
   for (const auto& r : w.resourceNodes) { hash_u32(h, r.id); hash_u32(h, (uint32_t)r.type); hash_float(h, r.pos.x); hash_float(h, r.pos.y); hash_float(h, r.amount); }
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
+  for (const auto& r : w.roads) { hash_u32(h, r.id); hash_u32(h, r.owner); hash_u32(h, (uint32_t)r.a.x); hash_u32(h, (uint32_t)r.a.y); hash_u32(h, (uint32_t)r.b.x); hash_u32(h, (uint32_t)r.b.y); hash_u32(h, r.quality); }
   return h;
 }
 
@@ -1663,8 +1821,16 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.trainedUnitsViaQueue);
   hash_u32(h, w.triggerExecutionCount);
   hash_u32(h, w.objectiveStateChangeCount);
+  hash_u32(h, w.logisticsRoadCount);
+  hash_u32(h, w.logisticsTradeActiveCount);
+  hash_u32(h, w.logisticsOperationIssuedCount);
+  hash_u32(h, w.suppliedUnits);
+  hash_u32(h, w.lowSupplyUnits);
+  hash_u32(h, w.outOfSupplyUnits);
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
+  for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
+  for (const auto& o : w.operations) { hash_u32(h, o.id); hash_u32(h, o.team); hash_u32(h, (uint32_t)o.type); hash_float(h, o.target.x); hash_float(h, o.target.y); hash_u32(h, o.assignedTick); hash_u32(h, o.active ? 1u : 0u); }
   return h;
 }
 

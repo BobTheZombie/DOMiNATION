@@ -22,3 +22,12 @@ Derived: nav cache, fog/territory recompute counters, editor UI state.
 - `placements`: `cities,units,buildings,resourceNodes`
 - `terrainOverrides` (optional): `height`, `fertility`
 - `rulesOverrides`: `timeLimit`, `wonderRules`, `disabledVictoryTypes`
+
+
+### Logistics additions
+
+Scenario JSON supports:
+
+- `roads`: array of `{id, owner, a:[x,y], b:[x,y], quality}` segments.
+
+`scenarios/logistics_test.json` provides a minimal logistics validation setup.
