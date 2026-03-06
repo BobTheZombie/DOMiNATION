@@ -9,9 +9,26 @@ namespace dom::sim {
 enum class Resource : uint8_t { Food, Wood, Metal, Wealth, Knowledge, Oil, Count };
 enum class Age : uint8_t { Ancient, Classical, Medieval, Gunpowder, Enlightenment, Industrial, Modern, Information };
 enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege };
-enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks };
+enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder };
 enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building };
 enum class AttackType : uint8_t { Melee, Ranged };
+enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
+enum class VictoryCondition : uint8_t { None, Conquest, Score, Wonder };
+
+enum class ReplayCommandType : uint8_t { Move, Attack, AttackMove, PlaceBuilding, QueueTrain, QueueResearch, CancelQueue };
+
+struct ReplayCommand {
+  ReplayCommandType type{ReplayCommandType::Move};
+  uint32_t tick{0};
+  uint16_t team{0};
+  std::vector<uint32_t> ids;
+  glm::vec2 target{};
+  uint32_t enemy{0};
+  uint32_t buildingId{0};
+  UnitType unitType{UnitType::Worker};
+  BuildingType buildingType{BuildingType::House};
+  size_t queueIndex{0};
+};
 
 enum class QueueKind : uint8_t { TrainUnit, AgeResearch };
 
@@ -83,6 +100,32 @@ struct PlayerState {
   int popCap{10};
   int score{0};
   bool alive{true};
+  uint32_t unitsLost{0};
+  uint32_t buildingsLost{0};
+  int finalScore{0};
+};
+
+struct MatchResult {
+  MatchPhase phase{MatchPhase::Running};
+  VictoryCondition condition{VictoryCondition::None};
+  uint16_t winner{0};
+  uint32_t endTick{0};
+  bool scoreTieBreak{false};
+};
+
+struct WonderState {
+  uint16_t owner{UINT16_MAX};
+  uint32_t heldTicks{0};
+};
+
+struct MatchConfig {
+  uint32_t timeLimitTicks{20 * 600};
+  uint32_t wonderHoldTicks{20 * 90};
+  int scoreResourceWeight{1};
+  int scoreUnitWeight{30};
+  int scoreBuildingWeight{70};
+  int scoreAgeWeight{120};
+  int scoreCapitalWeight{220};
 };
 
 struct World {
@@ -98,8 +141,11 @@ struct World {
   std::vector<PlayerState> players;
   bool godMode{false};
   uint32_t tick{0};
-  bool gameOver{false};
-  uint16_t winner{0};
+  bool gameOver{false}; // Backward-compatible mirror of match.phase != Running.
+  uint16_t winner{0}; // Backward-compatible mirror of match.winner.
+  MatchConfig config{};
+  MatchResult match{};
+  WonderState wonder{};
 
   bool uiBuildMenu{false};
   bool uiTrainMenu{false};
@@ -129,12 +175,17 @@ struct World {
   uint32_t aiRetreatCount{0};
   uint32_t focusFireEvents{0};
   uint32_t combatTicks{0};
+  uint32_t rejectedCommandCount{0};
   bool territoryDirty{true};
   bool fogDirty{true};
 };
 
 void initialize_world(World& world, uint32_t seed);
 void tick_world(World& world, float dt);
+bool gameplay_orders_allowed(const World& world);
+void set_match_phase(World& world, MatchPhase phase);
+int compute_player_score(const World& world, uint16_t playerId);
+void consume_replay_commands(std::vector<ReplayCommand>& out);
 void issue_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);
 void issue_attack(World& world, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy);
 void issue_attack_move(World& world, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target);

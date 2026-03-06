@@ -70,3 +70,11 @@
 - AI composes mixed army groups and issues deterministic group attack-move on enemy capital objective.
 - AI retreat/rally triggers when army HP is low or local strength ratio is unfavorable; then regroups and re-engages.
 - Ranged/focus behavior is modeled through stable target lock + switching threshold to reduce thrash and overkill churn.
+
+
+## Match flow state machine
+Simulation owns match phase transitions: `RUNNING -> ENDED -> POSTMATCH`.
+Authoritative orders are rejected outside `RUNNING`. Ended matches persist winner ID, victory condition, end tick, and tie-break flag in sim state.
+
+## Replay architecture
+Replay recording drains authoritative command events emitted from sim order APIs each tick. Playback injects those commands at exact recorded ticks in headless/interactive loops. Replay metadata stores seed/map/time-limit/flags/content hash and expected final deterministic state hash for `--replay-verify`.

@@ -1,6 +1,7 @@
 #include "game/ai/simple_ai.h"
 #include <algorithm>
 #include <vector>
+#include <glm/geometric.hpp>
 
 namespace dom::ai {
 
@@ -37,6 +38,7 @@ void set_attack_early(bool enabled) { gAttackEarly = enabled; }
 void set_aggressive(bool enabled) { gAggressive = enabled; }
 
 void update_simple_ai(dom::sim::World& world, uint16_t team) {
+  if (!dom::sim::gameplay_orders_allowed(world)) return;
   if (world.tick % 20 != 0) return;
 
   glm::vec2 base = team == 0 ? glm::vec2{20, 20} : glm::vec2{95, 95};

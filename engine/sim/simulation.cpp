@@ -5,6 +5,7 @@
 #include <random>
 #include <queue>
 #include <tuple>
+#include <limits>
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
@@ -36,13 +37,14 @@ struct UnitDef {
   int buildingHp{1000};
 };
 
-BuildDef gBuildDefs[8];
+BuildDef gBuildDefs[9];
 UnitDef gUnitDefs[5];
 float gAgeResearchTime{30.0f};
 std::array<float, static_cast<size_t>(Resource::Count)> gAgeResearchCost{};
 bool gDefsLoaded{false};
 bool gNavDebug{false};
 bool gCombatDebug{false};
+std::vector<ReplayCommand> gReplayCommands;
 
 constexpr uint16_t kRoleCount = 6;
 constexpr int kTargetBetterThreshold = 220;
@@ -124,6 +126,12 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::Barracks)].cost[ridx(Resource::Wood)] = 130;
   gBuildDefs[bidx(BuildingType::Barracks)].cost[ridx(Resource::Metal)] = 70;
 
+  gBuildDefs[bidx(BuildingType::Wonder)].size = {4.0f, 4.0f};
+  gBuildDefs[bidx(BuildingType::Wonder)].buildTime = 45.0f;
+  gBuildDefs[bidx(BuildingType::Wonder)].cost[ridx(Resource::Wood)] = 350;
+  gBuildDefs[bidx(BuildingType::Wonder)].cost[ridx(Resource::Metal)] = 300;
+  gBuildDefs[bidx(BuildingType::Wonder)].cost[ridx(Resource::Wealth)] = 250;
+
   gUnitDefs[uidx(UnitType::Worker)].trainTime = 10.0f;
   gUnitDefs[uidx(UnitType::Worker)].cost[ridx(Resource::Food)] = 60;
   gUnitDefs[uidx(UnitType::Worker)].popCost = 1;
@@ -196,6 +204,7 @@ void load_defs_once() {
       else if (id == "Market") t = BuildingType::Market;
       else if (id == "Library") t = BuildingType::Library;
       else if (id == "Barracks") t = BuildingType::Barracks;
+      else if (id == "Wonder") t = BuildingType::Wonder;
       BuildDef& d = gBuildDefs[bidx(t)];
       if (bd.contains("size")) d.size = {bd["size"][0].get<float>(), bd["size"][1].get<float>()};
       d.buildTime = bd.value("buildTime", d.buildTime);
@@ -475,9 +484,57 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   return id;
 }
 
+
+void apply_match_end(World& w, VictoryCondition condition, uint16_t winner, bool scoreTieBreak) {
+  if (w.match.phase != MatchPhase::Running) return;
+  w.match.phase = MatchPhase::Ended;
+  w.match.condition = condition;
+  w.match.winner = winner;
+  w.match.endTick = w.tick;
+  w.match.scoreTieBreak = scoreTieBreak;
+  w.gameOver = true;
+  w.winner = winner;
+}
+
+int controlled_capitals(const World& w, uint16_t team) {
+  int caps = 0;
+  for (const auto& c : w.cities) {
+    if (!c.capital || c.team != team) continue;
+    bool alive = false;
+    for (const auto& b : w.buildings) {
+      if (b.team == team && b.type == BuildingType::CityCenter && !b.underConstruction && b.hp > 0.0f && dist(b.pos, c.pos) < 8.0f) { alive = true; break; }
+    }
+    if (alive) ++caps;
+  }
+  return caps;
+}
+
 } // namespace
 
+bool gameplay_orders_allowed(const World& world) { return world.match.phase == MatchPhase::Running; }
+void set_match_phase(World& world, MatchPhase phase) { world.match.phase = phase; world.gameOver = phase != MatchPhase::Running; }
+
+void consume_replay_commands(std::vector<ReplayCommand>& out) { out = std::move(gReplayCommands); gReplayCommands.clear(); }
+
+int compute_player_score(const World& world, uint16_t playerId) {
+  if (playerId >= world.players.size()) return 0;
+  const auto& p = world.players[playerId];
+  int resources = 0;
+  for (float r : p.resources) resources += (int)std::floor(r);
+  int unitsAlive = 0;
+  int buildingsAlive = 0;
+  for (const auto& u : world.units) if (u.team == playerId && u.hp > 0) ++unitsAlive;
+  for (const auto& b : world.buildings) if (b.team == playerId && !b.underConstruction && b.hp > 0.0f) ++buildingsAlive;
+  const int capitals = controlled_capitals(world, playerId);
+  return resources * world.config.scoreResourceWeight +
+      unitsAlive * world.config.scoreUnitWeight +
+      buildingsAlive * world.config.scoreBuildingWeight +
+      ((int)p.age + 1) * world.config.scoreAgeWeight +
+      capitals * world.config.scoreCapitalWeight;
+}
+
 void initialize_world(World& w, uint32_t seed) {
+
   load_defs_once();
   gNav.cache.clear();
   gNav.nextMoveOrder = 1;
@@ -495,6 +552,13 @@ void initialize_world(World& w, uint32_t seed) {
   }
 
   w.players = {{0, Age::Ancient}, {1, Age::Ancient}};
+  w.tick = 0;
+  w.match = {};
+  w.wonder = {};
+  w.gameOver = false;
+  w.winner = 0;
+  w.rejectedCommandCount = 0;
+  gReplayCommands.clear();
   w.cities = {{1, 0, {20, 20}, 1, true}, {2, 1, {95, 95}, 1, true}};
   w.buildings.clear();
   w.buildings.push_back({1, 0, BuildingType::CityCenter, {20, 20}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
@@ -514,6 +578,10 @@ void initialize_world(World& w, uint32_t seed) {
 
 void tick_world(World& w, float dt) {
   ++w.tick;
+  if (w.match.phase != MatchPhase::Running) {
+    if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
+    return;
+  }
   if (w.tick % 10 == 0) recompute_territory(w);
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
@@ -684,15 +752,68 @@ void tick_world(World& w, float dt) {
     u.renderPos = glm::mix(u.renderPos, u.pos, 0.35f);
   }
   const size_t beforeUnits = w.units.size();
-  w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [](const Unit& u) { return u.hp <= 0; }), w.units.end());
+  w.units.erase(std::remove_if(w.units.begin(), w.units.end(), [&](const Unit& u) {
+    if (u.hp > 0) return false;
+    w.players[u.team].unitsLost += 1;
+    return true;
+  }), w.units.end());
   w.unitDeathEvents += static_cast<uint32_t>(beforeUnits - w.units.size());
+
+  const size_t beforeBuildings = w.buildings.size();
+  w.buildings.erase(std::remove_if(w.buildings.begin(), w.buildings.end(), [&](const Building& b) {
+    if (b.hp > 0.0f) return false;
+    w.players[b.team].buildingsLost += 1;
+    if (b.type == BuildingType::Wonder) { w.wonder.owner = std::numeric_limits<uint16_t>::max(); w.wonder.heldTicks = 0; }
+    ++w.navVersion;
+    return true;
+  }), w.buildings.end());
+  if (beforeBuildings != w.buildings.size()) gNav.cache.clear();
+
+  for (auto& p : w.players) p.finalScore = compute_player_score(w, p.id);
+
+  bool tieBreakUsed = false;
+  int alivePlayers = 0;
+  uint16_t aliveId = 0;
+  for (auto& p : w.players) {
+    p.alive = controlled_capitals(w, p.id) > 0;
+    if (p.alive) { ++alivePlayers; aliveId = p.id; }
+  }
+  if (alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
+
+  uint16_t wonderOwner = std::numeric_limits<uint16_t>::max();
+  for (const auto& b : w.buildings) if (b.type == BuildingType::Wonder && !b.underConstruction && b.hp > 0.0f) { wonderOwner = b.team; break; }
+  if (wonderOwner == std::numeric_limits<uint16_t>::max()) {
+    w.wonder.owner = wonderOwner;
+    w.wonder.heldTicks = 0;
+  } else {
+    if (w.wonder.owner != wonderOwner) { w.wonder.owner = wonderOwner; w.wonder.heldTicks = 0; }
+    else ++w.wonder.heldTicks;
+    if (w.wonder.heldTicks >= w.config.wonderHoldTicks) apply_match_end(w, VictoryCondition::Wonder, wonderOwner, false);
+  }
+
+  if (w.tick >= w.config.timeLimitTicks && w.match.phase == MatchPhase::Running) {
+    int bestScore = std::numeric_limits<int>::min();
+    uint16_t bestId = 0;
+    for (const auto& p : w.players) {
+      int score = p.finalScore;
+      if (score > bestScore || (score == bestScore && p.id < bestId)) {
+        tieBreakUsed = (score == bestScore && p.id < bestId);
+        bestScore = score;
+        bestId = p.id;
+      }
+    }
+    apply_match_end(w, VictoryCondition::Score, bestId, tieBreakUsed);
+  }
+
   recompute_population(w);
   recompute_fog(w);
 
-  if (w.tick > 20 * 600) { w.gameOver = true; w.winner = w.players[0].score >= w.players[1].score ? 0 : 1; }
+  if (w.match.phase == MatchPhase::Ended) w.match.phase = MatchPhase::Postmatch;
 }
 
 void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
+  if (!gameplay_orders_allowed(w)) { ++w.rejectedCommandCount; return; }
+  gReplayCommands.push_back({ReplayCommandType::Move, w.tick, team, ids, target});
   std::vector<uint32_t> sorted = ids;
   std::sort(sorted.begin(), sorted.end());
   const int n = (int)sorted.size();
@@ -725,6 +846,8 @@ void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::
 }
 
 void issue_attack(World& w, uint16_t team, const std::vector<uint32_t>& ids, uint32_t enemy) {
+  if (!gameplay_orders_allowed(w)) { ++w.rejectedCommandCount; return; }
+  ReplayCommand cmd{}; cmd.type = ReplayCommandType::Attack; cmd.tick = w.tick; cmd.team = team; cmd.ids = ids; cmd.enemy = enemy; gReplayCommands.push_back(cmd);
   for (auto& u : w.units) if (u.team == team && std::find(ids.begin(), ids.end(), u.id) != ids.end()) {
     u.targetUnit = enemy;
     u.attackMove = false;
@@ -733,6 +856,8 @@ void issue_attack(World& w, uint16_t team, const std::vector<uint32_t>& ids, uin
 }
 
 void issue_attack_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
+  if (!gameplay_orders_allowed(w)) { ++w.rejectedCommandCount; return; }
+  gReplayCommands.push_back({ReplayCommandType::AttackMove, w.tick, team, ids, target});
   issue_move(w, team, ids, target);
   for (auto& u : w.units) if (u.team == team && std::find(ids.begin(), ids.end(), u.id) != ids.end()) {
     u.attackMove = true;
@@ -748,6 +873,7 @@ void set_combat_debug(bool enabled) { gCombatDebug = enabled; }
 bool combat_debug_enabled() { return gCombatDebug; }
 
 bool start_build_placement(World& world, uint16_t, BuildingType type) {
+  if (!gameplay_orders_allowed(world)) { ++world.rejectedCommandCount; return false; }
   world.placementActive = true; world.placementType = type; return true;
 }
 void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos) {
@@ -755,11 +881,13 @@ void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos) {
   world.placementValid = placeable(world, team, world.placementType, worldPos) && can_afford(world.players[team].resources, gBuildDefs[bidx(world.placementType)].cost);
 }
 bool confirm_build_placement(World& world, uint16_t team) {
+  if (!gameplay_orders_allowed(world)) { ++world.rejectedCommandCount; return false; }
   if (!world.placementActive || !placeable(world, team, world.placementType, world.placementPos)) return false;
   if (!spend(world.players[team].resources, gBuildDefs[bidx(world.placementType)].cost)) return false;
   uint32_t id = 1; for (const auto& b : world.buildings) id = std::max(id, b.id + 1);
   const auto& d = gBuildDefs[bidx(world.placementType)];
   world.buildings.push_back({id, team, world.placementType, world.placementPos, d.size, true, 0.0f, d.buildTime, 1000.0f, 1000.0f, {}});
+  ReplayCommand cmd{}; cmd.type = ReplayCommandType::PlaceBuilding; cmd.tick = world.tick; cmd.team = team; cmd.target = world.placementPos; cmd.buildingType = world.placementType; gReplayCommands.push_back(cmd);
   ++world.navVersion;
   gNav.cache.clear();
   world.placementActive = false;
@@ -768,6 +896,7 @@ bool confirm_build_placement(World& world, uint16_t team) {
 void cancel_build_placement(World& world) { world.placementActive = false; }
 
 bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitType type) {
+  if (!gameplay_orders_allowed(world)) { ++world.rejectedCommandCount; return false; }
   auto it = std::find_if(world.buildings.begin(), world.buildings.end(), [&](const Building& b) { return b.id == buildingId && b.team == team && !b.underConstruction; });
   if (it == world.buildings.end()) return false;
   if (it->type == BuildingType::CityCenter && type != UnitType::Worker) return false;
@@ -776,10 +905,12 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
   if (!spend(p.resources, gUnitDefs[uidx(type)].cost)) return false;
   it->queue.push_back({QueueKind::TrainUnit, type, gUnitDefs[uidx(type)].trainTime, 0});
+  ReplayCommand cmd{}; cmd.type = ReplayCommandType::QueueTrain; cmd.tick = world.tick; cmd.team = team; cmd.buildingId = buildingId; cmd.unitType = type; gReplayCommands.push_back(cmd);
   return true;
 }
 
 bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId) {
+  if (!gameplay_orders_allowed(world)) { ++world.rejectedCommandCount; return false; }
   auto it = std::find_if(world.buildings.begin(), world.buildings.end(), [&](const Building& b) { return b.id == buildingId && b.team == team && !b.underConstruction; });
   if (it == world.buildings.end()) return false;
   if (!(it->type == BuildingType::Library || it->type == BuildingType::CityCenter)) return false;
@@ -789,17 +920,20 @@ bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId) {
   if (pendingAge) return false;
   if (!spend(p.resources, gAgeResearchCost)) return false;
   it->queue.push_back({QueueKind::AgeResearch, UnitType::Worker, gAgeResearchTime, (int)p.age + 1});
+  ReplayCommand cmd{}; cmd.type = ReplayCommandType::QueueResearch; cmd.tick = world.tick; cmd.team = team; cmd.buildingId = buildingId; gReplayCommands.push_back(cmd);
   ++world.researchStartedCount;
   return true;
 }
 
 bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t index) {
+  if (!gameplay_orders_allowed(world)) { ++world.rejectedCommandCount; return false; }
   auto it = std::find_if(world.buildings.begin(), world.buildings.end(), [&](const Building& b) { return b.id == buildingId && b.team == team; });
   if (it == world.buildings.end() || index >= it->queue.size()) return false;
   auto& p = world.players[team];
   if (it->queue[index].kind == QueueKind::TrainUnit) refund(p.resources, gUnitDefs[uidx(it->queue[index].unitType)].cost, 0.8f);
   else refund(p.resources, gAgeResearchCost, 0.8f);
   it->queue.erase(it->queue.begin() + (long)index);
+  ReplayCommand cmd{}; cmd.type = ReplayCommandType::CancelQueue; cmd.tick = world.tick; cmd.team = team; cmd.buildingId = buildingId; cmd.queueIndex = index; gReplayCommands.push_back(cmd);
   return true;
 }
 
@@ -826,8 +960,15 @@ uint64_t state_hash(const World& w) {
   }
   for (const auto& p : w.players) {
     hash_u32(h, (uint32_t)p.age); hash_u32(h, (uint32_t)p.popUsed); hash_u32(h, (uint32_t)p.popCap);
+    hash_u32(h, p.unitsLost); hash_u32(h, p.buildingsLost); hash_u32(h, (uint32_t)p.finalScore);
     for (float r : p.resources) hash_float(h, r);
   }
+  hash_u32(h, static_cast<uint32_t>(w.match.phase));
+  hash_u32(h, static_cast<uint32_t>(w.match.condition));
+  hash_u32(h, w.match.winner);
+  hash_u32(h, w.match.endTick);
+  hash_u32(h, w.wonder.owner == std::numeric_limits<uint16_t>::max() ? 0xFFFFu : w.wonder.owner);
+  hash_u32(h, w.wonder.heldTicks);
   hash_u32(h, w.territoryRecomputeCount);
   hash_u32(h, w.aiDecisionCount);
   hash_u32(h, w.completedBuildingsCount);

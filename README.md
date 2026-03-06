@@ -48,6 +48,13 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--ai-attack-early` lower AI attack threshold for fast testing
 - `--ai-aggressive` reduce AI retreat sensitivity
 - `--combat-debug` print combat smoke diagnostics (engagements/switches/retreats/damage)
+- `--time-limit-ticks <N>` set score-victory time limit in ticks
+- `--record-replay <file>` record authoritative command replay JSON
+- `--replay <file>` play replay JSON deterministically
+- `--replay-verify` compare replay final hash against recorded expected hash
+- `--force-score-victory` disable wonder win pressure for score-smoke helper
+- `--force-wonder-progress` helper flag reserved for wonder smoke shaping
+- `--match-debug` print match-flow diagnostics
 
 ## Controls
 - **WASD**: pan camera
@@ -63,3 +70,12 @@ Headless deterministic smoke mode (CI/container friendly):
 - **1..9**: select control group (double tap focuses camera on group)
 - **M**: toggle minimap visibility
 - **F1/F2/F3**: territory / border / fog overlays
+
+## Victory conditions
+- **Conquest**: eliminate all enemy capitals/city centers.
+- **Score**: when `time-limit-ticks` is reached, highest deterministic score wins; ties resolve to lowest player ID.
+- **Wonder**: complete and hold a Wonder for configured hold ticks.
+
+## Replay
+- Record: `./build/rts --headless --smoke --ticks 2200 --seed 1234 --time-limit-ticks 1800 --record-replay /tmp/test_replay.json --dump-hash`
+- Playback+verify: `./build/rts --headless --replay /tmp/test_replay.json --replay-verify`

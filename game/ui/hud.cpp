@@ -3,6 +3,14 @@
 #include <string>
 
 namespace dom::ui {
+namespace {
+const char* victory_name(dom::sim::VictoryCondition c) {
+  if (c == dom::sim::VictoryCondition::Conquest) return "conquest";
+  if (c == dom::sim::VictoryCondition::Score) return "score";
+  if (c == dom::sim::VictoryCondition::Wonder) return "wonder";
+  return "none";
+}
+}
 void draw_hud(SDL_Window* window, const dom::sim::World& world) {
   const auto& p = world.players[0];
   int capitals = 0;
@@ -22,6 +30,13 @@ void draw_hud(SDL_Window* window, const dom::sim::World& world) {
     (world.uiResearchMenu ? " | [R] Research" : "") +
     (world.godMode ? " | GOD MODE (All Visible)" : "") +
     " | Minimap [M] | Groups Ctrl+1..9 / 1..9 | Overlays [F1/F2/F3] | Capitals " + std::to_string(capitals);
+  if (world.match.phase != dom::sim::MatchPhase::Running) {
+    title += " | POSTMATCH winner=" + std::to_string(world.match.winner) + " cond=" + victory_name(world.match.condition);
+    for (const auto& p2 : world.players) {
+      title += " | P" + std::to_string(p2.id) + " score=" + std::to_string(p2.finalScore) + " lostU=" + std::to_string(p2.unitsLost) + " lostB=" + std::to_string(p2.buildingsLost);
+    }
+    if (world.wonder.owner != UINT16_MAX) title += " | Wonder P" + std::to_string(world.wonder.owner) + " hold=" + std::to_string(world.wonder.heldTicks);
+  }
   SDL_SetWindowTitle(window, title.c_str());
 }
 }
