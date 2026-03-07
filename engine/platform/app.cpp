@@ -488,6 +488,16 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   for (const auto& t : w.trains) { nlohmann::json route = nlohmann::json::array(); for (const auto& st : t.route) route.push_back({{"edgeId", st.edgeId}, {"toNode", st.toNode}}); j["trains"].push_back({{"id", t.id}, {"owner", t.owner}, {"type", (int)t.type}, {"state", (int)t.state}, {"currentNode", t.currentNode}, {"destinationNode", t.destinationNode}, {"currentEdge", t.currentEdge}, {"routeCursor", t.routeCursor}, {"segmentProgress", t.segmentProgress}, {"speed", t.speed}, {"cargo", t.cargo}, {"capacity", t.capacity}, {"cargoType", t.cargoType}, {"lastRouteTick", t.lastRouteTick}, {"route", route}}); }
   j["operations"] = nlohmann::json::array();
   for (const auto& o : w.operations) j["operations"].push_back({{"id", o.id}, {"team", o.team}, {"type", (int)o.type}, {"target", {o.target.x, o.target.y}}, {"assignedTick", o.assignedTick}, {"active", o.active}});
+  j["theaterCommands"] = nlohmann::json::array();
+  for (const auto& t : w.theaterCommands) j["theaterCommands"].push_back({{"theaterId",t.theaterId},{"owner",t.owner},{"bounds",{t.bounds.x,t.bounds.y,t.bounds.z,t.bounds.w}},{"priority",(int)t.priority},{"activeOperations",t.activeOperations},{"assignedArmyGroups",t.assignedArmyGroups},{"assignedNavalTaskForces",t.assignedNavalTaskForces},{"assignedAirWings",t.assignedAirWings},{"supplyStatus",t.supplyStatus},{"threatLevel",t.threatLevel}});
+  j["armyGroups"] = nlohmann::json::array();
+  for (const auto& a : w.armyGroups) j["armyGroups"].push_back({{"id",a.id},{"owner",a.owner},{"theaterId",a.theaterId},{"unitIds",a.unitIds},{"stance",(int)a.stance},{"assignedObjective",a.assignedObjective},{"active",a.active}});
+  j["navalTaskForces"] = nlohmann::json::array();
+  for (const auto& n : w.navalTaskForces) j["navalTaskForces"].push_back({{"id",n.id},{"owner",n.owner},{"theaterId",n.theaterId},{"unitIds",n.unitIds},{"mission",(int)n.mission},{"assignedObjective",n.assignedObjective},{"active",n.active}});
+  j["airWings"] = nlohmann::json::array();
+  for (const auto& a : w.airWings) j["airWings"].push_back({{"id",a.id},{"owner",a.owner},{"theaterId",a.theaterId},{"squadronIds",a.squadronIds},{"mission",(int)a.mission},{"assignedObjective",a.assignedObjective},{"active",a.active}});
+  j["operationalObjectives"] = nlohmann::json::array();
+  for (const auto& o : w.operationalObjectives) j["operationalObjectives"].push_back({{"id",o.id},{"owner",o.owner},{"theaterId",o.theaterId},{"objectiveType",(int)o.objectiveType},{"targetRegion",{o.targetRegion.x,o.targetRegion.y,o.targetRegion.z,o.targetRegion.w}},{"requiredForce",o.requiredForce},{"startTick",o.startTick},{"durationTicks",o.durationTicks},{"outcome",(int)o.outcome},{"active",o.active},{"armyGroups",o.armyGroups},{"navalTaskForces",o.navalTaskForces},{"airWings",o.airWings}});
   j["worldTension"] = w.worldTension;
   j["diplomacyRelations"] = nlohmann::json::array();
   for (size_t i = 0; i < w.players.size(); ++i) {
@@ -550,6 +560,10 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["objectiveStateChangeCount"] = w.objectiveStateChangeCount;
   j["diplomacyEventCount"] = w.diplomacyEventCount;
   j["postureChangeCount"] = w.postureChangeCount;
+  j["theatersCreatedCount"] = w.theatersCreatedCount;
+  j["operationsExecutedCount"] = w.operationsExecutedCount;
+  j["formationsAssignedCount"] = w.formationsAssignedCount;
+  j["operationalOutcomesRecorded"] = w.operationalOutcomesRecorded;
   j["wonder"] = {{"owner", w.wonder.owner}, {"heldTicks", w.wonder.heldTicks}};
   j["stateHash"] = dom::sim::state_hash(w);
   return j;
@@ -690,6 +704,16 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   if (j.contains("trains")) for (const auto& jt : j.at("trains")) { dom::sim::Train t{}; t.id = jt.value("id", 0u); t.owner = jt.value("owner", (uint16_t)UINT16_MAX); t.type = (dom::sim::TrainType)jt.value("type", 0); t.state = (dom::sim::TrainState)jt.value("state", 1); t.currentNode = jt.value("currentNode", 0u); t.destinationNode = jt.value("destinationNode", 0u); t.currentEdge = jt.value("currentEdge", 0u); t.routeCursor = jt.value("routeCursor", 0u); t.segmentProgress = jt.value("segmentProgress", 0.0f); t.speed = jt.value("speed", 0.03f); t.cargo = jt.value("cargo", 0.0f); t.capacity = jt.value("capacity", 100.0f); t.cargoType = jt.value("cargoType", std::string("Supply")); t.lastRouteTick = jt.value("lastRouteTick", 0u); if (jt.contains("route")) for (const auto& rs : jt.at("route")) t.route.push_back({rs.value("edgeId", 0u), rs.value("toNode", 0u)}); w.trains.push_back(std::move(t)); }
   w.operations.clear();
   if (j.contains("operations")) for (const auto& jo : j.at("operations")) { dom::sim::OperationOrder o{}; o.id = jo.value("id", 0u); o.team = jo.value("team", 0u); o.type = static_cast<dom::sim::OperationType>(jo.value("type", 0)); o.target = {jo["target"][0].get<float>(), jo["target"][1].get<float>()}; o.assignedTick = jo.value("assignedTick", 0u); o.active = jo.value("active", true); w.operations.push_back(o); }
+  w.theaterCommands.clear();
+  if (j.contains("theaterCommands")) for (const auto& jt : j.at("theaterCommands")) { dom::sim::TheaterCommand t{}; t.theaterId=jt.value("theaterId",0u); t.owner=jt.value("owner",0u); if (jt.contains("bounds") && jt.at("bounds").is_array() && jt.at("bounds").size()>=4) t.bounds={jt["bounds"][0].get<int>(),jt["bounds"][1].get<int>(),jt["bounds"][2].get<int>(),jt["bounds"][3].get<int>()}; t.priority=(dom::sim::TheaterPriority)jt.value("priority",1); if (jt.contains("activeOperations")) t.activeOperations=jt.at("activeOperations").get<std::vector<uint32_t>>(); if (jt.contains("assignedArmyGroups")) t.assignedArmyGroups=jt.at("assignedArmyGroups").get<std::vector<uint32_t>>(); if (jt.contains("assignedNavalTaskForces")) t.assignedNavalTaskForces=jt.at("assignedNavalTaskForces").get<std::vector<uint32_t>>(); if (jt.contains("assignedAirWings")) t.assignedAirWings=jt.at("assignedAirWings").get<std::vector<uint32_t>>(); t.supplyStatus=jt.value("supplyStatus",1.0f); t.threatLevel=jt.value("threatLevel",0.0f); w.theaterCommands.push_back(std::move(t)); }
+  w.armyGroups.clear();
+  if (j.contains("armyGroups")) for (const auto& ja : j.at("armyGroups")) { dom::sim::ArmyGroup a{}; a.id=ja.value("id",0u); a.owner=ja.value("owner",0u); a.theaterId=ja.value("theaterId",0u); if (ja.contains("unitIds")) a.unitIds=ja.at("unitIds").get<std::vector<uint32_t>>(); a.stance=(dom::sim::ArmyGroupStance)ja.value("stance",1); a.assignedObjective=ja.value("assignedObjective",0u); a.active=ja.value("active",true); w.armyGroups.push_back(std::move(a)); }
+  w.navalTaskForces.clear();
+  if (j.contains("navalTaskForces")) for (const auto& jn : j.at("navalTaskForces")) { dom::sim::NavalTaskForce n{}; n.id=jn.value("id",0u); n.owner=jn.value("owner",0u); n.theaterId=jn.value("theaterId",0u); if (jn.contains("unitIds")) n.unitIds=jn.at("unitIds").get<std::vector<uint32_t>>(); n.mission=(dom::sim::NavalMissionType)jn.value("mission",0); n.assignedObjective=jn.value("assignedObjective",0u); n.active=jn.value("active",true); w.navalTaskForces.push_back(std::move(n)); }
+  w.airWings.clear();
+  if (j.contains("airWings")) for (const auto& jw : j.at("airWings")) { dom::sim::AirWing a{}; a.id=jw.value("id",0u); a.owner=jw.value("owner",0u); a.theaterId=jw.value("theaterId",0u); if (jw.contains("squadronIds")) a.squadronIds=jw.at("squadronIds").get<std::vector<uint32_t>>(); a.mission=(dom::sim::AirMissionType)jw.value("mission",1); a.assignedObjective=jw.value("assignedObjective",0u); a.active=jw.value("active",true); w.airWings.push_back(std::move(a)); }
+  w.operationalObjectives.clear();
+  if (j.contains("operationalObjectives")) for (const auto& jo : j.at("operationalObjectives")) { dom::sim::OperationalObjective o{}; o.id=jo.value("id",0u); o.owner=jo.value("owner",0u); o.theaterId=jo.value("theaterId",0u); o.objectiveType=(dom::sim::OperationType)jo.value("objectiveType",4); if (jo.contains("targetRegion")&&jo.at("targetRegion").is_array()&&jo.at("targetRegion").size()>=4) o.targetRegion={jo["targetRegion"][0].get<int>(),jo["targetRegion"][1].get<int>(),jo["targetRegion"][2].get<int>(),jo["targetRegion"][3].get<int>()}; o.requiredForce=jo.value("requiredForce",0u); o.startTick=jo.value("startTick",0u); o.durationTicks=jo.value("durationTicks",0u); o.outcome=(dom::sim::OperationOutcome)jo.value("outcome",0); o.active=jo.value("active",true); if (jo.contains("armyGroups")) o.armyGroups=jo.at("armyGroups").get<std::vector<uint32_t>>(); if (jo.contains("navalTaskForces")) o.navalTaskForces=jo.at("navalTaskForces").get<std::vector<uint32_t>>(); if (jo.contains("airWings")) o.airWings=jo.at("airWings").get<std::vector<uint32_t>>(); w.operationalObjectives.push_back(std::move(o)); }
   w.triggerAreas.clear();
   if (j.contains("triggerAreas")) for (const auto& ja : j.at("triggerAreas")) { dom::sim::TriggerArea a{}; a.id = ja.value("id", 0u); a.min = {ja["min"][0].get<float>(), ja["min"][1].get<float>()}; a.max = {ja["max"][0].get<float>(), ja["max"][1].get<float>()}; w.triggerAreas.push_back(a); }
   w.objectives.clear();
@@ -727,6 +751,10 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.objectiveStateChangeCount = j.value("objectiveStateChangeCount", 0u);
   w.diplomacyEventCount = j.value("diplomacyEventCount", 0u);
   w.postureChangeCount = j.value("postureChangeCount", 0u);
+  w.theatersCreatedCount = j.value("theatersCreatedCount", 0u);
+  w.operationsExecutedCount = j.value("operationsExecutedCount", 0u);
+  w.formationsAssignedCount = j.value("formationsAssignedCount", 0u);
+  w.operationalOutcomesRecorded = j.value("operationalOutcomesRecorded", 0u);
   w.wonder.owner = j.at("wonder").value("owner", UINT16_MAX); w.wonder.heldTicks = j.at("wonder").value("heldTicks", 0u);
   w.riverCount = 0; for (uint8_t v : w.riverMap) if (v) ++w.riverCount;
   w.lakeCount = 0; for (uint8_t v : w.lakeMap) if (v) ++w.lakeCount;
@@ -1297,6 +1325,17 @@ int run_headless(const CliOptions& o) {
     float refinedTotal = 0.0f; for (const auto& p : world.players) for (float g : p.refinedGoods) refinedTotal += g;
     if (refinedTotal <= 0.0f) { std::cerr << "Smoke failure: no refined goods produced\n"; return 100; }
   }
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("theater_operations") != std::string::npos) {
+    if (world.theaterCommands.empty()) { std::cerr << "Smoke failure: no theater commands created\n"; return 101; }
+    if (world.operationalObjectives.empty()) { std::cerr << "Smoke failure: no operational objectives executed\n"; return 102; }
+    bool assigned = false;
+    for (const auto& oo : world.operationalObjectives) if (!oo.armyGroups.empty() || !oo.navalTaskForces.empty() || !oo.airWings.empty()) { assigned = true; break; }
+    if (!assigned) { std::cerr << "Smoke failure: no formations assigned to operations\n"; return 103; }
+    bool resolved = false;
+    for (const auto& oo : world.operationalObjectives) if (oo.outcome != dom::sim::OperationOutcome::InProgress) { resolved = true; break; }
+    if (!resolved) { std::cerr << "Smoke failure: no operational outcomes recorded\n"; return 104; }
+  }
+
   if (o.smoke && !o.scenarioFile.empty()) {
     const std::string tmpPath = "scenarios/.roundtrip_tmp.json";
     std::string serr;

@@ -259,3 +259,11 @@ Campaign orchestration is data-driven and deterministic. Mission simulation rema
 
 ## Industrial economy layer
 The simulation now includes an authoritative industrial economy subsystem with refined goods, deterministic factory cycles, and logistics-aware throughput. Factory state and per-player refined-good stockpiles are serialized and hashed for deterministic replay/save-load parity.
+
+
+## Theater operations command layer
+
+- Authoritative strategic command now includes `theaterCommands`, `armyGroups`, `navalTaskForces`, `airWings`, and `operationalObjectives`.
+- Theater planning executes deterministically on fixed cadence and uses stable iteration/order-preserving assignment rules.
+- Doctrine modifiers bias operational intent (offensive pressure, defensive posture, supply corridor protection, naval and air emphasis).
+- Operational state is serialized and included in authoritative state hashing for replay/save-load/thread parity.

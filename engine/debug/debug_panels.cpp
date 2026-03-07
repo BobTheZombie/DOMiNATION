@@ -21,6 +21,10 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Checkbox("operation targets", &state.operationTargets);
   ImGui::Checkbox("AI state", &state.aiState);
   ImGui::Text("Units: %zu | Buildings: %zu | Operations: %zu", world.units.size(), world.buildings.size(), world.operations.size());
+  ImGui::Text("Theaters: %zu | Objectives: %zu | ArmyGroups: %zu | NavalTF: %zu | AirWings: %zu",
+              world.theaterCommands.size(), world.operationalObjectives.size(), world.armyGroups.size(), world.navalTaskForces.size(), world.airWings.size());
+  ImGui::Text("Operational counters: created=%u executed=%u assigned=%u outcomes=%u",
+              world.theatersCreatedCount, world.operationsExecutedCount, world.formationsAssignedCount, world.operationalOutcomesRecorded);
   ImGui::End();
 
   if (!ImGui::Begin("Perf Graphs")) { ImGui::End(); return; }

@@ -131,3 +131,16 @@ Scenarios used by campaigns remain standard scenario files. Campaign carryover i
 - `industrialRecipes`: optional per-scenario recipe array with fields `output`, `outputAmount`, `cycleTime`, `inputResources` (array), `inputGoods` (array).
 
 Example scenario: `scenarios/industrial_economy_test.json`.
+
+
+## Theater operations fields
+
+Optional fields for authored operational state:
+
+- `theaterCommands[]`: `{theaterId, owner, bounds:[minX,minY,maxX,maxY], priority, activeOperations[], assignedArmyGroups[], assignedNavalTaskForces[], assignedAirWings[], supplyStatus, threatLevel}`
+- `armyGroups[]`: `{id, owner, theaterId, unitIds[], stance, assignedObjective, active}`
+- `navalTaskForces[]`: `{id, owner, theaterId, unitIds[], mission, assignedObjective, active}`
+- `airWings[]`: `{id, owner, theaterId, squadronIds[], mission, assignedObjective, active}`
+- `operationalObjectives[]`: `{id, owner, theaterId, objectiveType, targetRegion:[minX,minY,maxX,maxY], requiredForce, startTick, durationTicks, outcome, active, armyGroups[], navalTaskForces[], airWings[]}`
+
+Reference scenario: `scenarios/theater_operations_test.json`.
