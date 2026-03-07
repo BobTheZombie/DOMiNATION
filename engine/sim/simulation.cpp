@@ -448,11 +448,43 @@ struct CivilizationDef {
   float scienceBias{1.0f};
   float aggression{1.0f};
   float defense{1.0f};
+  float diplomacyBias{1.0f};
+  float logisticsBias{1.0f};
+  float strategicBias{1.0f};
+  float aiWorkerTargetMult{1.0f};
+  float aiExpansionTiming{1.0f};
+  float aiResearchPriority{1.0f};
+  float aiReconPriority{1.0f};
+  float aiNavalPriority{1.0f};
+  float aiAirPriority{1.0f};
+  float aiStrategicPriority{1.0f};
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitAttackMult{};
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitHpMult{};
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitCostMult{};
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitTrainTimeMult{};
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingCostMult{};
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingBuildTimeMult{};
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingHpMult{};
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingTrickleMult{};
+  std::array<std::string, static_cast<size_t>(UnitType::Count)> uniqueUnitDefs{};
+  std::array<std::string, static_cast<size_t>(BuildingType::Count)> uniqueBuildingDefs{};
+  std::vector<std::string> missionTags;
 };
 
 std::vector<CivilizationDef> gCivilizations;
 std::array<BiomeDef, static_cast<size_t>(BiomeType::Count)> gBiomes{};
 std::unordered_map<std::string, ThemeDef> gThemes;
+
+void init_civ_defaults(CivilizationDef& d) {
+  d.unitAttackMult.fill(1.0f); d.unitHpMult.fill(1.0f); d.unitCostMult.fill(1.0f); d.unitTrainTimeMult.fill(1.0f);
+  d.buildingCostMult.fill(1.0f); d.buildingBuildTimeMult.fill(1.0f); d.buildingHpMult.fill(1.0f); d.buildingTrickleMult.fill(1.0f);
+}
+
+template <typename TArr, typename TParser>
+void parse_named_multiplier_map(const nlohmann::json& j, TArr& out, TParser parse) {
+  if (!j.is_object()) return;
+  for (auto it = j.begin(); it != j.end(); ++it) out[static_cast<size_t>(parse(it.key()))] = it.value().get<float>();
+}
 
 void load_civilizations_once() {
   if (!gCivilizations.empty()) return;
@@ -464,13 +496,44 @@ void load_civilizations_once() {
   gCivilizations.clear();
   for (const auto& c : j) {
     CivilizationDef d{};
-    d.id = c.value("id", std::string("default"));
-    d.displayName = c.value("displayName", d.id);
+    init_civ_defaults(d);
+    d.id = c.value("civilization_id", c.value("id", std::string("default")));
+    d.displayName = c.value("display_name", c.value("displayName", d.id));
     d.economyBias = c.value("economyBias", 1.0f);
     d.militaryBias = c.value("militaryBias", 1.0f);
     d.scienceBias = c.value("scienceBias", 1.0f);
     d.aggression = c.value("aggression", 1.0f);
     d.defense = c.value("defense", 1.0f);
+    d.diplomacyBias = c.value("diplomacyBias", 1.0f);
+    d.logisticsBias = c.value("logisticsBias", 1.0f);
+    d.strategicBias = c.value("strategicBias", 1.0f);
+    if (c.contains("aiDoctrineModifiers")) {
+      const auto& ai = c["aiDoctrineModifiers"];
+      d.aiWorkerTargetMult = ai.value("workerTargetMult", 1.0f);
+      d.aiExpansionTiming = ai.value("expansionTiming", 1.0f);
+      d.aiResearchPriority = ai.value("researchPriority", 1.0f);
+      d.aiReconPriority = ai.value("reconPriority", 1.0f);
+      d.aiNavalPriority = ai.value("navalPriority", 1.0f);
+      d.aiAirPriority = ai.value("airPriority", 1.0f);
+      d.aiStrategicPriority = ai.value("strategicPriority", 1.0f);
+    }
+    if (c.contains("unitBonuses")) {
+      const auto& ub = c["unitBonuses"];
+      if (ub.contains("attackMult")) parse_named_multiplier_map(ub["attackMult"], d.unitAttackMult, parse_unit);
+      if (ub.contains("hpMult")) parse_named_multiplier_map(ub["hpMult"], d.unitHpMult, parse_unit);
+      if (ub.contains("costMult")) parse_named_multiplier_map(ub["costMult"], d.unitCostMult, parse_unit);
+      if (ub.contains("trainTimeMult")) parse_named_multiplier_map(ub["trainTimeMult"], d.unitTrainTimeMult, parse_unit);
+    }
+    if (c.contains("buildingBonuses")) {
+      const auto& bb = c["buildingBonuses"];
+      if (bb.contains("costMult")) parse_named_multiplier_map(bb["costMult"], d.buildingCostMult, parse_building);
+      if (bb.contains("buildTimeMult")) parse_named_multiplier_map(bb["buildTimeMult"], d.buildingBuildTimeMult, parse_building);
+      if (bb.contains("hpMult")) parse_named_multiplier_map(bb["hpMult"], d.buildingHpMult, parse_building);
+      if (bb.contains("trickleMult")) parse_named_multiplier_map(bb["trickleMult"], d.buildingTrickleMult, parse_building);
+    }
+    if (c.contains("uniqueUnits") && c["uniqueUnits"].is_object()) for (auto it=c["uniqueUnits"].begin(); it!=c["uniqueUnits"].end(); ++it) d.uniqueUnitDefs[static_cast<size_t>(parse_unit(it.key()))]=it.value().get<std::string>();
+    if (c.contains("uniqueBuildings") && c["uniqueBuildings"].is_object()) for (auto it=c["uniqueBuildings"].begin(); it!=c["uniqueBuildings"].end(); ++it) d.uniqueBuildingDefs[static_cast<size_t>(parse_building(it.key()))]=it.value().get<std::string>();
+    if (c.contains("missionTags") && c["missionTags"].is_array()) d.missionTags = c["missionTags"].get<std::vector<std::string>>();
     gCivilizations.push_back(d);
   }
   if (gCivilizations.empty()) gCivilizations.push_back({});
@@ -478,8 +541,20 @@ void load_civilizations_once() {
 
 CivilizationRuntime civilization_runtime_for(const std::string& id) {
   load_civilizations_once();
-  for (const auto& c : gCivilizations) if (c.id == id) return {c.id, c.economyBias, c.militaryBias, c.scienceBias, c.aggression, c.defense};
-  return {"default", 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+  for (const auto& c : gCivilizations) if (c.id == id) {
+    CivilizationRuntime r{};
+    r.id = c.id; r.displayName = c.displayName; r.economyBias = c.economyBias; r.militaryBias = c.militaryBias; r.scienceBias = c.scienceBias; r.aggression = c.aggression; r.defense = c.defense;
+    r.diplomacyBias = c.diplomacyBias; r.logisticsBias = c.logisticsBias; r.strategicBias = c.strategicBias;
+    r.aiWorkerTargetMult = c.aiWorkerTargetMult; r.aiExpansionTiming = c.aiExpansionTiming; r.aiResearchPriority = c.aiResearchPriority; r.aiReconPriority = c.aiReconPriority; r.aiNavalPriority = c.aiNavalPriority; r.aiAirPriority = c.aiAirPriority; r.aiStrategicPriority = c.aiStrategicPriority;
+    r.unitAttackMult = c.unitAttackMult; r.unitHpMult = c.unitHpMult; r.unitCostMult = c.unitCostMult; r.unitTrainTimeMult = c.unitTrainTimeMult;
+    r.buildingCostMult = c.buildingCostMult; r.buildingBuildTimeMult = c.buildingBuildTimeMult; r.buildingHpMult = c.buildingHpMult; r.buildingTrickleMult = c.buildingTrickleMult;
+    r.uniqueUnitDefs = c.uniqueUnitDefs; r.uniqueBuildingDefs = c.uniqueBuildingDefs; r.missionTags = c.missionTags;
+    return r;
+  }
+  CivilizationRuntime d{};
+  d.unitAttackMult.fill(1.0f); d.unitHpMult.fill(1.0f); d.unitCostMult.fill(1.0f); d.unitTrainTimeMult.fill(1.0f);
+  d.buildingCostMult.fill(1.0f); d.buildingBuildTimeMult.fill(1.0f); d.buildingHpMult.fill(1.0f); d.buildingTrickleMult.fill(1.0f);
+  return d;
 }
 
 void load_biomes_once() {
@@ -1435,11 +1510,24 @@ glm::vec2 group_centroid_for_order(const World& w, const Unit& member) {
   return n > 0 ? c / static_cast<float>(n) : member.pos;
 }
 
+std::string resolved_unit_definition_id(const World& w, uint16_t team, UnitType type) {
+  if (team >= w.players.size()) return unit_name(type);
+  const auto& v = w.players[team].civilization.uniqueUnitDefs[static_cast<size_t>(type)];
+  return v.empty() ? std::string(unit_name(type)) : v;
+}
+
+std::string resolved_building_definition_id(const World& w, uint16_t team, BuildingType type) {
+  if (team >= w.players.size()) return building_name(type);
+  const auto& v = w.players[team].civilization.uniqueBuildingDefs[static_cast<size_t>(type)];
+  return v.empty() ? std::string(building_name(type)) : v;
+}
+
 uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   uint32_t id = 1;
   for (const auto& u : w.units) id = std::max(id, u.id + 1);
   Unit nu{}; nu.id = id; nu.team = team; nu.type = type; nu.pos = nu.renderPos = nu.target = nu.slotTarget = p;
   const UnitDef& ud = gUnitDefs[uidx(type)];
+  const auto& civ = team < w.players.size() ? w.players[team].civilization : CivilizationRuntime{};
   nu.role = ud.role;
   nu.attackType = ud.attackType;
   nu.preferredTargetRole = ud.preferredTargetRole;
@@ -1458,6 +1546,9 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   else if (type == UnitType::Bomber || type == UnitType::StrategicBomber) { nu.hp = 120; nu.attack = 22.0f; nu.range = 6.0f; nu.speed = 6.3f; nu.role = UnitRole::Siege; nu.preferredTargetRole = UnitRole::Building; }
   else if (type == UnitType::ReconDrone || type == UnitType::StrikeDrone) { nu.hp = 60; nu.attack = type == UnitType::StrikeDrone ? 9.0f : 3.0f; nu.range = 5.4f; nu.speed = 8.8f; nu.role = UnitRole::Ranged; }
   else if (type == UnitType::TacticalMissile || type == UnitType::StrategicMissile) { nu.hp = 30; nu.attack = 40.0f; nu.range = 2.0f; nu.speed = 10.0f; nu.role = UnitRole::Siege; }
+  nu.attack *= civ.unitAttackMult[static_cast<size_t>(type)];
+  nu.hp *= civ.unitHpMult[static_cast<size_t>(type)];
+  nu.definitionId = resolved_unit_definition_id(w, team, type);
   if (!unit_cell_valid(w, nu, cell_of(w, nu.pos))) {
     for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
       int c = y * w.width + x;
@@ -2363,7 +2454,8 @@ void tick_world(World& w, float dt) {
     const BuildDef& def = gBuildDefs[bidx(b.type)];
     if (b.underConstruction) {
       float workerFactor = has_nearby_builder(w, b.team, b.pos) ? 1.0f : 0.25f;
-      b.buildProgress += dt / std::max(1.0f, b.buildTime) * workerFactor;
+      const float civBuild = owner.civilization.buildingBuildTimeMult[static_cast<size_t>(b.type)];
+      b.buildProgress += dt / std::max(1.0f, b.buildTime * civBuild) * workerFactor;
       if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; emit_event(w, GameplayEventType::BuildingCompleted, b.team, b.team, b.id); if (b.type == BuildingType::Wonder) emit_event(w, GameplayEventType::WonderStarted, b.team, b.team, b.id); ++w.navVersion; gNav.cache.clear(); }
       continue;
     }
@@ -2372,7 +2464,7 @@ void tick_world(World& w, float dt) {
     for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) {
       float trick = def.trickle[r];
       if (trick > 0.0f) {
-        float mult = 1.0f;
+        float mult = owner.civilization.buildingTrickleMult[static_cast<size_t>(b.type)];
         if (b.type == BuildingType::Farm) mult = fertility_at(w, b.pos);
         owner.resources[r] += trick * op * dt * 20.0f;
       }
@@ -2777,10 +2869,13 @@ void update_build_placement(World& world, uint16_t team, glm::vec2 worldPos) {
 bool confirm_build_placement(World& world, uint16_t team) {
   if (!gameplay_orders_allowed(world)) { ++world.rejectedCommandCount; return false; }
   if (!world.placementActive || !placeable(world, team, world.placementType, world.placementPos)) return false;
-  if (!spend(world.players[team].resources, gBuildDefs[bidx(world.placementType)].cost)) return false;
+  auto cost = gBuildDefs[bidx(world.placementType)].cost;
+  const auto& civ = world.players[team].civilization;
+  for (size_t i=0;i<cost.size();++i) cost[i] *= civ.buildingCostMult[static_cast<size_t>(world.placementType)];
+  if (!spend(world.players[team].resources, cost)) return false;
   uint32_t id = 1; for (const auto& b : world.buildings) id = std::max(id, b.id + 1);
   const auto& d = gBuildDefs[bidx(world.placementType)];
-  world.buildings.push_back({id, team, world.placementType, world.placementPos, d.size, true, 0.0f, d.buildTime, 1000.0f, 1000.0f, {}});
+  Building nb{}; nb.id=id; nb.team=team; nb.type=world.placementType; nb.pos=world.placementPos; nb.size=d.size; nb.underConstruction=true; nb.buildProgress=0.0f; nb.buildTime=d.buildTime; nb.maxHp=1000.0f * civ.buildingHpMult[static_cast<size_t>(world.placementType)]; nb.hp=nb.maxHp; nb.definitionId = resolved_building_definition_id(world, team, world.placementType); world.buildings.push_back(std::move(nb));
   ReplayCommand cmd{}; cmd.type = ReplayCommandType::PlaceBuilding; cmd.tick = world.tick; cmd.team = team; cmd.target = world.placementPos; cmd.buildingType = world.placementType; gReplayCommands.push_back(cmd);
   ++world.navVersion;
   gNav.cache.clear();
@@ -2801,8 +2896,10 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
   if (it->type != BuildingType::Port && it->type != BuildingType::Airbase && it->type != BuildingType::MissileSilo && (unit_is_naval(type) || unit_is_air(type))) return false;
   auto& p = world.players[team];
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
-  if (!spend(p.resources, gUnitDefs[uidx(type)].cost)) return false;
-  it->queue.push_back({QueueKind::TrainUnit, type, gUnitDefs[uidx(type)].trainTime, 0});
+  auto cost = gUnitDefs[uidx(type)].cost;
+  for (size_t i=0;i<cost.size();++i) cost[i] *= p.civilization.unitCostMult[static_cast<size_t>(type)];
+  if (!spend(p.resources, cost)) return false;
+  it->queue.push_back({QueueKind::TrainUnit, type, gUnitDefs[uidx(type)].trainTime * p.civilization.unitTrainTimeMult[static_cast<size_t>(type)], 0});
   ReplayCommand cmd{}; cmd.type = ReplayCommandType::QueueTrain; cmd.tick = world.tick; cmd.team = team; cmd.buildingId = buildingId; cmd.unitType = type; gReplayCommands.push_back(cmd);
   return true;
 }

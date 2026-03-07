@@ -4,3 +4,6 @@
 - Exposed API: `activate_objective`, `complete_objective`, `fail_objective`, `show_message`, `get_tick`, `get_objective_state`, `get_player_alive`, `get_world_tension`.
 - `os`, `io`, and `package` are disabled for sandbox safety.
 - Lua orchestrates mission content only; authoritative sim stays in C++.
+
+
+Lua hooks continue to run in sandbox; civilization mission tags are available through player civilization data and remain deterministic because hook execution log and mission runtime counters are serialized in authority saves.

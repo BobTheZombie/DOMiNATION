@@ -82,7 +82,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
 
   const auto& civ = world.players[team].civilization;
   uint32_t cc = first_building(world, team, dom::sim::BuildingType::CityCenter);
-  const int workerTarget = std::clamp((int)std::round(5.0f * civ.economyBias + 1.5f), 4, 12);
+  const int workerTarget = std::clamp((int)std::round((5.0f * civ.economyBias + 1.5f) * civ.aiWorkerTargetMult), 4, 16);
   if (cc && count_units(world, team, dom::sim::UnitType::Worker) < workerTarget) dom::sim::enqueue_train_unit(world, team, cc, dom::sim::UnitType::Worker);
 
   auto maybeBuild = [&](dom::sim::BuildingType t, glm::vec2 offset) {
@@ -105,11 +105,11 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     maybeBuild(dom::sim::BuildingType::LumberCamp, {4, 8});
     maybeBuild(dom::sim::BuildingType::Farm, {6, 4});
   }
-  if (civ.scienceBias > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
+  if (civ.scienceBias * civ.aiResearchPriority > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
   maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
-  if (civ.scienceBias >= 1.0f || civ.defense >= 1.0f) maybeBuild(dom::sim::BuildingType::RadarTower, {9, 10});
-  if (civ.militaryBias >= 1.0f) maybeBuild(dom::sim::BuildingType::Airbase, {16, 10});
-  if (world.worldTension > 35.0f || civ.scienceBias > 1.05f) maybeBuild(dom::sim::BuildingType::MissileSilo, {18, 12});
+  if (civ.scienceBias * civ.aiReconPriority >= 1.0f || civ.defense >= 1.0f) maybeBuild(dom::sim::BuildingType::RadarTower, {9, 10});
+  if (civ.militaryBias * civ.aiAirPriority >= 1.0f) maybeBuild(dom::sim::BuildingType::Airbase, {16, 10});
+  if (world.worldTension > 35.0f || civ.scienceBias * civ.aiStrategicPriority > 1.05f || civ.strategicBias > 1.05f) maybeBuild(dom::sim::BuildingType::MissileSilo, {18, 12});
   if (world.worldTension > 30.0f || civ.defense > 1.0f) { maybeBuild(dom::sim::BuildingType::AABattery, {7, 13}); maybeBuild(dom::sim::BuildingType::AntiMissileDefense, {6, 15}); }
 
   const bool navalRelevant = map_has_navigable_water(world) && coastal_city_exists(world, team);
@@ -164,7 +164,8 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   if (army.empty()) return;
 
   float tensionFactor = std::clamp(1.0f - world.worldTension / 180.0f, 0.5f, 1.2f);
-  int attackThreshold = std::clamp((int)std::round(((gAttackEarly ? 5.0f : 8.0f) / std::max(0.7f, civ.aggression)) * tensionFactor), 3, 12);
+  const float expansionTiming = std::max(0.7f, civ.aiExpansionTiming);
+  int attackThreshold = std::clamp((int)std::round((((gAttackEarly ? 5.0f : 8.0f) * expansionTiming) / std::max(0.7f, civ.aggression)) * tensionFactor), 3, 12);
   if ((int)army.size() < attackThreshold) { ++world.aiDecisionCount; return; }
 
   TeamStrength ours = strength_near(world, team, enemyBase, 30.0f);

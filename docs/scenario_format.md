@@ -67,3 +67,8 @@ Reference sample: `scenarios/diplomacy_test.json`.
 `objectives[]` now supports `objective_id`, `description`, `category`, `visible`, `progressText`, `progressValue`.
 
 `triggers[]` conditions include objective/diplomacy/tension/strike hooks; actions include objective state changes, messages, spawns, diplomacy/tension changes, operation launch, end match, and `RunLuaHook`.
+
+
+## Civilization fields
+
+`players[].civilization` binds a player to a civilization definition. Scenario smoke fixture `scenarios/civ_test.json` demonstrates civ-vs-civ doctrine divergence and unique replacements.

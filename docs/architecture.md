@@ -204,3 +204,8 @@ Headless/interactive perf outputs now include:
 ## Campaign scripting layer
 
 Added deterministic objective + trigger-action mission orchestration in simulation authority. Mission runtime state and trigger execution are serialized and included in authoritative hashing.
+
+
+## Civilization authority model
+
+Civilization identity is data-driven from `content/civilizations.json` and includes bonuses, AI doctrine modifiers, and unique unit/building replacement IDs. Production and spawn paths resolve these deterministically per-player, and authoritative save data persists resolved definition IDs for replay/load stability.
