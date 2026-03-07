@@ -324,3 +324,23 @@ Use `--campaign campaigns/test_campaign.json` for deterministic multi-mission pr
 ./build/rts --headless --scenario scenarios/industrial_economy_test.json --smoke --ticks 1600 --save /tmp/industrial_save.json --dump-hash
 ./build/rts --headless --load /tmp/industrial_save.json --smoke --ticks 3000 --dump-hash
 ```
+
+
+## Theater operations (deterministic)
+
+This build adds deterministic large-scale command structures:
+
+- theater commands
+- army groups, naval task forces, and air wings
+- operational objectives (offensive/defensive/encirclement/blockade/strategic strike style goals)
+- doctrine-influenced AI operational planning
+- ImGui/debug visibility for theaters + operations
+
+Smoke and thread parity:
+
+```bash
+./build/rts --headless --scenario scenarios/theater_operations_test.json --smoke --ticks 3000 --dump-hash
+./build/rts --headless --scenario scenarios/theater_operations_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/theater_operations_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/theater_operations_test.json --threads 8 --hash-only
+```

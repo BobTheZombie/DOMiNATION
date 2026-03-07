@@ -2,6 +2,8 @@
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
+#include <algorithm>
+#include <string>
 #endif
 
 namespace dom::ui {
@@ -16,10 +18,15 @@ const char* relation_name(dom::sim::DiplomacyRelation rel) {
 
 const char* op_name(dom::sim::OperationType t) {
   switch (t) {
-    case dom::sim::OperationType::AssaultCity: return "offensive operation";
+    case dom::sim::OperationType::AssaultCity: return "offensive";
+    case dom::sim::OperationType::DefendBorder: return "defensive line";
+    case dom::sim::OperationType::Encirclement: return "encirclement";
+    case dom::sim::OperationType::NavalBlockade: return "naval blockade";
+    case dom::sim::OperationType::StrategicBombing: return "strategic bombing";
+    case dom::sim::OperationType::MissileStrikeCampaign: return "missile strike";
     case dom::sim::OperationType::AmphibiousAssault: return "naval invasion";
-    case dom::sim::OperationType::SecureRoute: return "supply disruption";
-    case dom::sim::OperationType::CoastalBombard: return "strategic strike";
+    case dom::sim::OperationType::SecureRoute: return "supply corridor";
+    case dom::sim::OperationType::CoastalBombard: return "coastal bombard";
     default: return "operation";
   }
 }
@@ -50,9 +57,22 @@ void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool 
 
   if (!showOperationsPanel) return;
   if (!ImGui::Begin("Operations")) { ImGui::End(); return; }
+  ImGui::Text("Theaters: %zu | Objectives: %zu | ArmyGroups: %zu | NavalTF: %zu | AirWings: %zu",
+              world.theaterCommands.size(), world.operationalObjectives.size(), world.armyGroups.size(), world.navalTaskForces.size(), world.airWings.size());
+  for (const auto& t : world.theaterCommands) {
+    ImGui::SeparatorText((std::string("Theater ") + std::to_string(t.theaterId)).c_str());
+    ImGui::Text("owner=%u bounds=[%d,%d]-[%d,%d] supply=%.2f threat=%.2f", t.owner, t.bounds.x, t.bounds.y, t.bounds.z, t.bounds.w, t.supplyStatus, t.threatLevel);
+    ImGui::Text("assigned forces: army=%zu naval=%zu air=%zu", t.assignedArmyGroups.size(), t.assignedNavalTaskForces.size(), t.assignedAirWings.size());
+    for (uint32_t objectiveId : t.activeOperations) {
+      auto it = std::find_if(world.operationalObjectives.begin(), world.operationalObjectives.end(), [&](const dom::sim::OperationalObjective& o){ return o.id == objectiveId; });
+      if (it == world.operationalObjectives.end()) continue;
+      ImGui::BulletText("objective %u %s required=%u start=%u dur=%u outcome=%u",
+                        it->id, op_name(it->objectiveType), it->requiredForce, it->startTick, it->durationTicks, (unsigned)it->outcome);
+    }
+  }
   for (const auto& op : world.operations) {
     if (!op.active) continue;
-    ImGui::BulletText("%s @ (%.1f, %.1f) assigned tick=%u", op_name(op.type), op.target.x, op.target.y, op.assignedTick);
+    ImGui::BulletText("legacy op: %s @ (%.1f, %.1f) tick=%u", op_name(op.type), op.target.x, op.target.y, op.assignedTick);
   }
   ImGui::End();
 #endif

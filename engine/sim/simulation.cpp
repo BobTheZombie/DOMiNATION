@@ -2806,26 +2806,155 @@ void apply_supply_effects(World& w, float dt) {
   }
 }
 
+int military_strength(const World& w, uint16_t team);
+
 void update_operations(World& w) {
   if (w.tick % 80 != 0) return;
+
   w.operations.clear();
-  w.railNodes.clear();
-  w.railEdges.clear();
-  w.railNetworks.clear();
-  w.trains.clear();
-  uint32_t nextId = 1;
+  w.theaterCommands.clear();
+  w.armyGroups.clear();
+  w.navalTaskForces.clear();
+  w.airWings.clear();
+  w.operationalObjectives.clear();
+
+  w.theatersCreatedCount = 0;
+  w.formationsAssignedCount = 0;
+  w.operationsExecutedCount = 0;
+  w.operationalOutcomesRecorded = 0;
+
+  uint32_t nextLegacyOpId = 1;
+  uint32_t nextTheaterId = 1;
+  uint32_t nextArmyId = 1;
+  uint32_t nextNavalId = 1;
+  uint32_t nextAirId = 1;
+  uint32_t nextObjectiveId = 1;
+
   for (const auto& p : w.players) {
     if (!p.isCPU || !p.alive) continue;
-    OperationType t = OperationType::RallyAndPush;
-    if (p.civilization.defense > 1.1f) t = OperationType::DefendBorder;
-    else if (p.civilization.economyBias > 1.1f) t = OperationType::SecureRoute;
-    else if (p.civilization.aggression > 1.1f) t = OperationType::AssaultCity;
-    if (p.civilization.economyBias > 1.15f) t = OperationType::NavalPatrol;
-    if (p.civilization.aggression > 1.2f) t = OperationType::AmphibiousAssault;
-    glm::vec2 target{(p.id == 0) ? 85.0f : 20.0f, (p.id == 0) ? 85.0f : 20.0f};
-    for (const auto& c : w.cities) if (c.team != p.id && !players_allied(w, c.team, p.id)) { target = c.pos; break; }
-    w.operations.push_back({nextId++, p.id, t, target, w.tick, true});
-    ++w.logisticsOperationIssuedCount;
+
+    std::vector<uint32_t> groundUnits;
+    std::vector<uint32_t> navalUnits;
+    std::vector<uint32_t> wingUnits;
+    for (const auto& u : w.units) {
+      if (u.team != p.id || u.hp <= 0.0f || u.type == UnitType::Worker) continue;
+      if (unit_is_naval(u.type)) navalUnits.push_back(u.id);
+      else groundUnits.push_back(u.id);
+    }
+    for (const auto& a : w.airUnits) if (a.team == p.id && a.hp > 0.0f) wingUnits.push_back(a.id);
+
+    const int splitY = std::max(1, w.height / 2);
+    for (int tIndex = 0; tIndex < 2; ++tIndex) {
+      TheaterCommand theater{};
+      theater.theaterId = nextTheaterId++;
+      theater.owner = p.id;
+      theater.bounds = {0, tIndex == 0 ? 0 : splitY, w.width - 1, tIndex == 0 ? splitY - 1 : w.height - 1};
+      theater.priority = tIndex == 0 ? TheaterPriority::High : TheaterPriority::Medium;
+
+      const uint16_t enemyTeam = [&]() {
+        for (const auto& e : w.players) if (e.id != p.id && e.alive && !players_allied(w, p.id, e.id)) return e.id;
+        return p.id;
+      }();
+
+      glm::vec2 target{(float)(w.width / 2), (float)(tIndex == 0 ? splitY * 0.5f : splitY + splitY * 0.5f)};
+      for (const auto& c : w.cities) {
+        if (c.team == enemyTeam && c.pos.y >= theater.bounds.y && c.pos.y <= theater.bounds.w) { target = c.pos; break; }
+      }
+
+      OperationType objectiveType = OperationType::RallyAndPush;
+      if (p.civilization.aggression * p.civilization.strategicBias > 1.2f) objectiveType = OperationType::AssaultCity;
+      else if (p.civilization.defense > 1.08f) objectiveType = OperationType::DefendBorder;
+      else if (p.civilization.logisticsBias > 1.05f) objectiveType = OperationType::SecureRoute;
+      if (p.civilization.aiNavalPriority * p.civilization.logisticsBias > 1.15f && !navalUnits.empty()) objectiveType = OperationType::NavalBlockade;
+      if (p.civilization.aiAirPriority * p.civilization.aiStrategicPriority > 1.2f && !wingUnits.empty()) objectiveType = OperationType::StrategicBombing;
+
+      OperationalObjective objective{};
+      objective.id = nextObjectiveId++;
+      objective.owner = p.id;
+      objective.theaterId = theater.theaterId;
+      objective.objectiveType = objectiveType;
+      objective.targetRegion = {std::max(0, (int)target.x - 8), std::max(theater.bounds.y, (int)target.y - 8), std::min(w.width - 1, (int)target.x + 8), std::min(theater.bounds.w, (int)target.y + 8)};
+      objective.requiredForce = static_cast<uint32_t>(std::max<size_t>(6, groundUnits.size() / 2 + navalUnits.size()));
+      objective.startTick = w.tick;
+      objective.durationTicks = 320u + static_cast<uint32_t>(p.civilization.aiStrategicPriority * 120.0f);
+      objective.active = true;
+
+      auto in_theater = [&](const Unit& u) {
+        const int uy = static_cast<int>(std::floor(u.pos.y));
+        return uy >= theater.bounds.y && uy <= theater.bounds.w;
+      };
+
+      ArmyGroup army{};
+      army.id = nextArmyId++;
+      army.owner = p.id;
+      army.theaterId = theater.theaterId;
+      army.stance = p.civilization.aggression >= p.civilization.defense ? ArmyGroupStance::Offensive : ArmyGroupStance::Defensive;
+      for (uint32_t id : groundUnits) {
+        const auto u = std::find_if(w.units.begin(), w.units.end(), [&](const Unit& v){ return v.id == id; });
+        if (u != w.units.end() && in_theater(*u)) army.unitIds.push_back(id);
+      }
+      if (army.unitIds.empty()) {
+        for (size_t i = tIndex; i < groundUnits.size(); i += 2) army.unitIds.push_back(groundUnits[i]);
+      }
+      if (!army.unitIds.empty()) {
+        army.assignedObjective = objective.id;
+        theater.assignedArmyGroups.push_back(army.id);
+        objective.armyGroups.push_back(army.id);
+        w.armyGroups.push_back(army);
+        ++w.formationsAssignedCount;
+      }
+
+      if (!navalUnits.empty()) {
+        NavalTaskForce ntf{};
+        ntf.id = nextNavalId++;
+        ntf.owner = p.id;
+        ntf.theaterId = theater.theaterId;
+        ntf.mission = objectiveType == OperationType::NavalBlockade ? NavalMissionType::Escort : (objectiveType == OperationType::AssaultCity ? NavalMissionType::Assault : NavalMissionType::Patrol);
+        for (size_t i = tIndex; i < navalUnits.size(); i += 2) ntf.unitIds.push_back(navalUnits[i]);
+        if (!ntf.unitIds.empty()) {
+          ntf.assignedObjective = objective.id;
+          theater.assignedNavalTaskForces.push_back(ntf.id);
+          objective.navalTaskForces.push_back(ntf.id);
+          w.navalTaskForces.push_back(ntf);
+          ++w.formationsAssignedCount;
+        }
+      }
+
+      if (!wingUnits.empty()) {
+        AirWing wing{};
+        wing.id = nextAirId++;
+        wing.owner = p.id;
+        wing.theaterId = theater.theaterId;
+        wing.mission = (objectiveType == OperationType::StrategicBombing || objectiveType == OperationType::MissileStrikeCampaign) ? AirMissionType::Bombing : AirMissionType::Interception;
+        for (size_t i = tIndex; i < wingUnits.size(); i += 2) wing.squadronIds.push_back(wingUnits[i]);
+        if (!wing.squadronIds.empty()) {
+          wing.assignedObjective = objective.id;
+          theater.assignedAirWings.push_back(wing.id);
+          objective.airWings.push_back(wing.id);
+          w.airWings.push_back(wing);
+          ++w.formationsAssignedCount;
+        }
+      }
+
+      const int alliedSupply = static_cast<int>(std::count_if(w.units.begin(), w.units.end(), [&](const Unit& u){ return u.team == p.id && u.supplyState == SupplyState::InSupply; }));
+      const int inTheaterForce = static_cast<int>(army.unitIds.size() + objective.navalTaskForces.size() * 2 + objective.airWings.size() * 2);
+      theater.supplyStatus = std::clamp((alliedSupply + 1.0f) / (inTheaterForce + 2.0f), 0.0f, 1.0f);
+      theater.threatLevel = std::clamp((float)military_strength(w, enemyTeam) / std::max(1.0f, (float)military_strength(w, p.id)), 0.2f, 3.0f);
+
+      if (theater.threatLevel > 1.25f) objective.outcome = OperationOutcome::Failure;
+      else if (theater.supplyStatus > 0.7f && theater.threatLevel < 1.0f) objective.outcome = OperationOutcome::Success;
+      else objective.outcome = OperationOutcome::InProgress;
+      if (objective.outcome != OperationOutcome::InProgress) ++w.operationalOutcomesRecorded;
+
+      theater.activeOperations.push_back(objective.id);
+      w.operationalObjectives.push_back(objective);
+      w.theaterCommands.push_back(theater);
+      ++w.theatersCreatedCount;
+      ++w.operationsExecutedCount;
+
+      w.operations.push_back({nextLegacyOpId++, p.id, objectiveType, target, w.tick, true});
+      ++w.logisticsOperationIssuedCount;
+    }
   }
 }
 
@@ -3154,6 +3283,11 @@ void apply_world_defaults(World& w) {
   w.roads.clear();
   w.tradeRoutes.clear();
   w.operations.clear();
+  w.theaterCommands.clear();
+  w.armyGroups.clear();
+  w.navalTaskForces.clear();
+  w.airWings.clear();
+  w.operationalObjectives.clear();
   w.railNodes.clear();
   w.railEdges.clear();
   w.railNetworks.clear();
@@ -3183,6 +3317,10 @@ void apply_world_defaults(World& w) {
   w.logisticsRoadCount = 0;
   w.logisticsTradeActiveCount = 0;
   w.logisticsOperationIssuedCount = 0;
+  w.theatersCreatedCount = 0;
+  w.operationsExecutedCount = 0;
+  w.formationsAssignedCount = 0;
+  w.operationalOutcomesRecorded = 0;
   w.railNodeCount = 0;
   w.railEdgeCount = 0;
   w.activeRailNetworks = 0;
@@ -3609,6 +3747,62 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
       w.espionageOps.push_back(op);
     }
   }
+  w.theaterCommands.clear();
+  if (j.contains("theaterCommands") && j["theaterCommands"].is_array()) for (const auto& jt : j["theaterCommands"]) {
+    TheaterCommand tc{};
+    tc.theaterId = jt.value("theaterId", 0u);
+    tc.owner = jt.value("owner", (uint16_t)0);
+    if (jt.contains("bounds") && jt["bounds"].is_array() && jt["bounds"].size() >= 4) tc.bounds = {jt["bounds"][0].get<int>(), jt["bounds"][1].get<int>(), jt["bounds"][2].get<int>(), jt["bounds"][3].get<int>()};
+    tc.priority = static_cast<TheaterPriority>(jt.value("priority", 1));
+    if (jt.contains("activeOperations")) tc.activeOperations = jt["activeOperations"].get<std::vector<uint32_t>>();
+    if (jt.contains("assignedArmyGroups")) tc.assignedArmyGroups = jt["assignedArmyGroups"].get<std::vector<uint32_t>>();
+    if (jt.contains("assignedNavalTaskForces")) tc.assignedNavalTaskForces = jt["assignedNavalTaskForces"].get<std::vector<uint32_t>>();
+    if (jt.contains("assignedAirWings")) tc.assignedAirWings = jt["assignedAirWings"].get<std::vector<uint32_t>>();
+    tc.supplyStatus = jt.value("supplyStatus", 1.0f);
+    tc.threatLevel = jt.value("threatLevel", 0.0f);
+    w.theaterCommands.push_back(std::move(tc));
+  }
+  w.armyGroups.clear();
+  if (j.contains("armyGroups") && j["armyGroups"].is_array()) for (const auto& ja : j["armyGroups"]) {
+    ArmyGroup ag{};
+    ag.id = ja.value("id", 0u); ag.owner = ja.value("owner", (uint16_t)0); ag.theaterId = ja.value("theaterId", 0u);
+    if (ja.contains("unitIds")) ag.unitIds = ja["unitIds"].get<std::vector<uint32_t>>();
+    ag.stance = static_cast<ArmyGroupStance>(ja.value("stance", 1));
+    ag.assignedObjective = ja.value("assignedObjective", 0u); ag.active = ja.value("active", true);
+    w.armyGroups.push_back(std::move(ag));
+  }
+  w.navalTaskForces.clear();
+  if (j.contains("navalTaskForces") && j["navalTaskForces"].is_array()) for (const auto& jn : j["navalTaskForces"]) {
+    NavalTaskForce nt{};
+    nt.id = jn.value("id", 0u); nt.owner = jn.value("owner", (uint16_t)0); nt.theaterId = jn.value("theaterId", 0u);
+    if (jn.contains("unitIds")) nt.unitIds = jn["unitIds"].get<std::vector<uint32_t>>();
+    nt.mission = static_cast<NavalMissionType>(jn.value("mission", 0));
+    nt.assignedObjective = jn.value("assignedObjective", 0u); nt.active = jn.value("active", true);
+    w.navalTaskForces.push_back(std::move(nt));
+  }
+  w.airWings.clear();
+  if (j.contains("airWings") && j["airWings"].is_array()) for (const auto& jw : j["airWings"]) {
+    AirWing aw{};
+    aw.id = jw.value("id", 0u); aw.owner = jw.value("owner", (uint16_t)0); aw.theaterId = jw.value("theaterId", 0u);
+    if (jw.contains("squadronIds")) aw.squadronIds = jw["squadronIds"].get<std::vector<uint32_t>>();
+    aw.mission = static_cast<AirMissionType>(jw.value("mission", 1));
+    aw.assignedObjective = jw.value("assignedObjective", 0u); aw.active = jw.value("active", true);
+    w.airWings.push_back(std::move(aw));
+  }
+  w.operationalObjectives.clear();
+  if (j.contains("operationalObjectives") && j["operationalObjectives"].is_array()) for (const auto& jo : j["operationalObjectives"]) {
+    OperationalObjective o{};
+    o.id = jo.value("id", 0u); o.owner = jo.value("owner", (uint16_t)0); o.theaterId = jo.value("theaterId", 0u);
+    o.objectiveType = static_cast<OperationType>(jo.value("objectiveType", 4));
+    if (jo.contains("targetRegion") && jo["targetRegion"].is_array() && jo["targetRegion"].size() >= 4) o.targetRegion = {jo["targetRegion"][0].get<int>(), jo["targetRegion"][1].get<int>(), jo["targetRegion"][2].get<int>(), jo["targetRegion"][3].get<int>()};
+    o.requiredForce = jo.value("requiredForce", 0u); o.startTick = jo.value("startTick", 0u); o.durationTicks = jo.value("durationTicks", 0u);
+    o.outcome = static_cast<OperationOutcome>(jo.value("outcome", 0));
+    o.active = jo.value("active", true);
+    if (jo.contains("armyGroups")) o.armyGroups = jo["armyGroups"].get<std::vector<uint32_t>>();
+    if (jo.contains("navalTaskForces")) o.navalTaskForces = jo["navalTaskForces"].get<std::vector<uint32_t>>();
+    if (jo.contains("airWings")) o.airWings = jo["airWings"].get<std::vector<uint32_t>>();
+    w.operationalObjectives.push_back(std::move(o));
+  }
   w.cities.clear();
   if (j.contains("cities")) for (const auto& c : j["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
   w.units.clear();
@@ -3804,6 +3998,16 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["airUnits"] = nlohmann::json::array(); for (const auto& a : w.airUnits) j["airUnits"].push_back({{"id",a.id},{"team",a.team},{"class",(int)a.cls},{"state",(int)a.state},{"pos",{a.pos.x,a.pos.y}},{"missionTarget",{a.missionTarget.x,a.missionTarget.y}},{"hp",a.hp},{"speed",a.speed},{"cooldownTicks",a.cooldownTicks},{"missionPerformed",a.missionPerformed}});
   j["strategicStrikes"] = nlohmann::json::array(); for (const auto& st : w.strategicStrikes) j["strategicStrikes"].push_back({{"id",st.id},{"team",st.team},{"type",(int)st.type},{"from",{st.from.x,st.from.y}},{"target",{st.target.x,st.target.y}},{"prepTicksRemaining",st.prepTicksRemaining},{"travelTicksRemaining",st.travelTicksRemaining},{"cooldownTicks",st.cooldownTicks},{"interceptionState",st.interceptionState},{"launched",st.launched},{"resolved",st.resolved}});
   j["denialZones"] = nlohmann::json::array(); for (const auto& dz : w.denialZones) j["denialZones"].push_back({{"id",dz.id},{"team",dz.team},{"pos",{dz.pos.x,dz.pos.y}},{"radius",dz.radius},{"ticksRemaining",dz.ticksRemaining}});
+  j["theaterCommands"] = nlohmann::json::array();
+  for (const auto& t : w.theaterCommands) j["theaterCommands"].push_back({{"theaterId",t.theaterId},{"owner",t.owner},{"bounds",{t.bounds.x,t.bounds.y,t.bounds.z,t.bounds.w}},{"priority",(int)t.priority},{"activeOperations",t.activeOperations},{"assignedArmyGroups",t.assignedArmyGroups},{"assignedNavalTaskForces",t.assignedNavalTaskForces},{"assignedAirWings",t.assignedAirWings},{"supplyStatus",t.supplyStatus},{"threatLevel",t.threatLevel}});
+  j["armyGroups"] = nlohmann::json::array();
+  for (const auto& a : w.armyGroups) j["armyGroups"].push_back({{"id",a.id},{"owner",a.owner},{"theaterId",a.theaterId},{"unitIds",a.unitIds},{"stance",(int)a.stance},{"assignedObjective",a.assignedObjective},{"active",a.active}});
+  j["navalTaskForces"] = nlohmann::json::array();
+  for (const auto& n : w.navalTaskForces) j["navalTaskForces"].push_back({{"id",n.id},{"owner",n.owner},{"theaterId",n.theaterId},{"unitIds",n.unitIds},{"mission",(int)n.mission},{"assignedObjective",n.assignedObjective},{"active",n.active}});
+  j["airWings"] = nlohmann::json::array();
+  for (const auto& a : w.airWings) j["airWings"].push_back({{"id",a.id},{"owner",a.owner},{"theaterId",a.theaterId},{"squadronIds",a.squadronIds},{"mission",(int)a.mission},{"assignedObjective",a.assignedObjective},{"active",a.active}});
+  j["operationalObjectives"] = nlohmann::json::array();
+  for (const auto& o : w.operationalObjectives) j["operationalObjectives"].push_back({{"id",o.id},{"owner",o.owner},{"theaterId",o.theaterId},{"objectiveType",(int)o.objectiveType},{"targetRegion",{o.targetRegion.x,o.targetRegion.y,o.targetRegion.z,o.targetRegion.w}},{"requiredForce",o.requiredForce},{"startTick",o.startTick},{"durationTicks",o.durationTicks},{"outcome",(int)o.outcome},{"active",o.active},{"armyGroups",o.armyGroups},{"navalTaskForces",o.navalTaskForces},{"airWings",o.airWings}});
   j["resourceNodes"] = nlohmann::json::array(); for (const auto& r : w.resourceNodes) { std::string t="Forest"; if (r.type==ResourceNodeType::Ore) t="Ore"; else if (r.type==ResourceNodeType::Farmable) t="Farmable"; else if (r.type==ResourceNodeType::Ruins) t="Ruins"; j["resourceNodes"].push_back({{"id",r.id},{"type",t},{"pos",{r.pos.x,r.pos.y}},{"amount",r.amount},{"owner",r.owner}}); }
   j["mountainRegions"] = nlohmann::json::array(); for (const auto& mr : w.mountainRegions) j["mountainRegions"].push_back({{"id",mr.id},{"minX",mr.minX},{"minY",mr.minY},{"maxX",mr.maxX},{"maxY",mr.maxY},{"peakCell",mr.peakCell},{"centerCell",mr.centerCell},{"cellCount",mr.cellCount}});
   j["surfaceDeposits"] = nlohmann::json::array(); for (const auto& sd : w.surfaceDeposits) j["surfaceDeposits"].push_back({{"id",sd.id},{"regionId",sd.regionId},{"mineral",(int)sd.mineral},{"cell",sd.cell},{"remaining",sd.remaining},{"owner",sd.owner}});
@@ -4580,6 +4784,10 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.logisticsRoadCount);
   hash_u32(h, w.logisticsTradeActiveCount);
   hash_u32(h, w.logisticsOperationIssuedCount);
+  hash_u32(h, w.theatersCreatedCount);
+  hash_u32(h, w.operationsExecutedCount);
+  hash_u32(h, w.formationsAssignedCount);
+  hash_u32(h, w.operationalOutcomesRecorded);
   hash_u32(h, w.railNodeCount);
   hash_u32(h, w.railEdgeCount);
   hash_u32(h, w.activeRailNetworks);
@@ -4618,6 +4826,35 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, (uint32_t)w.campaign.pendingBranchKey.size());
   for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
   for (const auto& o : w.operations) { hash_u32(h, o.id); hash_u32(h, o.team); hash_u32(h, (uint32_t)o.type); hash_float(h, o.target.x); hash_float(h, o.target.y); hash_u32(h, o.assignedTick); hash_u32(h, o.active ? 1u : 0u); }
+  for (const auto& t : w.theaterCommands) {
+    hash_u32(h, t.theaterId); hash_u32(h, t.owner); hash_u32(h, static_cast<uint32_t>(t.priority));
+    hash_u32(h, static_cast<uint32_t>(t.bounds.x)); hash_u32(h, static_cast<uint32_t>(t.bounds.y)); hash_u32(h, static_cast<uint32_t>(t.bounds.z)); hash_u32(h, static_cast<uint32_t>(t.bounds.w));
+    hash_float(h, t.supplyStatus); hash_float(h, t.threatLevel);
+    for (uint32_t id : t.activeOperations) hash_u32(h, id);
+    for (uint32_t id : t.assignedArmyGroups) hash_u32(h, id);
+    for (uint32_t id : t.assignedNavalTaskForces) hash_u32(h, id);
+    for (uint32_t id : t.assignedAirWings) hash_u32(h, id);
+  }
+  for (const auto& a : w.armyGroups) {
+    hash_u32(h, a.id); hash_u32(h, a.owner); hash_u32(h, a.theaterId); hash_u32(h, static_cast<uint32_t>(a.stance)); hash_u32(h, a.assignedObjective); hash_u32(h, a.active ? 1u : 0u);
+    for (uint32_t id : a.unitIds) hash_u32(h, id);
+  }
+  for (const auto& n : w.navalTaskForces) {
+    hash_u32(h, n.id); hash_u32(h, n.owner); hash_u32(h, n.theaterId); hash_u32(h, static_cast<uint32_t>(n.mission)); hash_u32(h, n.assignedObjective); hash_u32(h, n.active ? 1u : 0u);
+    for (uint32_t id : n.unitIds) hash_u32(h, id);
+  }
+  for (const auto& a : w.airWings) {
+    hash_u32(h, a.id); hash_u32(h, a.owner); hash_u32(h, a.theaterId); hash_u32(h, static_cast<uint32_t>(a.mission)); hash_u32(h, a.assignedObjective); hash_u32(h, a.active ? 1u : 0u);
+    for (uint32_t id : a.squadronIds) hash_u32(h, id);
+  }
+  for (const auto& o : w.operationalObjectives) {
+    hash_u32(h, o.id); hash_u32(h, o.owner); hash_u32(h, o.theaterId); hash_u32(h, static_cast<uint32_t>(o.objectiveType));
+    hash_u32(h, static_cast<uint32_t>(o.targetRegion.x)); hash_u32(h, static_cast<uint32_t>(o.targetRegion.y)); hash_u32(h, static_cast<uint32_t>(o.targetRegion.z)); hash_u32(h, static_cast<uint32_t>(o.targetRegion.w));
+    hash_u32(h, o.requiredForce); hash_u32(h, o.startTick); hash_u32(h, o.durationTicks); hash_u32(h, static_cast<uint32_t>(o.outcome)); hash_u32(h, o.active ? 1u : 0u);
+    for (uint32_t id : o.armyGroups) hash_u32(h, id);
+    for (uint32_t id : o.navalTaskForces) hash_u32(h, id);
+    for (uint32_t id : o.airWings) hash_u32(h, id);
+  }
   for (const auto& n : w.railNodes) { hash_u32(h, n.id); hash_u32(h, n.owner); hash_u32(h, (uint32_t)n.type); hash_u32(h, (uint32_t)n.tile.x); hash_u32(h, (uint32_t)n.tile.y); hash_u32(h, n.networkId); hash_u32(h, n.active?1u:0u); }
   for (const auto& e : w.railEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.aNode); hash_u32(h, e.bNode); hash_u32(h, e.quality); hash_u32(h, e.bridge?1u:0u); hash_u32(h, e.tunnel?1u:0u); hash_u32(h, e.disrupted?1u:0u); }
   for (const auto& rn : w.railNetworks) { hash_u32(h, rn.id); hash_u32(h, rn.owner); hash_u32(h, rn.nodeCount); hash_u32(h, rn.edgeCount); hash_u32(h, rn.active?1u:0u); }

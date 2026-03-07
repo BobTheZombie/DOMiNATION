@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 
 namespace dom::sim {
 
@@ -106,7 +107,12 @@ enum class DetectorType : uint8_t { RadarTower, MobileRadar, ReconDrone, NavalSe
 enum class StrikeType : uint8_t { TacticalMissile, StrategicMissile, StrategicBomberStrike, AbstractWMD };
 
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
-enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
+enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard, Encirclement, NavalBlockade, StrategicBombing, MissileStrikeCampaign };
+enum class TheaterPriority : uint8_t { Low, Medium, High, Critical };
+enum class ArmyGroupStance : uint8_t { Offensive, Defensive };
+enum class NavalMissionType : uint8_t { Patrol, Escort, Assault };
+enum class AirMissionType : uint8_t { Bombing, Interception };
+enum class OperationOutcome : uint8_t { InProgress, Success, Failure };
 enum class TerrainClass : uint8_t { Land, ShallowWater, DeepWater };
 enum class RailNodeType : uint8_t { Junction, Station, Depot };
 enum class TrainType : uint8_t { Supply, Freight, Armored };
@@ -171,6 +177,11 @@ struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry};
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
 struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
 struct OperationOrder { uint32_t id{}; uint16_t team{}; OperationType type{OperationType::RallyAndPush}; glm::vec2 target{}; uint32_t assignedTick{0}; bool active{true}; };
+struct ArmyGroup { uint32_t id{0}; uint16_t owner{0}; uint32_t theaterId{0}; std::vector<uint32_t> unitIds; ArmyGroupStance stance{ArmyGroupStance::Defensive}; uint32_t assignedObjective{0}; bool active{true}; };
+struct NavalTaskForce { uint32_t id{0}; uint16_t owner{0}; uint32_t theaterId{0}; std::vector<uint32_t> unitIds; NavalMissionType mission{NavalMissionType::Patrol}; uint32_t assignedObjective{0}; bool active{true}; };
+struct AirWing { uint32_t id{0}; uint16_t owner{0}; uint32_t theaterId{0}; std::vector<uint32_t> squadronIds; AirMissionType mission{AirMissionType::Interception}; uint32_t assignedObjective{0}; bool active{true}; };
+struct TheaterCommand { uint32_t theaterId{0}; uint16_t owner{0}; glm::ivec4 bounds{}; TheaterPriority priority{TheaterPriority::Medium}; std::vector<uint32_t> activeOperations; std::vector<uint32_t> assignedArmyGroups; std::vector<uint32_t> assignedNavalTaskForces; std::vector<uint32_t> assignedAirWings; float supplyStatus{1.0f}; float threatLevel{0.0f}; };
+struct OperationalObjective { uint32_t id{0}; uint16_t owner{0}; uint32_t theaterId{0}; OperationType objectiveType{OperationType::RallyAndPush}; glm::ivec4 targetRegion{}; uint32_t requiredForce{0}; uint32_t startTick{0}; uint32_t durationTicks{0}; OperationOutcome outcome{OperationOutcome::InProgress}; bool active{true}; std::vector<uint32_t> armyGroups; std::vector<uint32_t> navalTaskForces; std::vector<uint32_t> airWings; };
 struct RailNode { uint32_t id{0}; uint16_t owner{UINT16_MAX}; RailNodeType type{RailNodeType::Junction}; glm::ivec2 tile{}; uint32_t networkId{0}; bool active{true}; };
 struct RailEdge { uint32_t id{0}; uint16_t owner{UINT16_MAX}; uint32_t aNode{0}; uint32_t bNode{0}; uint8_t quality{1}; bool bridge{false}; bool tunnel{false}; bool disrupted{false}; };
 struct RailNetwork { uint32_t id{0}; uint16_t owner{UINT16_MAX}; uint32_t nodeCount{0}; uint32_t edgeCount{0}; bool active{false}; };
@@ -384,6 +395,11 @@ struct World {
   std::vector<uint8_t> fogMaskByPlayer;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
+  std::vector<TheaterCommand> theaterCommands;
+  std::vector<ArmyGroup> armyGroups;
+  std::vector<NavalTaskForce> navalTaskForces;
+  std::vector<AirWing> airWings;
+  std::vector<OperationalObjective> operationalObjectives;
   std::vector<RailNode> railNodes; std::vector<RailEdge> railEdges; std::vector<RailNetwork> railNetworks; std::vector<Train> trains;
   std::vector<IndustrialRecipe> industrialRecipes;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
@@ -411,6 +427,7 @@ struct World {
   uint32_t territoryRecomputeCount{0}; uint32_t aiDecisionCount{0}; uint32_t completedBuildingsCount{0}; uint32_t trainedUnitsViaQueue{0}; uint32_t researchStartedCount{0}; uint32_t navVersion{1}; uint32_t flowFieldGeneratedCount{0}; uint32_t flowFieldCacheHitCount{0}; uint32_t groupMoveCommandCount{0}; uint32_t unitsReachedSlotCount{0}; uint32_t stuckMoveAssertions{0}; uint32_t totalDamageDealtPermille{0}; uint32_t combatEngagementCount{0}; uint32_t targetSwitchCount{0}; uint32_t chaseLimitBreakCount{0}; uint32_t buildingDamageEvents{0}; uint32_t unitDeathEvents{0}; uint32_t aiRetreatCount{0}; uint32_t focusFireEvents{0}; uint32_t combatTicks{0}; uint32_t rejectedCommandCount{0};
   uint32_t triggerExecutionCount{0}; uint32_t objectiveStateChangeCount{0};
   uint32_t logisticsRoadCount{0}; uint32_t logisticsTradeActiveCount{0}; uint32_t logisticsOperationIssuedCount{0};
+  uint32_t theatersCreatedCount{0}; uint32_t operationsExecutedCount{0}; uint32_t formationsAssignedCount{0}; uint32_t operationalOutcomesRecorded{0};
   uint32_t diplomacyEventCount{0}; uint32_t postureChangeCount{0};
   uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
   uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "seed": 424242,
+  "map": {"width": 128, "height": 128},
+  "players": [
+    {"id": 0, "isHuman": false, "isCPU": true, "civilization": "iron_phalanx", "team": 0, "popCap": 60,
+     "startingResources": {"Food": 1200, "Wood": 1000, "Metal": 1200, "Wealth": 800, "Knowledge": 650, "Oil": 700}},
+    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "scholar_dynasty", "team": 1, "popCap": 60,
+     "startingResources": {"Food": 1200, "Wood": 1000, "Metal": 1200, "Wealth": 800, "Knowledge": 650, "Oil": 700}}
+  ],
+  "placements": {
+    "cities": [
+      {"id": 1, "team": 0, "pos": [20, 22], "level": 2, "capital": true},
+      {"id": 2, "team": 0, "pos": [18, 88], "level": 2, "capital": false},
+      {"id": 3, "team": 1, "pos": [108, 34], "level": 2, "capital": false},
+      {"id": 4, "team": 1, "pos": [102, 102], "level": 2, "capital": true}
+    ],
+    "buildings": [
+      {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 22], "underConstruction": false, "hp": 2200},
+      {"id": 11, "team": 0, "type": "Port", "pos": [24, 20], "underConstruction": false, "hp": 1000},
+      {"id": 12, "team": 0, "type": "Airbase", "pos": [26, 18], "underConstruction": false, "hp": 1000},
+      {"id": 20, "team": 1, "type": "CityCenter", "pos": [102, 102], "underConstruction": false, "hp": 2200},
+      {"id": 21, "team": 1, "type": "Port", "pos": [98, 104], "underConstruction": false, "hp": 1000},
+      {"id": 22, "team": 1, "type": "Airbase", "pos": [96, 98], "underConstruction": false, "hp": 1000}
+    ],
+    "units": [
+      {"id": 100, "team": 0, "type": "Infantry", "pos": [28, 28]},
+      {"id": 101, "team": 0, "type": "Infantry", "pos": [30, 34]},
+      {"id": 102, "team": 0, "type": "Archer", "pos": [22, 84]},
+      {"id": 103, "team": 0, "type": "Cavalry", "pos": [24, 86]},
+      {"id": 104, "team": 0, "type": "TransportShip", "pos": [34, 20]},
+      {"id": 105, "team": 0, "type": "LightWarship", "pos": [36, 22]},
+      {"id": 200, "team": 1, "type": "Infantry", "pos": [100, 30]},
+      {"id": 201, "team": 1, "type": "Infantry", "pos": [102, 36]},
+      {"id": 202, "team": 1, "type": "Archer", "pos": [98, 96]},
+      {"id": 203, "team": 1, "type": "Cavalry", "pos": [100, 98]},
+      {"id": 204, "team": 1, "type": "TransportShip", "pos": [92, 108]},
+      {"id": 205, "team": 1, "type": "HeavyWarship", "pos": [90, 106]}
+    ]
+  },
+  "airUnits": [
+    {"id": 1, "team": 0, "class": 2, "state": 0, "pos": [24, 24], "missionTarget": [102, 102], "hp": 120, "speed": 6.2, "cooldownTicks": 0, "missionPerformed": false},
+    {"id": 2, "team": 1, "class": 3, "state": 0, "pos": [98, 98], "missionTarget": [20, 22], "hp": 130, "speed": 6.0, "cooldownTicks": 0, "missionPerformed": false}
+  ],
+  "rulesOverrides": {"timeLimit": 12000, "disabledVictoryTypes": []}
+}
