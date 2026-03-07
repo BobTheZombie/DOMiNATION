@@ -3,6 +3,7 @@
 #include "engine/editor/terrain_editor.h"
 
 #include <algorithm>
+#include <vector>
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -45,6 +46,30 @@ void draw_scenario_editor(dom::sim::World& world, const glm::vec2& cameraCenter,
         else dom::sim::declare_war(world, 0, 1);
       }
     }
+  }
+
+  ImGui::SeparatorText("Mythic guardian sites");
+  if (!world.guardianDefinitions.empty()) {
+    std::vector<const char*> guardianNames;
+    guardianNames.reserve(world.guardianDefinitions.size());
+    for (const auto& g : world.guardianDefinitions) guardianNames.push_back(g.displayName.c_str());
+    state.selectedGuardianDef = std::clamp(state.selectedGuardianDef, 0, (int)guardianNames.size() - 1);
+    ImGui::Combo("Guardian", &state.selectedGuardianDef, guardianNames.data(), (int)guardianNames.size());
+    if (ImGui::Button("Place guardian site at camera")) {
+      const auto& gd = world.guardianDefinitions[static_cast<size_t>(state.selectedGuardianDef)];
+      uint32_t nextId = 1;
+      for (const auto& s : world.guardianSites) nextId = std::max(nextId, s.instanceId + 1);
+      dom::sim::GuardianSiteInstance s{};
+      s.instanceId = nextId;
+      s.guardianId = gd.guardianId;
+      s.siteType = gd.siteType;
+      s.pos = cameraCenter;
+      s.regionId = -1;
+      s.scenarioPlaced = true;
+      world.guardianSites.push_back(std::move(s));
+    }
+  } else {
+    ImGui::TextUnformatted("No guardian definitions loaded.");
   }
 
   ImGui::SeparatorText("Save scenario");

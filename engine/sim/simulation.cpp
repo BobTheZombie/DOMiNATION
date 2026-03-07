@@ -88,6 +88,80 @@ std::vector<ReplayCommand> gReplayCommands;
 std::vector<GameplayEvent> gGameplayEvents;
 int gWorkerThreads = 1;
 
+GuardianSiteType parse_guardian_site_type(const std::string& v) {
+  if (v == "abyssal_trench") return GuardianSiteType::AbyssalTrench;
+  if (v == "dune_nest") return GuardianSiteType::DuneNest;
+  if (v == "sacred_grove") return GuardianSiteType::SacredGrove;
+  if (v == "frozen_cavern") return GuardianSiteType::FrozenCavern;
+  return GuardianSiteType::YetiLair;
+}
+
+const char* guardian_site_type_name(GuardianSiteType t) {
+  switch (t) {
+    case GuardianSiteType::YetiLair: return "yeti_lair";
+    case GuardianSiteType::AbyssalTrench: return "abyssal_trench";
+    case GuardianSiteType::DuneNest: return "dune_nest";
+    case GuardianSiteType::SacredGrove: return "sacred_grove";
+    case GuardianSiteType::FrozenCavern: return "frozen_cavern";
+  }
+  return "yeti_lair";
+}
+
+GuardianSpawnMode parse_guardian_spawn_mode(const std::string& v) { return v == "scenario_start" ? GuardianSpawnMode::ScenarioStart : GuardianSpawnMode::OnDiscovery; }
+GuardianDiscoveryMode parse_guardian_discovery_mode(const std::string& v) {
+  if (v == "fog_reveal") return GuardianDiscoveryMode::FogReveal;
+  if (v == "underground_discovery") return GuardianDiscoveryMode::UndergroundDiscovery;
+  if (v == "scripted_reveal") return GuardianDiscoveryMode::ScriptedReveal;
+  return GuardianDiscoveryMode::Proximity;
+}
+GuardianBehaviorMode parse_guardian_behavior_mode(const std::string& v) {
+  if (v == "neutral_encounter") return GuardianBehaviorMode::NeutralEncounter;
+  if (v == "hostile_encounter") return GuardianBehaviorMode::HostileEncounter;
+  return GuardianBehaviorMode::DormantUntilDiscovery;
+}
+GuardianJoinMode parse_guardian_join_mode(const std::string& v) {
+  if (v == "remain_neutral") return GuardianJoinMode::RemainNeutral;
+  if (v == "never_join") return GuardianJoinMode::NeverJoin;
+  return GuardianJoinMode::DiscovererControl;
+}
+
+const char* guardian_spawn_mode_name(GuardianSpawnMode m) { return m == GuardianSpawnMode::ScenarioStart ? "scenario_start" : "on_discovery"; }
+const char* guardian_discovery_mode_name(GuardianDiscoveryMode m) {
+  switch (m) {
+    case GuardianDiscoveryMode::Proximity: return "proximity";
+    case GuardianDiscoveryMode::FogReveal: return "fog_reveal";
+    case GuardianDiscoveryMode::UndergroundDiscovery: return "underground_discovery";
+    case GuardianDiscoveryMode::ScriptedReveal: return "scripted_reveal";
+  }
+  return "proximity";
+}
+const char* guardian_behavior_mode_name(GuardianBehaviorMode m) {
+  switch (m) {
+    case GuardianBehaviorMode::DormantUntilDiscovery: return "dormant_until_discovery";
+    case GuardianBehaviorMode::NeutralEncounter: return "neutral_encounter";
+    case GuardianBehaviorMode::HostileEncounter: return "hostile_encounter";
+  }
+  return "dormant_until_discovery";
+}
+const char* guardian_join_mode_name(GuardianJoinMode m) {
+  switch (m) {
+    case GuardianJoinMode::DiscovererControl: return "discoverer_control";
+    case GuardianJoinMode::RemainNeutral: return "remain_neutral";
+    case GuardianJoinMode::NeverJoin: return "never_join";
+  }
+  return "discoverer_control";
+}
+
+const GuardianDefinition* find_guardian_definition(const World& w, const std::string& id) {
+  auto it = std::find_if(w.guardianDefinitions.begin(), w.guardianDefinitions.end(), [&](const GuardianDefinition& d){ return d.guardianId == id; });
+  return it == w.guardianDefinitions.end() ? nullptr : &(*it);
+}
+
+int find_guardian_site_index(const World& w, uint32_t siteInstanceId) {
+  for (size_t i = 0; i < w.guardianSites.size(); ++i) if (w.guardianSites[i].instanceId == siteInstanceId) return static_cast<int>(i);
+  return -1;
+}
+
 #ifdef DOM_HAS_LUA
 lua_State* gLuaState = nullptr;
 World* gLuaWorld = nullptr;
@@ -125,6 +199,23 @@ int lua_get_objective_state(lua_State* L) {
   for (const auto& o : gLuaWorld->objectives) if (o.id == oid) { lua_pushinteger(L, (int)o.state); return 1; }
   lua_pushinteger(L, 0); return 1;
 }
+int lua_activate_guardian_site(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  activate_guardian_site(*gLuaWorld, static_cast<uint32_t>(luaL_checkinteger(L, 1)));
+  return 0;
+}
+int lua_reveal_guardian_site(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const uint32_t id = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+  const uint16_t discoverer = static_cast<uint16_t>(luaL_optinteger(L, 2, 0));
+  reveal_guardian_site(*gLuaWorld, id, discoverer);
+  return 0;
+}
+int lua_assign_guardian_owner(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  assign_guardian_owner(*gLuaWorld, static_cast<uint32_t>(luaL_checkinteger(L, 1)), static_cast<uint16_t>(luaL_checkinteger(L, 2)));
+  return 0;
+}
 void ensure_lua(World& w) {
   if (gLuaState) return;
   gLuaState = luaL_newstate();
@@ -140,6 +231,9 @@ void ensure_lua(World& w) {
   lua_register(gLuaState, "get_objective_state", lua_get_objective_state);
   lua_register(gLuaState, "get_player_alive", lua_get_player_alive);
   lua_register(gLuaState, "get_world_tension", lua_get_world_tension);
+  lua_register(gLuaState, "activate_guardian_site", lua_activate_guardian_site);
+  lua_register(gLuaState, "reveal_guardian_site", lua_reveal_guardian_site);
+  lua_register(gLuaState, "assign_guardian_owner", lua_assign_guardian_owner);
   if (!w.mission.luaScriptInline.empty()) luaL_dostring(gLuaState, w.mission.luaScriptInline.c_str());
   else if (!w.mission.luaScriptFile.empty()) luaL_dofile(gLuaState, w.mission.luaScriptFile.c_str());
 }
@@ -248,6 +342,10 @@ void ensure_chunk_layout(const World& w);
 void process_nav_requests(World& w);
 void apply_nav_results(World& w);
 void rebuild_chunk_membership_impl(const World& w);
+void load_guardian_defs(World& w);
+void generate_guardian_sites(World& w);
+void update_guardian_sites(World& w);
+uint32_t spawn_guardian_unit(World& w, GuardianSiteInstance& site, const GuardianDefinition& def);
 
 float unit_vision_radius(const Unit& u);
 float building_vision_radius(BuildingType type);
@@ -800,7 +898,57 @@ void load_defs_once() {
     gAgeResearchTime = j["ageUp"].value("researchTime", gAgeResearchTime);
     if (j["ageUp"].contains("cost")) parseCost(j["ageUp"]["cost"], gAgeResearchCost);
   }
+
+  std::ifstream g("content/mythic_guardians.json");
+  if (g.good()) {
+    nlohmann::json gj; g >> gj;
+    if (gj.contains("guardians") && gj["guardians"].is_array()) {
+      // loaded per world in initialize/load path; this parse validates content shape once.
+      for (const auto& gd : gj["guardians"]) {
+        (void)gd.value("guardian_id", std::string{});
+      }
+    }
+  }
   gDefsLoaded = true;
+}
+
+void load_guardian_defs(World& w) {
+  w.guardianDefinitions.clear();
+  std::ifstream g("content/mythic_guardians.json");
+  if (!g.good()) return;
+  nlohmann::json j; g >> j;
+  if (!j.contains("guardians") || !j["guardians"].is_array()) return;
+  for (const auto& gd : j["guardians"]) {
+    GuardianDefinition d{};
+    d.guardianId = gd.value("guardian_id", std::string{});
+    if (d.guardianId.empty()) continue;
+    d.displayName = gd.value("display_name", d.guardianId);
+    d.biomeRequirement = static_cast<uint8_t>(parse_biome_type(gd.value("biome_requirement", std::string("snow_mountains"))));
+    d.siteType = parse_guardian_site_type(gd.value("site_type", std::string("yeti_lair")));
+    d.spawnMode = parse_guardian_spawn_mode(gd.value("spawn_mode", std::string("on_discovery")));
+    d.maxPerMap = gd.value("max_per_map", 1u);
+    d.unique = gd.value("unique", true);
+    d.discoveryMode = parse_guardian_discovery_mode(gd.value("discovery_mode", std::string("proximity")));
+    d.behaviorMode = parse_guardian_behavior_mode(gd.value("behavior_mode", std::string("dormant_until_discovery")));
+    d.joinMode = parse_guardian_join_mode(gd.value("join_mode", std::string("discoverer_control")));
+    d.associatedUnitDefinitionId = gd.value("associated_unit_definition", std::string{});
+    d.rewardHook = gd.value("reward_hook", std::string{});
+    d.effectHook = gd.value("effect_hook", std::string{});
+    d.scenarioOnly = gd.value("scenario_only", false);
+    d.procedural = gd.value("procedural", true);
+    d.rarityPermille = gd.value("rarity_permille", 8);
+    d.minSpacingCells = gd.value("min_spacing_cells", 20);
+    d.discoveryRadius = gd.value("discovery_radius", 5.0f);
+    if (gd.contains("unit") && gd["unit"].is_object()) {
+      const auto& u = gd["unit"];
+      d.unitHp = u.value("hp", d.unitHp);
+      d.unitAttack = u.value("attack", d.unitAttack);
+      d.unitRange = u.value("range", d.unitRange);
+      d.unitSpeed = u.value("speed", d.unitSpeed);
+    }
+    w.guardianDefinitions.push_back(std::move(d));
+  }
+  std::sort(w.guardianDefinitions.begin(), w.guardianDefinitions.end(), [](const GuardianDefinition& a, const GuardianDefinition& b){ return a.guardianId < b.guardianId; });
 }
 
 bool can_afford(const std::array<float, static_cast<size_t>(Resource::Count)>& pool, const std::array<float, static_cast<size_t>(Resource::Count)>& cost) {
@@ -1785,6 +1933,146 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   return id;
 }
 
+uint32_t spawn_guardian_unit(World& w, GuardianSiteInstance& site, const GuardianDefinition& def) {
+  const uint16_t owner = site.owner == UINT16_MAX ? 0 : site.owner;
+  const uint32_t uid = spawn_unit(w, owner, UnitType::Siege, site.pos + glm::vec2{0.5f, 0.0f});
+  for (auto& u : w.units) {
+    if (u.id != uid) continue;
+    u.hp = def.unitHp;
+    u.attack = def.unitAttack;
+    u.range = def.unitRange;
+    u.speed = def.unitSpeed;
+    u.role = UnitRole::Siege;
+    u.preferredTargetRole = UnitRole::Building;
+    u.vsRoleMultiplierPermille = {1300,1600,1200,1200,1000,1900,1000,1000};
+    u.definitionId = def.associatedUnitDefinitionId.empty() ? def.guardianId : def.associatedUnitDefinitionId;
+    break;
+  }
+  return uid;
+}
+
+bool assign_guardian_owner(World& world, uint32_t siteInstanceId, uint16_t player) {
+  const int idx = find_guardian_site_index(world, siteInstanceId);
+  if (idx < 0 || player >= world.players.size()) return false;
+  auto& site = world.guardianSites[static_cast<size_t>(idx)];
+  site.owner = player;
+  for (auto& u : world.units) {
+    if (u.definitionId != site.guardianId) continue;
+    if (dist(u.pos, site.pos) > 6.0f) continue;
+    u.team = player;
+    break;
+  }
+  return true;
+}
+
+bool activate_guardian_site(World& world, uint32_t siteInstanceId) {
+  const int idx = find_guardian_site_index(world, siteInstanceId);
+  if (idx < 0) return false;
+  auto& site = world.guardianSites[static_cast<size_t>(idx)];
+  const GuardianDefinition* def = find_guardian_definition(world, site.guardianId);
+  if (!def || site.spawned || site.oneShotUsed) return false;
+  spawn_guardian_unit(world, site, *def);
+  site.spawned = true;
+  site.siteActive = false;
+  site.siteDepleted = true;
+  ++world.guardiansSpawned;
+  emit_event(world, GameplayEventType::GuardianJoined, site.owner, site.owner, site.instanceId, def->displayName + " has emerged");
+  if (def->joinMode == GuardianJoinMode::DiscovererControl && site.owner < world.players.size()) {
+    ++world.guardiansJoined;
+  }
+  return true;
+}
+
+bool reveal_guardian_site(World& world, uint32_t siteInstanceId, uint16_t discoverer) {
+  const int idx = find_guardian_site_index(world, siteInstanceId);
+  if (idx < 0) return false;
+  auto& site = world.guardianSites[static_cast<size_t>(idx)];
+  const GuardianDefinition* def = find_guardian_definition(world, site.guardianId);
+  if (!def) return false;
+  if (site.discovered) return true;
+  site.discovered = true;
+  site.owner = discoverer;
+  ++world.guardiansDiscovered;
+  emit_event(world, GameplayEventType::GuardianDiscovered, discoverer, discoverer, site.instanceId,
+    "Mythic guardian discovered: " + def->displayName);
+  if (def->spawnMode == GuardianSpawnMode::OnDiscovery) {
+    activate_guardian_site(world, site.instanceId);
+    if (def->joinMode == GuardianJoinMode::DiscovererControl) assign_guardian_owner(world, site.instanceId, discoverer);
+  }
+  return true;
+}
+
+void generate_guardian_sites(World& w) {
+  uint32_t nextId = 1;
+  for (const auto& s : w.guardianSites) nextId = std::max(nextId, s.instanceId + 1);
+  std::mt19937 rng(w.seed ^ 0x9e3779b9u);
+  std::uniform_int_distribution<int> chance(0, 999);
+  for (const auto& d : w.guardianDefinitions) {
+    if (!d.procedural || d.scenarioOnly) continue;
+    uint32_t existing = 0;
+    for (const auto& s : w.guardianSites) if (s.guardianId == d.guardianId) ++existing;
+    if (d.unique && existing > 0) continue;
+    if (existing >= d.maxPerMap) continue;
+    std::vector<int> candidates;
+    for (int i = 0; i < w.width * w.height; ++i) {
+      if (static_cast<uint8_t>(biome_at(w, i)) != d.biomeRequirement) continue;
+      if (chance(rng) >= d.rarityPermille) continue;
+      bool spaced = true;
+      glm::vec2 p{(i % w.width) + 0.5f, (i / w.width) + 0.5f};
+      for (const auto& s : w.guardianSites) if (glm::length(s.pos - p) < (float)d.minSpacingCells) { spaced = false; break; }
+      if (spaced) candidates.push_back(i);
+    }
+    std::sort(candidates.begin(), candidates.end());
+    const uint32_t need = std::min<uint32_t>(d.maxPerMap - existing, d.unique ? 1u : d.maxPerMap);
+    for (uint32_t k = 0; k < need && k < candidates.size(); ++k) {
+      const int cell = candidates[k];
+      GuardianSiteInstance s{};
+      s.instanceId = nextId++;
+      s.guardianId = d.guardianId;
+      s.siteType = d.siteType;
+      s.pos = {(cell % w.width) + 0.5f, (cell / w.width) + 0.5f};
+      s.regionId = (cell >= 0 && cell < (int)w.mountainRegionByCell.size()) ? w.mountainRegionByCell[(size_t)cell] : -1;
+      w.guardianSites.push_back(std::move(s));
+    }
+  }
+  std::sort(w.guardianSites.begin(), w.guardianSites.end(), [](const GuardianSiteInstance& a, const GuardianSiteInstance& b){ return a.instanceId < b.instanceId; });
+}
+
+void update_guardian_sites(World& w) {
+  for (auto& s : w.guardianSites) {
+    if (!s.siteActive || s.siteDepleted || s.oneShotUsed) continue;
+    const GuardianDefinition* def = find_guardian_definition(w, s.guardianId);
+    if (!def) continue;
+    if (s.discovered) continue;
+    bool discovered = false;
+    uint16_t discoverer = 0;
+    for (const auto& u : w.units) {
+      if (u.hp <= 0 || u.embarked) continue;
+      if (glm::length(u.pos - s.pos) <= def->discoveryRadius) {
+        discovered = true;
+        discoverer = u.team;
+        break;
+      }
+      const int c = cell_of(w, u.pos);
+      if (def->discoveryMode == GuardianDiscoveryMode::FogReveal && c >= 0 && c < (int)w.fog.size() && w.fog[(size_t)c] == 0) {
+        discovered = true;
+        discoverer = u.team;
+        break;
+      }
+      if (def->discoveryMode == GuardianDiscoveryMode::UndergroundDiscovery) {
+        for (const auto& n : w.undergroundNodes) {
+          if (!n.active || n.owner != u.team || (int)n.regionId != s.regionId) continue;
+          discovered = true;
+          discoverer = u.team;
+          break;
+        }
+      }
+      if (discovered) break;
+    }
+    if (discovered) reveal_guardian_site(w, s.instanceId, discoverer);
+  }
+}
+
 
 void apply_match_end(World& w, VictoryCondition condition, uint16_t winner, bool scoreTieBreak) {
   if (w.match.phase != MatchPhase::Running) return;
@@ -2209,6 +2497,11 @@ void apply_world_defaults(World& w) {
   w.objectiveLog.clear();
   w.mission = {};
   w.missionRuntime = {};
+  w.guardianSites.clear();
+  w.guardiansDiscovered = 0;
+  w.guardiansSpawned = 0;
+  w.guardiansJoined = 0;
+  w.guardiansKilled = 0;
   w.roads.clear();
   w.tradeRoutes.clear();
   w.operations.clear();
@@ -2358,6 +2651,7 @@ void run_task_graph(TaskGraph& graph) {
 void initialize_world(World& w, uint32_t seed) {
 
   load_defs_once();
+  load_guardian_defs(w);
   gNav.cache.clear();
   gPendingNavRequests.clear();
   gCompletedNavResults.clear();
@@ -2410,6 +2704,8 @@ void initialize_world(World& w, uint32_t seed) {
   Building c1{}; c1.id = 2; c1.team = 1; c1.type = BuildingType::CityCenter; c1.pos = {92.0f, 92.0f}; c1.size = gBuildDefs[bidx(c1.type)].size; c1.underConstruction = false; c1.buildProgress = 1.0f; c1.buildTime = gBuildDefs[bidx(c1.type)].buildTime; c1.maxHp = 2200.0f; c1.hp = c1.maxHp; w.buildings.push_back(c1);
   w.mission = {};
   w.missionRuntime = {};
+  w.guardianSites.clear();
+  generate_guardian_sites(w);
   recompute_population(w);
   recompute_territory(w);
   recompute_fog(w);
@@ -2545,6 +2841,40 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   w.roads.clear();
   if (j.contains("roads")) { uint32_t rid=1; for (const auto& rr : j["roads"]) { RoadSegment r{}; r.id = rr.value("id", rid++); r.owner = rr.value("owner", (uint16_t)UINT16_MAX); r.a = {rr["a"][0].get<int>(), rr["a"][1].get<int>()}; r.b = {rr["b"][0].get<int>(), rr["b"][1].get<int>()}; r.quality = rr.value("quality", 1); w.roads.push_back(r);} }
   if (j.contains("resourceNodes")) { uint32_t id=1; for (const auto& r : j["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",id++); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} }
+  if (j.contains("mythicGuardians") && j["mythicGuardians"].is_object()) {
+    const auto& mg = j["mythicGuardians"];
+    if (mg.contains("sites") && mg["sites"].is_array()) {
+      w.guardianSites.clear();
+      uint32_t sid = 1;
+      for (const auto& sj : mg["sites"]) {
+        GuardianSiteInstance s{};
+        s.instanceId = sj.value("instance_id", sid++);
+        s.guardianId = sj.value("guardian_id", std::string("snow_yeti"));
+        s.siteType = parse_guardian_site_type(sj.value("site_type", std::string("yeti_lair")));
+        s.pos = {sj["pos"][0].get<float>(), sj["pos"][1].get<float>()};
+        s.regionId = sj.value("region_id", -1);
+        s.nodeId = sj.value("node_id", -1);
+        s.discovered = sj.value("discovered", false);
+        s.alive = sj.value("alive", true);
+        s.owner = sj.value("owner", (uint16_t)UINT16_MAX);
+        s.siteActive = sj.value("site_active", true);
+        s.siteDepleted = sj.value("site_depleted", false);
+        s.spawned = sj.value("spawned", false);
+        s.behaviorState = sj.value("behavior_state", (uint8_t)0);
+        s.cooldownTicks = sj.value("cooldown_ticks", 0u);
+        s.oneShotUsed = sj.value("one_shot_used", false);
+        s.scenarioPlaced = true;
+        w.guardianSites.push_back(std::move(s));
+      }
+    }
+    if (mg.contains("counters") && mg["counters"].is_object()) {
+      const auto& c = mg["counters"];
+      w.guardiansDiscovered = c.value("discovered", w.guardiansDiscovered);
+      w.guardiansSpawned = c.value("spawned", w.guardiansSpawned);
+      w.guardiansJoined = c.value("joined", w.guardiansJoined);
+      w.guardiansKilled = c.value("killed", w.guardiansKilled);
+    }
+  }
   if (j.contains("placements")) {
     const auto& pl = j["placements"];
     if (pl.contains("cities")) for (const auto& c : pl["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
@@ -2648,6 +2978,16 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   }
   if (w.deepDeposits.empty() || w.undergroundNodes.empty() || w.undergroundEdges.empty()) rebuild_mountain_deposits(w);
 
+  for (auto& s : w.guardianSites) {
+    if (s.spawned) {
+      const GuardianDefinition* d = find_guardian_definition(w, s.guardianId);
+      if (d) {
+        if (s.owner == UINT16_MAX) s.owner = 0;
+        spawn_guardian_unit(w, s, *d);
+      }
+    }
+  }
+
   w.missionRuntime.status = MissionStatus::Running;
   w.missionRuntime.briefingShown = false;
   recompute_population(w);
@@ -2674,6 +3014,17 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["undergroundNodes"] = nlohmann::json::array(); for (const auto& n : w.undergroundNodes) j["undergroundNodes"].push_back({{"id",n.id},{"regionId",n.regionId},{"type",(int)n.type},{"cell",n.cell},{"linkedBuildingId",n.linkedBuildingId},{"owner",n.owner},{"active",n.active}});
   j["undergroundEdges"] = nlohmann::json::array(); for (const auto& e : w.undergroundEdges) j["undergroundEdges"].push_back({{"id",e.id},{"regionId",e.regionId},{"a",e.a},{"b",e.b},{"owner",e.owner},{"active",e.active}});
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
+  j["guardianDefinitions"] = nlohmann::json::array();
+  for (const auto& d : w.guardianDefinitions) j["guardianDefinitions"].push_back({{"guardian_id",d.guardianId},{"display_name",d.displayName},{"biome_requirement",(int)d.biomeRequirement},{"site_type",guardian_site_type_name(d.siteType)},{"spawn_mode",guardian_spawn_mode_name(d.spawnMode)},{"max_per_map",d.maxPerMap},{"unique",d.unique},{"discovery_mode",guardian_discovery_mode_name(d.discoveryMode)},{"behavior_mode",guardian_behavior_mode_name(d.behaviorMode)},{"join_mode",guardian_join_mode_name(d.joinMode)},{"associated_unit_definition",d.associatedUnitDefinitionId},{"reward_hook",d.rewardHook},{"effect_hook",d.effectHook},{"scenario_only",d.scenarioOnly},{"procedural",d.procedural},{"rarity_permille",d.rarityPermille},{"min_spacing_cells",d.minSpacingCells},{"discovery_radius",d.discoveryRadius},{"unit",{{"hp",d.unitHp},{"attack",d.unitAttack},{"range",d.unitRange},{"speed",d.unitSpeed}}}});
+  j["mythicGuardians"] = {{"sites", nlohmann::json::array()}, {"counters", {{"discovered",w.guardiansDiscovered},{"spawned",w.guardiansSpawned},{"joined",w.guardiansJoined},{"killed",w.guardiansKilled}}}};
+  for (const auto& s : w.guardianSites) {
+    j["mythicGuardians"]["sites"].push_back({
+      {"instance_id", s.instanceId}, {"guardian_id", s.guardianId}, {"site_type", guardian_site_type_name(s.siteType)}, {"pos", {s.pos.x, s.pos.y}},
+      {"region_id", s.regionId}, {"node_id", s.nodeId}, {"discovered", s.discovered}, {"alive", s.alive}, {"owner", s.owner},
+      {"site_active", s.siteActive}, {"site_depleted", s.siteDepleted}, {"spawned", s.spawned}, {"behavior_state", s.behaviorState},
+      {"cooldown_ticks", s.cooldownTicks}, {"one_shot_used", s.oneShotUsed}
+    });
+  }
   j["biomeMap"] = w.biomeMap;
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"objective_id",o.objectiveId},{"title",o.title},{"description",o.description.empty()?o.text:o.description},{"primary",o.primary},{"category",objective_category_name(o.category)},{"state",objective_state_name(o.state)},{"owner",o.owner},{"visible",o.visible},{"progressText",o.progressText},{"progressValue",o.progressValue}});
@@ -2747,6 +3098,7 @@ void tick_world(World& w, float dt) {
   update_operations(w);
   rebuild_detector_sites(w);
   update_air_and_strategic_warfare(w, dt);
+  update_guardian_sites(w);
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
   apply_trade_income(w, dt);
@@ -2969,6 +3321,18 @@ void tick_world(World& w, float dt) {
       for (uint32_t cid : u.cargo) for (auto& cu : w.units) if (cu.id == cid) cu.hp = 0;
     }
     w.players[u.team].unitsLost += 1;
+    for (auto& s : w.guardianSites) {
+      if (u.definitionId != s.guardianId) continue;
+      if (dist(u.pos, s.pos) > 8.0f) continue;
+      if (s.alive) {
+        s.alive = false;
+        s.siteDepleted = true;
+        s.oneShotUsed = true;
+        ++w.guardiansKilled;
+        emit_event(w, GameplayEventType::GuardianKilled, s.owner, u.team, s.instanceId, "Mythic guardian slain");
+      }
+      break;
+    }
     emit_event(w, GameplayEventType::UnitDied, u.team, u.team, u.id);
     return true;
   }), w.units.end());
@@ -3069,6 +3433,11 @@ void tick_world(World& w, float dt) {
   gLastStats.activeTunnels = w.activeTunnels;
   gLastStats.undergroundDepots = w.undergroundDepots;
   gLastStats.undergroundYield = w.undergroundYield;
+  gLastStats.guardianSiteCount = static_cast<uint32_t>(w.guardianSites.size());
+  gLastStats.guardiansDiscovered = w.guardiansDiscovered;
+  gLastStats.guardiansSpawned = w.guardiansSpawned;
+  gLastStats.guardiansJoined = w.guardiansJoined;
+  gLastStats.guardiansKilled = w.guardiansKilled;
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -3366,6 +3735,14 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.radarRevealEvents); hash_u32(h, w.strategicStrikeEvents); hash_u32(h, w.interceptionEvents); hash_u32(h, w.airMissionEvents);
   hash_u32(h, w.mountainRegionCount); hash_u32(h, w.surfaceDepositCount); hash_u32(h, w.deepDepositCount);
   hash_u32(h, w.activeMineShafts); hash_u32(h, w.activeTunnels); hash_u32(h, w.undergroundDepots); hash_float(h, w.undergroundYield);
+  hash_u32(h, w.guardiansDiscovered); hash_u32(h, w.guardiansSpawned); hash_u32(h, w.guardiansJoined); hash_u32(h, w.guardiansKilled);
+  for (const auto& s : w.guardianSites) {
+    hash_u32(h, s.instanceId); hash_u32(h, (uint32_t)s.siteType); hash_u32(h, (uint32_t)s.guardianId.size());
+    hash_float(h, s.pos.x); hash_float(h, s.pos.y); hash_u32(h, static_cast<uint32_t>(s.regionId + 1)); hash_u32(h, static_cast<uint32_t>(s.nodeId + 1));
+    hash_u32(h, s.discovered ? 1u : 0u); hash_u32(h, s.alive ? 1u : 0u); hash_u32(h, s.owner == UINT16_MAX ? 0xFFFFu : s.owner);
+    hash_u32(h, s.siteActive ? 1u : 0u); hash_u32(h, s.siteDepleted ? 1u : 0u); hash_u32(h, s.spawned ? 1u : 0u);
+    hash_u32(h, s.behaviorState); hash_u32(h, s.cooldownTicks); hash_u32(h, s.oneShotUsed ? 1u : 0u);
+  }
   for (const auto& d : w.deepDeposits) { hash_u32(h, d.id); hash_float(h, d.remaining); hash_u32(h, d.owner); hash_u32(h, d.active?1u:0u); }
   for (const auto& e : w.undergroundEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.active?1u:0u); }
   for (uint8_t v : w.fog) hash_u32(h, v);

@@ -40,6 +40,59 @@ enum class GameplayEventType : uint8_t {
   EspionageSuccess,
   EspionageFailure,
   PostureChanged,
+  GuardianDiscovered,
+  GuardianJoined,
+  GuardianKilled,
+};
+
+enum class GuardianSiteType : uint8_t { YetiLair, AbyssalTrench, DuneNest, SacredGrove, FrozenCavern };
+enum class GuardianSpawnMode : uint8_t { OnDiscovery, ScenarioStart };
+enum class GuardianDiscoveryMode : uint8_t { Proximity, FogReveal, UndergroundDiscovery, ScriptedReveal };
+enum class GuardianBehaviorMode : uint8_t { DormantUntilDiscovery, NeutralEncounter, HostileEncounter };
+enum class GuardianJoinMode : uint8_t { DiscovererControl, RemainNeutral, NeverJoin };
+
+struct GuardianDefinition {
+  std::string guardianId;
+  std::string displayName;
+  uint8_t biomeRequirement{0};
+  GuardianSiteType siteType{GuardianSiteType::YetiLair};
+  GuardianSpawnMode spawnMode{GuardianSpawnMode::OnDiscovery};
+  uint32_t maxPerMap{1};
+  bool unique{true};
+  GuardianDiscoveryMode discoveryMode{GuardianDiscoveryMode::Proximity};
+  GuardianBehaviorMode behaviorMode{GuardianBehaviorMode::DormantUntilDiscovery};
+  GuardianJoinMode joinMode{GuardianJoinMode::DiscovererControl};
+  std::string associatedUnitDefinitionId;
+  float unitHp{3500.0f};
+  float unitAttack{90.0f};
+  float unitRange{1.6f};
+  float unitSpeed{1.6f};
+  std::string rewardHook;
+  std::string effectHook;
+  bool scenarioOnly{false};
+  bool procedural{true};
+  int rarityPermille{8};
+  int minSpacingCells{20};
+  float discoveryRadius{5.0f};
+};
+
+struct GuardianSiteInstance {
+  uint32_t instanceId{0};
+  std::string guardianId;
+  GuardianSiteType siteType{GuardianSiteType::YetiLair};
+  glm::vec2 pos{};
+  int32_t regionId{-1};
+  int32_t nodeId{-1};
+  bool discovered{false};
+  bool alive{true};
+  uint16_t owner{UINT16_MAX};
+  bool siteActive{true};
+  bool siteDepleted{false};
+  bool spawned{false};
+  uint8_t behaviorState{0};
+  uint32_t cooldownTicks{0};
+  bool oneShotUsed{false};
+  bool scenarioPlaced{false};
 };
 
 enum class DiplomacyRelation : uint8_t { Allied, Neutral, War, Ceasefire };
@@ -214,6 +267,11 @@ struct SimulationStats {
   uint32_t activeTunnels{0};
   uint32_t undergroundDepots{0};
   float undergroundYield{0.0f};
+  uint32_t guardianSiteCount{0};
+  uint32_t guardiansDiscovered{0};
+  uint32_t guardiansSpawned{0};
+  uint32_t guardiansJoined{0};
+  uint32_t guardiansKilled{0};
 };
 
 struct ChunkCoord {
@@ -254,6 +312,8 @@ struct World {
   std::vector<DeepDeposit> deepDeposits;
   std::vector<UndergroundNode> undergroundNodes;
   std::vector<UndergroundEdge> undergroundEdges;
+  std::vector<GuardianDefinition> guardianDefinitions;
+  std::vector<GuardianSiteInstance> guardianSites;
   std::vector<uint8_t> radarContactByPlayer;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   MissionDefinition mission{};
@@ -271,8 +331,13 @@ struct World {
   uint32_t mountainRegionCount{0}; uint32_t surfaceDepositCount{0}; uint32_t deepDepositCount{0};
   uint32_t activeMineShafts{0}; uint32_t activeTunnels{0}; uint32_t undergroundDepots{0};
   float undergroundYield{0.0f};
+  uint32_t guardiansDiscovered{0};
+  uint32_t guardiansSpawned{0};
+  uint32_t guardiansJoined{0};
+  uint32_t guardiansKilled{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
+
 
 void initialize_world(World& world, uint32_t seed);
 void set_worker_threads(int threads);
