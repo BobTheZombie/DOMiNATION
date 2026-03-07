@@ -108,6 +108,7 @@ enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
 enum class TerrainClass : uint8_t { Land, ShallowWater, DeepWater };
 enum class BiomeType : uint8_t { TemperateGrassland, Steppe, Forest, Desert, Mediterranean, Jungle, Tundra, Arctic, Coast, Wetlands, Mountain, SnowMountain, Count };
+enum class WorldPreset : uint8_t { Pangaea, Continents, Archipelago, InlandSea, MountainWorld };
 enum class MineralType : uint8_t { Gold, Iron, Silver, Copper, Stone, Count };
 enum class UndergroundNodeType : uint8_t { Shaft, Deposit, Junction, Depot, Exit };
 
@@ -162,6 +163,8 @@ struct ResourceNode { uint32_t id{}; ResourceNodeType type{ResourceNodeType::For
 struct MountainRegion { uint32_t id{0}; int minX{0}; int minY{0}; int maxX{0}; int maxY{0}; int peakCell{-1}; int centerCell{-1}; uint32_t cellCount{0}; };
 struct SurfaceDeposit { uint32_t id{0}; uint32_t regionId{0}; MineralType mineral{MineralType::Iron}; int cell{-1}; float remaining{0.0f}; uint16_t owner{UINT16_MAX}; };
 struct DeepDeposit { uint32_t id{0}; uint32_t regionId{0}; uint32_t nodeId{0}; MineralType mineral{MineralType::Gold}; int cell{-1}; float richness{0.0f}; float remaining{0.0f}; uint16_t owner{UINT16_MAX}; bool active{true}; };
+struct StartCandidate { int cell{-1}; float score{0.0f}; uint8_t civBiasMask{0}; };
+struct MythicCandidate { GuardianSiteType siteType{GuardianSiteType::YetiLair}; int cell{-1}; float score{0.0f}; };
 struct UndergroundNode { uint32_t id{0}; uint32_t regionId{0}; UndergroundNodeType type{UndergroundNodeType::Junction}; int cell{-1}; uint32_t linkedBuildingId{0}; uint16_t owner{UINT16_MAX}; bool active{true}; };
 struct UndergroundEdge { uint32_t id{0}; uint32_t regionId{0}; uint32_t a{0}; uint32_t b{0}; uint16_t owner{UINT16_MAX}; bool active{true}; };
 struct TriggerArea { uint32_t id{}; glm::vec2 min{}; glm::vec2 max{}; };
@@ -261,6 +264,11 @@ struct SimulationStats {
   uint32_t interceptions{0};
   uint32_t activeDenialZones{0};
   uint32_t mountainRegionCount{0};
+  uint32_t mountainChainCount{0};
+  uint32_t riverCount{0};
+  uint32_t lakeCount{0};
+  uint32_t startCandidateCount{0};
+  uint32_t mythicCandidateCount{0};
   uint32_t surfaceDepositCount{0};
   uint32_t deepDepositCount{0};
   uint32_t activeMineShafts{0};
@@ -296,7 +304,17 @@ struct TaskGraph {
 
 struct World {
   uint32_t seed{1337}; int width{128}; int height{128};
+  WorldPreset worldPreset{WorldPreset::Pangaea};
   std::vector<float> heightmap; std::vector<float> fertility; std::vector<uint8_t> terrainClass; std::vector<uint8_t> biomeMap; std::vector<uint16_t> territoryOwner; std::vector<uint8_t> fog;
+  std::vector<float> temperatureMap;
+  std::vector<float> moistureMap;
+  std::vector<uint8_t> coastClassMap;
+  std::vector<int32_t> landmassIdByCell;
+  std::vector<uint8_t> riverMap;
+  std::vector<uint8_t> lakeMap;
+  std::vector<float> resourceWeightMap;
+  std::vector<StartCandidate> startCandidates;
+  std::vector<MythicCandidate> mythicCandidates;
   std::vector<uint8_t> fogVisibilityByPlayer;
   std::vector<uint8_t> fogExploredByPlayer;
   std::vector<uint8_t> fogMaskByPlayer;
@@ -331,6 +349,7 @@ struct World {
   uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};
   uint32_t radarRevealEvents{0}; uint32_t strategicStrikeEvents{0}; uint32_t interceptionEvents{0}; uint32_t airMissionEvents{0};
   uint32_t mountainRegionCount{0}; uint32_t surfaceDepositCount{0}; uint32_t deepDepositCount{0};
+  uint32_t mountainChainCount{0}; uint32_t riverCount{0}; uint32_t lakeCount{0}; uint32_t startCandidateCount{0}; uint32_t mythicCandidateCount{0};
   uint32_t activeMineShafts{0}; uint32_t activeTunnels{0}; uint32_t undergroundDepots{0};
   float undergroundYield{0.0f};
   uint32_t guardiansDiscovered{0};
@@ -344,6 +363,9 @@ struct World {
 
 
 void initialize_world(World& world, uint32_t seed);
+void set_world_preset(World& world, WorldPreset preset);
+WorldPreset parse_world_preset(const std::string& value);
+const char* world_preset_name(WorldPreset preset);
 void set_worker_threads(int threads);
 int worker_threads();
 void run_task_graph(TaskGraph& graph);

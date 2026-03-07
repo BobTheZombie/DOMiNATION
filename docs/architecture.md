@@ -220,3 +220,23 @@ Civilization identity is data-driven from `content/civilizations.json` and inclu
 A new deterministic authoritative layer tracks mythic guardian definitions and runtime site instances. Definitions are loaded from `content/mythic_guardians.json`, procedural sites are generated deterministically from seed + biome constraints, and scenario-authored sites are supported via `mythicGuardians.sites`.
 
 Authoritative state includes discovery/spawn/owner/alive/depleted flags and guardian counters (`GUARDIAN_SITE_COUNT`, `GUARDIANS_DISCOVERED`, `GUARDIANS_SPAWNED`, `GUARDIANS_JOINED`, `GUARDIANS_KILLED`, `HOSTILE_GUARDIAN_EVENTS`, `ALLIED_GUARDIAN_EVENTS`) used by hash/save/load/perf.
+
+## Procedural world generation (deterministic)
+
+World generation now runs as deterministic passes keyed by `(seed, map size, world preset)`:
+1. Macro landmass pass (preset-driven continent/ocean mask).
+2. Tectonic ridge pass (coherent mountain chain uplift and basins).
+3. Terrain classification + coastline + landmass IDs.
+4. Climate fields (`temperatureMap`, `moistureMap`) + biome assignment.
+5. Hydrology pass (`riverMap`, `lakeMap`) via downhill routing.
+6. Resource geography weighting (`resourceWeightMap`) and mountain deposits.
+7. Start candidate generation (`startCandidates`) and mythic candidate generation (`mythicCandidates`).
+
+Authoritative worldgen outputs are hashed in `map_setup_hash` for deterministic validation and thread-parity smoke checks.
+
+Supported world presets:
+- `pangaea`
+- `continents`
+- `archipelago`
+- `inland_sea`
+- `mountain_world`
