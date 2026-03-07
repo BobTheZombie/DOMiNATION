@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "seed": 1234,
+  "map": {"width": 128, "height": 128},
+  "players": [
+    {"id": 0, "team": 0, "isHuman": true, "isCPU": false, "civilization": "default"},
+    {"id": 1, "team": 1, "isHuman": false, "isCPU": true, "civilization": "default"}
+  ],
+  "placements": {
+    "units": [
+      {"team": 0, "type": "Infantry", "pos": [36.0, 35.5]},
+      {"team": 0, "type": "Infantry", "pos": [34.5, 36.0]},
+      {"team": 0, "type": "Infantry", "pos": [35.3, 34.4]},
+      {"team": 1, "type": "Infantry", "pos": [98.0, 98.0]},
+      {"team": 1, "type": "Infantry", "pos": [100.0, 98.0]}
+    ]
+  },
+  "mythicGuardians": {
+    "sites": [
+      {"instance_id": 1, "guardian_id": "snow_yeti", "site_type": "yeti_lair", "pos": [38.0, 36.0], "region_id": 0, "node_id": -1, "discovered": false, "alive": true, "owner": 65535, "site_active": true, "site_depleted": false, "spawned": false, "behavior_state": 0, "cooldown_ticks": 0, "one_shot_used": false, "scenario_placed": true},
+      {"instance_id": 2, "guardian_id": "kraken", "site_type": "abyssal_trench", "pos": [80.0, 84.0], "region_id": -1, "node_id": -1, "discovered": false, "alive": true, "owner": 65535, "site_active": true, "site_depleted": false, "spawned": false, "behavior_state": 0, "cooldown_ticks": 0, "one_shot_used": false, "scenario_placed": true},
+      {"instance_id": 3, "guardian_id": "sandworm", "site_type": "dune_nest", "pos": [70.0, 40.0], "region_id": -1, "node_id": -1, "discovered": false, "alive": true, "owner": 65535, "site_active": true, "site_depleted": false, "spawned": false, "behavior_state": 0, "cooldown_ticks": 0, "one_shot_used": false, "scenario_placed": true},
+      {"instance_id": 4, "guardian_id": "forest_spirit", "site_type": "sacred_grove", "pos": [42.0, 42.0], "region_id": -1, "node_id": -1, "discovered": false, "alive": true, "owner": 65535, "site_active": true, "site_depleted": false, "spawned": false, "behavior_state": 0, "cooldown_ticks": 0, "one_shot_used": false, "scenario_placed": true}
+    ],
+    "counters": {"discovered": 0, "spawned": 0, "joined": 0, "killed": 0, "hostile_events": 0, "allied_events": 0}
+  }
+}

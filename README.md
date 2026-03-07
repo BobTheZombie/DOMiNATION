@@ -263,8 +263,18 @@ The engine now includes a reusable deterministic Mythic Guardian layer:
 
 - Data-driven definitions in `content/mythic_guardians.json`
 - Deterministic procedural + scenario-authored guardian sites
-- First full guardian: **Snow Yeti** (unique legendary shock unit)
+- Full guardian suite: **Snow Yeti**, **Kraken**, **Sandworm**, and **Forest Spirit**
 - Save/load/replay-authoritative guardian state
 - Basic AI/UI/editor/scenario integration
 
 Reference docs: `docs/mythic_guardians.md`.
+
+- Mythic guardian deterministic smoke commands:
+  - `./build/rts --headless --smoke --ticks 1800 --seed 1234 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/mythic_guardians_test.json --smoke --ticks 2200 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 2400 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 1 --hash-only`
+  - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 4 --hash-only`
+  - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 8 --hash-only`
+  - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1200 --save /tmp/guardian_save.json --dump-hash`
+  - `./build/rts --headless --load /tmp/guardian_save.json --smoke --ticks 2400 --dump-hash`

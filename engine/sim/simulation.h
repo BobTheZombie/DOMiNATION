@@ -272,6 +272,8 @@ struct SimulationStats {
   uint32_t guardiansSpawned{0};
   uint32_t guardiansJoined{0};
   uint32_t guardiansKilled{0};
+  uint32_t hostileGuardianEvents{0};
+  uint32_t alliedGuardianEvents{0};
 };
 
 struct ChunkCoord {
@@ -335,6 +337,8 @@ struct World {
   uint32_t guardiansSpawned{0};
   uint32_t guardiansJoined{0};
   uint32_t guardiansKilled{0};
+  uint32_t hostileGuardianEvents{0};
+  uint32_t alliedGuardianEvents{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 

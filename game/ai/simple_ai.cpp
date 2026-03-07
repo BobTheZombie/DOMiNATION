@@ -187,10 +187,20 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   std::sort(army.begin(), army.end());
   if (army.empty()) return;
 
+  const int combatArmy = static_cast<int>(army.size());
   for (const auto& s : world.guardianSites) {
-    if (s.discovered || !s.siteActive || s.siteDepleted) continue;
-    if (glm::length(s.pos - base) < 45.0f) {
+    const float d = glm::length(s.pos - base);
+    const bool nearBase = d < 50.0f;
+    const bool hostileType = s.guardianId == "kraken" || s.guardianId == "sandworm";
+    const bool beneficialType = s.guardianId == "snow_yeti" || s.guardianId == "forest_spirit";
+    if (!s.discovered && s.siteActive && !s.siteDepleted && nearBase && beneficialType && combatArmy >= 4) {
       dom::sim::issue_move(world, team, army, s.pos);
+      ++world.aiDecisionCount;
+      return;
+    }
+    if (s.discovered && s.spawned && hostileType && nearBase && combatArmy < 6) {
+      dom::sim::issue_move(world, team, army, rally);
+      ++world.aiRetreatCount;
       ++world.aiDecisionCount;
       return;
     }

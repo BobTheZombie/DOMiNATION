@@ -22,7 +22,7 @@
     {
       "guardian_id": "kraken",
       "display_name": "Kraken",
-      "biome_requirement": "coast_littoral",
+      "biome_requirement": "coast",
       "site_type": "abyssal_trench",
       "spawn_mode": "on_discovery",
       "max_per_map": 1,
@@ -31,11 +31,12 @@
       "behavior_mode": "hostile_encounter",
       "join_mode": "never_join",
       "associated_unit_definition": "unit_kraken",
-      "procedural": false,
-      "scenario_only": true,
-      "rarity_permille": 3,
+      "procedural": true,
+      "scenario_only": false,
+      "rarity_permille": 4,
       "min_spacing_cells": 48,
-      "discovery_radius": 6.0
+      "discovery_radius": 6.0,
+      "unit": {"hp": 5000.0, "attack": 125.0, "range": 2.4, "speed": 1.35}
     },
     {
       "guardian_id": "sandworm",
@@ -43,17 +44,18 @@
       "biome_requirement": "desert",
       "site_type": "dune_nest",
       "spawn_mode": "on_discovery",
-      "max_per_map": 2,
-      "unique": false,
+      "max_per_map": 1,
+      "unique": true,
       "discovery_mode": "proximity",
       "behavior_mode": "hostile_encounter",
       "join_mode": "never_join",
       "associated_unit_definition": "unit_sandworm",
       "procedural": true,
       "scenario_only": false,
-      "rarity_permille": 5,
+      "rarity_permille": 6,
       "min_spacing_cells": 30,
-      "discovery_radius": 4.5
+      "discovery_radius": 4.5,
+      "unit": {"hp": 3900.0, "attack": 110.0, "range": 1.5, "speed": 2.3}
     },
     {
       "guardian_id": "forest_spirit",
@@ -61,17 +63,18 @@
       "biome_requirement": "forest",
       "site_type": "sacred_grove",
       "spawn_mode": "on_discovery",
-      "max_per_map": 2,
-      "unique": false,
+      "max_per_map": 1,
+      "unique": true,
       "discovery_mode": "fog_reveal",
       "behavior_mode": "neutral_encounter",
-      "join_mode": "remain_neutral",
+      "join_mode": "discoverer_control",
       "associated_unit_definition": "unit_forest_spirit",
       "procedural": true,
       "scenario_only": false,
-      "rarity_permille": 4,
+      "rarity_permille": 5,
       "min_spacing_cells": 28,
-      "discovery_radius": 5.0
+      "discovery_radius": 5.0,
+      "unit": {"hp": 3200.0, "attack": 72.0, "range": 5.5, "speed": 1.95}
     }
   ]
 }

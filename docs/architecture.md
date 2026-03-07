@@ -219,4 +219,4 @@ Civilization identity is data-driven from `content/civilizations.json` and inclu
 
 A new deterministic authoritative layer tracks mythic guardian definitions and runtime site instances. Definitions are loaded from `content/mythic_guardians.json`, procedural sites are generated deterministically from seed + biome constraints, and scenario-authored sites are supported via `mythicGuardians.sites`.
 
-Authoritative state includes discovery/spawn/owner/alive/depleted flags and guardian counters (`GUARDIAN_SITE_COUNT`, `GUARDIANS_DISCOVERED`, `GUARDIANS_SPAWNED`, `GUARDIANS_JOINED`, `GUARDIANS_KILLED`) used by hash/save/load/perf.
+Authoritative state includes discovery/spawn/owner/alive/depleted flags and guardian counters (`GUARDIAN_SITE_COUNT`, `GUARDIANS_DISCOVERED`, `GUARDIANS_SPAWNED`, `GUARDIANS_JOINED`, `GUARDIANS_KILLED`, `HOSTILE_GUARDIAN_EVENTS`, `ALLIED_GUARDIAN_EVENTS`) used by hash/save/load/perf.

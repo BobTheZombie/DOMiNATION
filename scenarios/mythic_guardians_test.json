@@ -1,16 +1,52 @@
 {
   "schemaVersion": 1,
   "seed": 1234,
-  "map": {"width": 128, "height": 128},
+  "map": {
+    "width": 128,
+    "height": 128
+  },
   "players": [
-    {"id": 0, "team": 0, "isHuman": true, "isCPU": false, "civilization": "default"},
-    {"id": 1, "team": 1, "isHuman": false, "isCPU": true, "civilization": "default"}
+    {
+      "id": 0,
+      "team": 0,
+      "isHuman": true,
+      "isCPU": false,
+      "civilization": "default"
+    },
+    {
+      "id": 1,
+      "team": 1,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "default"
+    }
   ],
   "placements": {
     "units": [
-      {"team": 0, "type": "Infantry", "pos": [36.0, 35.5]},
-      {"team": 0, "type": "Infantry", "pos": [34.5, 36.0]},
-      {"team": 1, "type": "Infantry", "pos": [90.0, 90.0]}
+      {
+        "team": 0,
+        "type": "Infantry",
+        "pos": [
+          36.0,
+          35.5
+        ]
+      },
+      {
+        "team": 0,
+        "type": "Infantry",
+        "pos": [
+          34.5,
+          36.0
+        ]
+      },
+      {
+        "team": 1,
+        "type": "Infantry",
+        "pos": [
+          90.0,
+          90.0
+        ]
+      }
     ]
   },
   "mythicGuardians": {
@@ -19,7 +55,10 @@
         "instance_id": 1,
         "guardian_id": "snow_yeti",
         "site_type": "yeti_lair",
-        "pos": [38.0, 36.0],
+        "pos": [
+          38.0,
+          36.0
+        ],
         "region_id": 0,
         "node_id": -1,
         "discovered": false,
@@ -30,8 +69,17 @@
         "spawned": false,
         "behavior_state": 0,
         "cooldown_ticks": 0,
-        "one_shot_used": false
+        "one_shot_used": false,
+        "scenario_placed": true
       }
-    ]
+    ],
+    "counters": {
+      "discovered": 0,
+      "spawned": 0,
+      "joined": 0,
+      "killed": 0,
+      "hostile_events": 0,
+      "allied_events": 0
+    }
   }
 }
