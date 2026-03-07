@@ -138,6 +138,21 @@ void draw_hud(SDL_Window* window,
         ImGui::Text("Health: %.0f/%.0f | Owner: P%u", b.hp, b.maxHp, b.team);
         ImGui::Text("Queue items: %zu", b.queue.size());
         ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
+        if (b.type == dom::sim::BuildingType::Mine) {
+          const int cx = std::clamp((int)b.pos.x, 0, world.width - 1);
+          const int cy = std::clamp((int)b.pos.y, 0, world.height - 1);
+          const int cell = cy * world.width + cx;
+          int rid = 0;
+          if (!world.mountainRegionByCell.empty() && cell >= 0 && cell < (int)world.mountainRegionByCell.size()) rid = world.mountainRegionByCell[(size_t)cell];
+          int activeDeposits = 0;
+          float remaining = 0.0f;
+          for (const auto& d : world.deepDeposits) if ((int)d.regionId == rid && d.active && d.remaining > 0.0f) { ++activeDeposits; remaining += d.remaining; }
+          int links = 0;
+          for (const auto& e : world.undergroundEdges) if ((int)e.regionId == rid && e.active) ++links;
+          ImGui::Text("Mine region: %d | deep deposits: %d", rid, activeDeposits);
+          ImGui::Text("Tunnel links: %d | deep remaining: %.0f", links, remaining);
+          ImGui::Text("Underground throughput: %.1f", world.undergroundYield);
+        }
         found = true;
         break;
       }

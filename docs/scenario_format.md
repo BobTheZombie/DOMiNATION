@@ -72,3 +72,13 @@ Reference sample: `scenarios/diplomacy_test.json`.
 ## Civilization fields
 
 `players[].civilization` binds a player to a civilization definition. Scenario smoke fixture `scenarios/civ_test.json` demonstrates civ-vs-civ doctrine divergence and unique replacements.
+
+## Mountain mining extensions
+Optional fields:
+- `mountainRegions`
+- `surfaceDeposits`
+- `deepDeposits`
+- `undergroundNodes`
+- `undergroundEdges`
+
+See `scenarios/mountain_mining_test.json`.

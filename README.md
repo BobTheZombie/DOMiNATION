@@ -254,3 +254,5 @@ Smoke scenario: `scenarios/campaign_test.json` with optional script `scripts/cam
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 1 --hash-only`
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 4 --hash-only`
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 8 --hash-only`
+
+- Mountain extraction + underground tunnel network layer (deterministic node/edge model, snow-capped mountain generation, deep deposits).

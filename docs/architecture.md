@@ -209,3 +209,8 @@ Added deterministic objective + trigger-action mission orchestration in simulati
 ## Civilization authority model
 
 Civilization identity is data-driven from `content/civilizations.json` and includes bonuses, AI doctrine modifiers, and unique unit/building replacement IDs. Production and spawn paths resolve these deterministically per-player, and authoritative save data persists resolved definition IDs for replay/load stability.
+
+## Mountain extraction / underground network
+- Authoritative deterministic mountain regions (`mountainRegions`) and cell-region map.
+- Two-layer deposits: `surfaceDeposits` and `deepDeposits`.
+- Underground logistics graph (`undergroundNodes`, `undergroundEdges`) is serialized and replay-safe.

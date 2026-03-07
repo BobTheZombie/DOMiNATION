@@ -62,3 +62,7 @@ Stylized RTS game art should prioritize readability at strategic zoom levels.
 - Air units render with unit markers and mission-target indicators.
 - Debug/GOD overlays include radar contact coverage and denial-zone circles.
 - Strategic warning notifications highlight incoming strike travel phases and interception outcomes.
+
+## Mountain rendering updates
+- Added snow-capped mountain biome palette (`snow_capped_mountains`) for strategic visibility.
+- Minimap now reflects snow mountain biome color separation.
