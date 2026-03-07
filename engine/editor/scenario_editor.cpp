@@ -35,8 +35,8 @@ void draw_scenario_editor(dom::sim::World& world, const glm::vec2& cameraCenter,
   if (ImGui::Button("Apply terrain at camera")) apply_terrain_tool(world, state.terrainTool, state.selectedBiome, state.terrainDelta, state.brushRadius, cameraCenter);
 
   ImGui::SeparatorText("Object placement");
-  const char* objTools[] = {"place cities", "place buildings", "place resources", "place units"};
-  ImGui::Combo("Placement", &state.objectTool, objTools, 4);
+  const char* objTools[] = {"place cities", "place buildings", "place resources", "place units", "place rail hub/line"};
+  ImGui::Combo("Placement", &state.objectTool, objTools, 5);
   ImGui::SliderInt("Owner", &state.selectedPlayer, 0, std::max(0, static_cast<int>(world.players.size()) - 1));
   if (ImGui::Button("Place at camera")) place_editor_object(world, state.objectTool, static_cast<uint16_t>(state.selectedPlayer), cameraCenter);
 

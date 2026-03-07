@@ -15,6 +15,9 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Checkbox("biome map", &state.biomeMap);
   ImGui::Checkbox("territory control", &state.territoryControl);
   ImGui::Checkbox("supply routes", &state.supplyRoutes);
+  ImGui::Checkbox("rail network", &state.railNetwork);
+  ImGui::Checkbox("rail supply", &state.railSupply);
+  ImGui::Checkbox("rail freight", &state.railFreight);
   ImGui::Checkbox("operation targets", &state.operationTargets);
   ImGui::Checkbox("AI state", &state.aiState);
   ImGui::Text("Units: %zu | Buildings: %zu | Operations: %zu", world.units.size(), world.buildings.size(), world.operations.size());
@@ -37,6 +40,23 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::PlotLines("navigation time", navHistory, 120, idx, nullptr, 0.0f, 40.0f, ImVec2(0, 50));
   ImGui::PlotLines("combat time", combatHistory, 120, idx, nullptr, 0.0f, 40.0f, ImVec2(0, 50));
   ImGui::PlotLines("job system stats", jobsHistory, 120, idx, nullptr, 0.0f, 1000.0f, ImVec2(0, 50));
+  ImGui::End();
+
+
+  if (ImGui::Begin("Rail Logistics")) {
+    ImGui::Text("nodes=%zu edges=%zu networks=%zu trains=%zu", world.railNodes.size(), world.railEdges.size(), world.railNetworks.size(), world.trains.size());
+    ImGui::Text("active trains supply=%u freight=%u throughput=%.2f disrupted=%u", world.activeSupplyTrains, world.activeFreightTrains, world.railThroughput, world.disruptedRailRoutes);
+    if (!world.railNodes.empty()) {
+      const auto& n = world.railNodes.front();
+      ImGui::SeparatorText("selected rail node/segment/station (sample)");
+      ImGui::Text("owner=%u network=%u tile=(%d,%d)", n.owner, n.networkId, n.tile.x, n.tile.y);
+    }
+    if (!world.trains.empty()) {
+      const auto& t = world.trains.front();
+      ImGui::SeparatorText("selected train (sample)");
+      ImGui::Text("route_steps=%zu cargo=%s destination=%u status=%u", t.route.size(), t.cargoType.c_str(), t.destinationNode, (unsigned)t.state);
+    }
+  }
   ImGui::End();
 
   if (ImGui::Begin("Mission Debug")) {

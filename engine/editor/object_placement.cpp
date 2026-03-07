@@ -1,4 +1,5 @@
 #include "engine/editor/object_placement.h"
+#include <cmath>
 
 namespace dom::editor {
 namespace {
@@ -24,6 +25,17 @@ void place_editor_object(dom::sim::World& world, int tool, uint16_t owner, const
     u.role = dom::sim::UnitRole::Infantry;
     u.pos = u.renderPos = u.target = u.slotTarget = at;
     world.units.push_back(u);
+  } else if (tool == 4) {
+    uint32_t nid = world.railNodes.empty() ? 1u : world.railNodes.back().id + 1;
+    dom::sim::RailNodeType type = dom::sim::RailNodeType::Station;
+    world.railNodes.push_back({nid, owner, type, {(int)std::round(at.x), (int)std::round(at.y)}, 0u, true});
+    if (world.railNodes.size() >= 2) {
+      const auto& prev = world.railNodes[world.railNodes.size() - 2];
+      if (prev.owner == owner) {
+        uint32_t eid = world.railEdges.empty() ? 1u : world.railEdges.back().id + 1;
+        world.railEdges.push_back({eid, owner, prev.id, nid, 1, false, false, false});
+      }
+    }
   }
 }
 } // namespace dom::editor

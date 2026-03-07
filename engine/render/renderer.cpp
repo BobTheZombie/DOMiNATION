@@ -383,6 +383,31 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   }
   glEnd();
 
+
+
+  glBegin(GL_POINTS);
+  glPointSize(c.zoom > 30.0f ? 3.0f : 5.0f);
+  for (const auto& t : w.trains) {
+    if (t.state != dom::sim::TrainState::Active) glColor3f(0.45f, 0.45f, 0.45f);
+    else if (t.type == dom::sim::TrainType::Supply) glColor3f(0.35f, 0.95f, 0.35f);
+    else if (t.type == dom::sim::TrainType::Freight) glColor3f(0.95f, 0.75f, 0.2f);
+    else glColor3f(0.85f, 0.25f, 0.25f);
+    glm::vec2 p{0.0f, 0.0f};
+    bool found = false;
+    for (const auto& n : w.railNodes) if (n.id == t.currentNode) { p = {n.tile.x + 0.5f, n.tile.y + 0.5f}; found = true; break; }
+    if (!found && t.currentEdge != 0) {
+      const dom::sim::RailEdge* e = nullptr;
+      for (const auto& re : w.railEdges) if (re.id == t.currentEdge) { e = &re; break; }
+      if (e) {
+        glm::vec2 a{0.0f, 0.0f}, b{0.0f, 0.0f};
+        for (const auto& n : w.railNodes) { if (n.id == e->aNode) a = {n.tile.x + 0.5f, n.tile.y + 0.5f}; if (n.id == e->bNode) b = {n.tile.x + 0.5f, n.tile.y + 0.5f}; }
+        p = glm::mix(a, b, std::clamp(t.segmentProgress, 0.0f, 1.0f));
+      }
+    }
+    glVertex2f(p.x, p.y);
+  }
+  glEnd();
+
   glLineWidth(1.0f);
   glBegin(GL_LINES);
   for (const auto& tr : w.tradeRoutes) {

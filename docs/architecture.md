@@ -240,3 +240,15 @@ Supported world presets:
 - `archipelago`
 - `inland_sea`
 - `mountain_world`
+
+
+## Railroad industrial logistics layer
+
+Authoritative rail model:
+- `railNodes`: station/junction/depot tiles with owner/network id.
+- `railEdges`: owner + node links + disruption/bridge/tunnel bits.
+- `railNetworks`: connected subnetworks by owner.
+- `trains`: deterministic supply/freight convoy state including route, cursor, cargo, destination, edge progress, and status.
+
+Simulation pass order: base rail generation -> network recompute -> train updates -> rail throughput application -> supply/trade interaction.
+Rail state is serialized in scenario/save files and included in `state_hash` for deterministic replay/thread parity.

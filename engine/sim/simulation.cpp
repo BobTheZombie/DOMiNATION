@@ -2369,6 +2369,160 @@ void ensure_base_roads(World& w) {
   }
 }
 
+
+
+void ensure_base_rail(World& w) {
+  if (!w.railNodes.empty() || !w.railEdges.empty()) return;
+  uint32_t nextNode = 1;
+  uint32_t nextEdge = 1;
+  for (const auto& c : w.cities) {
+    w.railNodes.push_back({nextNode++, c.team, RailNodeType::Station, {(int)std::round(c.pos.x), (int)std::round(c.pos.y)}, 0, true});
+  }
+  for (const auto& b : w.buildings) {
+    if (b.type != BuildingType::Market && b.type != BuildingType::Mine && b.type != BuildingType::CityCenter && b.type != BuildingType::Port) continue;
+    RailNodeType rt = (b.type == BuildingType::Mine) ? RailNodeType::Depot : RailNodeType::Junction;
+    w.railNodes.push_back({nextNode++, b.team, rt, {(int)std::round(b.pos.x), (int)std::round(b.pos.y)}, 0, true});
+  }
+  for (size_t i = 1; i < w.railNodes.size(); ++i) {
+    auto& a = w.railNodes[i - 1];
+    auto& b = w.railNodes[i];
+    if (a.owner != b.owner) continue;
+    w.railEdges.push_back({nextEdge++, a.owner, a.id, b.id, 1, false, false, false});
+  }
+}
+
+void recompute_rail_networks(World& w) {
+  for (auto& n : w.railNodes) n.networkId = 0;
+  w.railNetworks.clear();
+  uint32_t nextNet = 1;
+  for (auto& start : w.railNodes) {
+    if (!start.active || start.networkId != 0) continue;
+    RailNetwork rn{};
+    rn.id = nextNet++;
+    rn.owner = start.owner;
+    std::vector<uint32_t> stack{start.id};
+    while (!stack.empty()) {
+      uint32_t nid = stack.back(); stack.pop_back();
+      auto it = std::find_if(w.railNodes.begin(), w.railNodes.end(), [&](const RailNode& n){ return n.id == nid; });
+      if (it == w.railNodes.end() || it->networkId != 0 || !it->active || it->owner != rn.owner) continue;
+      it->networkId = rn.id;
+      ++rn.nodeCount;
+      for (const auto& e : w.railEdges) {
+        if (e.owner != rn.owner || e.disrupted) continue;
+        if (e.aNode == nid) stack.push_back(e.bNode);
+        if (e.bNode == nid) stack.push_back(e.aNode);
+      }
+    }
+    for (const auto& e : w.railEdges) {
+      if (e.owner != rn.owner || e.disrupted) continue;
+      auto a = std::find_if(w.railNodes.begin(), w.railNodes.end(), [&](const RailNode& n){ return n.id == e.aNode; });
+      auto b = std::find_if(w.railNodes.begin(), w.railNodes.end(), [&](const RailNode& n){ return n.id == e.bNode; });
+      if (a != w.railNodes.end() && b != w.railNodes.end() && a->networkId == rn.id && b->networkId == rn.id) ++rn.edgeCount;
+    }
+    rn.active = rn.nodeCount > 1 && rn.edgeCount > 0;
+    w.railNetworks.push_back(rn);
+  }
+}
+
+std::vector<TrainRouteStep> route_between_nodes(const World& w, uint32_t owner, uint32_t fromNode, uint32_t toNode) {
+  if (fromNode == 0 || toNode == 0 || fromNode == toNode) return {};
+  std::vector<uint32_t> nodes;
+  std::vector<int32_t> prevNode;
+  std::vector<int32_t> prevEdge;
+  nodes.reserve(w.railNodes.size());
+  for (const auto& n : w.railNodes) if (n.owner == owner && n.active) nodes.push_back(n.id);
+  prevNode.assign(nodes.size(), -1);
+  prevEdge.assign(nodes.size(), -1);
+  auto idx_of = [&](uint32_t id)->int { for (size_t i=0;i<nodes.size();++i) if (nodes[i]==id) return (int)i; return -1; };
+  int sidx = idx_of(fromNode), didx = idx_of(toNode);
+  if (sidx < 0 || didx < 0) return {};
+  std::vector<int> q{ sidx };
+  prevNode[sidx] = sidx;
+  for (size_t qi = 0; qi < q.size(); ++qi) {
+    int cur = q[qi];
+    uint32_t nid = nodes[(size_t)cur];
+    if (cur == didx) break;
+    for (const auto& e : w.railEdges) {
+      if (e.owner != owner || e.disrupted) continue;
+      uint32_t other = 0;
+      if (e.aNode == nid) other = e.bNode;
+      else if (e.bNode == nid) other = e.aNode;
+      if (other == 0) continue;
+      int oi = idx_of(other);
+      if (oi < 0 || prevNode[(size_t)oi] != -1) continue;
+      prevNode[(size_t)oi] = cur;
+      prevEdge[(size_t)oi] = (int32_t)e.id;
+      q.push_back(oi);
+    }
+  }
+  if (prevNode[(size_t)didx] == -1) return {};
+  std::vector<TrainRouteStep> rev;
+  for (int cur = didx; cur != sidx; cur = prevNode[(size_t)cur]) rev.push_back({(uint32_t)prevEdge[(size_t)cur], nodes[(size_t)cur]});
+  std::reverse(rev.begin(), rev.end());
+  return rev;
+}
+
+void ensure_trains(World& w) {
+  if (!w.trains.empty()) return;
+  uint32_t nextTrain = 1;
+  for (const auto& n : w.railNodes) {
+    if (n.type != RailNodeType::Station) continue;
+    uint32_t dst = 0;
+    for (const auto& o : w.railNodes) if (o.owner == n.owner && o.id != n.id && o.networkId == n.networkId) { dst = o.id; break; }
+    if (!dst) continue;
+    Train supply{};
+    supply.id = nextTrain++; supply.owner = n.owner; supply.type = TrainType::Supply; supply.state = TrainState::Active; supply.currentNode = n.id; supply.destinationNode = dst; supply.capacity = 120.0f; supply.cargo = 70.0f; supply.cargoType = "Supply"; supply.route = route_between_nodes(w, n.owner, n.id, dst); supply.speed = 0.05f; supply.lastRouteTick = w.tick;
+    if (!supply.route.empty()) w.trains.push_back(supply);
+    Train freight = supply;
+    freight.id = nextTrain++; freight.type = TrainType::Freight; freight.capacity = 160.0f; freight.cargo = 90.0f; freight.cargoType = "Freight"; freight.speed = 0.045f;
+    if (!freight.route.empty()) w.trains.push_back(freight);
+  }
+}
+
+void update_trains(World& w) {
+  if (w.tick % 5 != 0) return;
+  for (auto& t : w.trains) {
+    if (t.state == TrainState::Inactive || t.route.empty()) continue;
+    if (t.routeCursor >= t.route.size()) {
+      std::swap(t.currentNode, t.destinationNode);
+      t.route = route_between_nodes(w, t.owner, t.currentNode, t.destinationNode);
+      t.routeCursor = 0;
+      if (t.route.empty()) { t.state = TrainState::Delayed; continue; }
+    }
+    const auto step = t.route[t.routeCursor];
+    auto eIt = std::find_if(w.railEdges.begin(), w.railEdges.end(), [&](const RailEdge& e){ return e.id == step.edgeId; });
+    if (eIt == w.railEdges.end() || eIt->disrupted) { t.state = TrainState::Delayed; continue; }
+    t.state = TrainState::Active;
+    t.currentEdge = step.edgeId;
+    t.segmentProgress = std::min(1.0f, t.segmentProgress + t.speed);
+    if (t.segmentProgress >= 1.0f) {
+      t.segmentProgress = 0.0f;
+      t.currentNode = step.toNode;
+      ++t.routeCursor;
+      t.lastRouteTick = w.tick;
+    }
+  }
+}
+
+void apply_rail_logistics(World& w) {
+  w.railThroughput = 0.0f;
+  w.disruptedRailRoutes = 0;
+  for (const auto& e : w.railEdges) if (e.disrupted) ++w.disruptedRailRoutes;
+  for (const auto& t : w.trains) {
+    if (t.state != TrainState::Active) continue;
+    const float throughput = (t.cargo / std::max(1.0f, t.capacity)) * (t.type == TrainType::Freight ? 1.6f : 1.25f);
+    w.railThroughput += throughput;
+    if (t.owner < w.players.size()) {
+      if (t.type == TrainType::Freight) {
+        w.players[t.owner].resources[ridx(Resource::Metal)] += 0.012f * throughput;
+        w.players[t.owner].resources[ridx(Resource::Wealth)] += 0.016f * throughput;
+      } else if (t.type == TrainType::Supply) {
+        w.players[t.owner].resources[ridx(Resource::Food)] += 0.01f * throughput;
+      }
+    }
+  }
+}
+
 void recompute_trade_routes(World& w) {
   if (w.tick % 50 != 0 && !w.tradeRoutes.empty()) return;
   w.tradeRoutes.clear();
@@ -2379,7 +2533,10 @@ void recompute_trade_routes(World& w) {
       const auto& b = w.cities[j];
       if (!(a.team == b.team || trade_access_allowed(w, a.team, b.team))) continue;
       float d = dist(a.pos, b.pos);
+      bool railBonus = false;
+      for (const auto& n : w.railNodes) if (n.owner == a.team && n.type == RailNodeType::Station) { railBonus = true; break; }
       float roadBonus = (near_friendly_road(w, a.team, a.pos) && near_friendly_road(w, b.team, b.pos)) ? 1.3f : 1.0f;
+      if (railBonus) roadBonus *= 1.2f;
       int ax = std::clamp((int)a.pos.x, 0, w.width - 1), ay = std::clamp((int)a.pos.y, 0, w.height - 1);
       int bx = std::clamp((int)b.pos.x, 0, w.width - 1), by = std::clamp((int)b.pos.y, 0, w.height - 1);
       bool contested = (w.territoryOwner[ay * w.width + ax] != a.team) || (w.territoryOwner[by * w.width + bx] != b.team);
@@ -2414,6 +2571,7 @@ void recompute_supply(World& w) {
     for (const auto& c : w.cities) if (c.team == u.team) best = std::min(best, dist(u.pos, c.pos));
     for (const auto& b : w.buildings) if (b.team == u.team && (b.type == BuildingType::CityCenter || b.type == BuildingType::Market)) best = std::min(best, dist(u.pos, b.pos));
     if (near_friendly_road(w, u.team, u.pos)) best *= 0.8f;
+    for (const auto& t : w.trains) if (t.owner == u.team && t.type == TrainType::Supply && t.state == TrainState::Active) { best *= 0.88f; break; }
     int tx = std::clamp((int)u.pos.x, 0, w.width - 1), ty = std::clamp((int)u.pos.y, 0, w.height - 1);
     if (w.territoryOwner[ty * w.width + tx] != u.team) best *= 1.2f;
     if (best < 24.0f) u.supplyState = SupplyState::InSupply;
@@ -2435,6 +2593,10 @@ void apply_supply_effects(World& w, float dt) {
 void update_operations(World& w) {
   if (w.tick % 80 != 0) return;
   w.operations.clear();
+  w.railNodes.clear();
+  w.railEdges.clear();
+  w.railNetworks.clear();
+  w.trains.clear();
   uint32_t nextId = 1;
   for (const auto& p : w.players) {
     if (!p.isCPU || !p.alive) continue;
@@ -2697,6 +2859,30 @@ bool break_treaty(World& world, uint16_t a, uint16_t b) {
   return true;
 }
 
+const char* train_type_name(TrainType t) {
+  if (t == TrainType::Freight) return "Freight";
+  if (t == TrainType::Armored) return "Armored";
+  return "Supply";
+}
+
+TrainType parse_train_type(const std::string& v) {
+  if (v == "Freight") return TrainType::Freight;
+  if (v == "Armored") return TrainType::Armored;
+  return TrainType::Supply;
+}
+
+RailNodeType parse_rail_node_type(const std::string& v) {
+  if (v == "Station") return RailNodeType::Station;
+  if (v == "Depot") return RailNodeType::Depot;
+  return RailNodeType::Junction;
+}
+
+const char* rail_node_type_name(RailNodeType t) {
+  if (t == RailNodeType::Station) return "Station";
+  if (t == RailNodeType::Depot) return "Depot";
+  return "Junction";
+}
+
 const char* posture_name(StrategicPosture posture) {
   switch (posture) {
     case StrategicPosture::Expansionist: return "EXPANSIONIST";
@@ -2752,6 +2938,10 @@ void apply_world_defaults(World& w) {
   w.roads.clear();
   w.tradeRoutes.clear();
   w.operations.clear();
+  w.railNodes.clear();
+  w.railEdges.clear();
+  w.railNetworks.clear();
+  w.trains.clear();
   w.diplomacy.assign(w.players.size() * w.players.size(), DiplomacyRelation::Neutral);
   w.treaties.assign(w.players.size() * w.players.size(), DiplomacyTreaty{});
   w.strategicPosture.assign(w.players.size(), StrategicPosture::Defensive);
@@ -2777,6 +2967,14 @@ void apply_world_defaults(World& w) {
   w.logisticsRoadCount = 0;
   w.logisticsTradeActiveCount = 0;
   w.logisticsOperationIssuedCount = 0;
+  w.railNodeCount = 0;
+  w.railEdgeCount = 0;
+  w.activeRailNetworks = 0;
+  w.activeTrains = 0;
+  w.activeSupplyTrains = 0;
+  w.activeFreightTrains = 0;
+  w.railThroughput = 0.0f;
+  w.disruptedRailRoutes = 0;
   w.diplomacyEventCount = 0;
   w.postureChangeCount = 0;
   w.suppliedUnits = 0;
@@ -3150,6 +3348,14 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   w.resourceNodes.clear();
   w.roads.clear();
   if (j.contains("roads")) { uint32_t rid=1; for (const auto& rr : j["roads"]) { RoadSegment r{}; r.id = rr.value("id", rid++); r.owner = rr.value("owner", (uint16_t)UINT16_MAX); r.a = {rr["a"][0].get<int>(), rr["a"][1].get<int>()}; r.b = {rr["b"][0].get<int>(), rr["b"][1].get<int>()}; r.quality = rr.value("quality", 1); w.roads.push_back(r);} }
+  w.railNodes.clear();
+  if (j.contains("railNodes") && j["railNodes"].is_array()) { uint32_t nid = 1; for (const auto& rn : j["railNodes"]) { RailNode n{}; n.id = rn.value("id", nid++); n.owner = rn.value("owner", (uint16_t)UINT16_MAX); n.type = parse_rail_node_type(rn.value("type", std::string("Junction"))); n.tile = {rn["tile"][0].get<int>(), rn["tile"][1].get<int>()}; n.networkId = rn.value("networkId", 0u); n.active = rn.value("active", true); w.railNodes.push_back(n); } }
+  w.railEdges.clear();
+  if (j.contains("railEdges") && j["railEdges"].is_array()) { uint32_t eid = 1; for (const auto& re : j["railEdges"]) { RailEdge e{}; e.id = re.value("id", eid++); e.owner = re.value("owner", (uint16_t)UINT16_MAX); e.aNode = re.value("aNode", 0u); e.bNode = re.value("bNode", 0u); e.quality = re.value("quality", 1); e.bridge = re.value("bridge", false); e.tunnel = re.value("tunnel", false); e.disrupted = re.value("disrupted", false); w.railEdges.push_back(e); } }
+  w.railNetworks.clear();
+  if (j.contains("railNetworks") && j["railNetworks"].is_array()) { for (const auto& rr : j["railNetworks"]) { RailNetwork rn{}; rn.id = rr.value("id", 0u); rn.owner = rr.value("owner", (uint16_t)UINT16_MAX); rn.nodeCount = rr.value("nodeCount", 0u); rn.edgeCount = rr.value("edgeCount", 0u); rn.active = rr.value("active", false); w.railNetworks.push_back(rn); } }
+  w.trains.clear();
+  if (j.contains("trains") && j["trains"].is_array()) { uint32_t tid=1; for (const auto& tj : j["trains"]) { Train t{}; t.id = tj.value("id", tid++); t.owner = tj.value("owner", (uint16_t)UINT16_MAX); t.type = parse_train_type(tj.value("type", std::string("Supply"))); t.state = (TrainState)tj.value("state", 1); t.currentNode = tj.value("currentNode", 0u); t.destinationNode = tj.value("destinationNode", 0u); t.currentEdge = tj.value("currentEdge", 0u); t.routeCursor = tj.value("routeCursor", 0u); t.segmentProgress = tj.value("segmentProgress", 0.0f); t.speed = tj.value("speed", 0.03f); t.cargo = tj.value("cargo", 0.0f); t.capacity = tj.value("capacity", 100.0f); t.cargoType = tj.value("cargoType", std::string("Supply")); t.lastRouteTick = tj.value("lastRouteTick", 0u); if (tj.contains("route") && tj["route"].is_array()) { for (const auto& rj : tj["route"]) t.route.push_back({rj.value("edgeId", 0u), rj.value("toNode", 0u)}); } w.trains.push_back(std::move(t)); } }
   if (j.contains("resourceNodes")) { uint32_t id=1; for (const auto& r : j["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",id++); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} }
   if (j.contains("mythicGuardians") && j["mythicGuardians"].is_object()) {
     const auto& mg = j["mythicGuardians"];
@@ -3328,6 +3534,11 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["undergroundNodes"] = nlohmann::json::array(); for (const auto& n : w.undergroundNodes) j["undergroundNodes"].push_back({{"id",n.id},{"regionId",n.regionId},{"type",(int)n.type},{"cell",n.cell},{"linkedBuildingId",n.linkedBuildingId},{"owner",n.owner},{"active",n.active}});
   j["undergroundEdges"] = nlohmann::json::array(); for (const auto& e : w.undergroundEdges) j["undergroundEdges"].push_back({{"id",e.id},{"regionId",e.regionId},{"a",e.a},{"b",e.b},{"owner",e.owner},{"active",e.active}});
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
+  j["railNodes"] = nlohmann::json::array(); for (const auto& n : w.railNodes) j["railNodes"].push_back({{"id",n.id},{"owner",n.owner},{"type",rail_node_type_name(n.type)},{"tile",{n.tile.x,n.tile.y}},{"networkId",n.networkId},{"active",n.active}});
+  j["railEdges"] = nlohmann::json::array(); for (const auto& e : w.railEdges) j["railEdges"].push_back({{"id",e.id},{"owner",e.owner},{"aNode",e.aNode},{"bNode",e.bNode},{"quality",e.quality},{"bridge",e.bridge},{"tunnel",e.tunnel},{"disrupted",e.disrupted}});
+  j["railNetworks"] = nlohmann::json::array(); for (const auto& rn : w.railNetworks) j["railNetworks"].push_back({{"id",rn.id},{"owner",rn.owner},{"nodeCount",rn.nodeCount},{"edgeCount",rn.edgeCount},{"active",rn.active}});
+  j["trains"] = nlohmann::json::array();
+  for (const auto& t : w.trains) { nlohmann::json route = nlohmann::json::array(); for (const auto& step : t.route) route.push_back({{"edgeId",step.edgeId},{"toNode",step.toNode}}); j["trains"].push_back({{"id",t.id},{"owner",t.owner},{"type",train_type_name(t.type)},{"state",(int)t.state},{"currentNode",t.currentNode},{"destinationNode",t.destinationNode},{"currentEdge",t.currentEdge},{"routeCursor",t.routeCursor},{"segmentProgress",t.segmentProgress},{"speed",t.speed},{"cargo",t.cargo},{"capacity",t.capacity},{"cargoType",t.cargoType},{"lastRouteTick",t.lastRouteTick},{"route",route}}); }
   j["guardianDefinitions"] = nlohmann::json::array();
   for (const auto& d : w.guardianDefinitions) j["guardianDefinitions"].push_back({{"guardian_id",d.guardianId},{"display_name",d.displayName},{"biome_requirement",(int)d.biomeRequirement},{"site_type",guardian_site_type_name(d.siteType)},{"spawn_mode",guardian_spawn_mode_name(d.spawnMode)},{"max_per_map",d.maxPerMap},{"unique",d.unique},{"discovery_mode",guardian_discovery_mode_name(d.discoveryMode)},{"behavior_mode",guardian_behavior_mode_name(d.behaviorMode)},{"join_mode",guardian_join_mode_name(d.joinMode)},{"associated_unit_definition",d.associatedUnitDefinitionId},{"reward_hook",d.rewardHook},{"effect_hook",d.effectHook},{"scenario_only",d.scenarioOnly},{"procedural",d.procedural},{"rarity_permille",d.rarityPermille},{"min_spacing_cells",d.minSpacingCells},{"discovery_radius",d.discoveryRadius},{"unit",{{"hp",d.unitHp},{"attack",d.unitAttack},{"range",d.unitRange},{"speed",d.unitSpeed}}}});
   j["mythicGuardians"] = {{"sites", nlohmann::json::array()}, {"counters", {{"discovered",w.guardiansDiscovered},{"spawned",w.guardiansSpawned},{"joined",w.guardiansJoined},{"killed",w.guardiansKilled},{"hostile_events",w.hostileGuardianEvents},{"allied_events",w.alliedGuardianEvents}}}};
@@ -3417,6 +3628,11 @@ void tick_world(World& w, float dt) {
 
   spatial_prepare(w);
   ensure_base_roads(w);
+  ensure_base_rail(w);
+  recompute_rail_networks(w);
+  ensure_trains(w);
+  update_trains(w);
+  apply_rail_logistics(w);
   recompute_trade_routes(w);
   recompute_supply(w);
   update_espionage(w);
@@ -3722,8 +3938,21 @@ void tick_world(World& w, float dt) {
   gLastTickProfile.navMs = std::chrono::duration<double, std::milli>(tickEnd - tickStart).count() - gLastTickProfile.combatMs;
 
   w.logisticsRoadCount = static_cast<uint32_t>(w.roads.size());
+  w.railNodeCount = static_cast<uint32_t>(w.railNodes.size());
+  w.railEdgeCount = static_cast<uint32_t>(w.railEdges.size());
+  w.activeRailNetworks = 0; for (const auto& rn : w.railNetworks) if (rn.active) ++w.activeRailNetworks;
+  w.activeTrains = 0; w.activeSupplyTrains = 0; w.activeFreightTrains = 0;
+  for (const auto& t : w.trains) if (t.state == TrainState::Active) { ++w.activeTrains; if (t.type == TrainType::Supply) ++w.activeSupplyTrains; if (t.type == TrainType::Freight) ++w.activeFreightTrains; }
   gLastStats.roadCount = w.logisticsRoadCount;
   gLastStats.activeTradeRoutes = w.logisticsTradeActiveCount;
+  gLastStats.railNodeCount = w.railNodeCount;
+  gLastStats.railEdgeCount = w.railEdgeCount;
+  gLastStats.activeRailNetworks = w.activeRailNetworks;
+  gLastStats.activeTrains = w.activeTrains;
+  gLastStats.activeSupplyTrains = w.activeSupplyTrains;
+  gLastStats.activeFreightTrains = w.activeFreightTrains;
+  gLastStats.railThroughput = w.railThroughput;
+  gLastStats.disruptedRailRoutes = w.disruptedRailRoutes;
   gLastStats.suppliedUnits = w.suppliedUnits;
   gLastStats.lowSupplyUnits = w.lowSupplyUnits;
   gLastStats.outOfSupplyUnits = w.outOfSupplyUnits;
@@ -4007,6 +4236,8 @@ uint64_t map_setup_hash(const World& w) {
   for (const auto& e : w.undergroundEdges) { hash_u32(h, e.id); hash_u32(h, e.regionId); hash_u32(h, e.a); hash_u32(h, e.b); hash_u32(h, e.active?1u:0u); }
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& r : w.roads) { hash_u32(h, r.id); hash_u32(h, r.owner); hash_u32(h, (uint32_t)r.a.x); hash_u32(h, (uint32_t)r.a.y); hash_u32(h, (uint32_t)r.b.x); hash_u32(h, (uint32_t)r.b.y); hash_u32(h, r.quality); }
+  for (const auto& n : w.railNodes) { hash_u32(h, n.id); hash_u32(h, n.owner); hash_u32(h, (uint32_t)n.type); hash_u32(h, (uint32_t)n.tile.x); hash_u32(h, (uint32_t)n.tile.y); hash_u32(h, n.networkId); hash_u32(h, n.active?1u:0u); }
+  for (const auto& e : w.railEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.aNode); hash_u32(h, e.bNode); hash_u32(h, e.quality); hash_u32(h, e.bridge?1u:0u); hash_u32(h, e.tunnel?1u:0u); hash_u32(h, e.disrupted?1u:0u); }
   return h;
 }
 
@@ -4041,6 +4272,14 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.logisticsRoadCount);
   hash_u32(h, w.logisticsTradeActiveCount);
   hash_u32(h, w.logisticsOperationIssuedCount);
+  hash_u32(h, w.railNodeCount);
+  hash_u32(h, w.railEdgeCount);
+  hash_u32(h, w.activeRailNetworks);
+  hash_u32(h, w.activeTrains);
+  hash_u32(h, w.activeSupplyTrains);
+  hash_u32(h, w.activeFreightTrains);
+  hash_float(h, w.railThroughput);
+  hash_u32(h, w.disruptedRailRoutes);
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);
   hash_u32(h, w.outOfSupplyUnits);
@@ -4055,6 +4294,10 @@ uint64_t state_hash(const World& w) {
   for (const auto& l : w.missionRuntime.luaHookLog) hash_u32(h, (uint32_t)l.size());
   for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
   for (const auto& o : w.operations) { hash_u32(h, o.id); hash_u32(h, o.team); hash_u32(h, (uint32_t)o.type); hash_float(h, o.target.x); hash_float(h, o.target.y); hash_u32(h, o.assignedTick); hash_u32(h, o.active ? 1u : 0u); }
+  for (const auto& n : w.railNodes) { hash_u32(h, n.id); hash_u32(h, n.owner); hash_u32(h, (uint32_t)n.type); hash_u32(h, (uint32_t)n.tile.x); hash_u32(h, (uint32_t)n.tile.y); hash_u32(h, n.networkId); hash_u32(h, n.active?1u:0u); }
+  for (const auto& e : w.railEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.aNode); hash_u32(h, e.bNode); hash_u32(h, e.quality); hash_u32(h, e.bridge?1u:0u); hash_u32(h, e.tunnel?1u:0u); hash_u32(h, e.disrupted?1u:0u); }
+  for (const auto& rn : w.railNetworks) { hash_u32(h, rn.id); hash_u32(h, rn.owner); hash_u32(h, rn.nodeCount); hash_u32(h, rn.edgeCount); hash_u32(h, rn.active?1u:0u); }
+  for (const auto& t : w.trains) { hash_u32(h,t.id); hash_u32(h,t.owner); hash_u32(h,(uint32_t)t.type); hash_u32(h,(uint32_t)t.state); hash_u32(h,t.currentNode); hash_u32(h,t.destinationNode); hash_u32(h,t.currentEdge); hash_u32(h,t.routeCursor); hash_float(h,t.segmentProgress); hash_float(h,t.speed); hash_float(h,t.cargo); hash_float(h,t.capacity); hash_u32(h,t.lastRouteTick); hash_u32(h,(uint32_t)t.cargoType.size()); for (const auto& rs : t.route) { hash_u32(h, rs.edgeId); hash_u32(h, rs.toNode); } }
   hash_float(h, w.worldTension);
   for (const auto& r : w.diplomacy) hash_u32(h, static_cast<uint32_t>(r));
   for (const auto& t : w.treaties) {
