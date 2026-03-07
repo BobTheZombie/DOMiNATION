@@ -1015,16 +1015,106 @@ float sample_noise_2d(uint32_t seed, int x, int y, float scale) {
   return v - std::floor(v);
 }
 
+void generate_macro_landmass(World& w) {
+  const int cells = w.width * w.height;
+  w.landmassIdByCell.assign(static_cast<size_t>(cells), -1);
+  for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
+    const int i = y * w.width + x;
+    const float nx = (float)x / std::max(1, w.width - 1) - 0.5f;
+    const float ny = (float)y / std::max(1, w.height - 1) - 0.5f;
+    const float radial = std::sqrt(nx * nx + ny * ny);
+    const float n1 = sample_noise_2d(w.seed + 11, x, y, 0.028f) * 2.0f - 1.0f;
+    const float n2 = sample_noise_2d(w.seed + 29, x, y, 0.061f) * 2.0f - 1.0f;
+    const float n3 = sample_noise_2d(w.seed + 53, x, y, 0.11f) * 2.0f - 1.0f;
+    float base = n1 * 0.60f + n2 * 0.28f + n3 * 0.12f;
+    float threshold = 0.0f;
+    if (w.worldPreset == WorldPreset::Pangaea) {
+      base += (0.62f - radial * 1.28f) + std::max(0.0f, 0.18f - std::abs(nx) * 0.35f);
+      threshold = 0.04f;
+    } else if (w.worldPreset == WorldPreset::Continents) {
+      base += (0.30f - radial * 0.58f) + std::sin((x + w.seed * 0.03f) * 0.05f) * 0.16f;
+      threshold = 0.10f;
+    } else if (w.worldPreset == WorldPreset::Archipelago) {
+      base += (0.18f - radial * 0.22f) + std::sin((x + y) * 0.09f) * 0.12f;
+      threshold = 0.24f;
+    } else if (w.worldPreset == WorldPreset::InlandSea) {
+      const float sea = 0.32f - std::sqrt(nx * nx + ny * ny) * 1.4f;
+      base += 0.62f - std::max(0.0f, sea);
+      threshold = 0.22f;
+    } else if (w.worldPreset == WorldPreset::MountainWorld) {
+      base += (0.40f - radial * 0.72f);
+      threshold = 0.08f;
+    }
+    w.heightmap[i] = base - threshold;
+  }
+}
+
+void apply_tectonics(World& w) {
+  const float dir = 0.55f + sample_noise_2d(w.seed + 700, 3, 7, 1.0f) * 0.9f;
+  for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
+    const int i = y * w.width + x;
+    const float seam = std::sin((x * std::cos(dir) + y * std::sin(dir)) * 0.08f + w.seed * 0.003f);
+    const float ridge = std::pow(std::max(0.0f, seam), 3.0f);
+    const float branch = std::pow(std::max(0.0f, std::sin((x - y) * 0.06f + w.seed * 0.002f)), 2.0f);
+    float uplift = ridge * 0.48f + branch * 0.22f;
+    if (w.worldPreset == WorldPreset::MountainWorld) uplift *= 1.8f;
+    if (w.heightmap[i] > kWaterLevel + 0.03f) w.heightmap[i] += uplift;
+    else w.heightmap[i] -= ridge * 0.08f;
+  }
+}
+
+void classify_coast_and_landmass(World& w) {
+  const int cells = w.width * w.height;
+  w.coastClassMap.assign(static_cast<size_t>(cells), 0);
+  w.landmassIdByCell.assign(static_cast<size_t>(cells), -1);
+  std::vector<uint8_t> seen(static_cast<size_t>(cells), 0);
+  int nextLand = 1;
+  for (int i = 0; i < cells; ++i) {
+    if (w.terrainClass[i] != static_cast<uint8_t>(TerrainClass::Land) || seen[i]) continue;
+    std::queue<int> q;
+    q.push(i); seen[i] = 1;
+    while (!q.empty()) {
+      int c = q.front(); q.pop();
+      w.landmassIdByCell[(size_t)c] = nextLand;
+      int cx = c % w.width;
+      int cy = c / w.width;
+      bool adjShallow = false;
+      bool adjDeep = false;
+      for (auto [dx,dy] : kNeighborOrder) {
+        int nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+        int ni = ny * w.width + nx;
+        if (w.terrainClass[ni] == static_cast<uint8_t>(TerrainClass::Land) && !seen[ni]) { seen[ni] = 1; q.push(ni); }
+        if (w.terrainClass[ni] == static_cast<uint8_t>(TerrainClass::ShallowWater)) adjShallow = true;
+        if (w.terrainClass[ni] == static_cast<uint8_t>(TerrainClass::DeepWater)) adjDeep = true;
+      }
+      w.coastClassMap[(size_t)c] = adjShallow ? (adjDeep ? 2 : 1) : 0;
+    }
+    ++nextLand;
+  }
+}
+
 void assign_biomes(World& w) {
   load_biomes_once();
+  w.temperatureMap.assign(static_cast<size_t>(w.width) * static_cast<size_t>(w.height), 0.0f);
+  w.moistureMap.assign(static_cast<size_t>(w.width) * static_cast<size_t>(w.height), 0.0f);
   w.biomeMap.assign(static_cast<size_t>(w.width) * static_cast<size_t>(w.height), static_cast<uint8_t>(BiomeType::TemperateGrassland));
   for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
     const int i = y * w.width + x;
     const float h = w.heightmap[i];
     const float rugged = sample_noise_2d(w.seed + 401, x, y, 0.21f);
-    const float moisture = std::clamp(w.fertility[i] * 0.7f + sample_noise_2d(w.seed + 17, x, y, 0.13f) * 0.3f, 0.0f, 1.0f);
+    const float coast = w.coastClassMap.empty() ? 0.0f : (w.coastClassMap[i] > 0 ? 1.0f : 0.0f);
+    float rainShadow = 0.0f;
+    for (int ox = 1; ox <= 6; ++ox) {
+      int nx = std::clamp(x - ox, 0, w.width - 1);
+      int ni = y * w.width + nx;
+      rainShadow += std::max(0.0f, w.heightmap[ni] - 0.48f) * 0.08f;
+    }
+    float moisture = std::clamp(w.fertility[i] * 0.55f + coast * 0.18f + sample_noise_2d(w.seed + 17, x, y, 0.13f) * 0.27f - rainShadow, 0.0f, 1.0f);
     const float lat = std::abs((float)y / std::max(1, w.height - 1) - 0.5f) * 2.0f;
-    const float temp = std::clamp((1.0f - lat) * 0.8f + sample_noise_2d(w.seed + 51, x, y, 0.09f) * 0.2f - std::max(0.0f, h) * 0.3f, 0.0f, 1.0f);
+    const float temp = std::clamp((1.0f - lat) * 0.84f + sample_noise_2d(w.seed + 51, x, y, 0.09f) * 0.16f - std::max(0.0f, h) * 0.35f, 0.0f, 1.0f);
+    w.temperatureMap[i] = temp;
+    w.moistureMap[i] = moisture;
     BiomeType b = BiomeType::TemperateGrassland;
     TerrainClass tc = static_cast<TerrainClass>(w.terrainClass[i]);
     if (tc != TerrainClass::Land) b = BiomeType::Coast;
@@ -1184,6 +1274,110 @@ void rebuild_mountain_deposits(World& w) {
   }
 }
 
+void generate_hydrology(World& w) {
+  const int cells = w.width * w.height;
+  w.riverMap.assign(static_cast<size_t>(cells), 0);
+  w.lakeMap.assign(static_cast<size_t>(cells), 0);
+  int riverCount = 0;
+  int lakeCount = 0;
+  for (int i = 0; i < cells; ++i) {
+    if (w.terrainClass[i] != static_cast<uint8_t>(TerrainClass::Land)) continue;
+    if (w.heightmap[i] < 0.60f) continue;
+    if (sample_noise_2d(w.seed + 821, i % w.width, i / w.width, 0.2f) < 0.83f) continue;
+    int current = i;
+    bool reachedWater = false;
+    for (int step = 0; step < 90; ++step) {
+      if (current < 0 || current >= cells) break;
+      w.riverMap[(size_t)current] = 1;
+      int cx = current % w.width;
+      int cy = current / w.width;
+      int best = current;
+      float bestH = w.heightmap[(size_t)current];
+      for (auto [dx,dy] : kNeighborOrder) {
+        int nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+        int ni = ny * w.width + nx;
+        if (w.heightmap[(size_t)ni] < bestH) { bestH = w.heightmap[(size_t)ni]; best = ni; }
+      }
+      if (best == current) {
+        if (w.terrainClass[(size_t)current] == static_cast<uint8_t>(TerrainClass::Land)) {
+          w.lakeMap[(size_t)current] = 1;
+          ++lakeCount;
+        }
+        break;
+      }
+      current = best;
+      if (w.terrainClass[(size_t)current] != static_cast<uint8_t>(TerrainClass::Land)) { reachedWater = true; break; }
+    }
+    if (reachedWater) ++riverCount;
+  }
+  w.riverCount = static_cast<uint32_t>(riverCount);
+  w.lakeCount = static_cast<uint32_t>(lakeCount);
+}
+
+void build_resource_geography(World& w) {
+  w.resourceWeightMap.assign(static_cast<size_t>(w.width) * static_cast<size_t>(w.height), 0.0f);
+  for (int y = 0; y < w.height; y += 8) for (int x = 0; x < w.width; x += 8) {
+    int i = y * w.width + x;
+    if (w.terrainClass[(size_t)i] != static_cast<uint8_t>(TerrainClass::Land)) continue;
+    const BiomeType b = biome_at(w, i);
+    float weight = 0.2f;
+    if (b == BiomeType::Mountain || b == BiomeType::SnowMountain) weight += 0.9f;
+    if (b == BiomeType::Forest || b == BiomeType::Jungle) weight += 0.55f;
+    if (b == BiomeType::TemperateGrassland || b == BiomeType::Mediterranean || b == BiomeType::Steppe) weight += 0.35f;
+    if (w.riverMap.size() == w.heightmap.size() && w.riverMap[(size_t)i]) weight += 0.65f;
+    if (w.lakeMap.size() == w.heightmap.size() && w.lakeMap[(size_t)i]) weight += 0.5f;
+    if (w.coastClassMap.size() == w.heightmap.size() && w.coastClassMap[(size_t)i] > 0) weight += 0.3f;
+    w.resourceWeightMap[(size_t)i] = weight;
+  }
+}
+
+void build_start_candidates(World& w) {
+  w.startCandidates.clear();
+  for (int y = 6; y < w.height - 6; y += 6) for (int x = 6; x < w.width - 6; x += 6) {
+    int i = y * w.width + x;
+    if (w.terrainClass[(size_t)i] != static_cast<uint8_t>(TerrainClass::Land)) continue;
+    const BiomeType b = biome_at(w, i);
+    if (b == BiomeType::Mountain || b == BiomeType::SnowMountain || b == BiomeType::Arctic) continue;
+    float score = 0.0f;
+    score += std::clamp(w.fertility[(size_t)i], 0.0f, 1.0f) * 1.3f;
+    if (!w.resourceWeightMap.empty()) score += std::min(1.4f, w.resourceWeightMap[(size_t)i]);
+    if (!w.riverMap.empty() && w.riverMap[(size_t)i]) score += 0.8f;
+    if (!w.coastClassMap.empty() && w.coastClassMap[(size_t)i] > 0) score += 0.45f;
+    score += (w.heightmap[(size_t)i] > 0.42f ? 0.4f : 0.0f);
+    uint8_t bias = 0;
+    if (b == BiomeType::Mediterranean || (w.coastClassMap.size()==w.heightmap.size() && w.coastClassMap[(size_t)i] > 0)) bias |= 1;
+    if (!w.riverMap.empty() && w.riverMap[(size_t)i]) bias |= 2;
+    if (b == BiomeType::Forest || b == BiomeType::TemperateGrassland) bias |= 4;
+    if (b == BiomeType::Desert || b == BiomeType::Steppe) bias |= 8;
+    if (score > 1.0f) w.startCandidates.push_back({i, score, bias});
+  }
+  std::sort(w.startCandidates.begin(), w.startCandidates.end(), [](const StartCandidate& a, const StartCandidate& b){
+    if (a.score != b.score) return a.score > b.score;
+    return a.cell < b.cell;
+  });
+  if (w.startCandidates.size() > 32) w.startCandidates.resize(32);
+  w.startCandidateCount = static_cast<uint32_t>(w.startCandidates.size());
+}
+
+void build_mythic_candidates(World& w) {
+  w.mythicCandidates.clear();
+  for (int i = 0; i < w.width * w.height; ++i) {
+    BiomeType b = biome_at(w, i);
+    if (b == BiomeType::SnowMountain) w.mythicCandidates.push_back({GuardianSiteType::YetiLair, i, 1.0f + w.heightmap[(size_t)i]});
+    if (b == BiomeType::Desert) w.mythicCandidates.push_back({GuardianSiteType::DuneNest, i, 0.8f + (1.0f - w.moistureMap[(size_t)i])});
+    if (b == BiomeType::Forest || b == BiomeType::Jungle) w.mythicCandidates.push_back({GuardianSiteType::SacredGrove, i, 0.7f + w.moistureMap[(size_t)i]});
+    if (w.terrainClass[(size_t)i] == static_cast<uint8_t>(TerrainClass::DeepWater)) w.mythicCandidates.push_back({GuardianSiteType::AbyssalTrench, i, 0.6f + std::abs(std::min(0.0f, w.heightmap[(size_t)i]))});
+  }
+  std::sort(w.mythicCandidates.begin(), w.mythicCandidates.end(), [](const MythicCandidate& a, const MythicCandidate& b){
+    if (a.siteType != b.siteType) return a.siteType < b.siteType;
+    if (a.score != b.score) return a.score > b.score;
+    return a.cell < b.cell;
+  });
+  if (w.mythicCandidates.size() > 256) w.mythicCandidates.resize(256);
+  w.mythicCandidateCount = static_cast<uint32_t>(w.mythicCandidates.size());
+}
+
 void spawn_biome_resources(World& w) {
   w.resourceNodes.clear();
   uint32_t nextId = 1;
@@ -1253,6 +1447,7 @@ void update_underground_economy(World& w, float dt) {
   }
 
   w.mountainRegionCount = static_cast<uint32_t>(w.mountainRegions.size());
+  w.mountainChainCount = w.mountainRegionCount;
   w.surfaceDepositCount = static_cast<uint32_t>(w.surfaceDeposits.size());
   w.deepDepositCount = static_cast<uint32_t>(w.deepDeposits.size());
 }
@@ -2035,7 +2230,6 @@ void generate_guardian_sites(World& w) {
   uint32_t nextId = 1;
   for (const auto& s : w.guardianSites) nextId = std::max(nextId, s.instanceId + 1);
   std::mt19937 rng(w.seed ^ 0x9e3779b9u);
-  std::uniform_int_distribution<int> chance(0, 999);
   for (const auto& d : w.guardianDefinitions) {
     if (!d.procedural || d.scenarioOnly) continue;
     uint32_t existing = 0;
@@ -2043,13 +2237,13 @@ void generate_guardian_sites(World& w) {
     if (d.unique && existing > 0) continue;
     if (existing >= d.maxPerMap) continue;
     std::vector<int> candidates;
-    for (int i = 0; i < w.width * w.height; ++i) {
-      if (static_cast<uint8_t>(biome_at(w, i)) != d.biomeRequirement) continue;
-      if (chance(rng) >= d.rarityPermille) continue;
+    for (const auto& mc : w.mythicCandidates) {
+      if (static_cast<uint8_t>(biome_at(w, mc.cell)) != d.biomeRequirement) continue;
+      if ((rng() % 1000) >= static_cast<uint32_t>(d.rarityPermille)) continue;
       bool spaced = true;
-      glm::vec2 p{(i % w.width) + 0.5f, (i / w.width) + 0.5f};
+      glm::vec2 p{(mc.cell % w.width) + 0.5f, (mc.cell / w.width) + 0.5f};
       for (const auto& s : w.guardianSites) if (glm::length(s.pos - p) < (float)d.minSpacingCells) { spaced = false; break; }
-      if (spaced) candidates.push_back(i);
+      if (spaced) candidates.push_back(mc.cell);
     }
     std::sort(candidates.begin(), candidates.end());
     const uint32_t need = std::min<uint32_t>(d.maxPerMap - existing, d.unique ? 1u : d.maxPerMap);
@@ -2363,6 +2557,28 @@ void update_ai_diplomacy(World& w) {
 
 } // namespace
 
+
+const char* world_preset_name(WorldPreset preset) {
+  switch (preset) {
+    case WorldPreset::Pangaea: return "pangaea";
+    case WorldPreset::Continents: return "continents";
+    case WorldPreset::Archipelago: return "archipelago";
+    case WorldPreset::InlandSea: return "inland_sea";
+    case WorldPreset::MountainWorld: return "mountain_world";
+  }
+  return "pangaea";
+}
+
+WorldPreset parse_world_preset(const std::string& value) {
+  if (value == "continents") return WorldPreset::Continents;
+  if (value == "archipelago") return WorldPreset::Archipelago;
+  if (value == "inland_sea") return WorldPreset::InlandSea;
+  if (value == "mountain_world") return WorldPreset::MountainWorld;
+  return WorldPreset::Pangaea;
+}
+
+void set_world_preset(World& world, WorldPreset preset) { world.worldPreset = preset; }
+
 bool gameplay_orders_allowed(const World& world) { return world.match.phase == MatchPhase::Running; }
 void set_match_phase(World& world, MatchPhase phase) { world.match.phase = phase; world.gameOver = phase != MatchPhase::Running; }
 
@@ -2571,6 +2787,7 @@ void apply_world_defaults(World& w) {
 
 bool validate_size(const World& w, const std::vector<float>& v) { return (int)v.size() == w.width * w.height; }
 bool validate_size_u8(const World& w, const std::vector<uint8_t>& v) { return (int)v.size() == w.width * w.height; }
+bool validate_size_i32(const World& w, const std::vector<int32_t>& v) { return (int)v.size() == w.width * w.height; }
 
 void eval_triggers(World& w) {
   std::sort(w.triggers.begin(), w.triggers.end(), [](const Trigger& a, const Trigger& b){ return a.id < b.id; });
@@ -2691,8 +2908,6 @@ void initialize_world(World& w, uint32_t seed) {
   gSpatial.cells.clear();
   w.navVersion = 1;
   w.seed = seed;
-  std::mt19937 rng(seed);
-  std::uniform_real_distribution<float> n(0.f, 1.f);
   w.heightmap.resize(w.width * w.height);
   w.fertility.resize(w.width * w.height);
   w.territoryOwner.resize(w.width * w.height);
@@ -2700,16 +2915,19 @@ void initialize_world(World& w, uint32_t seed) {
   w.fogVisibilityByPlayer.clear();
   w.fogExploredByPlayer.clear();
   w.fogMaskByPlayer.clear();
-  for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
-    float nx = (float)x / std::max(1, w.width - 1) - 0.5f;
-    float ny = (float)y / std::max(1, w.height - 1) - 0.5f;
-    float radial = std::sqrt(nx * nx + ny * ny);
-    float h = 0.55f * std::sin(x * 0.07f) + 0.45f * std::cos(y * 0.06f) + 0.25f * n(rng) - radial * 0.9f;
-    w.heightmap[y * w.width + x] = h;
-    w.fertility[y * w.width + x] = std::clamp(1.0f - std::abs(h), 0.1f, 1.0f);
-  }
+  generate_macro_landmass(w);
+  apply_tectonics(w);
   rebuild_terrain_classes(w);
+  classify_coast_and_landmass(w);
+  for (int i = 0; i < w.width * w.height; ++i) {
+    float coastBonus = (!w.coastClassMap.empty() && w.coastClassMap[(size_t)i] > 0) ? 0.15f : 0.0f;
+    w.fertility[(size_t)i] = std::clamp(0.85f - std::abs(w.heightmap[(size_t)i]) + coastBonus, 0.05f, 1.0f);
+  }
   assign_biomes(w);
+  generate_hydrology(w);
+  build_resource_geography(w);
+  build_start_candidates(w);
+  build_mythic_candidates(w);
   spawn_biome_resources(w);
 
   apply_world_defaults(w);
@@ -2750,6 +2968,7 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (j.contains("map")) { w.width = j["map"].value("width", 128); w.height = j["map"].value("height", 128); }
   else { w.width = j.value("mapWidth", 128); w.height = j.value("mapHeight", 128); }
   w.seed = j.value("seed", fallbackSeed);
+  w.worldPreset = parse_world_preset(j.value("worldPreset", std::string("pangaea")));
   initialize_world(w, w.seed);
   if (j.contains("heightmap")) { w.heightmap = j["heightmap"].get<std::vector<float>>(); if (!validate_size(w, w.heightmap)) { err = "heightmap size mismatch"; return false; } }
   if (j.contains("fertility")) { w.fertility = j["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "fertility size mismatch"; return false; } }
@@ -2759,11 +2978,71 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     if (to.contains("fertility") && to["fertility"].is_array()) { w.fertility = to["fertility"].get<std::vector<float>>(); if (!validate_size(w, w.fertility)) { err = "terrainOverrides.fertility size mismatch"; return false; } }
   }
   rebuild_terrain_classes(w);
+  classify_coast_and_landmass(w);
   assign_biomes(w);
+  generate_hydrology(w);
+  build_resource_geography(w);
+  build_start_candidates(w);
+  build_mythic_candidates(w);
   if (j.contains("biomeMap")) {
     auto bm = j["biomeMap"].get<std::vector<uint8_t>>();
     if (!validate_size_u8(w, bm)) { err = "biomeMap size mismatch"; return false; }
     w.biomeMap = std::move(bm);
+  }
+  if (j.contains("temperatureMap")) {
+    auto tm = j["temperatureMap"].get<std::vector<float>>();
+    if (!validate_size(w, tm)) { err = "temperatureMap size mismatch"; return false; }
+    w.temperatureMap = std::move(tm);
+  }
+  if (j.contains("moistureMap")) {
+    auto mm = j["moistureMap"].get<std::vector<float>>();
+    if (!validate_size(w, mm)) { err = "moistureMap size mismatch"; return false; }
+    w.moistureMap = std::move(mm);
+  }
+  if (j.contains("coastClassMap")) {
+    auto cm = j["coastClassMap"].get<std::vector<uint8_t>>();
+    if (!validate_size_u8(w, cm)) { err = "coastClassMap size mismatch"; return false; }
+    w.coastClassMap = std::move(cm);
+  }
+  if (j.contains("landmassIdByCell")) {
+    auto lm = j["landmassIdByCell"].get<std::vector<int32_t>>();
+    if (!validate_size_i32(w, lm)) { err = "landmassIdByCell size mismatch"; return false; }
+    w.landmassIdByCell = std::move(lm);
+  }
+  if (j.contains("riverMap")) {
+    auto rm = j["riverMap"].get<std::vector<uint8_t>>();
+    if (!validate_size_u8(w, rm)) { err = "riverMap size mismatch"; return false; }
+    w.riverMap = std::move(rm);
+  }
+  if (j.contains("lakeMap")) {
+    auto lm = j["lakeMap"].get<std::vector<uint8_t>>();
+    if (!validate_size_u8(w, lm)) { err = "lakeMap size mismatch"; return false; }
+    w.lakeMap = std::move(lm);
+  }
+  if (j.contains("resourceWeightMap")) {
+    auto rw = j["resourceWeightMap"].get<std::vector<float>>();
+    if (!validate_size(w, rw)) { err = "resourceWeightMap size mismatch"; return false; }
+    w.resourceWeightMap = std::move(rw);
+  }
+  if (j.contains("startCandidates") && j["startCandidates"].is_array()) {
+    w.startCandidates.clear();
+    for (const auto& sc : j["startCandidates"]) {
+      StartCandidate c{};
+      c.cell = sc.value("cell", -1);
+      c.score = sc.value("score", 0.0f);
+      c.civBiasMask = sc.value("civBiasMask", static_cast<uint8_t>(0));
+      w.startCandidates.push_back(c);
+    }
+  }
+  if (j.contains("mythicCandidates") && j["mythicCandidates"].is_array()) {
+    w.mythicCandidates.clear();
+    for (const auto& mc : j["mythicCandidates"]) {
+      MythicCandidate c{};
+      c.siteType = static_cast<GuardianSiteType>(mc.value("siteType", 0));
+      c.cell = mc.value("cell", -1);
+      c.score = mc.value("score", 0.0f);
+      w.mythicCandidates.push_back(c);
+    }
   }
   if (j.contains("waterMask")) {
     auto m = j["waterMask"].get<std::vector<uint8_t>>();
@@ -3033,6 +3312,7 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
 bool save_scenario_file(const std::string& path, const World& w, std::string& err) {
   nlohmann::json j;
   j["schemaVersion"] = 1; j["seed"] = w.seed; j["mapWidth"] = w.width; j["mapHeight"] = w.height;
+  j["worldPreset"] = world_preset_name(w.worldPreset);
   j["players"] = nlohmann::json::array();
   for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap},{"isHuman",p.isHuman},{"isCPU",p.isCPU},{"team",p.teamId},{"civilization",p.civilization.id},{"color",{p.color[0],p.color[1],p.color[2]}},{"startingResources",{{"Food",p.resources[0]},{"Wood",p.resources[1]},{"Metal",p.resources[2]},{"Wealth",p.resources[3]},{"Knowledge",p.resources[4]},{"Oil",p.resources[5]}}}});
   j["cities"] = nlohmann::json::array(); for (const auto& c : w.cities) j["cities"].push_back({{"id",c.id},{"team",c.team},{"pos",{c.pos.x,c.pos.y}},{"level",c.level},{"capital",c.capital}});
@@ -3060,6 +3340,17 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
     });
   }
   j["biomeMap"] = w.biomeMap;
+  j["temperatureMap"] = w.temperatureMap;
+  j["moistureMap"] = w.moistureMap;
+  j["coastClassMap"] = w.coastClassMap;
+  j["landmassIdByCell"] = w.landmassIdByCell;
+  j["riverMap"] = w.riverMap;
+  j["lakeMap"] = w.lakeMap;
+  j["resourceWeightMap"] = w.resourceWeightMap;
+  j["startCandidates"] = nlohmann::json::array();
+  for (const auto& sc : w.startCandidates) j["startCandidates"].push_back({{"cell",sc.cell},{"score",sc.score},{"civBiasMask",sc.civBiasMask}});
+  j["mythicCandidates"] = nlohmann::json::array();
+  for (const auto& mc : w.mythicCandidates) j["mythicCandidates"].push_back({{"siteType",(int)mc.siteType},{"cell",mc.cell},{"score",mc.score}});
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"objective_id",o.objectiveId},{"title",o.title},{"description",o.description.empty()?o.text:o.description},{"primary",o.primary},{"category",objective_category_name(o.category)},{"state",objective_state_name(o.state)},{"owner",o.owner},{"visible",o.visible},{"progressText",o.progressText},{"progressValue",o.progressValue}});
   j["mission"] = {{"title",w.mission.title},{"briefing",w.mission.briefing},{"introMessages",w.mission.introMessages},{"victoryOutcome",w.mission.victoryOutcomeTag},{"defeatOutcome",w.mission.defeatOutcomeTag},{"partialOutcome",w.mission.partialOutcomeTag},{"branchKey",w.mission.branchKey},{"luaScript",w.mission.luaScriptFile},{"luaInline",w.mission.luaScriptInline}};
@@ -3463,6 +3754,11 @@ void tick_world(World& w, float dt) {
   gLastStats.interceptions = w.interceptionEvents;
   gLastStats.activeDenialZones = static_cast<uint32_t>(w.denialZones.size());
   gLastStats.mountainRegionCount = w.mountainRegionCount;
+  gLastStats.mountainChainCount = w.mountainChainCount;
+  gLastStats.riverCount = w.riverCount;
+  gLastStats.lakeCount = w.lakeCount;
+  gLastStats.startCandidateCount = w.startCandidateCount;
+  gLastStats.mythicCandidateCount = w.mythicCandidateCount;
   gLastStats.surfaceDepositCount = w.surfaceDepositCount;
   gLastStats.deepDepositCount = w.deepDepositCount;
   gLastStats.activeMineShafts = w.activeMineShafts;
@@ -3683,10 +3979,20 @@ std::string building_visual_variant_id(const World& world, const Building& build
 
 uint64_t map_setup_hash(const World& w) {
   uint64_t h = kFNVOffset;
+  hash_u32(h, static_cast<uint32_t>(w.worldPreset));
   for (float v : w.heightmap) hash_float(h, v);
   for (float v : w.fertility) hash_float(h, v);
+  for (float v : w.temperatureMap) hash_float(h, v);
+  for (float v : w.moistureMap) hash_float(h, v);
   for (uint8_t v : w.terrainClass) hash_u32(h, v);
+  for (uint8_t v : w.coastClassMap) hash_u32(h, v);
   for (uint8_t v : w.biomeMap) hash_u32(h, v);
+  for (uint8_t v : w.riverMap) hash_u32(h, v);
+  for (uint8_t v : w.lakeMap) hash_u32(h, v);
+  for (float v : w.resourceWeightMap) hash_float(h, v);
+  for (int32_t v : w.landmassIdByCell) hash_u32(h, static_cast<uint32_t>(v + 1));
+  for (const auto& c : w.startCandidates) { hash_u32(h, static_cast<uint32_t>(c.cell + 1)); hash_float(h, c.score); hash_u32(h, c.civBiasMask); }
+  for (const auto& c : w.mythicCandidates) { hash_u32(h, static_cast<uint32_t>(c.siteType)); hash_u32(h, static_cast<uint32_t>(c.cell + 1)); hash_float(h, c.score); }
   for (const auto& c : w.cities) { hash_u32(h, c.id); hash_u32(h, c.team); hash_float(h, c.pos.x); hash_float(h, c.pos.y); }
   for (const auto& b : w.buildings) { hash_u32(h, b.id); hash_u32(h, b.team); hash_u32(h, (uint32_t)b.type); hash_float(h, b.pos.x); hash_float(h, b.pos.y); }
   for (const auto& u : w.units) { hash_u32(h, u.id); hash_u32(h, u.team); hash_u32(h, (uint32_t)u.type); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }

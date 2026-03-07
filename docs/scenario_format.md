@@ -96,3 +96,16 @@ Optional root object:
 - `mythicGuardians.counters` (optional): `discovered`, `spawned`, `joined`, `killed`, `hostile_events`, `allied_events`
 
 See `scenarios/mythic_guardians_test.json` and `scenarios/mythic_guardians_multi_test.json` for authored examples.
+
+## World generation fields
+
+Scenario files now support and/or emit:
+- `worldPreset` (`pangaea|continents|archipelago|inland_sea|mountain_world`)
+- `temperatureMap`, `moistureMap`
+- `coastClassMap`, `landmassIdByCell`
+- `riverMap`, `lakeMap`
+- `resourceWeightMap`
+- `startCandidates[]` (`cell`, `score`, `civBiasMask`)
+- `mythicCandidates[]` (`siteType`, `cell`, `score`)
+
+`seed + map size + worldPreset` remain the deterministic source of truth. Overrides are optional for authored/scenario-locked maps.

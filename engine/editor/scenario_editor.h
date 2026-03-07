@@ -13,6 +13,7 @@ struct ScenarioEditorState {
   float terrainDelta{0.1f};
   int brushRadius{2};
   int selectedGuardianDef{0};
+  bool lockGeneratedStarts{false};
   char saveName[96]{"editor_scenario.json"};
 };
 

@@ -67,6 +67,7 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--smoke` enable deterministic validation checks and strict failures
 - `--ticks <N>` run fixed number of sim ticks and exit
 - `--seed <S>` deterministic world seed
+- `--world-preset <pangaea|continents|archipelago|inland_sea|mountain_world>` deterministic macro world shape preset
 - `--map-size <W>x<H>` override map dimensions
 - `--dump-hash` print deterministic map/state hashes
 - `--nav-debug` print navigation diagnostics counters in headless dump output
@@ -89,6 +90,18 @@ Headless deterministic smoke mode (CI/container friendly):
 - `--match-debug` print match-flow diagnostics
 - `--threads <N>` set deterministic worker pool size for job graph execution
 - `--hash-only` print only final hash line (plus required diagnostics/errors)
+
+
+## World generation smoke checks
+```bash
+./build/rts --headless --smoke --ticks 200 --seed 1234 --dump-hash
+./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --dump-hash
+./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset archipelago --dump-hash
+./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset mountain_world --dump-hash
+./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --threads 1 --hash-only
+./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --threads 4 --hash-only
+./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --threads 8 --hash-only
+```
 
 ## Controls
 - **WASD**: pan camera

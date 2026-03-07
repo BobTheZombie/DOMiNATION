@@ -17,6 +17,16 @@ void draw_scenario_editor(dom::sim::World& world, const glm::vec2& cameraCenter,
   if (!ImGui::Begin("Scenario Editor")) { ImGui::End(); return; }
 
   ImGui::SeparatorText("Terrain editing");
+  const char* presets[] = {"pangaea", "continents", "archipelago", "inland_sea", "mountain_world"};
+  int presetIdx = static_cast<int>(world.worldPreset);
+  if (ImGui::Combo("World preset", &presetIdx, presets, 5)) {
+    world.worldPreset = static_cast<dom::sim::WorldPreset>(std::clamp(presetIdx, 0, 4));
+    dom::sim::initialize_world(world, world.seed);
+  }
+  if (ImGui::Button("Regenerate world (seed+preset)")) {
+    dom::sim::initialize_world(world, world.seed);
+  }
+  ImGui::Checkbox("Lock generated starts", &state.lockGeneratedStarts);
   const char* terrainTools[] = {"paint biome", "paint terrain height", "place rivers"};
   ImGui::Combo("Terrain Tool", &state.terrainTool, terrainTools, 3);
   ImGui::SliderInt("Biome", &state.selectedBiome, 0, static_cast<int>(dom::sim::BiomeType::Count) - 1);
@@ -49,6 +59,8 @@ void draw_scenario_editor(dom::sim::World& world, const glm::vec2& cameraCenter,
   }
 
   ImGui::SeparatorText("Mythic guardian sites");
+  ImGui::Text("Start candidates: %zu", world.startCandidates.size());
+  ImGui::Text("Mythic candidates: %zu", world.mythicCandidates.size());
   if (!world.guardianDefinitions.empty()) {
     std::vector<const char*> guardianNames;
     guardianNames.reserve(world.guardianDefinitions.size());
