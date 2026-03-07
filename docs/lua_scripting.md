@@ -6,7 +6,7 @@
 - Lua orchestrates mission content only; authoritative sim stays in C++.
 
 
-Lua hooks continue to run in sandbox; civilization mission tags are available through player civilization data and remain deterministic because hook execution log and mission runtime counters are serialized in authority saves.
+Lua hooks continue to run in sandbox; civilization mission/doctrine tags and civilization IDs are available through player civilization data and remain deterministic because hook execution log and mission runtime counters are serialized in authority saves.
 
 ## Campaign-safe Lua hooks
 

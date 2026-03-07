@@ -72,6 +72,22 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   }
   ImGui::End();
 
+  if (ImGui::Begin("Civilization Identity")) {
+    ImGui::Text("UNIQUE_UNITS_PRODUCED=%u UNIQUE_BUILDINGS_CONSTRUCTED=%u", world.uniqueUnitsProduced, world.uniqueBuildingsConstructed);
+    ImGui::Text("CIV_DOCTRINE_SWITCHES=%u CIV_OPERATION_COUNT=%u", world.civDoctrineSwitches, world.civOperationCount);
+    ImGui::Text("CIV_INDUSTRY_OUTPUT=%.2f CIV_LOGISTICS_BONUS_USAGE=%.2f", world.civIndustryOutput, world.civLogisticsBonusUsage);
+    for (const auto& p : world.players) {
+      ImGui::SeparatorText((std::string("P") + std::to_string(p.id) + " " + p.civilization.displayName).c_str());
+      ImGui::Text("eco %.2f mil %.2f sci %.2f log %.2f", p.civilization.economyBias, p.civilization.militaryBias, p.civilization.scienceBias, p.civilization.logisticsBias);
+      ImGui::Text("ops: secure %.2f encircle %.2f naval %.2f air %.2f",
+                  p.civilization.operationPreference[(size_t)dom::sim::OperationType::SecureRoute],
+                  p.civilization.operationPreference[(size_t)dom::sim::OperationType::Encirclement],
+                  p.civilization.aiNavalPriority,
+                  p.civilization.aiAirPriority);
+    }
+  }
+  ImGui::End();
+
   if (ImGui::Begin("Mission Debug")) {
     ImGui::Text("status=%u briefingShown=%s result=%s", (unsigned)world.missionRuntime.status, world.missionRuntime.briefingShown?"yes":"no", world.missionRuntime.resultTag.c_str());
     ImGui::Text("triggers fired=%u scripted actions=%u", world.missionRuntime.firedTriggerCount, world.missionRuntime.scriptedActionCount);

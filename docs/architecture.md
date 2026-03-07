@@ -210,6 +210,8 @@ Added deterministic objective + trigger-action mission orchestration in simulati
 
 Civilization identity is data-driven from `content/civilizations.json` and includes bonuses, AI doctrine modifiers, and unique unit/building replacement IDs. Production and spawn paths resolve these deterministically per-player, and authoritative save data persists resolved definition IDs for replay/load stability.
 
+Applied authoritative hooks now include resource gather/trickle, trade income, supply/rail throughput, industrial throughput/refined output, operation preference weighting, and diplomacy posture/tension response. Civilization differentiation counters (`UNIQUE_UNITS_PRODUCED`, `UNIQUE_BUILDINGS_CONSTRUCTED`, `CIV_DOCTRINE_SWITCHES`, `CIV_INDUSTRY_OUTPUT`, `CIV_LOGISTICS_BONUS_USAGE`, `CIV_OPERATION_COUNT`) are deterministic and part of perf/debug workflows.
+
 ## Mountain extraction / underground network
 - Authoritative deterministic mountain regions (`mountainRegions`) and cell-region map.
 - Two-layer deposits: `surfaceDeposits` and `deepDeposits`.
