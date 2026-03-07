@@ -252,3 +252,7 @@ Authoritative rail model:
 
 Simulation pass order: base rail generation -> network recompute -> train updates -> rail throughput application -> supply/trade interaction.
 Rail state is serialized in scenario/save files and included in `state_hash` for deterministic replay/thread parity.
+
+## Campaign progression layer
+
+Campaign orchestration is data-driven and deterministic. Mission simulation remains authoritative in C++; campaign runtime carries compact state between missions and resolves explicit next-mission mappings by outcome/branch keys.

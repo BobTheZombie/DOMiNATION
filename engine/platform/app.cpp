@@ -78,6 +78,7 @@ struct CliOptions {
   std::string saveFile;
   std::string loadFile;
   std::string scenarioFile;
+  std::string campaignFile;
   std::string editorSaveFile{"scenario_editor_output.json"};
 };
 
@@ -150,6 +151,7 @@ bool parse_cli(int argc, char** argv, CliOptions& o) {
     else if (a == "--save" && i + 1 < argc) { o.saveFile = argv[++i]; }
     else if (a == "--load" && i + 1 < argc) { o.loadFile = argv[++i]; }
     else if (a == "--scenario" && i + 1 < argc) { o.scenarioFile = argv[++i]; }
+    else if (a == "--campaign" && i + 1 < argc) { o.campaignFile = argv[++i]; }
     else if (a == "--width" && i + 1 < argc) { if (!parse_int(argv[++i], o.windowW) || o.windowW < 640) return false; }
     else if (a == "--height" && i + 1 < argc) { if (!parse_int(argv[++i], o.windowH) || o.windowH < 480) return false; }
     else if (a == "--fullscreen") { o.fullscreen = true; }
@@ -280,6 +282,131 @@ std::string building_to_string(dom::sim::BuildingType v) {
   return "House";
 }
 
+
+
+
+struct CampaignMissionEntry {
+  std::string missionId;
+  std::string scenarioFile;
+  std::string briefing;
+  std::string debrief;
+  std::string introImage;
+  std::vector<std::string> expectedOutcomes;
+  std::vector<std::string> prerequisites;
+  std::vector<std::pair<std::string, std::string>> nextByOutcome;
+  std::vector<std::pair<std::string, std::string>> nextByBranch;
+};
+
+struct CampaignDefinition {
+  std::string campaignId;
+  std::string displayName;
+  std::string description;
+  dom::sim::CampaignCarryoverState startState;
+  std::vector<CampaignMissionEntry> missions;
+};
+
+struct CampaignRuntimeState {
+  std::string campaignFile;
+  CampaignDefinition definition;
+  dom::sim::CampaignCarryoverState carryover;
+  std::string currentMissionId;
+  std::vector<std::string> completedMissions;
+  std::vector<std::string> failedMissions;
+  std::vector<std::string> branchHistory;
+  std::vector<std::pair<std::string, bool>> branchUnlocked;
+  bool campaignComplete{false};
+  bool campaignFailed{false};
+  uint32_t missionCount{0};
+  uint32_t branchesTaken{0};
+};
+
+const CampaignMissionEntry* find_campaign_mission(const CampaignDefinition& def, const std::string& id) {
+  for (const auto& m : def.missions) if (m.missionId == id) return &m;
+  return nullptr;
+}
+
+bool campaign_flag_value(const dom::sim::CampaignCarryoverState& c, const std::string& name) {
+  for (const auto& kv : c.flags) if (kv.first == name) return kv.second;
+  return false;
+}
+
+bool parse_campaign_file(const std::string& path, CampaignDefinition& out, std::string& err) {
+  std::ifstream in(path);
+  if (!in.good()) { err = "campaign file not found"; return false; }
+  nlohmann::json j; in >> j;
+  out = {};
+  out.campaignId = j.value("campaign_id", std::string("unknown_campaign"));
+  out.displayName = j.value("display_name", out.campaignId);
+  out.description = j.value("description", std::string(""));
+  const auto& st = j.value("starting_state", nlohmann::json::object());
+  out.startState.campaignId = out.campaignId;
+  out.startState.playerCivilizationId = st.value("player_civilization", std::string("default"));
+  out.startState.unlockedAge = static_cast<uint8_t>(std::clamp(st.value("unlocked_age", 0), 0, 7));
+  if (st.contains("resources")) {
+    const auto& r = st.at("resources");
+    out.startState.resources[(size_t)dom::sim::Resource::Food] = r.value("Food", 0.0f);
+    out.startState.resources[(size_t)dom::sim::Resource::Wood] = r.value("Wood", 0.0f);
+    out.startState.resources[(size_t)dom::sim::Resource::Metal] = r.value("Metal", 0.0f);
+    out.startState.resources[(size_t)dom::sim::Resource::Wealth] = r.value("Wealth", 0.0f);
+    out.startState.resources[(size_t)dom::sim::Resource::Knowledge] = r.value("Knowledge", 0.0f);
+    out.startState.resources[(size_t)dom::sim::Resource::Oil] = r.value("Oil", 0.0f);
+  }
+  out.startState.worldTension = st.value("world_tension", 0.0f);
+  if (st.contains("flags")) for (auto it = st["flags"].begin(); it != st["flags"].end(); ++it) out.startState.flags.push_back({it.key(), it.value().get<bool>()});
+  if (st.contains("variables")) for (auto it = st["variables"].begin(); it != st["variables"].end(); ++it) out.startState.variables.push_back({it.key(), it.value().get<int64_t>()});
+  if (!j.contains("missions") || !j.at("missions").is_array()) { err = "missions array missing"; return false; }
+  for (const auto& m : j.at("missions")) {
+    CampaignMissionEntry e{};
+    e.missionId = m.value("mission_id", std::string(""));
+    e.scenarioFile = m.value("scenario", std::string(""));
+    e.briefing = m.value("briefing", std::string(""));
+    e.debrief = m.value("debrief", std::string(""));
+    e.introImage = m.value("intro_image", std::string(""));
+    if (m.contains("expected_outcomes")) e.expectedOutcomes = m.at("expected_outcomes").get<std::vector<std::string>>();
+    if (m.contains("prerequisites")) e.prerequisites = m.at("prerequisites").get<std::vector<std::string>>();
+    if (m.contains("next")) for (auto it = m["next"].begin(); it != m["next"].end(); ++it) e.nextByOutcome.push_back({it.key(), it.value().get<std::string>()});
+    if (m.contains("next_by_branch")) for (auto it = m["next_by_branch"].begin(); it != m["next_by_branch"].end(); ++it) e.nextByBranch.push_back({it.key(), it.value().get<std::string>()});
+    if (e.missionId.empty() || e.scenarioFile.empty()) { err = "mission entry missing id/scenario"; return false; }
+    out.missions.push_back(std::move(e));
+  }
+  if (out.missions.size() < 2) { err = "campaign requires >=2 missions"; return false; }
+  return true;
+}
+
+bool campaign_runtime_json(const CampaignRuntimeState& c, nlohmann::json& j) {
+  j = nlohmann::json::object();
+  j["schemaVersion"] = 1;
+  j["campaignRuntimeState"] = true;
+  j["campaignFile"] = c.campaignFile;
+  j["campaign"] = { {"campaign_id", c.definition.campaignId}, {"display_name", c.definition.displayName}, {"description", c.definition.description} };
+  j["carryover"] = {
+    {"campaign_id", c.carryover.campaignId}, {"player_civilization", c.carryover.playerCivilizationId}, {"unlocked_age", c.carryover.unlockedAge},
+    {"resources", {{"Food",c.carryover.resources[0]},{"Wood",c.carryover.resources[1]},{"Metal",c.carryover.resources[2]},{"Wealth",c.carryover.resources[3]},{"Knowledge",c.carryover.resources[4]},{"Oil",c.carryover.resources[5]}}},
+    {"veteran_units", c.carryover.veteranUnitIds}, {"discovered_guardians", c.carryover.discoveredGuardians}, {"world_tension", c.carryover.worldTension},
+    {"unlocked_rewards", c.carryover.unlockedRewards}, {"previous_result", c.carryover.previousMissionResult}, {"pending_branch", c.carryover.pendingBranchKey}
+  };
+  nlohmann::json flags = nlohmann::json::object(); for (const auto& kv : c.carryover.flags) flags[kv.first] = kv.second; j["carryover"]["flags"] = flags;
+  nlohmann::json vars = nlohmann::json::object(); for (const auto& kv : c.carryover.variables) vars[kv.first] = kv.second; j["carryover"]["variables"] = vars;
+  j["currentMissionId"] = c.currentMissionId;
+  j["completedMissions"] = c.completedMissions;
+  j["failedMissions"] = c.failedMissions;
+  j["branchHistory"] = c.branchHistory;
+  j["campaignComplete"] = c.campaignComplete;
+  j["campaignFailed"] = c.campaignFailed;
+  j["missionCount"] = c.missionCount;
+  j["branchesTaken"] = c.branchesTaken;
+  return true;
+}
+
+void apply_campaign_carryover_to_world(dom::sim::World& w, const CampaignRuntimeState& c) {
+  w.campaign = c.carryover;
+  if (!w.players.empty()) {
+    w.players[0].civilization.id = c.carryover.playerCivilizationId.empty() ? w.players[0].civilization.id : c.carryover.playerCivilizationId;
+    w.players[0].age = static_cast<dom::sim::Age>(std::min<uint8_t>(c.carryover.unlockedAge, (uint8_t)dom::sim::Age::Information));
+    for (size_t i = 0; i < c.carryover.resources.size(); ++i) w.players[0].resources[i] += c.carryover.resources[i];
+  }
+  w.worldTension = c.carryover.worldTension;
+}
 
 constexpr uint32_t kSaveSchemaVersion = 2;
 
@@ -413,6 +540,9 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   for (const auto& l : w.objectiveLog) j["objectiveLog"].push_back({{"tick", l.tick}, {"text", l.text}});
   j["mission"] = {{"title", w.mission.title}, {"briefing", w.mission.briefing}, {"introMessages", w.mission.introMessages}, {"victoryOutcome", w.mission.victoryOutcomeTag}, {"defeatOutcome", w.mission.defeatOutcomeTag}, {"partialOutcome", w.mission.partialOutcomeTag}, {"branchKey", w.mission.branchKey}, {"luaScript", w.mission.luaScriptFile}, {"luaInline", w.mission.luaScriptInline}};
   j["missionRuntime"] = {{"briefingShown", w.missionRuntime.briefingShown}, {"status", (int)w.missionRuntime.status}, {"resultTag", w.missionRuntime.resultTag}, {"activeObjectives", w.missionRuntime.activeObjectives}, {"luaHookLog", w.missionRuntime.luaHookLog}, {"firedTriggerCount", w.missionRuntime.firedTriggerCount}, {"scriptedActionCount", w.missionRuntime.scriptedActionCount}};
+  j["campaign"] = {{"campaignId", w.campaign.campaignId}, {"playerCivilizationId", w.campaign.playerCivilizationId}, {"unlockedAge", w.campaign.unlockedAge}, {"resources", w.campaign.resources}, {"veteranUnitIds", w.campaign.veteranUnitIds}, {"discoveredGuardians", w.campaign.discoveredGuardians}, {"worldTension", w.campaign.worldTension}, {"unlockedRewards", w.campaign.unlockedRewards}, {"previousMissionResult", w.campaign.previousMissionResult}, {"pendingBranchKey", w.campaign.pendingBranchKey}};
+  nlohmann::json cflags=nlohmann::json::object(); for (const auto& kv : w.campaign.flags) cflags[kv.first]=kv.second; j["campaign"]["flags"] = cflags;
+  nlohmann::json cvars=nlohmann::json::object(); for (const auto& kv : w.campaign.variables) cvars[kv.first]=kv.second; j["campaign"]["variables"] = cvars;
   j["match"] = {{"phase", (int)w.match.phase}, {"condition", (int)w.match.condition}, {"winner", w.match.winner}, {"endTick", w.match.endTick}, {"scoreTieBreak", w.match.scoreTieBreak}};
   j["config"] = {{"timeLimitTicks", w.config.timeLimitTicks}, {"wonderHoldTicks", w.config.wonderHoldTicks}, {"scoreResourceWeight", w.config.scoreResourceWeight},
     {"scoreUnitWeight", w.config.scoreUnitWeight}, {"scoreBuildingWeight", w.config.scoreBuildingWeight}, {"scoreAgeWeight", w.config.scoreAgeWeight}, {"scoreCapitalWeight", w.config.scoreCapitalWeight}, {"allowConquest", w.config.allowConquest}, {"allowScore", w.config.allowScore}, {"allowWonder", w.config.allowWonder}};
@@ -584,6 +714,7 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.objectiveLog.clear();
   if (j.contains("objectiveLog")) for (const auto& jl : j.at("objectiveLog")) { w.objectiveLog.push_back({jl.value("tick", 0u), jl.value("text", "")}); }
   if (j.contains("mission")) { const auto& m = j.at("mission"); w.mission.title = m.value("title", ""); w.mission.briefing = m.value("briefing", ""); if (m.contains("introMessages")) w.mission.introMessages = m.at("introMessages").get<std::vector<std::string>>(); w.mission.victoryOutcomeTag = m.value("victoryOutcome", "victory"); w.mission.defeatOutcomeTag = m.value("defeatOutcome", "defeat"); w.mission.partialOutcomeTag = m.value("partialOutcome", "partial_victory"); w.mission.branchKey = m.value("branchKey", ""); w.mission.luaScriptFile = m.value("luaScript", ""); w.mission.luaScriptInline = m.value("luaInline", ""); }
+  if (j.contains("campaign")) { const auto& c = j.at("campaign"); w.campaign.campaignId = c.value("campaignId", std::string("")); w.campaign.playerCivilizationId = c.value("playerCivilizationId", std::string("")); w.campaign.unlockedAge = static_cast<uint8_t>(c.value("unlockedAge", 0)); if (c.contains("resources")) w.campaign.resources = c.at("resources").get<std::array<float, static_cast<size_t>(dom::sim::Resource::Count)>>(); if (c.contains("veteranUnitIds")) w.campaign.veteranUnitIds = c.at("veteranUnitIds").get<std::vector<uint32_t>>(); if (c.contains("discoveredGuardians")) w.campaign.discoveredGuardians = c.at("discoveredGuardians").get<std::vector<std::string>>(); w.campaign.worldTension = c.value("worldTension", 0.0f); if (c.contains("unlockedRewards")) w.campaign.unlockedRewards = c.at("unlockedRewards").get<std::vector<std::string>>(); w.campaign.previousMissionResult = c.value("previousMissionResult", std::string("")); w.campaign.pendingBranchKey = c.value("pendingBranchKey", std::string("")); if (c.contains("flags")) for (auto it=c["flags"].begin(); it!=c["flags"].end(); ++it) w.campaign.flags.push_back({it.key(), it.value().get<bool>()}); if (c.contains("variables")) for (auto it=c["variables"].begin(); it!=c["variables"].end(); ++it) w.campaign.variables.push_back({it.key(), it.value().get<int64_t>()}); }
   if (j.contains("missionRuntime")) { const auto& mr = j.at("missionRuntime"); w.missionRuntime.briefingShown = mr.value("briefingShown", false); w.missionRuntime.status = static_cast<dom::sim::MissionStatus>(mr.value("status", 1)); w.missionRuntime.resultTag = mr.value("resultTag", ""); if (mr.contains("activeObjectives")) w.missionRuntime.activeObjectives = mr.at("activeObjectives").get<std::vector<uint32_t>>(); if (mr.contains("luaHookLog")) w.missionRuntime.luaHookLog = mr.at("luaHookLog").get<std::vector<std::string>>(); w.missionRuntime.firedTriggerCount = mr.value("firedTriggerCount", 0u); w.missionRuntime.scriptedActionCount = mr.value("scriptedActionCount", 0u); }
   const auto& jm = j.at("match");
   w.match.phase = static_cast<dom::sim::MatchPhase>(jm.value("phase", 0)); w.match.condition = static_cast<dom::sim::VictoryCondition>(jm.value("condition", 0));
@@ -656,7 +787,167 @@ void setup_cpu_battle(dom::sim::World& world, int perTeam) {
   }
   dom::sim::on_authoritative_state_loaded(world);
 }
+
+
+std::string mission_result_tag(const dom::sim::World& world) {
+  if (!world.missionRuntime.resultTag.empty()) return world.missionRuntime.resultTag;
+  if (world.missionRuntime.status == dom::sim::MissionStatus::Victory) return world.mission.victoryOutcomeTag;
+  if (world.missionRuntime.status == dom::sim::MissionStatus::Defeat) return world.mission.defeatOutcomeTag;
+  if (world.missionRuntime.status == dom::sim::MissionStatus::PartialVictory) return world.mission.partialOutcomeTag;
+  return "none";
+}
+
+void update_campaign_carryover_from_world(CampaignRuntimeState& campaign, const dom::sim::World& world, const std::string& resultTag) {
+  campaign.carryover.previousMissionResult = resultTag;
+  campaign.carryover.worldTension = world.worldTension;
+  if (!world.players.empty()) {
+    campaign.carryover.playerCivilizationId = world.players[0].civilization.id;
+    campaign.carryover.unlockedAge = std::max<uint8_t>(campaign.carryover.unlockedAge, static_cast<uint8_t>(world.players[0].age));
+    constexpr float kCarryMult = 0.15f;
+    for (size_t i = 0; i < campaign.carryover.resources.size(); ++i) campaign.carryover.resources[i] = std::clamp(campaign.carryover.resources[i] + world.players[0].resources[i] * kCarryMult, 0.0f, 5000.0f);
+  }
+  campaign.carryover.veteranUnitIds.clear();
+  for (const auto& u : world.units) if (u.team == 0 && u.hp > 120.0f && campaign.carryover.veteranUnitIds.size() < 8) campaign.carryover.veteranUnitIds.push_back(u.id);
+  campaign.carryover.discoveredGuardians.clear();
+  for (const auto& s : world.guardianSites) if (s.discovered) campaign.carryover.discoveredGuardians.push_back(s.guardianId);
+  campaign.carryover.pendingBranchKey = world.campaign.pendingBranchKey;
+}
+
+std::string select_next_mission(const CampaignRuntimeState& campaign, const CampaignMissionEntry& mission, const std::string& resultTag) {
+  if (!campaign.carryover.pendingBranchKey.empty()) {
+    for (const auto& kv : mission.nextByBranch) if (kv.first == campaign.carryover.pendingBranchKey) return kv.second;
+  }
+  for (const auto& kv : mission.nextByOutcome) if (kv.first == resultTag) return kv.second;
+  return "";
+}
+
+int run_campaign_headless(const CliOptions& o) {
+  CampaignRuntimeState campaign{};
+  std::string err;
+  if (!o.loadFile.empty()) {
+    std::ifstream in(o.loadFile);
+    if (!in.good()) { std::cerr << "Campaign state not found: " << o.loadFile << "\n"; return 161; }
+    nlohmann::json j; in >> j;
+    if (!j.value("campaignRuntimeState", false)) { std::cerr << "Load file is not campaign runtime state\n"; return 162; }
+    campaign.campaignFile = j.value("campaignFile", std::string(""));
+    if (campaign.campaignFile.empty()) { std::cerr << "Campaign state missing campaignFile\n"; return 163; }
+    if (!parse_campaign_file(campaign.campaignFile, campaign.definition, err)) { std::cerr << "Failed to load campaign file: " << err << "\n"; return 164; }
+    const auto& c = j.at("carryover");
+    campaign.carryover = campaign.definition.startState;
+    campaign.carryover.campaignId = c.value("campaign_id", campaign.definition.campaignId);
+    campaign.carryover.playerCivilizationId = c.value("player_civilization", std::string("default"));
+    campaign.carryover.unlockedAge = static_cast<uint8_t>(c.value("unlocked_age", 0));
+    if (c.contains("resources")) {
+      campaign.carryover.resources[0] = c["resources"].value("Food", 0.0f);
+      campaign.carryover.resources[1] = c["resources"].value("Wood", 0.0f);
+      campaign.carryover.resources[2] = c["resources"].value("Metal", 0.0f);
+      campaign.carryover.resources[3] = c["resources"].value("Wealth", 0.0f);
+      campaign.carryover.resources[4] = c["resources"].value("Knowledge", 0.0f);
+      campaign.carryover.resources[5] = c["resources"].value("Oil", 0.0f);
+    }
+    if (c.contains("flags")) for (auto it = c["flags"].begin(); it != c["flags"].end(); ++it) campaign.carryover.flags.push_back({it.key(), it.value().get<bool>()});
+    if (c.contains("variables")) for (auto it = c["variables"].begin(); it != c["variables"].end(); ++it) campaign.carryover.variables.push_back({it.key(), it.value().get<int64_t>()});
+    if (c.contains("veteran_units")) campaign.carryover.veteranUnitIds = c.at("veteran_units").get<std::vector<uint32_t>>();
+    if (c.contains("discovered_guardians")) campaign.carryover.discoveredGuardians = c.at("discovered_guardians").get<std::vector<std::string>>();
+    if (c.contains("unlocked_rewards")) campaign.carryover.unlockedRewards = c.at("unlocked_rewards").get<std::vector<std::string>>();
+    campaign.carryover.worldTension = c.value("world_tension", 0.0f);
+    campaign.carryover.previousMissionResult = c.value("previous_result", std::string(""));
+    campaign.carryover.pendingBranchKey = c.value("pending_branch", std::string(""));
+    campaign.currentMissionId = j.value("currentMissionId", std::string(""));
+    if (j.contains("completedMissions")) campaign.completedMissions = j.at("completedMissions").get<std::vector<std::string>>();
+    if (j.contains("failedMissions")) campaign.failedMissions = j.at("failedMissions").get<std::vector<std::string>>();
+    if (j.contains("branchHistory")) campaign.branchHistory = j.at("branchHistory").get<std::vector<std::string>>();
+    campaign.campaignComplete = j.value("campaignComplete", false);
+    campaign.campaignFailed = j.value("campaignFailed", false);
+    campaign.missionCount = j.value("missionCount", 0u);
+    campaign.branchesTaken = j.value("branchesTaken", 0u);
+  } else {
+    if (!parse_campaign_file(o.campaignFile, campaign.definition, err)) { std::cerr << "Failed to load campaign: " << err << "\n"; return 165; }
+    campaign.campaignFile = o.campaignFile;
+    campaign.carryover = campaign.definition.startState;
+    campaign.currentMissionId = campaign.definition.missions.front().missionId;
+  }
+
+  if (campaign.currentMissionId.empty()) { std::cerr << "Campaign has no current mission\n"; return 166; }
+  int remainingTicks = o.ticks >= 0 ? o.ticks : 600;
+  while (remainingTicks > 0 && !campaign.campaignComplete && !campaign.campaignFailed) {
+    const CampaignMissionEntry* mission = find_campaign_mission(campaign.definition, campaign.currentMissionId);
+    if (!mission) { std::cerr << "Campaign mission not found: " << campaign.currentMissionId << "\n"; return 167; }
+    for (const auto& pre : mission->prerequisites) {
+      if (std::find(campaign.completedMissions.begin(), campaign.completedMissions.end(), pre) == campaign.completedMissions.end()) {
+        std::cerr << "Campaign prerequisite not met for mission " << mission->missionId << ": " << pre << "\n";
+        return 168;
+      }
+    }
+
+    dom::sim::World world;
+    std::string loadErr;
+    if (!dom::sim::load_scenario_file(world, mission->scenarioFile, o.seed, loadErr)) { std::cerr << "Failed to load mission scenario: " << loadErr << "\n"; return 169; }
+    apply_campaign_carryover_to_world(world, campaign);
+    const int missionTicks = std::min(remainingTicks, 1200);
+    dom::sim::set_worker_threads(o.threads > 0 ? o.threads : std::max(1u, std::thread::hardware_concurrency()));
+    const uint32_t stopTick = world.tick + static_cast<uint32_t>(missionTicks);
+    while (world.tick < stopTick) {
+      if (dom::sim::gameplay_orders_allowed(world)) {
+        std::vector<uint16_t> cpuPlayers;
+        for (const auto& p : world.players) if (p.isCPU && p.alive) cpuPlayers.push_back(p.id);
+        std::sort(cpuPlayers.begin(), cpuPlayers.end());
+        std::mutex aiMergeMutex;
+        dom::sim::TaskGraph aiGraph;
+        for (uint16_t id : cpuPlayers) aiGraph.jobs.push_back({[&world, &aiMergeMutex, id]() { std::lock_guard<std::mutex> lock(aiMergeMutex); dom::ai::update_simple_ai(world, id); }});
+        dom::sim::run_task_graph(aiGraph);
+      }
+      dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+      if (world.match.phase == dom::sim::MatchPhase::Ended) break;
+    }
+
+    remainingTicks -= missionTicks;
+    const std::string resultTag = mission_result_tag(world);
+    update_campaign_carryover_from_world(campaign, world, resultTag);
+    if (world.missionRuntime.status == dom::sim::MissionStatus::Defeat) campaign.failedMissions.push_back(mission->missionId);
+    else campaign.completedMissions.push_back(mission->missionId);
+    ++campaign.missionCount;
+    if (!campaign.carryover.pendingBranchKey.empty()) { campaign.branchHistory.push_back(campaign.carryover.pendingBranchKey); ++campaign.branchesTaken; }
+
+    const std::string nextMission = select_next_mission(campaign, *mission, resultTag);
+    campaign.carryover.pendingBranchKey.clear();
+    if (nextMission.empty()) {
+      campaign.campaignComplete = (resultTag == "victory" || resultTag == "partial_victory");
+      campaign.campaignFailed = (resultTag == "defeat");
+      break;
+    }
+    campaign.currentMissionId = nextMission;
+  }
+
+  nlohmann::json cj;
+  campaign_runtime_json(campaign, cj);
+  if (!o.saveFile.empty()) {
+    std::ofstream out(o.saveFile);
+    out << cj.dump(2) << "\n";
+    std::cout << "SAVE_RESULT path=" << o.saveFile << " mission=" << campaign.currentMissionId << "\n";
+  }
+  if (o.smoke) {
+    if (campaign.definition.missions.size() < 2) { std::cerr << "Smoke failure: campaign must define >=2 missions\n"; return 171; }
+    if (campaign.missionCount < 1) { std::cerr << "Smoke failure: no mission played\n"; return 172; }
+    if (campaign.completedMissions.empty() && campaign.failedMissions.empty()) { std::cerr << "Smoke failure: no mission result captured\n"; return 173; }
+    if (campaign.carryover.resources[0] <= campaign.definition.startState.resources[0]) { std::cerr << "Smoke failure: carryover resource did not change\n"; return 174; }
+  }
+  const uint64_t stateHash = std::hash<std::string>{}(cj.dump());
+  if (o.dumpHash || o.hashOnly) std::cout << "state_hash=" << stateHash << "\n";
+  if (o.dumpHash) {
+    std::cout << "CAMPAIGN_MISSION_COUNT=" << campaign.missionCount << "\n";
+    std::cout << "CAMPAIGN_FLAGS_SET=" << campaign.carryover.flags.size() << "\n";
+    std::cout << "CAMPAIGN_RESOURCES_COUNT=" << campaign.carryover.resources.size() << "\n";
+    std::cout << "CAMPAIGN_BRANCHES_TAKEN=" << campaign.branchesTaken << "\n";
+  }
+  return 0;
+}
+
 int run_headless(const CliOptions& o) {
+  if (!o.campaignFile.empty() || (!o.loadFile.empty() && o.scenarioFile.empty())) {
+    std::ifstream maybeCampaign(o.loadFile);
+    if (!o.campaignFile.empty() || (maybeCampaign.good() && [&](){ nlohmann::json j; maybeCampaign >> j; return j.value("campaignRuntimeState", false); }())) return run_campaign_headless(o);
+  }
   dom::sim::set_nav_debug(o.navDebug);
   dom::ai::set_attack_early(o.aiAttackEarly);
   dom::ai::set_aggressive(o.aiAggressive);
@@ -772,7 +1063,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -844,7 +1135,7 @@ int run_headless(const CliOptions& o) {
                 << " POSTURE_CHANGES=" << stats.postureChanges
                 << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents
                 << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << " AIR_UNIT_COUNT=" << stats.airUnitCount << " DETECTOR_COUNT=" << stats.detectorCount << " RADAR_REVEALS=" << stats.radarReveals << " STRATEGIC_STRIKES=" << stats.strategicStrikes << " INTERCEPTIONS=" << stats.interceptions << " ACTIVE_DENIAL_ZONES=" << stats.activeDenialZones << " MOUNTAIN_REGION_COUNT=" << stats.mountainRegionCount << " MOUNTAIN_CHAIN_COUNT=" << stats.mountainChainCount << " RIVER_COUNT=" << stats.riverCount << " LAKE_COUNT=" << stats.lakeCount << " START_CANDIDATE_COUNT=" << stats.startCandidateCount << " MYTHIC_CANDIDATE_COUNT=" << stats.mythicCandidateCount << " SURFACE_DEPOSIT_COUNT=" << stats.surfaceDepositCount << " DEEP_DEPOSIT_COUNT=" << stats.deepDepositCount << " ACTIVE_MINE_SHAFTS=" << stats.activeMineShafts << " ACTIVE_TUNNELS=" << stats.activeTunnels << " UNDERGROUND_DEPOTS=" << stats.undergroundDepots << " UNDERGROUND_YIELD=" << stats.undergroundYield << " GUARDIAN_SITE_COUNT=" << stats.guardianSiteCount << " GUARDIANS_DISCOVERED=" << stats.guardiansDiscovered << " GUARDIANS_SPAWNED=" << stats.guardiansSpawned << " GUARDIANS_JOINED=" << stats.guardiansJoined << " GUARDIANS_KILLED=" << stats.guardiansKilled << " HOSTILE_GUARDIAN_EVENTS=" << stats.hostileGuardianEvents << " ALLIED_GUARDIAN_EVENTS=" << stats.alliedGuardianEvents << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "," << stats.campaignMissionCount << "," << stats.campaignFlagsSet << "," << stats.campaignResourcesCount << "," << stats.campaignBranchesTaken << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -1058,7 +1349,13 @@ int run_app(int argc, char** argv) {
   bool replayPaused = false;
   float replaySpeed = std::max(0.1f, opts.replaySpeed);
   size_t replayIdx = 0;
-  if (!opts.scenarioFile.empty()) {
+  if (!opts.campaignFile.empty()) {
+    CampaignDefinition def{}; std::string err;
+    if (parse_campaign_file(opts.campaignFile, def, err) && !def.missions.empty()) {
+      if (!dom::sim::load_scenario_file(world, def.missions.front().scenarioFile, opts.seed, err)) { std::cerr << "Failed to load campaign mission scenario: " << err << "\n"; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed); }
+      world.campaign = def.startState;
+    } else { std::cerr << "Failed to load campaign: " << err << "\n"; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed); }
+  } else if (!opts.scenarioFile.empty()) {
     std::string err;
     if (!dom::sim::load_scenario_file(world, opts.scenarioFile, opts.seed, err)) { std::cerr << "Failed to load scenario: " << err << "\n"; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed); }
   } else {
@@ -1105,6 +1402,8 @@ int run_app(int argc, char** argv) {
   bool showCommandHistoryPanel = false;
   bool showSelectionPanel = true;
   bool showEditorPanel = true;
+  bool showCampaignPanel = true;
+  bool showCampaignDebriefPanel = true;
   bool eventFilterDiplomacy = true;
   bool eventFilterProduction = true;
   bool eventFilterCombat = true;
@@ -1461,6 +1760,28 @@ int run_app(int argc, char** argv) {
           ImGui::BulletText("team=%u type=%d target=(%.1f,%.1f)", op.team, (int)op.type, op.target.x, op.target.y);
         }
         ImGui::TextDisabled("Read-only (issuing operations not exposed in UI yet).");
+        ImGui::End();
+      }
+      if (showCampaignPanel && !world.campaign.campaignId.empty()) {
+        ImGui::Begin("Campaign Briefing", &showCampaignPanel);
+        ImGui::Text("Campaign: %s", world.campaign.campaignId.c_str());
+        ImGui::TextWrapped("Mission: %s", world.mission.title.c_str());
+        ImGui::Separator();
+        ImGui::TextWrapped("%s", world.mission.briefing.c_str());
+        ImGui::Separator();
+        ImGui::Text("Carryover Civ: %s", world.campaign.playerCivilizationId.c_str());
+        ImGui::Text("Carryover Previous Result: %s", world.campaign.previousMissionResult.c_str());
+        ImGui::Text("Carryover Food: %.1f", world.campaign.resources[0]);
+        ImGui::Text("Carryover Wealth: %.1f", world.campaign.resources[3]);
+        ImGui::End();
+      }
+      if (showCampaignDebriefPanel && !world.campaign.campaignId.empty()) {
+        ImGui::Begin("Campaign Progression", &showCampaignDebriefPanel);
+        ImGui::Text("Mission Result: %s", world.missionRuntime.resultTag.c_str());
+        ImGui::Text("Status: %d", (int)world.missionRuntime.status);
+        ImGui::Text("Flags: %zu", world.campaign.flags.size());
+        ImGui::Text("Rewards: %zu", world.campaign.unlockedRewards.size());
+        ImGui::Text("Pending Branch: %s", world.campaign.pendingBranchKey.c_str());
         ImGui::End();
       }
       if (showSelectionPanel) {

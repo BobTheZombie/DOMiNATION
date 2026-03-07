@@ -1,0 +1,43 @@
+{
+  "campaign_id": "test_campaign",
+  "display_name": "Deterministic Campaign Smoke",
+  "description": "Minimal multi-mission deterministic campaign flow with carryover and branching.",
+  "starting_state": {
+    "player_civilization": "default",
+    "unlocked_age": 0,
+    "resources": {"Food": 100, "Wood": 40, "Metal": 20, "Wealth": 60, "Knowledge": 10, "Oil": 0},
+    "world_tension": 0.15,
+    "flags": {"intro_seen": false},
+    "variables": {"story_score": 1}
+  },
+  "missions": [
+    {
+      "mission_id": "m1_opening",
+      "scenario": "scenarios/campaign_chain_m1.json",
+      "briefing": "Secure the region and establish the initial campaign branch.",
+      "debrief": "Opening operation complete.",
+      "intro_image": "content/textures/units/infantry_unit_rts_sprite_256.png",
+      "expected_outcomes": ["victory", "defeat", "partial_victory", "route_alpha"],
+      "next": {"victory": "m2_alpha", "partial_victory": "m2_alpha", "defeat": "m2_fallback"},
+      "next_by_branch": {"route_alpha": "m2_alpha"}
+    },
+    {
+      "mission_id": "m2_alpha",
+      "scenario": "scenarios/campaign_chain_m2_alpha.json",
+      "briefing": "Follow the alpha branch and secure a clean win.",
+      "debrief": "Alpha route complete.",
+      "expected_outcomes": ["victory", "defeat"],
+      "prerequisites": ["m1_opening"],
+      "next": {"victory": "", "defeat": ""}
+    },
+    {
+      "mission_id": "m2_fallback",
+      "scenario": "scenarios/campaign_chain_m2_fallback.json",
+      "briefing": "Fallback route if opening mission is lost.",
+      "debrief": "Fallback resolved.",
+      "expected_outcomes": ["victory", "defeat"],
+      "prerequisites": ["m1_opening"],
+      "next": {"victory": "", "defeat": ""}
+    }
+  ]
+}

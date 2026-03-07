@@ -162,6 +162,10 @@ int find_guardian_site_index(const World& w, uint32_t siteInstanceId) {
   return -1;
 }
 
+bool activate_guardian_site(World& w, uint32_t siteInstanceId);
+bool reveal_guardian_site(World& w, uint32_t siteInstanceId, uint16_t discoverer);
+bool assign_guardian_owner(World& w, uint32_t siteInstanceId, uint16_t owner);
+
 #ifdef DOM_HAS_LUA
 lua_State* gLuaState = nullptr;
 World* gLuaWorld = nullptr;
@@ -211,6 +215,68 @@ int lua_reveal_guardian_site(lua_State* L) {
   reveal_guardian_site(*gLuaWorld, id, discoverer);
   return 0;
 }
+
+
+int lua_get_campaign_flag(lua_State* L) {
+  if (!gLuaWorld) { lua_pushboolean(L, 0); return 1; }
+  const std::string name = luaL_checkstring(L, 1);
+  for (const auto& kv : gLuaWorld->campaign.flags) if (kv.first == name) { lua_pushboolean(L, kv.second); return 1; }
+  lua_pushboolean(L, 0); return 1;
+}
+int lua_set_campaign_flag(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const std::string name = luaL_checkstring(L, 1);
+  const bool value = lua_toboolean(L, 2) != 0;
+  for (auto& kv : gLuaWorld->campaign.flags) if (kv.first == name) { kv.second = value; return 0; }
+  gLuaWorld->campaign.flags.push_back({name, value});
+  return 0;
+}
+int lua_get_campaign_resource(lua_State* L) {
+  if (!gLuaWorld) { lua_pushnumber(L, 0.0); return 1; }
+  const std::string name = luaL_checkstring(L, 1);
+  if (name == "Food") lua_pushnumber(L, gLuaWorld->campaign.resources[0]);
+  else if (name == "Wood") lua_pushnumber(L, gLuaWorld->campaign.resources[1]);
+  else if (name == "Metal") lua_pushnumber(L, gLuaWorld->campaign.resources[2]);
+  else if (name == "Wealth") lua_pushnumber(L, gLuaWorld->campaign.resources[3]);
+  else if (name == "Knowledge") lua_pushnumber(L, gLuaWorld->campaign.resources[4]);
+  else if (name == "Oil") lua_pushnumber(L, gLuaWorld->campaign.resources[5]);
+  else lua_pushnumber(L, 0.0);
+  return 1;
+}
+int lua_add_campaign_resource(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const std::string name = luaL_checkstring(L, 1);
+  const float amount = static_cast<float>(luaL_checknumber(L, 2));
+  if (name == "Food") gLuaWorld->campaign.resources[0] += amount;
+  else if (name == "Wood") gLuaWorld->campaign.resources[1] += amount;
+  else if (name == "Metal") gLuaWorld->campaign.resources[2] += amount;
+  else if (name == "Wealth") gLuaWorld->campaign.resources[3] += amount;
+  else if (name == "Knowledge") gLuaWorld->campaign.resources[4] += amount;
+  else if (name == "Oil") gLuaWorld->campaign.resources[5] += amount;
+  return 0;
+}
+int lua_get_previous_mission_result(lua_State* L) {
+  if (!gLuaWorld) { lua_pushstring(L, ""); return 1; }
+  lua_pushstring(L, gLuaWorld->campaign.previousMissionResult.c_str());
+  return 1;
+}
+int lua_set_campaign_branch(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  gLuaWorld->campaign.pendingBranchKey = luaL_checkstring(L, 1);
+  return 0;
+}
+int lua_unlock_campaign_reward(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const std::string id = luaL_checkstring(L, 1);
+  if (std::find(gLuaWorld->campaign.unlockedRewards.begin(), gLuaWorld->campaign.unlockedRewards.end(), id) == gLuaWorld->campaign.unlockedRewards.end()) gLuaWorld->campaign.unlockedRewards.push_back(id);
+  return 0;
+}
+int lua_get_campaign_variable(lua_State* L) {
+  if (!gLuaWorld) { lua_pushinteger(L, 0); return 1; }
+  const std::string name = luaL_checkstring(L, 1);
+  for (const auto& kv : gLuaWorld->campaign.variables) if (kv.first == name) { lua_pushinteger(L, (lua_Integer)kv.second); return 1; }
+  lua_pushinteger(L, 0); return 1;
+}
 int lua_assign_guardian_owner(lua_State* L) {
   if (!gLuaWorld) return 0;
   assign_guardian_owner(*gLuaWorld, static_cast<uint32_t>(luaL_checkinteger(L, 1)), static_cast<uint16_t>(luaL_checkinteger(L, 2)));
@@ -234,6 +300,14 @@ void ensure_lua(World& w) {
   lua_register(gLuaState, "activate_guardian_site", lua_activate_guardian_site);
   lua_register(gLuaState, "reveal_guardian_site", lua_reveal_guardian_site);
   lua_register(gLuaState, "assign_guardian_owner", lua_assign_guardian_owner);
+  lua_register(gLuaState, "get_campaign_flag", lua_get_campaign_flag);
+  lua_register(gLuaState, "set_campaign_flag", lua_set_campaign_flag);
+  lua_register(gLuaState, "get_campaign_resource", lua_get_campaign_resource);
+  lua_register(gLuaState, "add_campaign_resource", lua_add_campaign_resource);
+  lua_register(gLuaState, "get_previous_mission_result", lua_get_previous_mission_result);
+  lua_register(gLuaState, "set_campaign_branch", lua_set_campaign_branch);
+  lua_register(gLuaState, "unlock_campaign_reward", lua_unlock_campaign_reward);
+  lua_register(gLuaState, "get_campaign_variable", lua_get_campaign_variable);
   if (!w.mission.luaScriptInline.empty()) luaL_dostring(gLuaState, w.mission.luaScriptInline.c_str());
   else if (!w.mission.luaScriptFile.empty()) luaL_dofile(gLuaState, w.mission.luaScriptFile.c_str());
 }
@@ -4001,6 +4075,10 @@ void tick_world(World& w, float dt) {
   gLastStats.guardiansKilled = w.guardiansKilled;
   gLastStats.hostileGuardianEvents = w.hostileGuardianEvents;
   gLastStats.alliedGuardianEvents = w.alliedGuardianEvents;
+  gLastStats.campaignMissionCount = 1;
+  gLastStats.campaignFlagsSet = static_cast<uint32_t>(w.campaign.flags.size());
+  gLastStats.campaignResourcesCount = static_cast<uint32_t>(w.campaign.resources.size());
+  gLastStats.campaignBranchesTaken = static_cast<uint32_t>(w.campaign.pendingBranchKey.empty() ? 0 : 1);
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -4292,6 +4370,17 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.missionRuntime.firedTriggerCount); hash_u32(h, w.missionRuntime.scriptedActionCount);
   for (uint32_t id : w.missionRuntime.activeObjectives) hash_u32(h, id);
   for (const auto& l : w.missionRuntime.luaHookLog) hash_u32(h, (uint32_t)l.size());
+  hash_u32(h, (uint32_t)w.campaign.campaignId.size()); hash_u32(h, (uint32_t)w.campaign.playerCivilizationId.size());
+  hash_u32(h, w.campaign.unlockedAge);
+  for (float v : w.campaign.resources) hash_u32(h, (uint32_t)(v * 1000.0f));
+  hash_u32(h, (uint32_t)w.campaign.veteranUnitIds.size());
+  hash_u32(h, (uint32_t)w.campaign.discoveredGuardians.size());
+  hash_u32(h, (uint32_t)(w.campaign.worldTension * 1000.0f));
+  hash_u32(h, (uint32_t)w.campaign.unlockedRewards.size());
+  hash_u32(h, (uint32_t)w.campaign.flags.size());
+  hash_u32(h, (uint32_t)w.campaign.variables.size());
+  hash_u32(h, (uint32_t)w.campaign.previousMissionResult.size());
+  hash_u32(h, (uint32_t)w.campaign.pendingBranchKey.size());
   for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
   for (const auto& o : w.operations) { hash_u32(h, o.id); hash_u32(h, o.team); hash_u32(h, (uint32_t)o.type); hash_float(h, o.target.x); hash_float(h, o.target.y); hash_u32(h, o.assignedTick); hash_u32(h, o.active ? 1u : 0u); }
   for (const auto& n : w.railNodes) { hash_u32(h, n.id); hash_u32(h, n.owner); hash_u32(h, (uint32_t)n.type); hash_u32(h, (uint32_t)n.tile.x); hash_u32(h, (uint32_t)n.tile.y); hash_u32(h, n.networkId); hash_u32(h, n.active?1u:0u); }

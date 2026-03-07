@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "seed": 1337,
+  "mapWidth": 96,
+  "mapHeight": 96,
+  "players": [
+    {"id": 0, "isHuman": true, "isCPU": false, "team": 0, "civilization": "default"},
+    {"id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "default"}
+  ],
+  "cities": [
+    {"id": 1, "team": 0, "pos": [20, 18], "capital": true},
+    {"id": 2, "team": 1, "pos": [80, 80], "capital": true}
+  ],
+  "buildings": [
+    {"id": 1, "team": 0, "type": "CityCenter", "pos": [20, 18], "underConstruction": false},
+    {"id": 2, "team": 1, "type": "CityCenter", "pos": [80, 80], "underConstruction": false}
+  ],
+  "units": [
+    {"id": 1, "team": 0, "type": "Infantry", "pos": [22, 21]},
+    {"id": 2, "team": 1, "type": "Infantry", "pos": [79, 78]}
+  ],
+  "mission": {
+    "title": "Alpha Branch",
+    "briefing": "Carryover should be visible in script and mission setup.",
+    "victoryOutcome": "victory",
+    "defeatOutcome": "defeat",
+    "luaScript": "scripts/campaign_chain.lua"
+  },
+  "triggers": [
+    {"id": 1, "once": true, "condition": {"type": "TickReached", "tick": 1}, "actions": [{"type": "RunLuaHook", "luaHook": "on_alpha_start"}]},
+    {"id": 2, "once": true, "condition": {"type": "TickReached", "tick": 360}, "actions": [{"type": "EndMatchVictory", "winner": 0}]}
+  ]
+}

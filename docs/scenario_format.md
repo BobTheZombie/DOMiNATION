@@ -120,3 +120,7 @@ Optional fields for industrial logistics scenarios:
 - `trains`: `{id, owner, type: Supply|Freight|Armored, state, currentNode, destinationNode, currentEdge, routeCursor, segmentProgress, speed, cargo, capacity, cargoType, lastRouteTick, route:[{edgeId,toNode}]}`
 
 Reference scenario: `scenarios/rail_logistics_test.json`.
+
+## Campaign-linked scenarios
+
+Scenarios used by campaigns remain standard scenario files. Campaign carryover is injected into mission startup (player civ/age/resources/world tension + script-visible flags/variables) and mission outcomes drive campaign progression.

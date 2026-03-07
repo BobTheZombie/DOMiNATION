@@ -309,3 +309,7 @@ Smoke commands:
 - `./build/rts --headless --scenario scenarios/rail_logistics_test.json --threads 8 --hash-only`
 - `./build/rts --headless --scenario scenarios/rail_logistics_test.json --smoke --ticks 1400 --save /tmp/rail_save.json --dump-hash`
 - `./build/rts --headless --load /tmp/rail_save.json --smoke --ticks 2600 --dump-hash`
+
+## Campaign progression
+
+Use `--campaign campaigns/test_campaign.json` for deterministic multi-mission progression with carryover/branching and campaign save-load support.
