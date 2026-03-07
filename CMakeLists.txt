@@ -29,6 +29,11 @@ find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
+find_package(Lua 5.4 QUIET)
+if(NOT Lua_FOUND)
+  find_package(Lua QUIET)
+endif()
+
 if(RTS_ENABLE_IMGUI)
   if(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/imgui/imgui.cpp")
     message(FATAL_ERROR "RTS_ENABLE_IMGUI is ON but third_party/imgui is missing. Run: git submodule update --init --recursive")
@@ -80,6 +85,15 @@ add_executable(rts
 
 target_include_directories(rts PRIVATE .)
 target_link_libraries(rts PRIVATE SDL2::SDL2 OpenGL::GL glm::glm nlohmann_json::nlohmann_json)
+if(Lua_FOUND)
+  if(TARGET Lua::Lua)
+    target_link_libraries(rts PRIVATE Lua::Lua)
+  else()
+    target_include_directories(rts PRIVATE ${LUA_INCLUDE_DIR})
+    target_link_libraries(rts PRIVATE ${LUA_LIBRARIES})
+  endif()
+  target_compile_definitions(rts PRIVATE DOM_HAS_LUA=1)
+endif()
 
 if(RTS_ENABLE_IMGUI)
   target_link_libraries(rts PRIVATE thirdparty_imgui)

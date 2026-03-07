@@ -235,3 +235,9 @@ Perf counters now include `ROAD_COUNT`, `ACTIVE_TRADE_ROUTES`, `SUPPLIED_UNITS`,
 - `./build/rts --headless --smoke --ticks 2200 --seed 1234 --threads 4 --hash-only`
 - `./build/rts --headless --smoke --ticks 2200 --seed 1234 --threads 8 --hash-only`
 - `./build/rts --headless --scenario scenarios/strategic_warfare_test.json --smoke --ticks 2600 --dump-hash`
+
+## Campaign scenario scripting
+
+This branch adds deterministic mission objectives, trigger-action authored scripting, mission runtime state, and sandboxed Lua hooks for scenario orchestration.
+
+Smoke scenario: `scenarios/campaign_test.json` with optional script `scripts/campaign_test.lua`.

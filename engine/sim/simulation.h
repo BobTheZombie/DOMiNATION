@@ -18,8 +18,10 @@ enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
 enum class VictoryCondition : uint8_t { None, Conquest, Score, Wonder };
 enum class ResourceNodeType : uint8_t { Forest, Ore, Farmable, Ruins };
 enum class ObjectiveState : uint8_t { Inactive, Active, Completed, Failed };
-enum class TriggerType : uint8_t { TickReached, EntityDestroyed, BuildingCompleted, AreaEntered, PlayerEliminated };
-enum class TriggerActionType : uint8_t { ShowObjectiveText, SetObjectiveState, GrantResources, SpawnUnits, EndMatchWithVictory, EndMatchWithDefeat, RevealArea };
+enum class ObjectiveCategory : uint8_t { Primary, Secondary, HiddenOptional };
+enum class TriggerType : uint8_t { TickReached, UnitDestroyed, BuildingDestroyed, BuildingCompleted, ObjectiveCompleted, ObjectiveFailed, PlayerEliminated, AreaEntered, DiplomacyChanged, WorldTensionReached, StrategicStrikeLaunched, WonderCompleted, CargoLanded };
+enum class TriggerActionType : uint8_t { ActivateObjective, CompleteObjective, FailObjective, ShowMessage, SpawnUnits, SpawnBuildings, GrantResources, ChangeDiplomacy, SetWorldTension, RevealArea, LaunchOperation, EndMatchVictory, EndMatchDefeat, RunLuaHook };
+enum class MissionStatus : uint8_t { InBriefing, Running, Victory, Defeat, PartialVictory };
 
 enum class ReplayCommandType : uint8_t { Move, Attack, AttackMove, PlaceBuilding, QueueTrain, QueueResearch, CancelQueue };
 enum class GameplayEventType : uint8_t {
@@ -103,11 +105,13 @@ struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType
 
 struct ResourceNode { uint32_t id{}; ResourceNodeType type{ResourceNodeType::Forest}; glm::vec2 pos{}; float amount{1000.0f}; uint16_t owner{UINT16_MAX}; };
 struct TriggerArea { uint32_t id{}; glm::vec2 min{}; glm::vec2 max{}; };
-struct Objective { uint32_t id{}; std::string title; std::string text; bool primary{true}; ObjectiveState state{ObjectiveState::Inactive}; uint16_t owner{UINT16_MAX}; };
-struct TriggerCondition { TriggerType type{TriggerType::TickReached}; uint32_t tick{0}; uint32_t entityId{0}; BuildingType buildingType{BuildingType::House}; uint32_t areaId{0}; uint16_t player{UINT16_MAX}; };
-struct TriggerAction { TriggerActionType type{TriggerActionType::ShowObjectiveText}; std::string text; uint32_t objectiveId{0}; ObjectiveState objectiveState{ObjectiveState::Active}; uint16_t player{UINT16_MAX}; std::array<float, static_cast<size_t>(Resource::Count)> resources{}; UnitType spawnUnitType{UnitType::Infantry}; uint32_t spawnCount{0}; glm::vec2 spawnPos{}; uint16_t winner{0}; uint32_t areaId{0}; };
+struct Objective { uint32_t id{}; std::string objectiveId; std::string title; std::string description; std::string text; bool primary{true}; ObjectiveCategory category{ObjectiveCategory::Primary}; uint16_t owner{UINT16_MAX}; ObjectiveState state{ObjectiveState::Inactive}; bool visible{true}; float progressValue{0.0f}; std::string progressText; };
+struct TriggerCondition { TriggerType type{TriggerType::TickReached}; uint32_t tick{0}; uint32_t entityId{0}; BuildingType buildingType{BuildingType::House}; uint32_t areaId{0}; uint16_t player{UINT16_MAX}; uint32_t objectiveId{0}; float worldTension{0.0f}; DiplomacyRelation diplomacy{DiplomacyRelation::Neutral}; uint16_t playerB{UINT16_MAX}; };
+struct TriggerAction { TriggerActionType type{TriggerActionType::ShowMessage}; std::string text; uint32_t objectiveId{0}; ObjectiveState objectiveState{ObjectiveState::Active}; uint16_t player{UINT16_MAX}; std::array<float, static_cast<size_t>(Resource::Count)> resources{}; UnitType spawnUnitType{UnitType::Infantry}; BuildingType spawnBuildingType{BuildingType::House}; uint32_t spawnCount{0}; glm::vec2 spawnPos{}; uint16_t winner{0}; uint32_t areaId{0}; DiplomacyRelation diplomacy{DiplomacyRelation::Neutral}; uint16_t playerB{UINT16_MAX}; float worldTension{0.0f}; OperationType operationType{OperationType::RallyAndPush}; glm::vec2 operationTarget{}; std::string luaHook; };
 struct Trigger { uint32_t id{}; bool once{true}; bool fired{false}; TriggerCondition condition{}; std::vector<TriggerAction> actions; };
 struct ObjectiveLogEntry { uint32_t tick{0}; std::string text; };
+struct MissionDefinition { std::string title; std::string briefing; std::vector<std::string> introMessages; std::string victoryOutcomeTag{"victory"}; std::string defeatOutcomeTag{"defeat"}; std::string partialOutcomeTag{"partial_victory"}; std::string branchKey; std::string luaScriptFile; std::string luaScriptInline; };
+struct MissionRuntimeState { bool briefingShown{false}; MissionStatus status{MissionStatus::InBriefing}; std::string resultTag; std::vector<uint32_t> activeObjectives; std::vector<std::string> luaHookLog; uint32_t firedTriggerCount{0}; uint32_t scriptedActionCount{0}; };
 
 struct CivilizationRuntime {
   std::string id{"default"};
@@ -210,6 +214,8 @@ struct World {
   std::vector<DenialZone> denialZones;
   std::vector<uint8_t> radarContactByPlayer;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
+  MissionDefinition mission{};
+  MissionRuntimeState missionRuntime{};
   std::vector<PlayerState> players;
   bool godMode{false}; uint32_t tick{0}; bool gameOver{false}; uint16_t winner{0}; MatchConfig config{}; MatchResult match{}; WonderState wonder{};
   bool uiBuildMenu{false}; bool uiTrainMenu{false}; bool uiResearchMenu{false}; bool placementActive{false}; BuildingType placementType{BuildingType::House}; glm::vec2 placementPos{}; bool placementValid{false};

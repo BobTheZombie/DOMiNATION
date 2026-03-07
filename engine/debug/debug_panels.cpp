@@ -38,6 +38,23 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::PlotLines("combat time", combatHistory, 120, idx, nullptr, 0.0f, 40.0f, ImVec2(0, 50));
   ImGui::PlotLines("job system stats", jobsHistory, 120, idx, nullptr, 0.0f, 1000.0f, ImVec2(0, 50));
   ImGui::End();
+
+  if (ImGui::Begin("Mission Debug")) {
+    ImGui::Text("status=%u briefingShown=%s result=%s", (unsigned)world.missionRuntime.status, world.missionRuntime.briefingShown?"yes":"no", world.missionRuntime.resultTag.c_str());
+    ImGui::Text("triggers fired=%u scripted actions=%u", world.missionRuntime.firedTriggerCount, world.missionRuntime.scriptedActionCount);
+    ImGui::Separator();
+    ImGui::TextUnformatted("Objectives");
+    for (const auto& o : world.objectives) ImGui::BulletText("id=%u %s state=%u visible=%d progress=%.2f %s", o.id, o.title.c_str(), (unsigned)o.state, o.visible?1:0, o.progressValue, o.progressText.c_str());
+    ImGui::Separator();
+    ImGui::TextUnformatted("Triggers");
+    for (const auto& t : world.triggers) ImGui::BulletText("id=%u fired=%d once=%d actions=%zu", t.id, t.fired?1:0, t.once?1:0, t.actions.size());
+    if (!world.missionRuntime.luaHookLog.empty()) {
+      ImGui::Separator();
+      ImGui::TextUnformatted("Lua hooks");
+      for (const auto& e : world.missionRuntime.luaHookLog) ImGui::BulletText("%s", e.c_str());
+    }
+  }
+  ImGui::End();
 #endif
 }
 } // namespace dom::debug

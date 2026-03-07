@@ -15,6 +15,9 @@
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
+#ifdef DOM_HAS_LUA
+#include <lua.hpp>
+#endif
 
 namespace dom::sim {
 namespace {
@@ -84,6 +87,75 @@ bool gCombatDebug{false};
 std::vector<ReplayCommand> gReplayCommands;
 std::vector<GameplayEvent> gGameplayEvents;
 int gWorkerThreads = 1;
+
+#ifdef DOM_HAS_LUA
+lua_State* gLuaState = nullptr;
+World* gLuaWorld = nullptr;
+
+int lua_activate_objective(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  uint32_t oid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+  for (auto& o : gLuaWorld->objectives) if (o.id == oid) o.state = ObjectiveState::Active;
+  return 0;
+}
+int lua_complete_objective(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  uint32_t oid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+  for (auto& o : gLuaWorld->objectives) if (o.id == oid) o.state = ObjectiveState::Completed;
+  return 0;
+}
+int lua_fail_objective(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  uint32_t oid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+  for (auto& o : gLuaWorld->objectives) if (o.id == oid) o.state = ObjectiveState::Failed;
+  return 0;
+}
+int lua_show_message(lua_State* L) { if (!gLuaWorld) return 0; gLuaWorld->objectiveLog.push_back({gLuaWorld->tick, luaL_checkstring(L,1)}); return 0; }
+int lua_get_tick(lua_State* L) { lua_pushinteger(L, gLuaWorld ? (lua_Integer)gLuaWorld->tick : 0); return 1; }
+int lua_get_world_tension(lua_State* L) { lua_pushnumber(L, gLuaWorld ? gLuaWorld->worldTension : 0.0); return 1; }
+int lua_get_player_alive(lua_State* L) {
+  if (!gLuaWorld) { lua_pushboolean(L,0); return 1; }
+  uint16_t p = static_cast<uint16_t>(luaL_checkinteger(L,1));
+  lua_pushboolean(L, p < gLuaWorld->players.size() && gLuaWorld->players[p].alive);
+  return 1;
+}
+int lua_get_objective_state(lua_State* L) {
+  if (!gLuaWorld) { lua_pushinteger(L,0); return 1; }
+  uint32_t oid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+  for (const auto& o : gLuaWorld->objectives) if (o.id == oid) { lua_pushinteger(L, (int)o.state); return 1; }
+  lua_pushinteger(L, 0); return 1;
+}
+void ensure_lua(World& w) {
+  if (gLuaState) return;
+  gLuaState = luaL_newstate();
+  luaL_openlibs(gLuaState);
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "io");
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "os");
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "package");
+  lua_register(gLuaState, "activate_objective", lua_activate_objective);
+  lua_register(gLuaState, "complete_objective", lua_complete_objective);
+  lua_register(gLuaState, "fail_objective", lua_fail_objective);
+  lua_register(gLuaState, "show_message", lua_show_message);
+  lua_register(gLuaState, "get_tick", lua_get_tick);
+  lua_register(gLuaState, "get_objective_state", lua_get_objective_state);
+  lua_register(gLuaState, "get_player_alive", lua_get_player_alive);
+  lua_register(gLuaState, "get_world_tension", lua_get_world_tension);
+  if (!w.mission.luaScriptInline.empty()) luaL_dostring(gLuaState, w.mission.luaScriptInline.c_str());
+  else if (!w.mission.luaScriptFile.empty()) luaL_dofile(gLuaState, w.mission.luaScriptFile.c_str());
+}
+void run_lua_hook(World& w, const std::string& hook) {
+  ensure_lua(w);
+  if (!gLuaState || hook.empty()) return;
+  gLuaWorld = &w;
+  lua_getglobal(gLuaState, hook.c_str());
+  if (lua_isfunction(gLuaState, -1)) {
+    if (lua_pcall(gLuaState, 0, 0, 0) == LUA_OK) w.missionRuntime.luaHookLog.push_back(hook);
+  } else lua_pop(gLuaState, 1);
+  gLuaWorld = nullptr;
+}
+#else
+void run_lua_hook(World& w, const std::string& hook) { if (!hook.empty()) w.missionRuntime.luaHookLog.push_back(std::string("lua-disabled:")+hook); }
+#endif
 
 constexpr uint16_t kRoleCount = static_cast<uint16_t>(UnitRole::Count);
 constexpr int kTargetBetterThreshold = 220;
@@ -295,6 +367,33 @@ const char* objective_state_name(ObjectiveState s) {
     case ObjectiveState::Failed: return "failed";
   }
   return "inactive";
+}
+
+
+ObjectiveCategory parse_objective_category(const std::string& v) {
+  if (v == "secondary") return ObjectiveCategory::Secondary;
+  if (v == "hidden" || v == "hidden_optional") return ObjectiveCategory::HiddenOptional;
+  return ObjectiveCategory::Primary;
+}
+
+const char* objective_category_name(ObjectiveCategory c) {
+  switch (c) {
+    case ObjectiveCategory::Primary: return "primary";
+    case ObjectiveCategory::Secondary: return "secondary";
+    case ObjectiveCategory::HiddenOptional: return "hidden_optional";
+  }
+  return "primary";
+}
+
+const char* mission_status_name(MissionStatus s) {
+  switch (s) {
+    case MissionStatus::InBriefing: return "briefing";
+    case MissionStatus::Running: return "running";
+    case MissionStatus::Victory: return "victory";
+    case MissionStatus::Defeat: return "defeat";
+    case MissionStatus::PartialVictory: return "partial_victory";
+  }
+  return "running";
 }
 
 BiomeType parse_biome_type(const std::string& id) {
@@ -1791,6 +1890,8 @@ void apply_world_defaults(World& w) {
   w.triggerExecutionCount = 0;
   w.objectiveStateChangeCount = 0;
   w.objectiveLog.clear();
+  w.mission = {};
+  w.missionRuntime = {};
   w.roads.clear();
   w.tradeRoutes.clear();
   w.operations.clear();
@@ -1832,59 +1933,85 @@ bool validate_size_u8(const World& w, const std::vector<uint8_t>& v) { return (i
 
 void eval_triggers(World& w) {
   std::sort(w.triggers.begin(), w.triggers.end(), [](const Trigger& a, const Trigger& b){ return a.id < b.id; });
+  auto apply_objective_state = [&](uint32_t oid, ObjectiveState st, uint16_t actor) {
+    for (auto& o : w.objectives) if (o.id == oid) {
+      if (o.state != st) {
+        ++w.objectiveStateChangeCount;
+        if (st == ObjectiveState::Completed) emit_event(w, GameplayEventType::ObjectiveCompleted, actor, o.owner, o.id, o.title);
+      }
+      o.state = st;
+    }
+  };
   for (auto& t : w.triggers) {
     if (t.once && t.fired) continue;
     bool hit = false;
     switch (t.condition.type) {
       case TriggerType::TickReached: hit = w.tick >= t.condition.tick; break;
-      case TriggerType::EntityDestroyed: {
+      case TriggerType::UnitDestroyed: {
         bool unitAlive = false; for (const auto& u : w.units) if (u.id == t.condition.entityId && u.hp > 0) unitAlive = true;
+        hit = !unitAlive;
+      } break;
+      case TriggerType::BuildingDestroyed: {
         bool buildingAlive = false; for (const auto& b : w.buildings) if (b.id == t.condition.entityId && b.hp > 0) buildingAlive = true;
-        hit = !(unitAlive || buildingAlive);
+        hit = !buildingAlive;
       } break;
       case TriggerType::BuildingCompleted: {
-        for (const auto& b : w.buildings) {
-          if ((t.condition.player == UINT16_MAX || b.team == t.condition.player) && b.type == t.condition.buildingType && !b.underConstruction) { hit = true; break; }
-        }
+        for (const auto& b : w.buildings) if ((t.condition.player == UINT16_MAX || b.team == t.condition.player) && b.type == t.condition.buildingType && !b.underConstruction) { hit = true; break; }
       } break;
+      case TriggerType::ObjectiveCompleted: for (const auto& o : w.objectives) if (o.id == t.condition.objectiveId && o.state == ObjectiveState::Completed) hit = true; break;
+      case TriggerType::ObjectiveFailed: for (const auto& o : w.objectives) if (o.id == t.condition.objectiveId && o.state == ObjectiveState::Failed) hit = true; break;
+      case TriggerType::PlayerEliminated: if (t.condition.player < w.players.size()) hit = !w.players[t.condition.player].alive; break;
       case TriggerType::AreaEntered: {
         auto it = std::find_if(w.triggerAreas.begin(), w.triggerAreas.end(), [&](const TriggerArea& a){ return a.id == t.condition.areaId; });
-        if (it != w.triggerAreas.end()) {
-          for (const auto& u : w.units) {
-            if (t.condition.player != UINT16_MAX && u.team != t.condition.player) continue;
-            if (u.pos.x >= it->min.x && u.pos.x <= it->max.x && u.pos.y >= it->min.y && u.pos.y <= it->max.y) { hit = true; break; }
-          }
-        }
+        if (it != w.triggerAreas.end()) for (const auto& u : w.units) if ((t.condition.player == UINT16_MAX || u.team == t.condition.player) && u.pos.x >= it->min.x && u.pos.x <= it->max.x && u.pos.y >= it->min.y && u.pos.y <= it->max.y) { hit = true; break; }
       } break;
-      case TriggerType::PlayerEliminated: {
-        if (t.condition.player < w.players.size()) hit = !w.players[t.condition.player].alive;
-      } break;
+      case TriggerType::DiplomacyChanged:
+        if (t.condition.player < w.players.size() && t.condition.playerB < w.players.size()) hit = relation_of(w, t.condition.player, t.condition.playerB) == t.condition.diplomacy;
+        break;
+      case TriggerType::WorldTensionReached: hit = w.worldTension >= t.condition.worldTension; break;
+      case TriggerType::StrategicStrikeLaunched: hit = w.strategicStrikeEvents > 0; break;
+      case TriggerType::WonderCompleted: for (const auto& b : w.buildings) if (!b.underConstruction && b.type == BuildingType::Wonder) { hit = true; break; } break;
+      case TriggerType::CargoLanded: hit = w.disembarkEvents > 0; break;
     }
     if (!hit) continue;
     t.fired = true;
     ++w.triggerExecutionCount;
+    ++w.missionRuntime.firedTriggerCount;
     for (const auto& a : t.actions) {
-      if (a.type == TriggerActionType::ShowObjectiveText) w.objectiveLog.push_back({w.tick, a.text});
-      else if (a.type == TriggerActionType::SetObjectiveState) {
-        for (auto& o : w.objectives) if (o.id == a.objectiveId) { if (o.state != a.objectiveState) { ++w.objectiveStateChangeCount; if (a.objectiveState == ObjectiveState::Completed) emit_event(w, GameplayEventType::ObjectiveCompleted, a.player, o.owner, o.id, o.title); } o.state = a.objectiveState; }
-      } else if (a.type == TriggerActionType::GrantResources) {
-        if (a.player < w.players.size()) for (size_t i = 0; i < a.resources.size(); ++i) w.players[a.player].resources[i] += a.resources[i];
-      } else if (a.type == TriggerActionType::SpawnUnits) {
-        for (uint32_t i = 0; i < a.spawnCount; ++i) spawn_unit(w, a.player, a.spawnUnitType, {a.spawnPos.x + 0.7f * i, a.spawnPos.y});
-      } else if (a.type == TriggerActionType::EndMatchWithVictory) {
-        apply_match_end(w, VictoryCondition::Conquest, a.winner, false);
-      } else if (a.type == TriggerActionType::EndMatchWithDefeat) {
-        apply_match_end(w, VictoryCondition::Conquest, a.winner, false);
-      } else if (a.type == TriggerActionType::RevealArea) {
+      ++w.missionRuntime.scriptedActionCount;
+      if (a.type == TriggerActionType::ShowMessage) w.objectiveLog.push_back({w.tick, a.text});
+      else if (a.type == TriggerActionType::ActivateObjective) apply_objective_state(a.objectiveId, ObjectiveState::Active, a.player);
+      else if (a.type == TriggerActionType::CompleteObjective) apply_objective_state(a.objectiveId, ObjectiveState::Completed, a.player);
+      else if (a.type == TriggerActionType::FailObjective) apply_objective_state(a.objectiveId, ObjectiveState::Failed, a.player);
+      else if (a.type == TriggerActionType::GrantResources) { if (a.player < w.players.size()) for (size_t i = 0; i < a.resources.size(); ++i) w.players[a.player].resources[i] += a.resources[i]; }
+      else if (a.type == TriggerActionType::SpawnUnits) { for (uint32_t i = 0; i < a.spawnCount; ++i) spawn_unit(w, a.player, a.spawnUnitType, {a.spawnPos.x + 0.7f * i, a.spawnPos.y}); }
+      else if (a.type == TriggerActionType::SpawnBuildings) {
+        for (uint32_t i = 0; i < a.spawnCount; ++i) {
+          uint32_t bid = 1; for (const auto& b : w.buildings) bid = std::max(bid, b.id + 1);
+          Building bb{}; bb.id = bid; bb.team = a.player; bb.type = a.spawnBuildingType; bb.pos = {a.spawnPos.x + 2.0f * i, a.spawnPos.y}; bb.size = gBuildDefs[bidx(bb.type)].size; bb.underConstruction = false; bb.buildProgress = 1.0f; bb.buildTime = gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp = (bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp = bb.maxHp;
+          w.buildings.push_back(bb);
+        }
+      }
+      else if (a.type == TriggerActionType::ChangeDiplomacy) set_relation(w, a.player, a.playerB, a.diplomacy);
+      else if (a.type == TriggerActionType::SetWorldTension) w.worldTension = a.worldTension;
+      else if (a.type == TriggerActionType::RevealArea) {
         auto it = std::find_if(w.triggerAreas.begin(), w.triggerAreas.end(), [&](const TriggerArea& ar){ return ar.id == a.areaId; });
         if (it != w.triggerAreas.end()) {
           int minX = std::max(0, (int)std::floor(it->min.x)); int maxX = std::min(w.width-1, (int)std::ceil(it->max.x));
           int minY = std::max(0, (int)std::floor(it->min.y)); int maxY = std::min(w.height-1, (int)std::ceil(it->max.y));
           for (int y=minY;y<=maxY;++y) for (int x=minX;x<=maxX;++x) w.fog[y*w.width+x]=0;
         }
-      }
+      } else if (a.type == TriggerActionType::LaunchOperation) {
+        w.operations.push_back({w.operations.empty()?1u:w.operations.back().id+1,a.player,a.operationType,a.operationTarget,w.tick,true});
+      } else if (a.type == TriggerActionType::EndMatchVictory) {
+        w.missionRuntime.status = MissionStatus::Victory; w.missionRuntime.resultTag = w.mission.victoryOutcomeTag; apply_match_end(w, VictoryCondition::Conquest, a.winner, false);
+      } else if (a.type == TriggerActionType::EndMatchDefeat) {
+        w.missionRuntime.status = MissionStatus::Defeat; w.missionRuntime.resultTag = w.mission.defeatOutcomeTag; apply_match_end(w, VictoryCondition::Conquest, a.winner, false);
+      } else if (a.type == TriggerActionType::RunLuaHook) run_lua_hook(w, a.luaHook);
     }
   }
+  w.missionRuntime.activeObjectives.clear();
+  for (const auto& o : w.objectives) if (o.state == ObjectiveState::Active) w.missionRuntime.activeObjectives.push_back(o.id);
 }
 
 void set_worker_threads(int threads) { gWorkerThreads = std::max(1, threads); }
@@ -1948,29 +2075,24 @@ void initialize_world(World& w, uint32_t seed) {
   w.triggerAreas.clear();
   w.objectives.clear();
   w.triggers.clear();
-  w.cities = {{1, 0, {20, 20}, 1, true}, {2, 1, {95, 95}, 1, true}};
+  w.units.clear();
+  w.cities.clear();
   w.buildings.clear();
-  w.buildings.push_back({1, 0, BuildingType::CityCenter, {20, 20}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
-  w.buildings.push_back({2, 1, BuildingType::CityCenter, {95, 95}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
-  w.buildings.push_back({3, 0, BuildingType::RadarTower, {26, 18}, {2.0f,2.0f}, false, 1.0f, 0.0f, 750.0f, 750.0f, {}});
-  w.buildings.push_back({4, 1, BuildingType::Airbase, {88, 99}, {2.0f,2.0f}, false, 1.0f, 0.0f, 900.0f, 900.0f, {}});
-  w.buildings.push_back({5, 0, BuildingType::MissileSilo, {24, 16}, {2.0f,2.0f}, false, 1.0f, 0.0f, 1000.0f, 1000.0f, {}});
-  w.buildings.push_back({6, 1, BuildingType::AntiMissileDefense, {90, 94}, {2.0f,2.0f}, false, 1.0f, 0.0f, 820.0f, 820.0f, {}});
-  for (int i = 0; i < 3; ++i) {
+  w.resourceNodes.clear();
+  for (int i = 0; i < 6; ++i) {
     spawn_unit(w, 0, UnitType::Worker, {18.0f + i * 0.8f, 24.0f});
     spawn_unit(w, 1, UnitType::Worker, {92.0f + i * 0.8f, 89.0f});
   }
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 8; ++i) {
     spawn_unit(w, 0, UnitType::Infantry, {17.0f + i * 0.8f, 22.0f});
     spawn_unit(w, 1, UnitType::Infantry, {91.0f + i * 0.8f, 87.0f});
   }
-  w.airUnits.push_back({1,0,AirUnitClass::ReconDrone,AirMissionState::Airborne,{24.0f,24.0f},{85.0f,85.0f},60.0f,8.5f,0,false});
-  w.airUnits.push_back({2,1,AirUnitClass::Bomber,AirMissionState::Airborne,{96.0f,96.0f},{22.0f,22.0f},120.0f,6.0f,0,false});
-  w.strategicStrikes.push_back({1,0,StrikeType::StrategicMissile,{24.0f,16.0f},{90.0f,94.0f},120,170,0,0,false,false});
-  spawn_biome_resources(w);
-  ensure_base_roads(w);
-  recompute_trade_routes(w);
-  recompute_supply(w);
+  w.cities.push_back({1, 0, {18.0f, 18.0f}, 2, true});
+  w.cities.push_back({2, 1, {92.0f, 92.0f}, 2, true});
+  Building c0{}; c0.id = 1; c0.team = 0; c0.type = BuildingType::CityCenter; c0.pos = {18.0f, 18.0f}; c0.size = gBuildDefs[bidx(c0.type)].size; c0.underConstruction = false; c0.buildProgress = 1.0f; c0.buildTime = gBuildDefs[bidx(c0.type)].buildTime; c0.maxHp = 2200.0f; c0.hp = c0.maxHp; w.buildings.push_back(c0);
+  Building c1{}; c1.id = 2; c1.team = 1; c1.type = BuildingType::CityCenter; c1.pos = {92.0f, 92.0f}; c1.size = gBuildDefs[bidx(c1.type)].size; c1.underConstruction = false; c1.buildProgress = 1.0f; c1.buildTime = gBuildDefs[bidx(c1.type)].buildTime; c1.maxHp = 2200.0f; c1.hp = c1.maxHp; w.buildings.push_back(c1);
+  w.mission = {};
+  w.missionRuntime = {};
   recompute_population(w);
   recompute_territory(w);
   recompute_fog(w);
@@ -2119,9 +2241,30 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   w.triggerAreas.clear();
   if (j.contains("areas")) for (const auto& a : j["areas"]) { TriggerArea ta{}; ta.id=a.value("id",0u); ta.min={a["min"][0].get<float>(),a["min"][1].get<float>()}; ta.max={a["max"][0].get<float>(),a["max"][1].get<float>()}; w.triggerAreas.push_back(ta); }
   w.objectives.clear();
-  if (j.contains("objectives")) for (const auto& o : j["objectives"]) { Objective ob{}; ob.id=o.value("id",0u); ob.title=o.value("title",""); ob.text=o.value("text",""); ob.primary=o.value("primary",true); ob.state=parse_objective_state(o.value("state",std::string("inactive"))); ob.owner=o.value("owner",(uint16_t)UINT16_MAX); w.objectives.push_back(ob);}
+  if (j.contains("objectives")) for (const auto& o : j["objectives"]) {
+    Objective ob{}; ob.id=o.value("id",0u); ob.objectiveId=o.value("objective_id",std::to_string(ob.id)); ob.title=o.value("title",""); ob.description=o.value("description",o.value("text",std::string(""))); ob.text=ob.description; ob.primary=o.value("primary",true); ob.category=parse_objective_category(o.value("category", ob.primary?std::string("primary"):std::string("secondary"))); ob.state=parse_objective_state(o.value("state",std::string("inactive"))); ob.owner=o.value("owner",(uint16_t)UINT16_MAX); ob.visible=o.value("visible",true); ob.progressText=o.value("progressText",std::string("")); ob.progressValue=o.value("progressValue",0.0f); w.objectives.push_back(ob);
+  }
   w.triggers.clear();
-  if (j.contains("triggers")) for (const auto& t : j["triggers"]) { Trigger tr{}; tr.id=t.value("id",0u); tr.once=t.value("once",true); auto c=t["condition"]; std::string ctype=c.value("type",std::string("TickReached")); if (ctype=="EntityDestroyed") tr.condition.type=TriggerType::EntityDestroyed; else if (ctype=="BuildingCompleted") tr.condition.type=TriggerType::BuildingCompleted; else if (ctype=="AreaEntered") tr.condition.type=TriggerType::AreaEntered; else if (ctype=="PlayerEliminated") tr.condition.type=TriggerType::PlayerEliminated; else tr.condition.type=TriggerType::TickReached; tr.condition.tick=c.value("tick",0u); tr.condition.entityId=c.value("entityId",0u); tr.condition.buildingType=parse_building(c.value("buildingType",std::string("House"))); tr.condition.areaId=c.value("areaId",0u); tr.condition.player=c.value("player",(uint16_t)UINT16_MAX); if (t.contains("actions")) for (const auto& a : t["actions"]) { TriggerAction ac{}; std::string at=a.value("type",std::string("ShowObjectiveText")); if (at=="SetObjectiveState") ac.type=TriggerActionType::SetObjectiveState; else if (at=="GrantResources") ac.type=TriggerActionType::GrantResources; else if (at=="SpawnUnits") ac.type=TriggerActionType::SpawnUnits; else if (at=="EndMatchWithVictory") ac.type=TriggerActionType::EndMatchWithVictory; else if (at=="EndMatchWithDefeat") ac.type=TriggerActionType::EndMatchWithDefeat; else if (at=="RevealArea") ac.type=TriggerActionType::RevealArea; else ac.type=TriggerActionType::ShowObjectiveText; ac.text=a.value("text",""); ac.objectiveId=a.value("objectiveId",0u); ac.objectiveState=parse_objective_state(a.value("state",std::string("active"))); ac.player=a.value("player",(uint16_t)UINT16_MAX); if (a.contains("resources")) { auto r=a["resources"]; ac.resources[ridx(Resource::Food)] = r.value("Food",0.0f); ac.resources[ridx(Resource::Wood)] = r.value("Wood",0.0f); ac.resources[ridx(Resource::Metal)] = r.value("Metal",0.0f); ac.resources[ridx(Resource::Wealth)] = r.value("Wealth",0.0f); ac.resources[ridx(Resource::Knowledge)] = r.value("Knowledge",0.0f); ac.resources[ridx(Resource::Oil)] = r.value("Oil",0.0f); } ac.spawnUnitType=parse_unit(a.value("unitType",std::string("Infantry"))); ac.spawnCount=a.value("count",0u); if (a.contains("pos")) ac.spawnPos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; ac.winner=a.value("winner",0u); ac.areaId=a.value("areaId",0u); tr.actions.push_back(ac);} w.triggers.push_back(tr);}
+  if (j.contains("triggers")) for (const auto& t : j["triggers"]) {
+    Trigger tr{}; tr.id=t.value("id",0u); tr.once=t.value("once",true); auto c=t["condition"]; std::string ctype=c.value("type",std::string("TickReached"));
+    if (ctype=="UnitDestroyed" || ctype=="EntityDestroyed") tr.condition.type=TriggerType::UnitDestroyed; else if (ctype=="BuildingDestroyed") tr.condition.type=TriggerType::BuildingDestroyed; else if (ctype=="BuildingCompleted") tr.condition.type=TriggerType::BuildingCompleted; else if (ctype=="ObjectiveCompleted") tr.condition.type=TriggerType::ObjectiveCompleted; else if (ctype=="ObjectiveFailed") tr.condition.type=TriggerType::ObjectiveFailed; else if (ctype=="AreaEntered") tr.condition.type=TriggerType::AreaEntered; else if (ctype=="PlayerEliminated") tr.condition.type=TriggerType::PlayerEliminated; else tr.condition.type=TriggerType::TickReached;
+    tr.condition.tick=c.value("tick",0u); tr.condition.entityId=c.value("entityId",0u); tr.condition.buildingType=parse_building(c.value("buildingType",std::string("House"))); tr.condition.areaId=c.value("areaId",0u); tr.condition.player=c.value("player",(uint16_t)UINT16_MAX); tr.condition.objectiveId=c.value("objectiveId",0u);
+    if (t.contains("actions")) for (const auto& a : t["actions"]) { TriggerAction ac{}; std::string at=a.value("type",std::string("ShowMessage")); if (at=="ActivateObjective") ac.type=TriggerActionType::ActivateObjective; else if (at=="CompleteObjective") ac.type=TriggerActionType::CompleteObjective; else if (at=="FailObjective") ac.type=TriggerActionType::FailObjective; else if (at=="GrantResources") ac.type=TriggerActionType::GrantResources; else if (at=="SpawnUnits") ac.type=TriggerActionType::SpawnUnits; else if (at=="EndMatchVictory") ac.type=TriggerActionType::EndMatchVictory; else if (at=="EndMatchDefeat") ac.type=TriggerActionType::EndMatchDefeat; else if (at=="RunLuaHook") ac.type=TriggerActionType::RunLuaHook; else ac.type=TriggerActionType::ShowMessage; ac.text=a.value("text",""); ac.objectiveId=a.value("objectiveId",0u); ac.player=a.value("player",(uint16_t)UINT16_MAX); if (a.contains("resources")) { auto r=a["resources"]; ac.resources[ridx(Resource::Food)] = r.value("Food",0.0f); ac.resources[ridx(Resource::Wood)] = r.value("Wood",0.0f); ac.resources[ridx(Resource::Metal)] = r.value("Metal",0.0f); ac.resources[ridx(Resource::Wealth)] = r.value("Wealth",0.0f); ac.resources[ridx(Resource::Knowledge)] = r.value("Knowledge",0.0f); ac.resources[ridx(Resource::Oil)] = r.value("Oil",0.0f); } ac.spawnUnitType=parse_unit(a.value("unitType",std::string("Infantry"))); ac.spawnCount=a.value("count",0u); if (a.contains("pos")) ac.spawnPos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; ac.winner=a.value("winner",0u); ac.areaId=a.value("areaId",0u); ac.luaHook=a.value("luaHook",std::string("")); tr.actions.push_back(ac);} w.triggers.push_back(tr);} 
+  if (j.contains("mission")) {
+    const auto& m = j["mission"];
+    w.mission.title = m.value("title", std::string(""));
+    w.mission.briefing = m.value("briefing", std::string(""));
+    if (m.contains("introMessages") && m["introMessages"].is_array()) w.mission.introMessages = m["introMessages"].get<std::vector<std::string>>();
+    w.mission.victoryOutcomeTag = m.value("victoryOutcome", std::string("victory"));
+    w.mission.defeatOutcomeTag = m.value("defeatOutcome", std::string("defeat"));
+    w.mission.partialOutcomeTag = m.value("partialOutcome", std::string("partial_victory"));
+    w.mission.branchKey = m.value("branchKey", std::string(""));
+    w.mission.luaScriptFile = m.value("luaScript", std::string(""));
+    w.mission.luaScriptInline = m.value("luaInline", std::string(""));
+    for (const auto& msg : w.mission.introMessages) w.objectiveLog.push_back({w.tick, msg});
+  }
+  w.missionRuntime.status = MissionStatus::Running;
+  w.missionRuntime.briefingShown = false;
   recompute_population(w);
   recompute_territory(w);
   recompute_fog(w);
@@ -2143,16 +2286,19 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
   j["biomeMap"] = w.biomeMap;
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
-  j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"title",o.title},{"text",o.text},{"primary",o.primary},{"state",objective_state_name(o.state)},{"owner",o.owner}});
+  j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"objective_id",o.objectiveId},{"title",o.title},{"description",o.description.empty()?o.text:o.description},{"primary",o.primary},{"category",objective_category_name(o.category)},{"state",objective_state_name(o.state)},{"owner",o.owner},{"visible",o.visible},{"progressText",o.progressText},{"progressValue",o.progressValue}});
+  j["mission"] = {{"title",w.mission.title},{"briefing",w.mission.briefing},{"introMessages",w.mission.introMessages},{"victoryOutcome",w.mission.victoryOutcomeTag},{"defeatOutcome",w.mission.defeatOutcomeTag},{"partialOutcome",w.mission.partialOutcomeTag},{"branchKey",w.mission.branchKey},{"luaScript",w.mission.luaScriptFile},{"luaInline",w.mission.luaScriptInline}};
   j["triggers"] = nlohmann::json::array();
   for (const auto& t : w.triggers) {
     nlohmann::json jt; jt["id"]=t.id; jt["once"]=t.once;
-    std::string ctype="TickReached"; if (t.condition.type==TriggerType::EntityDestroyed) ctype="EntityDestroyed"; else if (t.condition.type==TriggerType::BuildingCompleted) ctype="BuildingCompleted"; else if (t.condition.type==TriggerType::AreaEntered) ctype="AreaEntered"; else if (t.condition.type==TriggerType::PlayerEliminated) ctype="PlayerEliminated";
-    jt["condition"]={{"type",ctype},{"tick",t.condition.tick},{"entityId",t.condition.entityId},{"buildingType",building_name(t.condition.buildingType)},{"areaId",t.condition.areaId},{"player",t.condition.player}};
+    std::string ctype="TickReached"; if (t.condition.type==TriggerType::UnitDestroyed) ctype="UnitDestroyed"; else if (t.condition.type==TriggerType::BuildingDestroyed) ctype="BuildingDestroyed"; else if (t.condition.type==TriggerType::BuildingCompleted) ctype="BuildingCompleted"; else if (t.condition.type==TriggerType::ObjectiveCompleted) ctype="ObjectiveCompleted"; else if (t.condition.type==TriggerType::ObjectiveFailed) ctype="ObjectiveFailed"; else if (t.condition.type==TriggerType::AreaEntered) ctype="AreaEntered"; else if (t.condition.type==TriggerType::PlayerEliminated) ctype="PlayerEliminated"; else if (t.condition.type==TriggerType::DiplomacyChanged) ctype="DiplomacyChanged"; else if (t.condition.type==TriggerType::WorldTensionReached) ctype="WorldTensionReached"; else if (t.condition.type==TriggerType::StrategicStrikeLaunched) ctype="StrategicStrikeLaunched"; else if (t.condition.type==TriggerType::WonderCompleted) ctype="WonderCompleted"; else if (t.condition.type==TriggerType::CargoLanded) ctype="CargoLanded";
+    std::string rel="Neutral"; if (t.condition.diplomacy==DiplomacyRelation::Allied) rel="Allied"; else if (t.condition.diplomacy==DiplomacyRelation::War) rel="War"; else if (t.condition.diplomacy==DiplomacyRelation::Ceasefire) rel="Ceasefire";
+    jt["condition"]={{"type",ctype},{"tick",t.condition.tick},{"entityId",t.condition.entityId},{"buildingType",building_name(t.condition.buildingType)},{"areaId",t.condition.areaId},{"player",t.condition.player},{"objectiveId",t.condition.objectiveId},{"worldTension",t.condition.worldTension},{"playerB",t.condition.playerB},{"relation",rel}};
     jt["actions"]=nlohmann::json::array();
     for (const auto& a : t.actions) {
-      std::string at="ShowObjectiveText"; if (a.type==TriggerActionType::SetObjectiveState) at="SetObjectiveState"; else if (a.type==TriggerActionType::GrantResources) at="GrantResources"; else if (a.type==TriggerActionType::SpawnUnits) at="SpawnUnits"; else if (a.type==TriggerActionType::EndMatchWithVictory) at="EndMatchWithVictory"; else if (a.type==TriggerActionType::EndMatchWithDefeat) at="EndMatchWithDefeat"; else if (a.type==TriggerActionType::RevealArea) at="RevealArea";
-      jt["actions"].push_back({{"type",at},{"text",a.text},{"objectiveId",a.objectiveId},{"state",objective_state_name(a.objectiveState)},{"player",a.player},{"resources",{{"Food",a.resources[0]},{"Wood",a.resources[1]},{"Metal",a.resources[2]},{"Wealth",a.resources[3]},{"Knowledge",a.resources[4]},{"Oil",a.resources[5]}}},{"unitType",unit_name(a.spawnUnitType)},{"count",a.spawnCount},{"pos",{a.spawnPos.x,a.spawnPos.y}},{"winner",a.winner},{"areaId",a.areaId}});
+      std::string at="ShowMessage"; if (a.type==TriggerActionType::ActivateObjective) at="ActivateObjective"; else if (a.type==TriggerActionType::CompleteObjective) at="CompleteObjective"; else if (a.type==TriggerActionType::FailObjective) at="FailObjective"; else if (a.type==TriggerActionType::GrantResources) at="GrantResources"; else if (a.type==TriggerActionType::SpawnUnits) at="SpawnUnits"; else if (a.type==TriggerActionType::SpawnBuildings) at="SpawnBuildings"; else if (a.type==TriggerActionType::ChangeDiplomacy) at="ChangeDiplomacy"; else if (a.type==TriggerActionType::SetWorldTension) at="SetWorldTension"; else if (a.type==TriggerActionType::RevealArea) at="RevealArea"; else if (a.type==TriggerActionType::LaunchOperation) at="LaunchOperation"; else if (a.type==TriggerActionType::EndMatchVictory) at="EndMatchVictory"; else if (a.type==TriggerActionType::EndMatchDefeat) at="EndMatchDefeat"; else if (a.type==TriggerActionType::RunLuaHook) at="RunLuaHook";
+      std::string rel="Neutral"; if (a.diplomacy==DiplomacyRelation::Allied) rel="Allied"; else if (a.diplomacy==DiplomacyRelation::War) rel="War"; else if (a.diplomacy==DiplomacyRelation::Ceasefire) rel="Ceasefire";
+      jt["actions"].push_back({{"type",at},{"text",a.text},{"objectiveId",a.objectiveId},{"state",objective_state_name(a.objectiveState)},{"player",a.player},{"playerB",a.playerB},{"resources",{{"Food",a.resources[0]},{"Wood",a.resources[1]},{"Metal",a.resources[2]},{"Wealth",a.resources[3]},{"Knowledge",a.resources[4]},{"Oil",a.resources[5]}}},{"unitType",unit_name(a.spawnUnitType)},{"buildingType",building_name(a.spawnBuildingType)},{"count",a.spawnCount},{"pos",{a.spawnPos.x,a.spawnPos.y}},{"winner",a.winner},{"areaId",a.areaId},{"relation",rel},{"worldTension",a.worldTension},{"operationType",(int)a.operationType},{"operationTarget",{a.operationTarget.x,a.operationTarget.y}},{"luaHook",a.luaHook}});
     }
     j["triggers"].push_back(jt);
   }
@@ -2772,6 +2918,10 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.navalCombatEvents);
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
+  hash_u32(h, (uint32_t)w.missionRuntime.status); hash_u32(h, (uint32_t)w.missionRuntime.briefingShown); hash_u32(h, (uint32_t)w.missionRuntime.resultTag.size());
+  hash_u32(h, w.missionRuntime.firedTriggerCount); hash_u32(h, w.missionRuntime.scriptedActionCount);
+  for (uint32_t id : w.missionRuntime.activeObjectives) hash_u32(h, id);
+  for (const auto& l : w.missionRuntime.luaHookLog) hash_u32(h, (uint32_t)l.size());
   for (const auto& r : w.tradeRoutes) { hash_u32(h, r.id); hash_u32(h, r.team); hash_u32(h, r.fromCity); hash_u32(h, r.toCity); hash_u32(h, r.active ? 1u : 0u); hash_float(h, r.efficiency); hash_float(h, r.wealthPerTick); }
   for (const auto& o : w.operations) { hash_u32(h, o.id); hash_u32(h, o.team); hash_u32(h, (uint32_t)o.type); hash_float(h, o.target.x); hash_float(h, o.target.y); hash_u32(h, o.assignedTick); hash_u32(h, o.active ? 1u : 0u); }
   hash_float(h, w.worldTension);

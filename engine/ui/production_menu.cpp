@@ -27,6 +27,7 @@ uint32_t selected_production_building(const dom::sim::World& world, const std::v
 }
 
 void queue_item_ui(dom::sim::World& world, dom::sim::Building& b, size_t idx) {
+#ifdef DOM_HAS_IMGUI
   auto& it = b.queue[idx];
   ImGui::PushID(static_cast<int>(idx));
   ImGui::Text("%zu) %s | %.1fs", idx + 1, unit_name(it.unitType), it.remaining);
@@ -41,6 +42,9 @@ void queue_item_ui(dom::sim::World& world, dom::sim::Building& b, size_t idx) {
   ImGui::SameLine();
   if (idx + 1 < b.queue.size() && ImGui::SmallButton("Down")) std::swap(b.queue[idx], b.queue[idx + 1]);
   ImGui::PopID();
+#else
+  (void)world; (void)b; (void)idx;
+#endif
 }
 }
 
