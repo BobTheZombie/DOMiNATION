@@ -9,9 +9,10 @@
 namespace dom::sim {
 
 enum class Resource : uint8_t { Food, Wood, Metal, Wealth, Knowledge, Oil, Count };
+enum class RefinedGood : uint8_t { Steel, Fuel, Munitions, MachineParts, Electronics, Count };
 enum class Age : uint8_t { Ancient, Classical, Medieval, Gunpowder, Enlightenment, Industrial, Modern, Information };
 enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege, TransportShip, LightWarship, HeavyWarship, BombardShip, Fighter, Interceptor, Bomber, StrategicBomber, ReconDrone, StrikeDrone, TacticalMissile, StrategicMissile, Count };
-enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder, Port, RadarTower, MobileRadar, Airbase, MissileSilo, AABattery, AntiMissileDefense, Count };
+enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder, Port, RadarTower, MobileRadar, Airbase, MissileSilo, AABattery, AntiMissileDefense, SteelMill, Refinery, MunitionsPlant, MachineWorks, ElectronicsLab, FactoryHub, Count };
 enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building, Naval, Transport, Count };
 enum class AttackType : uint8_t { Melee, Ranged };
 enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
@@ -146,6 +147,25 @@ struct ProductionItem {
   int targetAge{0};
 };
 
+struct IndustrialRecipe {
+  RefinedGood output{RefinedGood::Steel};
+  std::array<float, static_cast<size_t>(Resource::Count)> inputResources{};
+  std::array<float, static_cast<size_t>(RefinedGood::Count)> inputGoods{};
+  float outputAmount{0.0f};
+  float cycleTime{10.0f};
+};
+
+struct FactoryState {
+  uint8_t recipeIndex{0};
+  float cycleProgress{0.0f};
+  std::array<float, static_cast<size_t>(Resource::Count)> inputBuffer{};
+  std::array<float, static_cast<size_t>(RefinedGood::Count)> outputBuffer{};
+  bool paused{false};
+  bool blocked{false};
+  bool active{false};
+  float throughputBonus{0.0f};
+};
+
 struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint16_t stealthRevealTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; uint32_t transportId{0}; std::string definitionId; std::vector<uint32_t> cargo; bool hasMoveOrder{false}; bool attackMove{false}; bool embarked{false}; bool selected{false}; };
 
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
@@ -165,7 +185,7 @@ struct DenialZone { uint32_t id{0}; uint16_t team{0}; glm::vec2 pos{}; float rad
 
 struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
-struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType::House}; glm::vec2 pos{}; glm::vec2 size{2.0f, 2.0f}; bool underConstruction{true}; float buildProgress{0.0f}; float buildTime{10.0f}; float hp{1000.0f}; float maxHp{1000.0f}; std::string definitionId; std::vector<ProductionItem> queue; };
+struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType::House}; glm::vec2 pos{}; glm::vec2 size{2.0f, 2.0f}; bool underConstruction{true}; float buildProgress{0.0f}; float buildTime{10.0f}; float hp{1000.0f}; float maxHp{1000.0f}; std::string definitionId; std::vector<ProductionItem> queue; FactoryState factory{}; };
 
 struct ResourceNode { uint32_t id{}; ResourceNodeType type{ResourceNodeType::Forest}; glm::vec2 pos{}; float amount{1000.0f}; uint16_t owner{UINT16_MAX}; };
 struct MountainRegion { uint32_t id{0}; int minX{0}; int minY{0}; int maxX{0}; int maxY{0}; int peakCell{-1}; int centerCell{-1}; uint32_t cellCount{0}; };
@@ -236,7 +256,7 @@ struct BiomeRuntime {
   std::array<float, 3> palette{0.25f, 0.55f, 0.25f};
 };
 
-struct PlayerState { uint16_t id{}; Age age{Age::Ancient}; std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0}; int popUsed{0}; int popCap{10}; int score{0}; bool alive{true}; uint32_t unitsLost{0}; uint32_t buildingsLost{0}; int finalScore{0}; bool isHuman{false}; bool isCPU{true}; uint16_t teamId{0}; std::array<float, 3> color{0.8f, 0.8f, 0.8f}; CivilizationRuntime civilization{}; };
+struct PlayerState { uint16_t id{}; Age age{Age::Ancient}; std::array<float, static_cast<size_t>(Resource::Count)> resources{400, 350, 250, 250, 100, 0}; std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedGoods{}; int popUsed{0}; int popCap{10}; int score{0}; bool alive{true}; uint32_t unitsLost{0}; uint32_t buildingsLost{0}; int finalScore{0}; bool isHuman{false}; bool isCPU{true}; uint16_t teamId{0}; std::array<float, 3> color{0.8f, 0.8f, 0.8f}; CivilizationRuntime civilization{}; };
 struct MatchResult { MatchPhase phase{MatchPhase::Running}; VictoryCondition condition{VictoryCondition::None}; uint16_t winner{0}; uint32_t endTick{0}; bool scoreTieBreak{false}; };
 struct WonderState { uint16_t owner{UINT16_MAX}; uint32_t heldTicks{0}; };
 
@@ -317,6 +337,15 @@ struct SimulationStats {
   uint32_t campaignFlagsSet{0};
   uint32_t campaignResourcesCount{0};
   uint32_t campaignBranchesTaken{0};
+  uint32_t factoryCount{0};
+  uint32_t activeFactories{0};
+  uint32_t blockedFactories{0};
+  float steelOutput{0.0f};
+  float fuelOutput{0.0f};
+  float munitionsOutput{0.0f};
+  float machinePartsOutput{0.0f};
+  float electronicsOutput{0.0f};
+  float industrialThroughput{0.0f};
 };
 
 struct ChunkCoord {
@@ -356,6 +385,7 @@ struct World {
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
   std::vector<RailNode> railNodes; std::vector<RailEdge> railEdges; std::vector<RailNetwork> railNetworks; std::vector<Train> trains;
+  std::vector<IndustrialRecipe> industrialRecipes;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
   std::vector<EspionageOp> espionageOps; std::vector<StrategicPosture> strategicPosture;
   std::vector<AirUnit> airUnits;
@@ -403,6 +433,11 @@ struct World {
   uint32_t activeFreightTrains{0};
   float railThroughput{0.0f};
   uint32_t disruptedRailRoutes{0};
+  uint32_t factoryCount{0};
+  uint32_t activeFactories{0};
+  uint32_t blockedFactories{0};
+  float industrialThroughput{0.0f};
+  std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedOutputByTick{};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 

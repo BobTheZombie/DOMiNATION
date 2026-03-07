@@ -434,6 +434,34 @@ void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subje
 }
 
 size_t ridx(Resource r) { return static_cast<size_t>(r); }
+size_t gidx(RefinedGood g) { return static_cast<size_t>(g); }
+
+const char* refined_good_name(RefinedGood g) {
+  switch (g) {
+    case RefinedGood::Steel: return "steel";
+    case RefinedGood::Fuel: return "fuel";
+    case RefinedGood::Munitions: return "munitions";
+    case RefinedGood::MachineParts: return "machine_parts";
+    case RefinedGood::Electronics: return "electronics";
+    case RefinedGood::Count: break;
+  }
+  return "steel";
+}
+
+RefinedGood parse_refined_good(const std::string& v) {
+  if (v == "steel") return RefinedGood::Steel;
+  if (v == "fuel") return RefinedGood::Fuel;
+  if (v == "munitions") return RefinedGood::Munitions;
+  if (v == "machine_parts") return RefinedGood::MachineParts;
+  if (v == "electronics") return RefinedGood::Electronics;
+  return RefinedGood::Steel;
+}
+
+bool is_factory_type(BuildingType t) {
+  return t == BuildingType::SteelMill || t == BuildingType::Refinery || t == BuildingType::MunitionsPlant ||
+         t == BuildingType::MachineWorks || t == BuildingType::ElectronicsLab || t == BuildingType::FactoryHub;
+}
+
 int bidx(BuildingType t) { return static_cast<int>(t); }
 int uidx(UnitType t) { return static_cast<int>(t); }
 int ridx_node(ResourceNodeType t) { return static_cast<int>(t); }
@@ -456,6 +484,12 @@ const char* building_name(BuildingType t) {
     case BuildingType::MissileSilo: return "MissileSilo";
     case BuildingType::AABattery: return "AABattery";
     case BuildingType::AntiMissileDefense: return "AntiMissileDefense";
+    case BuildingType::SteelMill: return "SteelMill";
+    case BuildingType::Refinery: return "Refinery";
+    case BuildingType::MunitionsPlant: return "MunitionsPlant";
+    case BuildingType::MachineWorks: return "MachineWorks";
+    case BuildingType::ElectronicsLab: return "ElectronicsLab";
+    case BuildingType::FactoryHub: return "FactoryHub";
     case BuildingType::Count: break;
   }
   return "House";
@@ -477,6 +511,12 @@ BuildingType parse_building(const std::string& v) {
   if (v == "MissileSilo") return BuildingType::MissileSilo;
   if (v == "AABattery") return BuildingType::AABattery;
   if (v == "AntiMissileDefense") return BuildingType::AntiMissileDefense;
+  if (v == "SteelMill") return BuildingType::SteelMill;
+  if (v == "Refinery") return BuildingType::Refinery;
+  if (v == "MunitionsPlant") return BuildingType::MunitionsPlant;
+  if (v == "MachineWorks") return BuildingType::MachineWorks;
+  if (v == "ElectronicsLab") return BuildingType::ElectronicsLab;
+  if (v == "FactoryHub") return BuildingType::FactoryHub;
   return BuildingType::House;
 }
 
@@ -607,6 +647,12 @@ const char* building_family_name(BuildingType t) {
     case BuildingType::Barracks: return "Barracks";
     case BuildingType::Wonder: return "Wonder";
     case BuildingType::Port: return "Port";
+    case BuildingType::SteelMill: return "SteelMill";
+    case BuildingType::Refinery: return "Refinery";
+    case BuildingType::MunitionsPlant: return "MunitionsPlant";
+    case BuildingType::MachineWorks: return "MachineWorks";
+    case BuildingType::ElectronicsLab: return "ElectronicsLab";
+    case BuildingType::FactoryHub: return "FactoryHub";
     default: return "House";
   }
 }
@@ -835,6 +881,36 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::Port)].cost[ridx(Resource::Wood)] = 140;
   gBuildDefs[bidx(BuildingType::Port)].cost[ridx(Resource::Metal)] = 80;
 
+  gBuildDefs[bidx(BuildingType::SteelMill)].size = {3.2f, 3.2f};
+  gBuildDefs[bidx(BuildingType::SteelMill)].buildTime = 26.0f;
+  gBuildDefs[bidx(BuildingType::SteelMill)].cost[ridx(Resource::Metal)] = 160;
+  gBuildDefs[bidx(BuildingType::SteelMill)].cost[ridx(Resource::Wealth)] = 100;
+
+  gBuildDefs[bidx(BuildingType::Refinery)].size = {3.2f, 3.2f};
+  gBuildDefs[bidx(BuildingType::Refinery)].buildTime = 24.0f;
+  gBuildDefs[bidx(BuildingType::Refinery)].cost[ridx(Resource::Metal)] = 130;
+  gBuildDefs[bidx(BuildingType::Refinery)].cost[ridx(Resource::Wealth)] = 90;
+
+  gBuildDefs[bidx(BuildingType::MunitionsPlant)].size = {3.0f, 3.0f};
+  gBuildDefs[bidx(BuildingType::MunitionsPlant)].buildTime = 25.0f;
+  gBuildDefs[bidx(BuildingType::MunitionsPlant)].cost[ridx(Resource::Metal)] = 150;
+  gBuildDefs[bidx(BuildingType::MunitionsPlant)].cost[ridx(Resource::Wealth)] = 110;
+
+  gBuildDefs[bidx(BuildingType::MachineWorks)].size = {3.0f, 3.0f};
+  gBuildDefs[bidx(BuildingType::MachineWorks)].buildTime = 25.0f;
+  gBuildDefs[bidx(BuildingType::MachineWorks)].cost[ridx(Resource::Metal)] = 140;
+  gBuildDefs[bidx(BuildingType::MachineWorks)].cost[ridx(Resource::Knowledge)] = 70;
+
+  gBuildDefs[bidx(BuildingType::ElectronicsLab)].size = {3.0f, 3.0f};
+  gBuildDefs[bidx(BuildingType::ElectronicsLab)].buildTime = 26.0f;
+  gBuildDefs[bidx(BuildingType::ElectronicsLab)].cost[ridx(Resource::Metal)] = 120;
+  gBuildDefs[bidx(BuildingType::ElectronicsLab)].cost[ridx(Resource::Knowledge)] = 130;
+
+  gBuildDefs[bidx(BuildingType::FactoryHub)].size = {3.4f, 3.4f};
+  gBuildDefs[bidx(BuildingType::FactoryHub)].buildTime = 28.0f;
+  gBuildDefs[bidx(BuildingType::FactoryHub)].cost[ridx(Resource::Metal)] = 180;
+  gBuildDefs[bidx(BuildingType::FactoryHub)].cost[ridx(Resource::Wealth)] = 140;
+
   gUnitDefs[uidx(UnitType::Worker)].trainTime = 10.0f;
   gUnitDefs[uidx(UnitType::Worker)].cost[ridx(Resource::Food)] = 60;
   gUnitDefs[uidx(UnitType::Worker)].popCost = 1;
@@ -932,16 +1008,7 @@ void load_defs_once() {
   if (j.contains("buildingDefs")) {
     for (const auto& bd : j["buildingDefs"]) {
       std::string id = bd.value("id", "");
-      BuildingType t = BuildingType::House;
-      if (id == "CityCenter") t = BuildingType::CityCenter;
-      else if (id == "Farm") t = BuildingType::Farm;
-      else if (id == "LumberCamp") t = BuildingType::LumberCamp;
-      else if (id == "Mine") t = BuildingType::Mine;
-      else if (id == "Market") t = BuildingType::Market;
-      else if (id == "Library") t = BuildingType::Library;
-      else if (id == "Barracks") t = BuildingType::Barracks;
-      else if (id == "Wonder") t = BuildingType::Wonder;
-      else if (id == "Port") t = BuildingType::Port;
+      BuildingType t = parse_building(id);
       BuildDef& d = gBuildDefs[bidx(t)];
       if (bd.contains("size")) d.size = {bd["size"][0].get<float>(), bd["size"][1].get<float>()};
       d.buildTime = bd.value("buildTime", d.buildTime);
@@ -2597,6 +2664,81 @@ void apply_rail_logistics(World& w) {
   }
 }
 
+void update_industrial_economy(World& w, float dt) {
+  w.factoryCount = 0;
+  w.activeFactories = 0;
+  w.blockedFactories = 0;
+  w.industrialThroughput = 0.0f;
+  w.refinedOutputByTick.fill(0.0f);
+  if (w.industrialRecipes.empty()) return;
+
+  for (auto& b : w.buildings) {
+    if (!is_factory_type(b.type) || b.underConstruction || b.hp <= 0.0f || b.team >= w.players.size()) continue;
+    ++w.factoryCount;
+    auto& owner = w.players[b.team];
+    auto& fs = b.factory;
+    const size_t recipeIndex = std::min<size_t>(fs.recipeIndex, w.industrialRecipes.size() - 1);
+    const auto& recipe = w.industrialRecipes[recipeIndex];
+
+    for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) {
+      const float want = recipe.inputResources[r] * 1.8f;
+      if (want > fs.inputBuffer[r] && owner.resources[r] > 0.01f) {
+        const float pull = std::min(want - fs.inputBuffer[r], owner.resources[r]);
+        owner.resources[r] -= pull;
+        fs.inputBuffer[r] += pull;
+      }
+    }
+    for (size_t g = 0; g < static_cast<size_t>(RefinedGood::Count); ++g) {
+      const float want = recipe.inputGoods[g] * 1.8f;
+      if (want > fs.outputBuffer[g] && owner.refinedGoods[g] > 0.01f) {
+        const float pull = std::min(want - fs.outputBuffer[g], owner.refinedGoods[g]);
+        owner.refinedGoods[g] -= pull;
+        fs.outputBuffer[g] += pull;
+      }
+    }
+
+    const bool hasRoad = near_friendly_road(w, b.team, b.pos);
+    bool hasRail = false;
+    for (const auto& n : w.railNodes) if (n.owner == b.team && n.active && dist(glm::vec2{(float)n.tile.x, (float)n.tile.y}, b.pos) < 8.0f) { hasRail = true; break; }
+    const bool nearPort = std::any_of(w.buildings.begin(), w.buildings.end(), [&](const Building& x){ return x.team == b.team && !x.underConstruction && x.type == BuildingType::Port && dist(x.pos, b.pos) < 12.0f; });
+    fs.throughputBonus = 0.0f;
+    if (hasRoad) fs.throughputBonus += 0.10f;
+    if (hasRail) fs.throughputBonus += 0.15f;
+    if (nearPort) fs.throughputBonus += 0.07f;
+    if (b.type == BuildingType::FactoryHub) fs.throughputBonus += 0.12f;
+
+    bool hasInputs = true;
+    for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) if (fs.inputBuffer[r] + 0.0001f < recipe.inputResources[r]) { hasInputs = false; break; }
+    for (size_t g = 0; g < static_cast<size_t>(RefinedGood::Count); ++g) if (fs.outputBuffer[g] + 0.0001f < recipe.inputGoods[g]) { hasInputs = false; break; }
+
+    const size_t out = gidx(recipe.output);
+    const bool outputFull = fs.outputBuffer[out] > 240.0f;
+    fs.blocked = !hasInputs || outputFull;
+    fs.active = !fs.paused && !fs.blocked;
+    if (fs.blocked) ++w.blockedFactories;
+    if (!fs.active) continue;
+    ++w.activeFactories;
+
+    const float cycle = std::max(1.0f, recipe.cycleTime / (1.0f + fs.throughputBonus));
+    fs.cycleProgress += dt * 20.0f;
+    while (fs.cycleProgress >= cycle) {
+      fs.cycleProgress -= cycle;
+      bool canCraft = true;
+      for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) if (fs.inputBuffer[r] + 0.0001f < recipe.inputResources[r]) { canCraft = false; break; }
+      for (size_t g = 0; g < static_cast<size_t>(RefinedGood::Count); ++g) if (fs.outputBuffer[g] + 0.0001f < recipe.inputGoods[g]) { canCraft = false; break; }
+      if (!canCraft) break;
+      for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) fs.inputBuffer[r] = std::max(0.0f, fs.inputBuffer[r] - recipe.inputResources[r]);
+      for (size_t g = 0; g < static_cast<size_t>(RefinedGood::Count); ++g) fs.outputBuffer[g] = std::max(0.0f, fs.outputBuffer[g] - recipe.inputGoods[g]);
+      fs.outputBuffer[out] += recipe.outputAmount;
+      const float ship = std::min(fs.outputBuffer[out], 1.8f + fs.throughputBonus * 2.5f);
+      fs.outputBuffer[out] -= ship;
+      owner.refinedGoods[out] += ship;
+      w.refinedOutputByTick[out] += ship;
+      w.industrialThroughput += ship;
+    }
+  }
+}
+
 void recompute_trade_routes(World& w) {
   if (w.tick % 50 != 0 && !w.tradeRoutes.empty()) return;
   w.tradeRoutes.clear();
@@ -3168,10 +3310,54 @@ void run_task_graph(TaskGraph& graph) {
   for (auto& t : pool) t.join();
 }
 
+void load_industrial_recipes(World& w) {
+  w.industrialRecipes.clear();
+  auto add = [&](RefinedGood out, float outAmt, float cycle, std::initializer_list<std::pair<Resource,float>> inR, std::initializer_list<std::pair<RefinedGood,float>> inG = {}) {
+    IndustrialRecipe r{};
+    r.output = out;
+    r.outputAmount = outAmt;
+    r.cycleTime = cycle;
+    for (const auto& kv : inR) r.inputResources[ridx(kv.first)] = kv.second;
+    for (const auto& kv : inG) r.inputGoods[gidx(kv.first)] = kv.second;
+    w.industrialRecipes.push_back(r);
+  };
+  add(RefinedGood::Steel, 3.0f, 18.0f, {{Resource::Metal, 2.2f}, {Resource::Oil, 0.4f}});
+  add(RefinedGood::Fuel, 3.5f, 16.0f, {{Resource::Oil, 2.5f}});
+  add(RefinedGood::Munitions, 2.6f, 16.0f, {{Resource::Metal, 1.2f}, {Resource::Oil, 0.8f}});
+  add(RefinedGood::MachineParts, 2.1f, 19.0f, {{Resource::Metal, 1.5f}, {Resource::Knowledge, 0.6f}}, {{RefinedGood::Steel, 0.9f}});
+  add(RefinedGood::Electronics, 1.8f, 22.0f, {{Resource::Knowledge, 1.7f}, {Resource::Metal, 0.6f}}, {{RefinedGood::MachineParts, 0.5f}});
+
+  std::ifstream f("content/industrial_recipes.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.contains("recipes") || !j["recipes"].is_array()) return;
+  w.industrialRecipes.clear();
+  for (const auto& it : j["recipes"]) {
+    IndustrialRecipe r{};
+    r.output = parse_refined_good(it.value("output", std::string("steel")));
+    r.outputAmount = it.value("outputAmount", 1.0f);
+    r.cycleTime = it.value("cycleTime", 10.0f);
+    if (it.contains("inputResources") && it["inputResources"].is_object()) {
+      const auto& ir = it["inputResources"];
+      if (ir.contains("food")) r.inputResources[ridx(Resource::Food)] = ir["food"].get<float>();
+      if (ir.contains("wood")) r.inputResources[ridx(Resource::Wood)] = ir["wood"].get<float>();
+      if (ir.contains("metal")) r.inputResources[ridx(Resource::Metal)] = ir["metal"].get<float>();
+      if (ir.contains("wealth")) r.inputResources[ridx(Resource::Wealth)] = ir["wealth"].get<float>();
+      if (ir.contains("knowledge")) r.inputResources[ridx(Resource::Knowledge)] = ir["knowledge"].get<float>();
+      if (ir.contains("oil")) r.inputResources[ridx(Resource::Oil)] = ir["oil"].get<float>();
+    }
+    if (it.contains("inputGoods") && it["inputGoods"].is_object()) {
+      for (auto kv = it["inputGoods"].begin(); kv != it["inputGoods"].end(); ++kv) r.inputGoods[gidx(parse_refined_good(kv.key()))] = kv.value().get<float>();
+    }
+    w.industrialRecipes.push_back(r);
+  }
+}
+
 void initialize_world(World& w, uint32_t seed) {
 
   load_defs_once();
   load_guardian_defs(w);
+  load_industrial_recipes(w);
   gNav.cache.clear();
   gPendingNavRequests.clear();
   gCompletedNavResults.clear();
@@ -3322,11 +3508,24 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     w.terrainClass = std::move(m);
   }
 
+  if (j.contains("industrialRecipes") && j["industrialRecipes"].is_array()) {
+    w.industrialRecipes.clear();
+    for (const auto& it : j["industrialRecipes"]) { IndustrialRecipe r{}; r.output = parse_refined_good(it.value("output", std::string("steel"))); r.outputAmount = it.value("outputAmount", 1.0f); r.cycleTime = it.value("cycleTime", 10.0f); if (it.contains("inputResources") && it["inputResources"].is_array()) r.inputResources = it["inputResources"].get<decltype(r.inputResources)>(); if (it.contains("inputGoods") && it["inputGoods"].is_array()) r.inputGoods = it["inputGoods"].get<decltype(r.inputGoods)>(); w.industrialRecipes.push_back(r); }
+  }
+
   if (j.contains("players")) {
     w.players.clear();
     for (const auto& p : j["players"]) {
       PlayerState ps{}; ps.id = p.value("id", (uint16_t)w.players.size()); ps.age = static_cast<Age>(p.value("age", 0));
       if (p.contains("resources")) ps.resources = p["resources"].get<decltype(ps.resources)>();
+      if (p.contains("refinedGoods") && p["refinedGoods"].is_object()) {
+        const auto& rg = p["refinedGoods"];
+        if (rg.contains("steel")) ps.refinedGoods[gidx(RefinedGood::Steel)] = rg["steel"].get<float>();
+        if (rg.contains("fuel")) ps.refinedGoods[gidx(RefinedGood::Fuel)] = rg["fuel"].get<float>();
+        if (rg.contains("munitions")) ps.refinedGoods[gidx(RefinedGood::Munitions)] = rg["munitions"].get<float>();
+        if (rg.contains("machine_parts")) ps.refinedGoods[gidx(RefinedGood::MachineParts)] = rg["machine_parts"].get<float>();
+        if (rg.contains("electronics")) ps.refinedGoods[gidx(RefinedGood::Electronics)] = rg["electronics"].get<float>();
+      }
       ps.popCap = p.value("popCap", 10);
       ps.isHuman = p.value("isHuman", ps.id == 0);
       ps.isCPU = p.value("isCPU", !ps.isHuman);
@@ -3416,7 +3615,9 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (j.contains("units")) for (const auto& u : j["units"]) { spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()}); }
   if (j.contains("airUnits")) for (const auto& a : j["airUnits"]) { AirUnit au{}; au.id=a.value("id",(uint32_t)(w.airUnits.size()+1)); au.team=a.value("team",0u); au.cls=(AirUnitClass)a.value("class",0); au.state=(AirMissionState)a.value("state",0); au.pos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; au.missionTarget={a["missionTarget"][0].get<float>(),a["missionTarget"][1].get<float>()}; au.hp=a.value("hp",100.0f); au.speed=a.value("speed",6.0f); au.cooldownTicks=a.value("cooldownTicks",0u); au.missionPerformed=a.value("missionPerformed",false); w.airUnits.push_back(au); }
   w.buildings.clear();
-  if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb);} }
+  if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp);
+  if (b.contains("factory") && b["factory"].is_object()) { const auto& fj = b["factory"]; bb.factory.recipeIndex = fj.value("recipeIndex", 0); bb.factory.cycleProgress = fj.value("cycleProgress", 0.0f); bb.factory.paused = fj.value("paused", false); bb.factory.blocked = fj.value("blocked", false); bb.factory.active = fj.value("active", false); bb.factory.throughputBonus = fj.value("throughputBonus", 0.0f); if (fj.contains("inputBuffer")) bb.factory.inputBuffer = fj["inputBuffer"].get<decltype(bb.factory.inputBuffer)>(); if (fj.contains("outputBuffer")) bb.factory.outputBuffer = fj["outputBuffer"].get<decltype(bb.factory.outputBuffer)>(); }
+  w.buildings.push_back(bb);} }
   if (j.contains("strategicStrikes")) for (const auto& st : j["strategicStrikes"]) { StrategicStrike ss{}; ss.id=st.value("id",(uint32_t)(w.strategicStrikes.size()+1)); ss.team=st.value("team",0u); ss.type=(StrikeType)st.value("type",0); ss.from={st["from"][0].get<float>(),st["from"][1].get<float>()}; ss.target={st["target"][0].get<float>(),st["target"][1].get<float>()}; ss.prepTicksRemaining=st.value("prepTicksRemaining",0u); ss.travelTicksRemaining=st.value("travelTicksRemaining",0u); ss.cooldownTicks=st.value("cooldownTicks",0u); ss.interceptionState=st.value("interceptionState",(uint8_t)0); ss.launched=st.value("launched",false); ss.resolved=st.value("resolved",false); w.strategicStrikes.push_back(ss); }
   if (j.contains("denialZones")) for (const auto& dz : j["denialZones"]) { DenialZone z{}; z.id=dz.value("id",(uint32_t)(w.denialZones.size()+1)); z.team=dz.value("team",0u); z.pos={dz["pos"][0].get<float>(),dz["pos"][1].get<float>()}; z.radius=dz.value("radius",6.0f); z.ticksRemaining=dz.value("ticksRemaining",0u); w.denialZones.push_back(z); }
   w.resourceNodes.clear();
@@ -3472,7 +3673,9 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     const auto& pl = j["placements"];
     if (pl.contains("cities")) for (const auto& c : pl["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
     if (pl.contains("units")) for (const auto& u : pl["units"]) spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()});
-    if (pl.contains("buildings")) for (const auto& b : pl["buildings"]) { Building bb{}; bb.id=b.value("id",(uint32_t)(w.buildings.size()+1)); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb); }
+    if (pl.contains("buildings")) for (const auto& b : pl["buildings"]) { Building bb{}; bb.id=b.value("id",(uint32_t)(w.buildings.size()+1)); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp);
+  if (b.contains("factory") && b["factory"].is_object()) { const auto& fj = b["factory"]; bb.factory.recipeIndex = fj.value("recipeIndex", 0); bb.factory.cycleProgress = fj.value("cycleProgress", 0.0f); bb.factory.paused = fj.value("paused", false); bb.factory.blocked = fj.value("blocked", false); bb.factory.active = fj.value("active", false); bb.factory.throughputBonus = fj.value("throughputBonus", 0.0f); if (fj.contains("inputBuffer")) bb.factory.inputBuffer = fj["inputBuffer"].get<decltype(bb.factory.inputBuffer)>(); if (fj.contains("outputBuffer")) bb.factory.outputBuffer = fj["outputBuffer"].get<decltype(bb.factory.outputBuffer)>(); }
+  w.buildings.push_back(bb); }
     if (pl.contains("resourceNodes")) for (const auto& r : pl["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",(uint32_t)(w.resourceNodes.size()+1)); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} 
   }
   if (j.contains("territoryOwner")) { w.territoryOwner = j["territoryOwner"].get<std::vector<uint16_t>>(); if ((int)w.territoryOwner.size()!=w.width*w.height) { err="territory size mismatch"; return false; } }
@@ -3594,10 +3797,10 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["schemaVersion"] = 1; j["seed"] = w.seed; j["mapWidth"] = w.width; j["mapHeight"] = w.height;
   j["worldPreset"] = world_preset_name(w.worldPreset);
   j["players"] = nlohmann::json::array();
-  for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap},{"isHuman",p.isHuman},{"isCPU",p.isCPU},{"team",p.teamId},{"civilization",p.civilization.id},{"color",{p.color[0],p.color[1],p.color[2]}},{"startingResources",{{"Food",p.resources[0]},{"Wood",p.resources[1]},{"Metal",p.resources[2]},{"Wealth",p.resources[3]},{"Knowledge",p.resources[4]},{"Oil",p.resources[5]}}}});
+  for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap},{"isHuman",p.isHuman},{"isCPU",p.isCPU},{"team",p.teamId},{"civilization",p.civilization.id},{"color",{p.color[0],p.color[1],p.color[2]}},{"startingResources",{{"Food",p.resources[0]},{"Wood",p.resources[1]},{"Metal",p.resources[2]},{"Wealth",p.resources[3]},{"Knowledge",p.resources[4]},{"Oil",p.resources[5]}}},{"refinedGoods",{{"steel",p.refinedGoods[gidx(RefinedGood::Steel)]},{"fuel",p.refinedGoods[gidx(RefinedGood::Fuel)]},{"munitions",p.refinedGoods[gidx(RefinedGood::Munitions)]},{"machine_parts",p.refinedGoods[gidx(RefinedGood::MachineParts)]},{"electronics",p.refinedGoods[gidx(RefinedGood::Electronics)]}}}});
   j["cities"] = nlohmann::json::array(); for (const auto& c : w.cities) j["cities"].push_back({{"id",c.id},{"team",c.team},{"pos",{c.pos.x,c.pos.y}},{"level",c.level},{"capital",c.capital}});
   j["units"] = nlohmann::json::array(); for (const auto& u : w.units) j["units"].push_back({{"id",u.id},{"team",u.team},{"type",unit_name(u.type)},{"pos",{u.pos.x,u.pos.y}}});
-  j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp}});
+  j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp},{"factory",{{"recipeIndex",b.factory.recipeIndex},{"cycleProgress",b.factory.cycleProgress},{"paused",b.factory.paused},{"blocked",b.factory.blocked},{"active",b.factory.active},{"throughputBonus",b.factory.throughputBonus},{"inputBuffer",b.factory.inputBuffer},{"outputBuffer",b.factory.outputBuffer}}}});
   j["airUnits"] = nlohmann::json::array(); for (const auto& a : w.airUnits) j["airUnits"].push_back({{"id",a.id},{"team",a.team},{"class",(int)a.cls},{"state",(int)a.state},{"pos",{a.pos.x,a.pos.y}},{"missionTarget",{a.missionTarget.x,a.missionTarget.y}},{"hp",a.hp},{"speed",a.speed},{"cooldownTicks",a.cooldownTicks},{"missionPerformed",a.missionPerformed}});
   j["strategicStrikes"] = nlohmann::json::array(); for (const auto& st : w.strategicStrikes) j["strategicStrikes"].push_back({{"id",st.id},{"team",st.team},{"type",(int)st.type},{"from",{st.from.x,st.from.y}},{"target",{st.target.x,st.target.y}},{"prepTicksRemaining",st.prepTicksRemaining},{"travelTicksRemaining",st.travelTicksRemaining},{"cooldownTicks",st.cooldownTicks},{"interceptionState",st.interceptionState},{"launched",st.launched},{"resolved",st.resolved}});
   j["denialZones"] = nlohmann::json::array(); for (const auto& dz : w.denialZones) j["denialZones"].push_back({{"id",dz.id},{"team",dz.team},{"pos",{dz.pos.x,dz.pos.y}},{"radius",dz.radius},{"ticksRemaining",dz.ticksRemaining}});
@@ -3720,6 +3923,7 @@ void tick_world(World& w, float dt) {
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
   apply_trade_income(w, dt);
   update_underground_economy(w, dt);
+  update_industrial_economy(w, dt);
 
   for (auto& b : w.buildings) {
     auto& owner = w.players[b.team];
@@ -4079,6 +4283,15 @@ void tick_world(World& w, float dt) {
   gLastStats.campaignFlagsSet = static_cast<uint32_t>(w.campaign.flags.size());
   gLastStats.campaignResourcesCount = static_cast<uint32_t>(w.campaign.resources.size());
   gLastStats.campaignBranchesTaken = static_cast<uint32_t>(w.campaign.pendingBranchKey.empty() ? 0 : 1);
+  gLastStats.factoryCount = w.factoryCount;
+  gLastStats.activeFactories = w.activeFactories;
+  gLastStats.blockedFactories = w.blockedFactories;
+  gLastStats.steelOutput = w.refinedOutputByTick[gidx(RefinedGood::Steel)];
+  gLastStats.fuelOutput = w.refinedOutputByTick[gidx(RefinedGood::Fuel)];
+  gLastStats.munitionsOutput = w.refinedOutputByTick[gidx(RefinedGood::Munitions)];
+  gLastStats.machinePartsOutput = w.refinedOutputByTick[gidx(RefinedGood::MachineParts)];
+  gLastStats.electronicsOutput = w.refinedOutputByTick[gidx(RefinedGood::Electronics)];
+  gLastStats.industrialThroughput = w.industrialThroughput;
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -4198,7 +4411,13 @@ bool confirm_build_placement(World& world, uint16_t team) {
   if (!spend(world.players[team].resources, cost)) return false;
   uint32_t id = 1; for (const auto& b : world.buildings) id = std::max(id, b.id + 1);
   const auto& d = gBuildDefs[bidx(world.placementType)];
-  Building nb{}; nb.id=id; nb.team=team; nb.type=world.placementType; nb.pos=world.placementPos; nb.size=d.size; nb.underConstruction=true; nb.buildProgress=0.0f; nb.buildTime=d.buildTime; nb.maxHp=1000.0f * civ.buildingHpMult[static_cast<size_t>(world.placementType)]; nb.hp=nb.maxHp; nb.definitionId = resolved_building_definition_id(world, team, world.placementType); world.buildings.push_back(std::move(nb));
+  Building nb{}; nb.id=id; nb.team=team; nb.type=world.placementType; nb.pos=world.placementPos; nb.size=d.size; nb.underConstruction=true; nb.buildProgress=0.0f; nb.buildTime=d.buildTime; nb.maxHp=1000.0f * civ.buildingHpMult[static_cast<size_t>(world.placementType)]; nb.hp=nb.maxHp; nb.definitionId = resolved_building_definition_id(world, team, world.placementType);
+  if (world.placementType == BuildingType::SteelMill) nb.factory.recipeIndex = 0;
+  else if (world.placementType == BuildingType::Refinery) nb.factory.recipeIndex = 1;
+  else if (world.placementType == BuildingType::MunitionsPlant) nb.factory.recipeIndex = 2;
+  else if (world.placementType == BuildingType::MachineWorks) nb.factory.recipeIndex = 3;
+  else if (world.placementType == BuildingType::ElectronicsLab) nb.factory.recipeIndex = 4;
+  world.buildings.push_back(std::move(nb));
   ReplayCommand cmd{}; cmd.type = ReplayCommandType::PlaceBuilding; cmd.tick = world.tick; cmd.team = team; cmd.target = world.placementPos; cmd.buildingType = world.placementType; gReplayCommands.push_back(cmd);
   ++world.navVersion;
   gNav.cache.clear();
@@ -4221,7 +4440,14 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
   auto cost = gUnitDefs[uidx(type)].cost;
   for (size_t i=0;i<cost.size();++i) cost[i] *= p.civilization.unitCostMult[static_cast<size_t>(type)];
+  std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedReq{};
+  if (type == UnitType::Cavalry) { refinedReq[gidx(RefinedGood::Steel)] = 0.8f; refinedReq[gidx(RefinedGood::Fuel)] = 0.6f; }
+  if (type == UnitType::Bomber || type == UnitType::StrategicBomber) { refinedReq[gidx(RefinedGood::Fuel)] = 1.0f; refinedReq[gidx(RefinedGood::MachineParts)] = 0.7f; }
+  if (type == UnitType::TacticalMissile || type == UnitType::StrategicMissile) { refinedReq[gidx(RefinedGood::Munitions)] = 1.2f; refinedReq[gidx(RefinedGood::Electronics)] = 0.8f; }
+  if (type == UnitType::ReconDrone || type == UnitType::StrikeDrone) { refinedReq[gidx(RefinedGood::Electronics)] = 0.5f; }
+  for (size_t i = 0; i < refinedReq.size(); ++i) if (p.refinedGoods[i] + 0.0001f < refinedReq[i]) return false;
   if (!spend(p.resources, cost)) return false;
+  for (size_t i = 0; i < refinedReq.size(); ++i) p.refinedGoods[i] -= refinedReq[i];
   it->queue.push_back({QueueKind::TrainUnit, type, gUnitDefs[uidx(type)].trainTime * p.civilization.unitTrainTimeMult[static_cast<size_t>(type)], 0});
   ReplayCommand cmd{}; cmd.type = ReplayCommandType::QueueTrain; cmd.tick = world.tick; cmd.team = team; cmd.buildingId = buildingId; cmd.unitType = type; gReplayCommands.push_back(cmd);
   return true;
@@ -4329,11 +4555,15 @@ uint64_t state_hash(const World& w) {
     hash_u32(h, b.id); hash_u32(h, (uint32_t)b.type); hash_u32(h, b.underConstruction ? 1 : 0); hash_float(h, b.buildProgress);
     hash_u32(h, (uint32_t)b.queue.size());
     for (const auto& q : b.queue) { hash_u32(h, (uint32_t)q.kind); hash_u32(h, (uint32_t)q.unitType); hash_float(h, q.remaining); hash_u32(h, q.targetAge); }
+    hash_u32(h, b.factory.recipeIndex); hash_float(h, b.factory.cycleProgress); hash_u32(h, b.factory.paused?1u:0u); hash_u32(h, b.factory.blocked?1u:0u); hash_u32(h, b.factory.active?1u:0u); hash_float(h, b.factory.throughputBonus);
+    for (float v : b.factory.inputBuffer) hash_float(h, v);
+    for (float v : b.factory.outputBuffer) hash_float(h, v);
   }
   for (const auto& p : w.players) {
     hash_u32(h, (uint32_t)p.age); hash_u32(h, (uint32_t)p.popUsed); hash_u32(h, (uint32_t)p.popCap);
     hash_u32(h, p.unitsLost); hash_u32(h, p.buildingsLost); hash_u32(h, (uint32_t)p.finalScore);
     for (float r : p.resources) hash_float(h, r);
+    for (float g : p.refinedGoods) hash_float(h, g);
   }
   hash_u32(h, static_cast<uint32_t>(w.match.phase));
   hash_u32(h, static_cast<uint32_t>(w.match.condition));
@@ -4358,6 +4588,11 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.activeFreightTrains);
   hash_float(h, w.railThroughput);
   hash_u32(h, w.disruptedRailRoutes);
+  hash_u32(h, w.factoryCount);
+  hash_u32(h, w.activeFactories);
+  hash_u32(h, w.blockedFactories);
+  hash_float(h, w.industrialThroughput);
+  for (float v : w.refinedOutputByTick) hash_float(h, v);
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);
   hash_u32(h, w.outOfSupplyUnits);

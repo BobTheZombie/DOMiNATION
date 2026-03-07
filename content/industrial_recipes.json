@@ -1,0 +1,41 @@
+{
+  "recipes": [
+    {
+      "id": "steel_from_metal",
+      "output": "steel",
+      "outputAmount": 3.0,
+      "cycleTime": 18.0,
+      "inputResources": {"metal": 2.2, "oil": 0.4}
+    },
+    {
+      "id": "fuel_from_oil",
+      "output": "fuel",
+      "outputAmount": 3.5,
+      "cycleTime": 16.0,
+      "inputResources": {"oil": 2.5}
+    },
+    {
+      "id": "munitions_chain",
+      "output": "munitions",
+      "outputAmount": 2.6,
+      "cycleTime": 16.0,
+      "inputResources": {"metal": 1.2, "oil": 0.8}
+    },
+    {
+      "id": "machine_parts",
+      "output": "machine_parts",
+      "outputAmount": 2.1,
+      "cycleTime": 19.0,
+      "inputResources": {"metal": 1.5, "knowledge": 0.6},
+      "inputGoods": {"steel": 0.9}
+    },
+    {
+      "id": "electronics",
+      "output": "electronics",
+      "outputAmount": 1.8,
+      "cycleTime": 22.0,
+      "inputResources": {"knowledge": 1.7, "metal": 0.6},
+      "inputGoods": {"machine_parts": 0.5}
+    }
+  ]
+}

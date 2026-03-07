@@ -12,7 +12,10 @@ void place_editor_object(dom::sim::World& world, int tool, uint16_t owner, const
     world.cities.push_back({next_id(last), owner, at, 1, false});
   } else if (tool == 1) {
     uint32_t last = world.buildings.empty() ? 0 : world.buildings.back().id;
-    world.buildings.push_back({next_id(last), owner, dom::sim::BuildingType::Barracks, at, {3.0f, 3.0f}, false, 1.0f, 14.0f, 1000.0f, 1000.0f, {}});
+    dom::sim::Building b{};
+    b.id = next_id(last); b.team = owner; b.type = dom::sim::BuildingType::Barracks; b.pos = at; b.size = {3.0f, 3.0f};
+    b.underConstruction = false; b.buildProgress = 1.0f; b.buildTime = 14.0f; b.hp = b.maxHp = 1000.0f;
+    world.buildings.push_back(b);
   } else if (tool == 2) {
     uint32_t last = world.resourceNodes.empty() ? 0 : world.resourceNodes.back().id;
     world.resourceNodes.push_back({next_id(last), dom::sim::ResourceNodeType::Ore, at, 1200.0f, owner});
@@ -36,6 +39,13 @@ void place_editor_object(dom::sim::World& world, int tool, uint16_t owner, const
         world.railEdges.push_back({eid, owner, prev.id, nid, 1, false, false, false});
       }
     }
+  } else if (tool == 5) {
+    uint32_t last = world.buildings.empty() ? 0 : world.buildings.back().id;
+    dom::sim::Building b{};
+    b.id = next_id(last); b.team = owner; b.type = dom::sim::BuildingType::SteelMill; b.pos = at; b.size = {3.2f, 3.2f};
+    b.underConstruction = false; b.buildProgress = 1.0f; b.buildTime = 24.0f; b.hp = b.maxHp = 1000.0f;
+    b.factory.recipeIndex = 0;
+    world.buildings.push_back(b);
   }
 }
 } // namespace dom::editor

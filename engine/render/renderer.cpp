@@ -433,6 +433,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     else if (b.team == 0) { r = 0.82f; g = 0.32f; bl = 0.32f; }
     else if (b.team == 1) { r = 0.28f; g = 0.45f; bl = 0.88f; }
     if (b.underConstruction) { r *= 0.6f; g *= 0.6f; bl *= 0.6f; }
+    if (b.factory.blocked) { r = 0.85f; g = 0.35f; bl = 0.25f; }
+    else if (b.factory.active) { r = std::min(1.0f, r + 0.12f); g = std::min(1.0f, g + 0.12f); }
     glColor3f(r, g, bl);
     float sx = b.size.x * 0.5f;
     float sy = b.size.y * 0.5f;

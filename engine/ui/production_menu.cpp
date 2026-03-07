@@ -82,6 +82,16 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
     if (ImGui::Button("Cavalry")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Cavalry);
   } else if (building->type == dom::sim::BuildingType::Mine) {
     if (ImGui::Button("Siege")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Siege);
+
+  } else if (building->type == dom::sim::BuildingType::SteelMill || building->type == dom::sim::BuildingType::Refinery || building->type == dom::sim::BuildingType::MunitionsPlant || building->type == dom::sim::BuildingType::MachineWorks || building->type == dom::sim::BuildingType::ElectronicsLab || building->type == dom::sim::BuildingType::FactoryHub) {
+    ImGui::SeparatorText("Industrial");
+    ImGui::Text("Recipe index: %u", building->factory.recipeIndex);
+    ImGui::Text("State: %s%s", building->factory.active ? "active" : "idle", building->factory.blocked ? " (blocked)" : "");
+    if (ImGui::Button("Steel")) building->factory.recipeIndex = 0;
+    ImGui::SameLine(); if (ImGui::Button("Fuel")) building->factory.recipeIndex = 1;
+    ImGui::SameLine(); if (ImGui::Button("Munitions")) building->factory.recipeIndex = 2;
+    if (ImGui::Button("Machine Parts")) building->factory.recipeIndex = 3;
+    ImGui::SameLine(); if (ImGui::Button("Electronics")) building->factory.recipeIndex = 4;
   } else {
     if (ImGui::Button("Worker")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Worker);
   }

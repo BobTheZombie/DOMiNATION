@@ -114,6 +114,7 @@ void draw_hud(SDL_Window* window,
     p.resources[0], p.resources[1], p.resources[2], p.resources[3], p.resources[4], p.resources[5],
     p.popUsed, p.popCap, age_name(p.age));
   ImGui::Text("Civ %s | eco %.2f mil %.2f sci %.2f dip %.2f log %.2f strat %.2f", p.civilization.displayName.c_str(), p.civilization.economyBias, p.civilization.militaryBias, p.civilization.scienceBias, p.civilization.diplomacyBias, p.civilization.logisticsBias, p.civilization.strategicBias);
+  ImGui::Text("Steel %.1f | Fuel %.1f | Munitions %.1f | Machine Parts %.1f | Electronics %.1f", p.refinedGoods[0], p.refinedGoods[1], p.refinedGoods[2], p.refinedGoods[3], p.refinedGoods[4]);
   if (!overlay.empty()) ImGui::TextUnformatted(overlay.c_str());
   ImGui::End();
 
@@ -150,6 +151,14 @@ void draw_hud(SDL_Window* window,
         ImGui::Text("Building #%u", b.id);
         ImGui::Text("Health: %.0f/%.0f | Owner: P%u", b.hp, b.maxHp, b.team);
         ImGui::Text("Queue items: %zu", b.queue.size());
+        if (b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::FactoryHub) {
+          ImGui::SeparatorText("Industrial");
+          ImGui::Text("Recipe: %u", b.factory.recipeIndex);
+          ImGui::Text("State: %s%s", b.factory.active ? "active" : "idle", b.factory.blocked ? " (blocked)" : "");
+          ImGui::Text("Throughput bonus: %.2f", b.factory.throughputBonus);
+          ImGui::Text("Output buffer steel/fuel/munitions: %.1f / %.1f / %.1f", b.factory.outputBuffer[0], b.factory.outputBuffer[1], b.factory.outputBuffer[2]);
+          ImGui::Text("Output buffer machine/electronics: %.1f / %.1f", b.factory.outputBuffer[3], b.factory.outputBuffer[4]);
+        }
         ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
         if (b.type == dom::sim::BuildingType::Mine) {
           const int cx = std::clamp((int)b.pos.x, 0, world.width - 1);
