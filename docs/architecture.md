@@ -200,3 +200,7 @@ Headless/interactive perf outputs now include:
 - Radar/sensor network is rebuilt deterministically from buildings and mobile detectors each tick.
 - Strategic strikes run through deterministic phases: prep -> warning/travel -> interception resolution -> area impact/denial zone.
 - New perf counters: `AIR_UNIT_COUNT`, `DETECTOR_COUNT`, `RADAR_REVEALS`, `STRATEGIC_STRIKES`, `INTERCEPTIONS`, `ACTIVE_DENIAL_ZONES`.
+
+## Campaign scripting layer
+
+Added deterministic objective + trigger-action mission orchestration in simulation authority. Mission runtime state and trigger execution are serialized and included in authoritative hashing.

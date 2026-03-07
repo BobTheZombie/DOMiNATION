@@ -59,3 +59,11 @@ Reference sample: `scenarios/diplomacy_test.json`.
 - Optional `strategicStrikes` array stores strike prep/travel/interception state.
 - New placeable building types: `RadarTower`, `MobileRadar`, `Airbase`, `MissileSilo`, `AABattery`, `AntiMissileDefense`.
 - Optional `denialZones` array persists temporary strategic denial effects.
+
+## Campaign mission additions
+
+`mission` block: `title`, `briefing`, `introMessages`, `victoryOutcome`, `defeatOutcome`, `partialOutcome`, `branchKey`, `luaScript` or `luaInline`.
+
+`objectives[]` now supports `objective_id`, `description`, `category`, `visible`, `progressText`, `progressValue`.
+
+`triggers[]` conditions include objective/diplomacy/tension/strike hooks; actions include objective state changes, messages, spawns, diplomacy/tension changes, operation launch, end match, and `RunLuaHook`.

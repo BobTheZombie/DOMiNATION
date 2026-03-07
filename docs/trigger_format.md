@@ -21,3 +21,7 @@ Trigger:
   - `RevealArea` (`areaId`)
 
 Evaluation is deterministic and stable by trigger `id` each tick.
+
+
+Extended trigger conditions: UnitDestroyed, BuildingDestroyed, ObjectiveCompleted, ObjectiveFailed, DiplomacyChanged, WorldTensionReached, StrategicStrikeLaunched, WonderCompleted, CargoLanded.
+Extended actions: ActivateObjective, CompleteObjective, FailObjective, ShowMessage, SpawnBuildings, ChangeDiplomacy, SetWorldTension, LaunchOperation, EndMatchVictory/Defeat, RunLuaHook.

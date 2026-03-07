@@ -44,6 +44,17 @@ const char* role_name(dom::sim::UnitRole role) {
   }
 }
 
+
+const char* objective_state_name(dom::sim::ObjectiveState st) {
+  switch (st) {
+    case dom::sim::ObjectiveState::Inactive: return "Inactive";
+    case dom::sim::ObjectiveState::Active: return "Active";
+    case dom::sim::ObjectiveState::Completed: return "Completed";
+    case dom::sim::ObjectiveState::Failed: return "Failed";
+  }
+  return "Inactive";
+}
+
 const char* supply_name(dom::sim::SupplyState state) {
   switch (state) {
     case dom::sim::SupplyState::InSupply: return "In Supply";
@@ -138,6 +149,19 @@ void draw_hud(SDL_Window* window,
   ImGui::TextUnformatted("Minimap active in renderer.");
   ImGui::SliderInt("Zoom indicator", &uiState.minimapZoomLevel, 1, 5);
   ImGui::TextUnformatted("[M] toggles minimap visibility.");
+  ImGui::End();
+
+  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 270.0f));
+  ImGui::SetNextWindowSize(ImVec2(382.0f, 220.0f));
+  ImGui::Begin("Mission", nullptr, barFlags);
+  ImGui::Text("%s", world.mission.title.empty() ? "Skirmish Mission" : world.mission.title.c_str());
+  if (!world.mission.briefing.empty()) ImGui::TextWrapped("%s", world.mission.briefing.c_str());
+  ImGui::Separator();
+  for (const auto& o : world.objectives) {
+    if (!o.visible && o.state != dom::sim::ObjectiveState::Completed && o.state != dom::sim::ObjectiveState::Failed) continue;
+    const bool primary = o.category == dom::sim::ObjectiveCategory::Primary || o.primary;
+    ImGui::BulletText("[%s] %s (%s)", primary ? "P" : "S", o.title.c_str(), objective_state_name(o.state));
+  }
   ImGui::End();
 
   ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 90.0f));

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "seed": 1337,
+  "mapWidth": 96,
+  "mapHeight": 96,
+  "players": [
+    {"id": 0, "isHuman": true, "isCPU": false, "team": 0, "civilization": "default"},
+    {"id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "default"}
+  ],
+  "cities": [
+    {"id": 1, "team": 0, "pos": [18, 18], "capital": true},
+    {"id": 2, "team": 1, "pos": [78, 78], "capital": true}
+  ],
+  "buildings": [
+    {"id": 1, "team": 0, "type": "CityCenter", "pos": [18, 18], "underConstruction": false},
+    {"id": 2, "team": 1, "type": "CityCenter", "pos": [78, 78], "underConstruction": false}
+  ],
+  "units": [
+    {"id": 1, "team": 0, "type": "Infantry", "pos": [22, 20]},
+    {"id": 2, "team": 1, "type": "Infantry", "pos": [74, 76]}
+  ],
+  "mission": {
+    "title": "Campaign Smoke Test",
+    "briefing": "Hold your capital, complete core objectives, and trigger scripted outcomes.",
+    "introMessages": ["Mission started", "Awaiting first milestone"],
+    "victoryOutcome": "victory",
+    "defeatOutcome": "defeat",
+    "partialOutcome": "partial_victory",
+    "branchKey": "alpha_route",
+    "luaScript": "scripts/campaign_test.lua"
+  },
+  "areas": [
+    {"id": 1, "min": [40, 40], "max": [48, 48]}
+  ],
+  "objectives": [
+    {"id": 100, "objective_id": "survive_1200", "title": "Survive to tick 1200", "description": "Remain operational until tick 1200.", "category": "primary", "state": "inactive", "visible": true},
+    {"id": 101, "objective_id": "capture_zone", "title": "Scout center area", "description": "Enter the mission center zone.", "category": "secondary", "state": "inactive", "visible": true}
+  ],
+  "triggers": [
+    {"id": 1, "once": true, "condition": {"type": "TickReached", "tick": 1}, "actions": [
+      {"type": "ActivateObjective", "objectiveId": 100},
+      {"type": "ShowMessage", "text": "Primary objective active"},
+      {"type": "RunLuaHook", "luaHook": "on_mission_start"}
+    ]},
+    {"id": 2, "once": true, "condition": {"type": "AreaEntered", "areaId": 1, "player": 0}, "actions": [
+      {"type": "ActivateObjective", "objectiveId": 101},
+      {"type": "ShowMessage", "text": "Center area entered"}
+    ]},
+    {"id": 3, "once": true, "condition": {"type": "TickReached", "tick": 1200}, "actions": [
+      {"type": "CompleteObjective", "objectiveId": 100},
+      {"type": "ShowMessage", "text": "Primary completed"},
+      {"type": "GrantResources", "player": 0, "resources": {"Food": 50, "Wood": 25}}
+    ]},
+    {"id": 4, "once": true, "condition": {"type": "ObjectiveCompleted", "objectiveId": 100}, "actions": [
+      {"type": "EndMatchVictory", "winner": 0}
+    ]}
+  ]
+}
