@@ -25,6 +25,7 @@
 #include <vector>
 #include <thread>
 #include <cstdio>
+#include <cmath>
 #include <mutex>
 #include <deque>
 #include <sstream>
@@ -564,6 +565,12 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["operationsExecutedCount"] = w.operationsExecutedCount;
   j["formationsAssignedCount"] = w.formationsAssignedCount;
   j["operationalOutcomesRecorded"] = w.operationalOutcomesRecorded;
+  j["uniqueUnitsProduced"] = w.uniqueUnitsProduced;
+  j["uniqueBuildingsConstructed"] = w.uniqueBuildingsConstructed;
+  j["civDoctrineSwitches"] = w.civDoctrineSwitches;
+  j["civIndustryOutput"] = w.civIndustryOutput;
+  j["civLogisticsBonusUsage"] = w.civLogisticsBonusUsage;
+  j["civOperationCount"] = w.civOperationCount;
   j["wonder"] = {{"owner", w.wonder.owner}, {"heldTicks", w.wonder.heldTicks}};
   j["stateHash"] = dom::sim::state_hash(w);
   return j;
@@ -603,6 +610,7 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
     p.resources = jp.at("resources").get<decltype(p.resources)>(); p.popUsed = jp.value("popUsed", 0); p.popCap = jp.value("popCap", 0); p.score = jp.value("score", 0);
     p.alive = jp.value("alive", true); p.unitsLost = jp.value("unitsLost", 0u); p.buildingsLost = jp.value("buildingsLost", 0u); p.finalScore = jp.value("finalScore", 0);
     p.teamId = jp.value("team", p.id);
+    p.civilization = dom::sim::civilization_runtime_for(jp.value("civilization", std::string("default")));
     w.players.push_back(p);
   }
   w.worldTension = j.value("worldTension", 0.0f);
@@ -755,6 +763,12 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.operationsExecutedCount = j.value("operationsExecutedCount", 0u);
   w.formationsAssignedCount = j.value("formationsAssignedCount", 0u);
   w.operationalOutcomesRecorded = j.value("operationalOutcomesRecorded", 0u);
+  w.uniqueUnitsProduced = j.value("uniqueUnitsProduced", 0u);
+  w.uniqueBuildingsConstructed = j.value("uniqueBuildingsConstructed", 0u);
+  w.civDoctrineSwitches = j.value("civDoctrineSwitches", 0u);
+  w.civIndustryOutput = j.value("civIndustryOutput", 0.0f);
+  w.civLogisticsBonusUsage = j.value("civLogisticsBonusUsage", 0.0f);
+  w.civOperationCount = j.value("civOperationCount", 0u);
   w.wonder.owner = j.at("wonder").value("owner", UINT16_MAX); w.wonder.heldTicks = j.at("wonder").value("heldTicks", 0u);
   w.riverCount = 0; for (uint8_t v : w.riverMap) if (v) ++w.riverCount;
   w.lakeCount = 0; for (uint8_t v : w.lakeMap) if (v) ++w.lakeCount;
@@ -1091,7 +1105,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken,factory_count,active_factories,blocked_factories,steel_output,fuel_output,munitions_output,machine_parts_output,electronics_output,industrial_throughput\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken,factory_count,active_factories,blocked_factories,steel_output,fuel_output,munitions_output,machine_parts_output,electronics_output,industrial_throughput,unique_units_produced,unique_buildings_constructed,civ_doctrine_switches,civ_industry_output,civ_logistics_bonus_usage,civ_operation_count\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -1162,8 +1176,9 @@ int run_headless(const CliOptions& o) {
                 << " ACTIVE_ESPIONAGE_OPS=" << stats.activeEspionageOps
                 << " POSTURE_CHANGES=" << stats.postureChanges
                 << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents
-                << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << " AIR_UNIT_COUNT=" << stats.airUnitCount << " DETECTOR_COUNT=" << stats.detectorCount << " RADAR_REVEALS=" << stats.radarReveals << " STRATEGIC_STRIKES=" << stats.strategicStrikes << " INTERCEPTIONS=" << stats.interceptions << " ACTIVE_DENIAL_ZONES=" << stats.activeDenialZones << " MOUNTAIN_REGION_COUNT=" << stats.mountainRegionCount << " MOUNTAIN_CHAIN_COUNT=" << stats.mountainChainCount << " RIVER_COUNT=" << stats.riverCount << " LAKE_COUNT=" << stats.lakeCount << " START_CANDIDATE_COUNT=" << stats.startCandidateCount << " MYTHIC_CANDIDATE_COUNT=" << stats.mythicCandidateCount << " SURFACE_DEPOSIT_COUNT=" << stats.surfaceDepositCount << " DEEP_DEPOSIT_COUNT=" << stats.deepDepositCount << " ACTIVE_MINE_SHAFTS=" << stats.activeMineShafts << " ACTIVE_TUNNELS=" << stats.activeTunnels << " UNDERGROUND_DEPOTS=" << stats.undergroundDepots << " UNDERGROUND_YIELD=" << stats.undergroundYield << " GUARDIAN_SITE_COUNT=" << stats.guardianSiteCount << " GUARDIANS_DISCOVERED=" << stats.guardiansDiscovered << " GUARDIANS_SPAWNED=" << stats.guardiansSpawned << " GUARDIANS_JOINED=" << stats.guardiansJoined << " GUARDIANS_KILLED=" << stats.guardiansKilled << " HOSTILE_GUARDIAN_EVENTS=" << stats.hostileGuardianEvents << " ALLIED_GUARDIAN_EVENTS=" << stats.alliedGuardianEvents << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "," << stats.campaignMissionCount << "," << stats.campaignFlagsSet << "," << stats.campaignResourcesCount << "," << stats.campaignBranchesTaken << "," << stats.factoryCount << "," << stats.activeFactories << "," << stats.blockedFactories << "," << stats.steelOutput << "," << stats.fuelOutput << "," << stats.munitionsOutput << "," << stats.machinePartsOutput << "," << stats.electronicsOutput << "," << stats.industrialThroughput << "\n";
+                << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << " AIR_UNIT_COUNT=" << stats.airUnitCount << " DETECTOR_COUNT=" << stats.detectorCount << " RADAR_REVEALS=" << stats.radarReveals << " STRATEGIC_STRIKES=" << stats.strategicStrikes << " INTERCEPTIONS=" << stats.interceptions << " ACTIVE_DENIAL_ZONES=" << stats.activeDenialZones << " MOUNTAIN_REGION_COUNT=" << stats.mountainRegionCount << " MOUNTAIN_CHAIN_COUNT=" << stats.mountainChainCount << " RIVER_COUNT=" << stats.riverCount << " LAKE_COUNT=" << stats.lakeCount << " START_CANDIDATE_COUNT=" << stats.startCandidateCount << " MYTHIC_CANDIDATE_COUNT=" << stats.mythicCandidateCount << " SURFACE_DEPOSIT_COUNT=" << stats.surfaceDepositCount << " DEEP_DEPOSIT_COUNT=" << stats.deepDepositCount << " ACTIVE_MINE_SHAFTS=" << stats.activeMineShafts << " ACTIVE_TUNNELS=" << stats.activeTunnels << " UNDERGROUND_DEPOTS=" << stats.undergroundDepots << " UNDERGROUND_YIELD=" << stats.undergroundYield << " GUARDIAN_SITE_COUNT=" << stats.guardianSiteCount << " GUARDIANS_DISCOVERED=" << stats.guardiansDiscovered << " GUARDIANS_SPAWNED=" << stats.guardiansSpawned << " GUARDIANS_JOINED=" << stats.guardiansJoined << " GUARDIANS_KILLED=" << stats.guardiansKilled << " HOSTILE_GUARDIAN_EVENTS=" << stats.hostileGuardianEvents << " ALLIED_GUARDIAN_EVENTS=" << stats.alliedGuardianEvents
+                << " UNIQUE_UNITS_PRODUCED=" << stats.uniqueUnitsProduced << " UNIQUE_BUILDINGS_CONSTRUCTED=" << stats.uniqueBuildingsConstructed << " CIV_DOCTRINE_SWITCHES=" << stats.civDoctrineSwitches << " CIV_INDUSTRY_OUTPUT=" << stats.civIndustryOutput << " CIV_LOGISTICS_BONUS_USAGE=" << stats.civLogisticsBonusUsage << " CIV_OPERATION_COUNT=" << stats.civOperationCount << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "," << stats.campaignMissionCount << "," << stats.campaignFlagsSet << "," << stats.campaignResourcesCount << "," << stats.campaignBranchesTaken << "," << stats.factoryCount << "," << stats.activeFactories << "," << stats.blockedFactories << "," << stats.steelOutput << "," << stats.fuelOutput << "," << stats.munitionsOutput << "," << stats.machinePartsOutput << "," << stats.electronicsOutput << "," << stats.industrialThroughput << "," << stats.uniqueUnitsProduced << "," << stats.uniqueBuildingsConstructed << "," << stats.civDoctrineSwitches << "," << stats.civIndustryOutput << "," << stats.civLogisticsBonusUsage << "," << stats.civOperationCount << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -1196,7 +1211,7 @@ int run_headless(const CliOptions& o) {
       if (mineCount == 0) std::cout << "SMOKE_NOTE no mine entrances yet at this tick budget\n";
       if (world.activeTunnels == 0) std::cout << "SMOKE_NOTE no active tunnels yet at this tick budget\n";
     }
-    if (!o.scenarioFile.empty() && !world.guardianSites.empty()) {
+    if (!o.scenarioFile.empty() && o.scenarioFile.find("mythic_guardians") != std::string::npos && !world.guardianSites.empty()) {
       if (world.guardianSites.size() < 1) { std::cerr << "Smoke failure: no guardian sites\n"; return 95; }
       bool discovered = false;
       bool spawned = false;
@@ -1334,6 +1349,27 @@ int run_headless(const CliOptions& o) {
     bool resolved = false;
     for (const auto& oo : world.operationalObjectives) if (oo.outcome != dom::sim::OperationOutcome::InProgress) { resolved = true; break; }
     if (!resolved) { std::cerr << "Smoke failure: no operational outcomes recorded\n"; return 104; }
+  }
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("civ_test") != std::string::npos) {
+    if (world.uniqueUnitsProduced < 1) { std::cerr << "Smoke failure: no unique units produced\n"; return 105; }
+    uint32_t uniqueBuildingPresence = 0;
+    for (const auto& b : world.buildings) {
+      if (b.team >= world.players.size()) continue;
+      const std::string resolved = world.players[b.team].civilization.uniqueBuildingDefs[(size_t)b.type];
+      if (!resolved.empty() && b.definitionId == resolved) ++uniqueBuildingPresence;
+    }
+    if (world.uniqueBuildingsConstructed < 1 && uniqueBuildingPresence < 1) { std::cerr << "Smoke failure: no unique buildings constructed/resolved\n"; return 106; }
+    if (world.civOperationCount < 2) { std::cerr << "Smoke failure: no civ differentiated operations\n"; return 107; }
+    float refinedTotal = 0.0f;
+    for (const auto& p : world.players) for (float g : p.refinedGoods) refinedTotal += g;
+    if (world.civIndustryOutput <= 0.0f && refinedTotal <= 0.0f) { std::cerr << "Smoke failure: no civ industry output\n"; return 108; }
+    if (world.civLogisticsBonusUsage == 0.0f && world.railThroughput <= 0.0f && world.logisticsTradeActiveCount < 1) { std::cerr << "Smoke failure: no civ logistics bonus usage\n"; return 109; }
+    if (world.players.size() >= 2) {
+      const auto& a = world.players[0];
+      const auto& b = world.players[1];
+      const float ecoDiff = std::fabs(a.resources[0] - b.resources[0]) + std::fabs(a.resources[3] - b.resources[3]) + std::fabs(a.resources[4] - b.resources[4]);
+      if (ecoDiff < 20.0f) { std::cerr << "Smoke failure: civ economy did not diverge\n"; return 110; }
+    }
   }
 
   if (o.smoke && !o.scenarioFile.empty()) {

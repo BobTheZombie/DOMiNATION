@@ -64,6 +64,31 @@ const char* supply_name(dom::sim::SupplyState state) {
   return "Unknown";
 }
 
+const char* unit_type_name(dom::sim::UnitType t) {
+  switch (t) {
+    case dom::sim::UnitType::Worker: return "Worker";
+    case dom::sim::UnitType::Infantry: return "Infantry";
+    case dom::sim::UnitType::Archer: return "Archer";
+    case dom::sim::UnitType::Cavalry: return "Cavalry";
+    case dom::sim::UnitType::Siege: return "Siege";
+    default: return "Special";
+  }
+}
+
+const char* building_type_name(dom::sim::BuildingType t) {
+  switch (t) {
+    case dom::sim::BuildingType::CityCenter: return "CityCenter";
+    case dom::sim::BuildingType::House: return "House";
+    case dom::sim::BuildingType::Farm: return "Farm";
+    case dom::sim::BuildingType::LumberCamp: return "LumberCamp";
+    case dom::sim::BuildingType::Mine: return "Mine";
+    case dom::sim::BuildingType::Market: return "Market";
+    case dom::sim::BuildingType::Library: return "Library";
+    case dom::sim::BuildingType::Barracks: return "Barracks";
+    default: return "Building";
+  }
+}
+
 } // namespace
 
 void push_gameplay_notifications(dom::sim::World& world, UiState& uiState) {
@@ -131,8 +156,13 @@ void draw_hud(SDL_Window* window,
       found = true;
       ImGui::Text("Unit #%u", u.id);
       ImGui::Text("Health: %.0f | Role: %s | Owner: P%u", u.hp, role_name(u.role), u.team);
+      if (u.team < world.players.size()) ImGui::Text("Civilization: %s", world.players[u.team].civilization.displayName.c_str());
       ImGui::Text("Supply: %s | Cargo: %zu", supply_name(u.supplyState), u.cargo.size());
       ImGui::Text("DefId: %s", u.definitionId.empty()?"(base)":u.definitionId.c_str());
+      if (u.team < world.players.size()) {
+        const std::string base = unit_type_name(u.type);
+        if (u.definitionId != base) ImGui::Text("Unique: yes (%s -> %s)", base.c_str(), u.definitionId.c_str());
+      }
       for (const auto& s : world.guardianSites) {
         if (u.definitionId != s.guardianId || glm::length(u.pos - s.pos) > 10.0f) continue;
         ImGui::SeparatorText("Mythic Guardian");
@@ -150,6 +180,7 @@ void draw_hud(SDL_Window* window,
         if (b.id != id) continue;
         ImGui::Text("Building #%u", b.id);
         ImGui::Text("Health: %.0f/%.0f | Owner: P%u", b.hp, b.maxHp, b.team);
+        if (b.team < world.players.size()) ImGui::Text("Civilization: %s", world.players[b.team].civilization.displayName.c_str());
         ImGui::Text("Queue items: %zu", b.queue.size());
         if (b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::FactoryHub) {
           ImGui::SeparatorText("Industrial");
@@ -160,6 +191,10 @@ void draw_hud(SDL_Window* window,
           ImGui::Text("Output buffer machine/electronics: %.1f / %.1f", b.factory.outputBuffer[3], b.factory.outputBuffer[4]);
         }
         ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
+        if (b.team < world.players.size()) {
+          const std::string base = building_type_name(b.type);
+          if (b.definitionId != base) ImGui::Text("Unique: yes (%s -> %s)", base.c_str(), b.definitionId.c_str());
+        }
         if (b.type == dom::sim::BuildingType::Mine) {
           const int cx = std::clamp((int)b.pos.x, 0, world.width - 1);
           const int cy = std::clamp((int)b.pos.y, 0, world.height - 1);

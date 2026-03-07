@@ -258,15 +258,20 @@ Smoke scenario: `scenarios/campaign_test.json` with optional script `scripts/cam
 ## Civilization differentiation and deterministic save/load
 
 - Civilization runtime now supports economy/military/science plus diplomacy/logistics/strategic biases, doctrine modifiers, and per-family unique unit/building definition IDs loaded from `content/civilizations.json`.
+- Civilization identity layer now includes identity metadata, economy/logistics/industry modifiers, diplomacy/theater operation preferences, unique unit+building replacements, and deterministic civ differentiation counters.
 - Unique replacements are deterministic and replay/save-safe via authoritative `definitionId` persisted on spawned units/buildings.
 - Campaign mission/objective/trigger runtime fields used by authority are serialized in save files to preserve mid-mission parity.
 - Smoke commands:
   - `./build/rts --headless --scenario scenarios/campaign_test.json --smoke --ticks 1200 --save /tmp/campaign_save.json --dump-hash`
   - `./build/rts --headless --load /tmp/campaign_save.json --smoke --ticks 2200 --dump-hash`
   - `./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 2200 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 2600 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 3000 --dump-hash`
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 1 --hash-only`
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 4 --hash-only`
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 8 --hash-only`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 1500 --save /tmp/civ_save.json --dump-hash`
+  - `./build/rts --headless --load /tmp/civ_save.json --smoke --ticks 3000 --dump-hash`
 
 - Mountain extraction + underground tunnel network layer (deterministic node/edge model, snow-capped mountain generation, deep deposits).
 

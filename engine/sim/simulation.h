@@ -233,6 +233,10 @@ struct CampaignCarryoverState {
 struct CivilizationRuntime {
   std::string id{"default"};
   std::string displayName{"Default"};
+  std::string shortDescription;
+  std::string themeId{"default"};
+  std::vector<std::string> eraFlavorTags;
+  std::vector<std::string> campaignTags;
   float economyBias{1.0f};
   float militaryBias{1.0f};
   float scienceBias{1.0f};
@@ -248,6 +252,20 @@ struct CivilizationRuntime {
   float aiNavalPriority{1.0f};
   float aiAirPriority{1.0f};
   float aiStrategicPriority{1.0f};
+  std::array<float, static_cast<size_t>(Resource::Count)> resourceGatherMult = [](){ std::array<float, static_cast<size_t>(Resource::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedGoodOutputMult = [](){ std::array<float, static_cast<size_t>(RefinedGood::Count)> a{}; a.fill(1.0f); return a; }();
+  float roadBonus{1.0f};
+  float railBonus{1.0f};
+  float supplyBonus{1.0f};
+  float tradeRouteBonus{1.0f};
+  float tunnelExtractionBonus{1.0f};
+  float factoryThroughputBonus{1.0f};
+  float aggressionBias{1.0f};
+  float allianceBias{1.0f};
+  float tradeBias{1.0f};
+  float worldTensionResponseBias{1.0f};
+  std::array<float, static_cast<size_t>(OperationType::MissileStrikeCampaign) + 1> operationPreference = [](){ std::array<float, static_cast<size_t>(OperationType::MissileStrikeCampaign) + 1> a{}; a.fill(1.0f); return a; }();
+  std::vector<std::string> doctrineTags;
   std::array<float, static_cast<size_t>(UnitType::Count)> unitAttackMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
   std::array<float, static_cast<size_t>(UnitType::Count)> unitHpMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
   std::array<float, static_cast<size_t>(UnitType::Count)> unitCostMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
@@ -357,6 +375,12 @@ struct SimulationStats {
   float machinePartsOutput{0.0f};
   float electronicsOutput{0.0f};
   float industrialThroughput{0.0f};
+  uint32_t uniqueUnitsProduced{0};
+  uint32_t uniqueBuildingsConstructed{0};
+  uint32_t civDoctrineSwitches{0};
+  float civIndustryOutput{0.0f};
+  float civLogisticsBonusUsage{0.0f};
+  uint32_t civOperationCount{0};
 };
 
 struct ChunkCoord {
@@ -455,6 +479,12 @@ struct World {
   uint32_t blockedFactories{0};
   float industrialThroughput{0.0f};
   std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedOutputByTick{};
+  uint32_t uniqueUnitsProduced{0};
+  uint32_t uniqueBuildingsConstructed{0};
+  uint32_t civDoctrineSwitches{0};
+  float civIndustryOutput{0.0f};
+  float civLogisticsBonusUsage{0.0f};
+  uint32_t civOperationCount{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 
@@ -468,6 +498,7 @@ int worker_threads();
 void run_task_graph(TaskGraph& graph);
 bool load_scenario_file(World& world, const std::string& path, uint32_t fallbackSeed, std::string& err);
 bool save_scenario_file(const std::string& path, const World& world, std::string& err);
+CivilizationRuntime civilization_runtime_for(const std::string& id);
 void on_authoritative_state_loaded(World& world);
 void tick_world(World& world, float dt);
 bool gameplay_orders_allowed(const World& world);

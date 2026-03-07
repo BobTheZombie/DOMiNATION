@@ -673,6 +673,10 @@ struct ThemeDef {
 struct CivilizationDef {
   std::string id{"default"};
   std::string displayName{"Default"};
+  std::string shortDescription;
+  std::string themeId{"default"};
+  std::vector<std::string> eraFlavorTags;
+  std::vector<std::string> campaignTags;
   float economyBias{1.0f};
   float militaryBias{1.0f};
   float scienceBias{1.0f};
@@ -688,6 +692,20 @@ struct CivilizationDef {
   float aiNavalPriority{1.0f};
   float aiAirPriority{1.0f};
   float aiStrategicPriority{1.0f};
+  std::array<float, static_cast<size_t>(Resource::Count)> resourceGatherMult{};
+  std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedGoodOutputMult{};
+  float roadBonus{1.0f};
+  float railBonus{1.0f};
+  float supplyBonus{1.0f};
+  float tradeRouteBonus{1.0f};
+  float tunnelExtractionBonus{1.0f};
+  float factoryThroughputBonus{1.0f};
+  float aggressionBias{1.0f};
+  float allianceBias{1.0f};
+  float tradeBias{1.0f};
+  float worldTensionResponseBias{1.0f};
+  std::array<float, static_cast<size_t>(OperationType::MissileStrikeCampaign) + 1> operationPreference{};
+  std::vector<std::string> doctrineTags;
   std::array<float, static_cast<size_t>(UnitType::Count)> unitAttackMult{};
   std::array<float, static_cast<size_t>(UnitType::Count)> unitHpMult{};
   std::array<float, static_cast<size_t>(UnitType::Count)> unitCostMult{};
@@ -706,8 +724,36 @@ std::array<BiomeDef, static_cast<size_t>(BiomeType::Count)> gBiomes{};
 std::unordered_map<std::string, ThemeDef> gThemes;
 
 void init_civ_defaults(CivilizationDef& d) {
+  d.resourceGatherMult.fill(1.0f);
+  d.refinedGoodOutputMult.fill(1.0f);
+  d.operationPreference.fill(1.0f);
   d.unitAttackMult.fill(1.0f); d.unitHpMult.fill(1.0f); d.unitCostMult.fill(1.0f); d.unitTrainTimeMult.fill(1.0f);
   d.buildingCostMult.fill(1.0f); d.buildingBuildTimeMult.fill(1.0f); d.buildingHpMult.fill(1.0f); d.buildingTrickleMult.fill(1.0f);
+}
+
+OperationType parse_operation_type_key(const std::string& s) {
+  if (s == "AssaultCity") return OperationType::AssaultCity;
+  if (s == "DefendBorder") return OperationType::DefendBorder;
+  if (s == "SecureRoute") return OperationType::SecureRoute;
+  if (s == "RaidEconomy") return OperationType::RaidEconomy;
+  if (s == "RallyAndPush") return OperationType::RallyAndPush;
+  if (s == "AmphibiousAssault") return OperationType::AmphibiousAssault;
+  if (s == "NavalPatrol") return OperationType::NavalPatrol;
+  if (s == "CoastalBombard") return OperationType::CoastalBombard;
+  if (s == "Encirclement") return OperationType::Encirclement;
+  if (s == "NavalBlockade") return OperationType::NavalBlockade;
+  if (s == "StrategicBombing") return OperationType::StrategicBombing;
+  return OperationType::MissileStrikeCampaign;
+}
+
+Resource parse_resource(const std::string& s) {
+  if (s == "Food") return Resource::Food;
+  if (s == "Wood") return Resource::Wood;
+  if (s == "Metal") return Resource::Metal;
+  if (s == "Wealth") return Resource::Wealth;
+  if (s == "Knowledge") return Resource::Knowledge;
+  if (s == "Oil") return Resource::Oil;
+  return Resource::Food;
 }
 
 template <typename TArr, typename TParser>
@@ -729,6 +775,10 @@ void load_civilizations_once() {
     init_civ_defaults(d);
     d.id = c.value("civilization_id", c.value("id", std::string("default")));
     d.displayName = c.value("display_name", c.value("displayName", d.id));
+    d.shortDescription = c.value("short_description", std::string());
+    d.themeId = c.value("theme_id", std::string("default"));
+    if (c.contains("era_flavor_tags") && c["era_flavor_tags"].is_array()) d.eraFlavorTags = c["era_flavor_tags"].get<std::vector<std::string>>();
+    if (c.contains("campaign_tags") && c["campaign_tags"].is_array()) d.campaignTags = c["campaign_tags"].get<std::vector<std::string>>();
     d.economyBias = c.value("economyBias", 1.0f);
     d.militaryBias = c.value("militaryBias", 1.0f);
     d.scienceBias = c.value("scienceBias", 1.0f);
@@ -746,6 +796,37 @@ void load_civilizations_once() {
       d.aiNavalPriority = ai.value("navalPriority", 1.0f);
       d.aiAirPriority = ai.value("airPriority", 1.0f);
       d.aiStrategicPriority = ai.value("strategicPriority", 1.0f);
+    }
+    if (c.contains("economyModifiers") && c["economyModifiers"].is_object()) {
+      const auto& em = c["economyModifiers"];
+      parse_named_multiplier_map(em.value("resource_gather", nlohmann::json::object()), d.resourceGatherMult, parse_resource);
+      parse_named_multiplier_map(em.value("refined_goods", nlohmann::json::object()), d.refinedGoodOutputMult, parse_refined_good);
+    }
+    if (c.contains("logisticsModifiers") && c["logisticsModifiers"].is_object()) {
+      const auto& lm = c["logisticsModifiers"];
+      d.roadBonus = lm.value("road_bonus", 1.0f);
+      d.railBonus = lm.value("rail_bonus", 1.0f);
+      d.supplyBonus = lm.value("supply_bonus", 1.0f);
+      d.tradeRouteBonus = lm.value("trade_route_bonus", 1.0f);
+      d.tunnelExtractionBonus = lm.value("tunnel_extraction_bonus", 1.0f);
+    }
+    if (c.contains("industryModifiers") && c["industryModifiers"].is_object()) {
+      const auto& im = c["industryModifiers"];
+      d.factoryThroughputBonus = im.value("factory_throughput_bonus", 1.0f);
+      parse_named_multiplier_map(im.value("refined_goods", nlohmann::json::object()), d.refinedGoodOutputMult, parse_refined_good);
+    }
+    if (c.contains("diplomacyDoctrine") && c["diplomacyDoctrine"].is_object()) {
+      const auto& dd = c["diplomacyDoctrine"];
+      d.aggressionBias = dd.value("aggression_bias", 1.0f);
+      d.allianceBias = dd.value("alliance_bias", 1.0f);
+      d.tradeBias = dd.value("trade_bias", 1.0f);
+      d.worldTensionResponseBias = dd.value("world_tension_response_bias", 1.0f);
+      if (dd.contains("operation_preference_weights") && dd["operation_preference_weights"].is_object()) {
+        for (auto it = dd["operation_preference_weights"].begin(); it != dd["operation_preference_weights"].end(); ++it) {
+          d.operationPreference[static_cast<size_t>(parse_operation_type_key(it.key()))] = it.value().get<float>();
+        }
+      }
+      if (dd.contains("doctrine_tags") && dd["doctrine_tags"].is_array()) d.doctrineTags = dd["doctrine_tags"].get<std::vector<std::string>>();
     }
     if (c.contains("unitBonuses")) {
       const auto& ub = c["unitBonuses"];
@@ -769,19 +850,25 @@ void load_civilizations_once() {
   if (gCivilizations.empty()) gCivilizations.push_back({});
 }
 
-CivilizationRuntime civilization_runtime_for(const std::string& id) {
+CivilizationRuntime civilization_runtime_for_impl(const std::string& id) {
   load_civilizations_once();
   for (const auto& c : gCivilizations) if (c.id == id) {
     CivilizationRuntime r{};
     r.id = c.id; r.displayName = c.displayName; r.economyBias = c.economyBias; r.militaryBias = c.militaryBias; r.scienceBias = c.scienceBias; r.aggression = c.aggression; r.defense = c.defense;
+    r.shortDescription = c.shortDescription; r.themeId = c.themeId; r.eraFlavorTags = c.eraFlavorTags; r.campaignTags = c.campaignTags;
     r.diplomacyBias = c.diplomacyBias; r.logisticsBias = c.logisticsBias; r.strategicBias = c.strategicBias;
     r.aiWorkerTargetMult = c.aiWorkerTargetMult; r.aiExpansionTiming = c.aiExpansionTiming; r.aiResearchPriority = c.aiResearchPriority; r.aiReconPriority = c.aiReconPriority; r.aiNavalPriority = c.aiNavalPriority; r.aiAirPriority = c.aiAirPriority; r.aiStrategicPriority = c.aiStrategicPriority;
+    r.resourceGatherMult = c.resourceGatherMult; r.refinedGoodOutputMult = c.refinedGoodOutputMult;
+    r.roadBonus = c.roadBonus; r.railBonus = c.railBonus; r.supplyBonus = c.supplyBonus; r.tradeRouteBonus = c.tradeRouteBonus; r.tunnelExtractionBonus = c.tunnelExtractionBonus;
+    r.factoryThroughputBonus = c.factoryThroughputBonus; r.aggressionBias = c.aggressionBias; r.allianceBias = c.allianceBias; r.tradeBias = c.tradeBias; r.worldTensionResponseBias = c.worldTensionResponseBias;
+    r.operationPreference = c.operationPreference; r.doctrineTags = c.doctrineTags;
     r.unitAttackMult = c.unitAttackMult; r.unitHpMult = c.unitHpMult; r.unitCostMult = c.unitCostMult; r.unitTrainTimeMult = c.unitTrainTimeMult;
     r.buildingCostMult = c.buildingCostMult; r.buildingBuildTimeMult = c.buildingBuildTimeMult; r.buildingHpMult = c.buildingHpMult; r.buildingTrickleMult = c.buildingTrickleMult;
     r.uniqueUnitDefs = c.uniqueUnitDefs; r.uniqueBuildingDefs = c.uniqueBuildingDefs; r.missionTags = c.missionTags;
     return r;
   }
   CivilizationRuntime d{};
+  d.resourceGatherMult.fill(1.0f); d.refinedGoodOutputMult.fill(1.0f); d.operationPreference.fill(1.0f);
   d.unitAttackMult.fill(1.0f); d.unitHpMult.fill(1.0f); d.unitCostMult.fill(1.0f); d.unitTrainTimeMult.fill(1.0f);
   d.buildingCostMult.fill(1.0f); d.buildingBuildTimeMult.fill(1.0f); d.buildingHpMult.fill(1.0f); d.buildingTrickleMult.fill(1.0f);
   return d;
@@ -2259,6 +2346,7 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   nu.attack *= civ.unitAttackMult[static_cast<size_t>(type)];
   nu.hp *= civ.unitHpMult[static_cast<size_t>(type)];
   nu.definitionId = resolved_unit_definition_id(w, team, type);
+  if (nu.definitionId != std::string(unit_name(type))) ++w.uniqueUnitsProduced;
   if (!unit_cell_valid(w, nu, cell_of(w, nu.pos))) {
     for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
       int c = y * w.width + x;
@@ -2648,17 +2736,22 @@ void update_trains(World& w) {
 void apply_rail_logistics(World& w) {
   w.railThroughput = 0.0f;
   w.disruptedRailRoutes = 0;
+  w.civLogisticsBonusUsage = 0.0f;
   for (const auto& e : w.railEdges) if (e.disrupted) ++w.disruptedRailRoutes;
   for (const auto& t : w.trains) {
     if (t.state != TrainState::Active) continue;
     const float throughput = (t.cargo / std::max(1.0f, t.capacity)) * (t.type == TrainType::Freight ? 1.6f : 1.25f);
-    w.railThroughput += throughput;
+    const auto& civ = (t.owner < w.players.size()) ? w.players[t.owner].civilization : CivilizationRuntime{};
+    const float civRail = std::clamp(civ.railBonus, 0.8f, 1.3f);
+    const float adjustedThroughput = throughput * civRail;
+    w.railThroughput += adjustedThroughput;
+    w.civLogisticsBonusUsage += (adjustedThroughput - throughput);
     if (t.owner < w.players.size()) {
       if (t.type == TrainType::Freight) {
-        w.players[t.owner].resources[ridx(Resource::Metal)] += 0.012f * throughput;
-        w.players[t.owner].resources[ridx(Resource::Wealth)] += 0.016f * throughput;
+        w.players[t.owner].resources[ridx(Resource::Metal)] += 0.012f * adjustedThroughput;
+        w.players[t.owner].resources[ridx(Resource::Wealth)] += 0.016f * adjustedThroughput;
       } else if (t.type == TrainType::Supply) {
-        w.players[t.owner].resources[ridx(Resource::Food)] += 0.01f * throughput;
+        w.players[t.owner].resources[ridx(Resource::Food)] += 0.01f * adjustedThroughput;
       }
     }
   }
@@ -2669,6 +2762,7 @@ void update_industrial_economy(World& w, float dt) {
   w.activeFactories = 0;
   w.blockedFactories = 0;
   w.industrialThroughput = 0.0f;
+  w.civIndustryOutput = 0.0f;
   w.refinedOutputByTick.fill(0.0f);
   if (w.industrialRecipes.empty()) return;
 
@@ -2702,10 +2796,11 @@ void update_industrial_economy(World& w, float dt) {
     for (const auto& n : w.railNodes) if (n.owner == b.team && n.active && dist(glm::vec2{(float)n.tile.x, (float)n.tile.y}, b.pos) < 8.0f) { hasRail = true; break; }
     const bool nearPort = std::any_of(w.buildings.begin(), w.buildings.end(), [&](const Building& x){ return x.team == b.team && !x.underConstruction && x.type == BuildingType::Port && dist(x.pos, b.pos) < 12.0f; });
     fs.throughputBonus = 0.0f;
-    if (hasRoad) fs.throughputBonus += 0.10f;
-    if (hasRail) fs.throughputBonus += 0.15f;
+    if (hasRoad) fs.throughputBonus += 0.10f * owner.civilization.roadBonus;
+    if (hasRail) fs.throughputBonus += 0.15f * owner.civilization.railBonus;
     if (nearPort) fs.throughputBonus += 0.07f;
     if (b.type == BuildingType::FactoryHub) fs.throughputBonus += 0.12f;
+    fs.throughputBonus += (owner.civilization.factoryThroughputBonus - 1.0f);
 
     bool hasInputs = true;
     for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) if (fs.inputBuffer[r] + 0.0001f < recipe.inputResources[r]) { hasInputs = false; break; }
@@ -2730,11 +2825,12 @@ void update_industrial_economy(World& w, float dt) {
       for (size_t r = 0; r < static_cast<size_t>(Resource::Count); ++r) fs.inputBuffer[r] = std::max(0.0f, fs.inputBuffer[r] - recipe.inputResources[r]);
       for (size_t g = 0; g < static_cast<size_t>(RefinedGood::Count); ++g) fs.outputBuffer[g] = std::max(0.0f, fs.outputBuffer[g] - recipe.inputGoods[g]);
       fs.outputBuffer[out] += recipe.outputAmount;
-      const float ship = std::min(fs.outputBuffer[out], 1.8f + fs.throughputBonus * 2.5f);
+      const float ship = std::min(fs.outputBuffer[out], (1.8f + fs.throughputBonus * 2.5f) * owner.civilization.refinedGoodOutputMult[out]);
       fs.outputBuffer[out] -= ship;
       owner.refinedGoods[out] += ship;
       w.refinedOutputByTick[out] += ship;
       w.industrialThroughput += ship;
+      w.civIndustryOutput += ship;
     }
   }
 }
@@ -2752,13 +2848,14 @@ void recompute_trade_routes(World& w) {
       bool railBonus = false;
       for (const auto& n : w.railNodes) if (n.owner == a.team && n.type == RailNodeType::Station) { railBonus = true; break; }
       float roadBonus = (near_friendly_road(w, a.team, a.pos) && near_friendly_road(w, b.team, b.pos)) ? 1.3f : 1.0f;
-      if (railBonus) roadBonus *= 1.2f;
+      if (railBonus) roadBonus *= 1.2f * w.players[a.team].civilization.railBonus;
+      roadBonus *= w.players[a.team].civilization.roadBonus;
       int ax = std::clamp((int)a.pos.x, 0, w.width - 1), ay = std::clamp((int)a.pos.y, 0, w.height - 1);
       int bx = std::clamp((int)b.pos.x, 0, w.width - 1), by = std::clamp((int)b.pos.y, 0, w.height - 1);
       bool contested = (w.territoryOwner[ay * w.width + ax] != a.team) || (w.territoryOwner[by * w.width + bx] != b.team);
       float eff = std::clamp((80.0f / std::max(25.0f, d)) * roadBonus * (contested ? 0.35f : 1.0f), 0.0f, 1.25f);
       bool active = eff > 0.2f;
-      float wealth = active ? eff * 0.08f : 0.0f;
+      float wealth = active ? eff * 0.08f * w.players[a.team].civilization.tradeRouteBonus : 0.0f;
       w.tradeRoutes.push_back({nextId++, a.team, a.id, b.id, active, eff, wealth, w.tick});
       if (a.team != b.team) w.tradeRoutes.push_back({nextId++, b.team, b.id, a.id, active, eff, wealth, w.tick});
     }
@@ -2769,9 +2866,11 @@ void apply_trade_income(World& w, float dt) {
   w.logisticsTradeActiveCount = 0;
   for (const auto& r : w.tradeRoutes) {
     if (!r.active || r.team >= w.players.size()) continue;
-    w.players[r.team].resources[ridx(Resource::Wealth)] += r.wealthPerTick * dt * 20.0f;
+    const auto& civ = w.players[r.team].civilization;
+    const float wealthGain = r.wealthPerTick * dt * 20.0f * civ.resourceGatherMult[ridx(Resource::Wealth)] * civ.tradeBias;
+    w.players[r.team].resources[ridx(Resource::Wealth)] += wealthGain;
     if (w.players[r.team].civilization.scienceBias > 1.1f) {
-      w.players[r.team].resources[ridx(Resource::Knowledge)] += r.wealthPerTick * 0.2f * dt * 20.0f;
+      w.players[r.team].resources[ridx(Resource::Knowledge)] += r.wealthPerTick * 0.2f * dt * 20.0f * civ.resourceGatherMult[ridx(Resource::Knowledge)];
     }
     ++w.logisticsTradeActiveCount;
   }
@@ -2786,10 +2885,11 @@ void recompute_supply(World& w) {
     float best = 1e9f;
     for (const auto& c : w.cities) if (c.team == u.team) best = std::min(best, dist(u.pos, c.pos));
     for (const auto& b : w.buildings) if (b.team == u.team && (b.type == BuildingType::CityCenter || b.type == BuildingType::Market)) best = std::min(best, dist(u.pos, b.pos));
-    if (near_friendly_road(w, u.team, u.pos)) best *= 0.8f;
-    for (const auto& t : w.trains) if (t.owner == u.team && t.type == TrainType::Supply && t.state == TrainState::Active) { best *= 0.88f; break; }
+    const auto& civ = w.players[u.team].civilization;
+    if (near_friendly_road(w, u.team, u.pos)) best *= 0.8f / std::max(0.8f, civ.roadBonus);
+    for (const auto& t : w.trains) if (t.owner == u.team && t.type == TrainType::Supply && t.state == TrainState::Active) { best *= 0.88f / std::max(0.8f, civ.railBonus); break; }
     int tx = std::clamp((int)u.pos.x, 0, w.width - 1), ty = std::clamp((int)u.pos.y, 0, w.height - 1);
-    if (w.territoryOwner[ty * w.width + tx] != u.team) best *= 1.2f;
+    if (w.territoryOwner[ty * w.width + tx] != u.team) best *= 1.2f / std::max(0.85f, civ.supplyBonus);
     if (best < 24.0f) u.supplyState = SupplyState::InSupply;
     else if (best < 44.0f) u.supplyState = SupplyState::LowSupply;
     else u.supplyState = SupplyState::OutOfSupply;
@@ -2822,6 +2922,7 @@ void update_operations(World& w) {
   w.formationsAssignedCount = 0;
   w.operationsExecutedCount = 0;
   w.operationalOutcomesRecorded = 0;
+  w.civOperationCount = 0;
 
   uint32_t nextLegacyOpId = 1;
   uint32_t nextTheaterId = 1;
@@ -2862,11 +2963,13 @@ void update_operations(World& w) {
       }
 
       OperationType objectiveType = OperationType::RallyAndPush;
-      if (p.civilization.aggression * p.civilization.strategicBias > 1.2f) objectiveType = OperationType::AssaultCity;
+      if (p.civilization.aggression * p.civilization.strategicBias * p.civilization.aggressionBias > 1.2f) objectiveType = OperationType::AssaultCity;
       else if (p.civilization.defense > 1.08f) objectiveType = OperationType::DefendBorder;
       else if (p.civilization.logisticsBias > 1.05f) objectiveType = OperationType::SecureRoute;
       if (p.civilization.aiNavalPriority * p.civilization.logisticsBias > 1.15f && !navalUnits.empty()) objectiveType = OperationType::NavalBlockade;
       if (p.civilization.aiAirPriority * p.civilization.aiStrategicPriority > 1.2f && !wingUnits.empty()) objectiveType = OperationType::StrategicBombing;
+      if (p.civilization.operationPreference[static_cast<size_t>(OperationType::Encirclement)] > 1.1f && !groundUnits.empty()) objectiveType = OperationType::Encirclement;
+      if (p.civilization.operationPreference[static_cast<size_t>(OperationType::SecureRoute)] > 1.1f) objectiveType = OperationType::SecureRoute;
 
       OperationalObjective objective{};
       objective.id = nextObjectiveId++;
@@ -2951,6 +3054,7 @@ void update_operations(World& w) {
       w.theaterCommands.push_back(theater);
       ++w.theatersCreatedCount;
       ++w.operationsExecutedCount;
+      ++w.civOperationCount;
 
       w.operations.push_back({nextLegacyOpId++, p.id, objectiveType, target, w.tick, true});
       ++w.logisticsOperationIssuedCount;
@@ -2973,6 +3077,10 @@ void update_world_tension(World& w) {
   }
   drift += wars * 0.03f;
   if (w.navalCombatEvents > 0 || w.combatEngagementCount > 0) drift += 0.02f;
+  float response = 1.0f;
+  for (const auto& p : w.players) response += (p.civilization.worldTensionResponseBias - 1.0f);
+  response = std::clamp(response / std::max(1.0f, (float)w.players.size()), 0.7f, 1.3f);
+  drift *= response;
   w.worldTension = std::clamp(w.worldTension + drift, 0.0f, 100.0f);
 }
 
@@ -3046,23 +3154,29 @@ void update_ai_diplomacy(World& w) {
     }
     StrategicPosture next = StrategicPosture::Defensive;
     if (w.worldTension > 70.0f || (bestEnemy != p.id && players_at_war(w, p.id, bestEnemy))) next = StrategicPosture::TotalWar;
-    else if (w.worldTension > 45.0f || p.civilization.aggression > 1.15f) next = StrategicPosture::Escalating;
+    else if (w.worldTension > (45.0f / std::max(0.75f, p.civilization.worldTensionResponseBias)) || p.civilization.aggression * p.civilization.aggressionBias > 1.15f) next = StrategicPosture::Escalating;
     else if (p.civilization.economyBias > p.civilization.militaryBias) next = StrategicPosture::TradeFocused;
     else if (ownStr > std::max(1, bestEnemyStr)) next = StrategicPosture::Expansionist;
     if (p.id < w.strategicPosture.size() && w.strategicPosture[p.id] != next) {
       w.strategicPosture[p.id] = next;
       ++w.postureChangeCount;
+      ++w.civDoctrineSwitches;
       ++w.diplomacyEventCount;
       emit_event(w, GameplayEventType::PostureChanged, p.id, p.id, (uint32_t)next, posture_name(next));
     }
 
     if (bestEnemy != p.id && !players_at_war(w, p.id, bestEnemy) && next == StrategicPosture::TotalWar) declare_war(w, p.id, bestEnemy);
-    if (bestEnemy != p.id && relation_of(w, p.id, bestEnemy) == DiplomacyRelation::Neutral && next == StrategicPosture::TradeFocused) establish_trade_agreement(w, p.id, bestEnemy);
+    if (bestEnemy != p.id && relation_of(w, p.id, bestEnemy) == DiplomacyRelation::Neutral && next == StrategicPosture::TradeFocused && p.civilization.tradeBias >= 1.0f) establish_trade_agreement(w, p.id, bestEnemy);
     if (bestEnemy != p.id && relation_of(w, p.id, bestEnemy) == DiplomacyRelation::Neutral && next == StrategicPosture::Expansionist && ownStr > bestEnemyStr * 13 / 10) declare_war(w, p.id, bestEnemy);
+    if (bestEnemy != p.id && relation_of(w, p.id, bestEnemy) == DiplomacyRelation::Neutral && next == StrategicPosture::Defensive && p.civilization.allianceBias > 1.05f) form_alliance(w, p.id, bestEnemy);
   }
 }
 
 } // namespace
+
+CivilizationRuntime civilization_runtime_for(const std::string& id) {
+  return civilization_runtime_for_impl(id);
+}
 
 
 const char* world_preset_name(WorldPreset preset) {
@@ -3317,6 +3431,12 @@ void apply_world_defaults(World& w) {
   w.logisticsRoadCount = 0;
   w.logisticsTradeActiveCount = 0;
   w.logisticsOperationIssuedCount = 0;
+  w.uniqueUnitsProduced = 0;
+  w.uniqueBuildingsConstructed = 0;
+  w.civDoctrineSwitches = 0;
+  w.civIndustryOutput = 0.0f;
+  w.civLogisticsBonusUsage = 0.0f;
+  w.civOperationCount = 0;
   w.theatersCreatedCount = 0;
   w.operationsExecutedCount = 0;
   w.formationsAssignedCount = 0;
@@ -3398,7 +3518,7 @@ void eval_triggers(World& w) {
       else if (a.type == TriggerActionType::SpawnBuildings) {
         for (uint32_t i = 0; i < a.spawnCount; ++i) {
           uint32_t bid = 1; for (const auto& b : w.buildings) bid = std::max(bid, b.id + 1);
-          Building bb{}; bb.id = bid; bb.team = a.player; bb.type = a.spawnBuildingType; bb.pos = {a.spawnPos.x + 2.0f * i, a.spawnPos.y}; bb.size = gBuildDefs[bidx(bb.type)].size; bb.underConstruction = false; bb.buildProgress = 1.0f; bb.buildTime = gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp = (bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp = bb.maxHp;
+          Building bb{}; bb.id = bid; bb.team = a.player; bb.type = a.spawnBuildingType; bb.pos = {a.spawnPos.x + 2.0f * i, a.spawnPos.y}; bb.size = gBuildDefs[bidx(bb.type)].size; bb.underConstruction = false; bb.buildProgress = 1.0f; bb.buildTime = gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp = (bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp = bb.maxHp; bb.definitionId = resolved_building_definition_id(w, bb.team, bb.type);
           w.buildings.push_back(bb);
         }
       }
@@ -3809,7 +3929,7 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (j.contains("units")) for (const auto& u : j["units"]) { spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()}); }
   if (j.contains("airUnits")) for (const auto& a : j["airUnits"]) { AirUnit au{}; au.id=a.value("id",(uint32_t)(w.airUnits.size()+1)); au.team=a.value("team",0u); au.cls=(AirUnitClass)a.value("class",0); au.state=(AirMissionState)a.value("state",0); au.pos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; au.missionTarget={a["missionTarget"][0].get<float>(),a["missionTarget"][1].get<float>()}; au.hp=a.value("hp",100.0f); au.speed=a.value("speed",6.0f); au.cooldownTicks=a.value("cooldownTicks",0u); au.missionPerformed=a.value("missionPerformed",false); w.airUnits.push_back(au); }
   w.buildings.clear();
-  if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp);
+  if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); bb.definitionId = resolved_building_definition_id(w, bb.team, bb.type);
   if (b.contains("factory") && b["factory"].is_object()) { const auto& fj = b["factory"]; bb.factory.recipeIndex = fj.value("recipeIndex", 0); bb.factory.cycleProgress = fj.value("cycleProgress", 0.0f); bb.factory.paused = fj.value("paused", false); bb.factory.blocked = fj.value("blocked", false); bb.factory.active = fj.value("active", false); bb.factory.throughputBonus = fj.value("throughputBonus", 0.0f); if (fj.contains("inputBuffer")) bb.factory.inputBuffer = fj["inputBuffer"].get<decltype(bb.factory.inputBuffer)>(); if (fj.contains("outputBuffer")) bb.factory.outputBuffer = fj["outputBuffer"].get<decltype(bb.factory.outputBuffer)>(); }
   w.buildings.push_back(bb);} }
   if (j.contains("strategicStrikes")) for (const auto& st : j["strategicStrikes"]) { StrategicStrike ss{}; ss.id=st.value("id",(uint32_t)(w.strategicStrikes.size()+1)); ss.team=st.value("team",0u); ss.type=(StrikeType)st.value("type",0); ss.from={st["from"][0].get<float>(),st["from"][1].get<float>()}; ss.target={st["target"][0].get<float>(),st["target"][1].get<float>()}; ss.prepTicksRemaining=st.value("prepTicksRemaining",0u); ss.travelTicksRemaining=st.value("travelTicksRemaining",0u); ss.cooldownTicks=st.value("cooldownTicks",0u); ss.interceptionState=st.value("interceptionState",(uint8_t)0); ss.launched=st.value("launched",false); ss.resolved=st.value("resolved",false); w.strategicStrikes.push_back(ss); }
@@ -3867,7 +3987,7 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     const auto& pl = j["placements"];
     if (pl.contains("cities")) for (const auto& c : pl["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
     if (pl.contains("units")) for (const auto& u : pl["units"]) spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()});
-    if (pl.contains("buildings")) for (const auto& b : pl["buildings"]) { Building bb{}; bb.id=b.value("id",(uint32_t)(w.buildings.size()+1)); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp);
+    if (pl.contains("buildings")) for (const auto& b : pl["buildings"]) { Building bb{}; bb.id=b.value("id",(uint32_t)(w.buildings.size()+1)); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); bb.definitionId = resolved_building_definition_id(w, bb.team, bb.type);
   if (b.contains("factory") && b["factory"].is_object()) { const auto& fj = b["factory"]; bb.factory.recipeIndex = fj.value("recipeIndex", 0); bb.factory.cycleProgress = fj.value("cycleProgress", 0.0f); bb.factory.paused = fj.value("paused", false); bb.factory.blocked = fj.value("blocked", false); bb.factory.active = fj.value("active", false); bb.factory.throughputBonus = fj.value("throughputBonus", 0.0f); if (fj.contains("inputBuffer")) bb.factory.inputBuffer = fj["inputBuffer"].get<decltype(bb.factory.inputBuffer)>(); if (fj.contains("outputBuffer")) bb.factory.outputBuffer = fj["outputBuffer"].get<decltype(bb.factory.outputBuffer)>(); }
   w.buildings.push_back(bb); }
     if (pl.contains("resourceNodes")) for (const auto& r : pl["resourceNodes"]) { ResourceNode rn{}; rn.id=r.value("id",(uint32_t)(w.resourceNodes.size()+1)); std::string t=r.value("type",std::string("Forest")); rn.type=(t=="Ore"?ResourceNodeType::Ore:(t=="Farmable"?ResourceNodeType::Farmable:(t=="Ruins"?ResourceNodeType::Ruins:ResourceNodeType::Forest))); rn.pos={r["pos"][0].get<float>(), r["pos"][1].get<float>()}; rn.amount=r.value("amount",1000.0f); rn.owner=r.value("owner",(uint16_t)UINT16_MAX); w.resourceNodes.push_back(rn);} 
@@ -4124,7 +4244,7 @@ void tick_world(World& w, float dt) {
   update_air_and_strategic_warfare(w, dt);
   update_guardian_sites(w);
 
-  for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
+  for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f * p.civilization.resourceGatherMult[ridx(Resource::Food)];
   apply_trade_income(w, dt);
   update_underground_economy(w, dt);
   update_industrial_economy(w, dt);
@@ -4136,7 +4256,7 @@ void tick_world(World& w, float dt) {
       float workerFactor = has_nearby_builder(w, b.team, b.pos) ? 1.0f : 0.25f;
       const float civBuild = owner.civilization.buildingBuildTimeMult[static_cast<size_t>(b.type)];
       b.buildProgress += dt / std::max(1.0f, b.buildTime * civBuild) * workerFactor;
-      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; emit_event(w, GameplayEventType::BuildingCompleted, b.team, b.team, b.id); if (b.type == BuildingType::Wonder) emit_event(w, GameplayEventType::WonderStarted, b.team, b.team, b.id); ++w.navVersion; gNav.cache.clear(); }
+      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; if (b.definitionId != std::string(building_name(b.type))) ++w.uniqueBuildingsConstructed; emit_event(w, GameplayEventType::BuildingCompleted, b.team, b.team, b.id); if (b.type == BuildingType::Wonder) emit_event(w, GameplayEventType::WonderStarted, b.team, b.team, b.id); ++w.navVersion; gNav.cache.clear(); }
       continue;
     }
 
@@ -4145,8 +4265,9 @@ void tick_world(World& w, float dt) {
       float trick = def.trickle[r];
       if (trick > 0.0f) {
         float mult = owner.civilization.buildingTrickleMult[static_cast<size_t>(b.type)];
-        if (b.type == BuildingType::Farm) mult = fertility_at(w, b.pos);
-        owner.resources[r] += trick * op * dt * 20.0f;
+        if (b.type == BuildingType::Farm) mult *= fertility_at(w, b.pos);
+        mult *= owner.civilization.resourceGatherMult[r];
+        owner.resources[r] += trick * op * dt * 20.0f * mult;
       }
     }
 
@@ -4496,6 +4617,12 @@ void tick_world(World& w, float dt) {
   gLastStats.machinePartsOutput = w.refinedOutputByTick[gidx(RefinedGood::MachineParts)];
   gLastStats.electronicsOutput = w.refinedOutputByTick[gidx(RefinedGood::Electronics)];
   gLastStats.industrialThroughput = w.industrialThroughput;
+  gLastStats.uniqueUnitsProduced = w.uniqueUnitsProduced;
+  gLastStats.uniqueBuildingsConstructed = w.uniqueBuildingsConstructed;
+  gLastStats.civDoctrineSwitches = w.civDoctrineSwitches;
+  gLastStats.civIndustryOutput = w.civIndustryOutput;
+  gLastStats.civLogisticsBonusUsage = w.civLogisticsBonusUsage;
+  gLastStats.civOperationCount = w.civOperationCount;
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -4784,6 +4911,9 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.logisticsRoadCount);
   hash_u32(h, w.logisticsTradeActiveCount);
   hash_u32(h, w.logisticsOperationIssuedCount);
+  hash_u32(h, w.uniqueUnitsProduced);
+  hash_u32(h, w.uniqueBuildingsConstructed);
+  hash_u32(h, w.civDoctrineSwitches);
   hash_u32(h, w.theatersCreatedCount);
   hash_u32(h, w.operationsExecutedCount);
   hash_u32(h, w.formationsAssignedCount);
@@ -4800,6 +4930,9 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.activeFactories);
   hash_u32(h, w.blockedFactories);
   hash_float(h, w.industrialThroughput);
+  hash_float(h, w.civIndustryOutput);
+  hash_float(h, w.civLogisticsBonusUsage);
+  hash_u32(h, w.civOperationCount);
   for (float v : w.refinedOutputByTick) hash_float(h, v);
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);

@@ -73,6 +73,8 @@ Reference sample: `scenarios/diplomacy_test.json`.
 
 `players[].civilization` binds a player to a civilization definition. Scenario smoke fixture `scenarios/civ_test.json` demonstrates civ-vs-civ doctrine divergence and unique replacements.
 
+`scenarios/civ_test.json` now includes explicit multi-civilization assignments for Rome/China/Europe/Middle East and authored starting structures to force deterministic unique unit/building and doctrine divergence coverage.
+
 ## Mountain mining extensions
 Optional fields:
 - `mountainRegions`

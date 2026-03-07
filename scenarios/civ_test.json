@@ -3,28 +3,42 @@
   "seed": 4242,
   "map": {"width": 128, "height": 128},
   "players": [
-    {"id": 0, "isHuman": false, "isCPU": true, "civilization": "rome", "team": 0, "color": [0.9,0.25,0.25], "startingResources": {"Food": 700, "Wood": 700, "Metal": 500, "Wealth": 350, "Knowledge": 180, "Oil": 0}, "popCap": 45},
-    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "china", "team": 1, "color": [0.25,0.45,0.95], "startingResources": {"Food": 700, "Wood": 700, "Metal": 500, "Wealth": 350, "Knowledge": 180, "Oil": 0}, "popCap": 45}
+    {"id": 0, "isHuman": false, "isCPU": true, "civilization": "rome", "team": 0, "color": [0.9,0.25,0.25], "startingResources": {"Food": 850, "Wood": 850, "Metal": 650, "Wealth": 480, "Knowledge": 220, "Oil": 20}, "popCap": 52},
+    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "china", "team": 1, "color": [0.25,0.45,0.95], "startingResources": {"Food": 850, "Wood": 850, "Metal": 650, "Wealth": 480, "Knowledge": 220, "Oil": 20}, "popCap": 52},
+    {"id": 2, "isHuman": false, "isCPU": true, "civilization": "europe", "team": 2, "color": [0.2,0.8,0.8], "startingResources": {"Food": 850, "Wood": 850, "Metal": 650, "Wealth": 480, "Knowledge": 220, "Oil": 20}, "popCap": 52},
+    {"id": 3, "isHuman": false, "isCPU": true, "civilization": "middle_east", "team": 3, "color": [0.9,0.8,0.2], "startingResources": {"Food": 850, "Wood": 850, "Metal": 650, "Wealth": 480, "Knowledge": 220, "Oil": 20}, "popCap": 52}
   ],
   "placements": {
     "cities": [
       {"id": 1, "team": 0, "pos": [20, 20], "level": 1, "capital": true},
-      {"id": 2, "team": 1, "pos": [104, 104], "level": 1, "capital": true}
+      {"id": 2, "team": 1, "pos": [104, 20], "level": 1, "capital": true},
+      {"id": 3, "team": 2, "pos": [20, 104], "level": 1, "capital": true},
+      {"id": 4, "team": 3, "pos": [104, 104], "level": 1, "capital": true}
     ],
     "buildings": [
       {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 20], "underConstruction": false, "hp": 2200},
-      {"id": 11, "team": 1, "type": "CityCenter", "pos": [104, 104], "underConstruction": false, "hp": 2200}
+      {"id": 11, "team": 1, "type": "CityCenter", "pos": [104, 20], "underConstruction": false, "hp": 2200},
+      {"id": 12, "team": 2, "type": "CityCenter", "pos": [20, 104], "underConstruction": false, "hp": 2200},
+      {"id": 13, "team": 3, "type": "CityCenter", "pos": [104, 104], "underConstruction": false, "hp": 2200},
+      {"id": 21, "team": 0, "type": "Barracks", "pos": [24, 20], "underConstruction": false},
+      {"id": 22, "team": 1, "type": "Library", "pos": [100, 20], "underConstruction": false},
+      {"id": 23, "team": 2, "type": "SteelMill", "pos": [24, 104], "underConstruction": false},
+      {"id": 24, "team": 3, "type": "Market", "pos": [100, 104], "underConstruction": false}
     ],
     "units": [
       {"id": 1, "team": 0, "type": "Worker", "pos": [21, 22]},
-      {"id": 2, "team": 1, "type": "Worker", "pos": [103, 102]}
+      {"id": 2, "team": 1, "type": "Worker", "pos": [103, 22]},
+      {"id": 3, "team": 2, "type": "Worker", "pos": [21, 102]},
+      {"id": 4, "team": 3, "type": "Worker", "pos": [103, 102]},
+      {"id": 5, "team": 0, "type": "Infantry", "pos": [24, 24]},
+      {"id": 6, "team": 3, "type": "Cavalry", "pos": [100, 100]}
     ]
   },
   "objectives": [
-    {"id": 1, "objective_id": "civ_diverge", "title": "Civilization divergence", "description": "Run until tick 2200.", "category": "primary", "state": "active", "visible": true}
+    {"id": 1, "objective_id": "civ_diverge", "title": "Civilization divergence", "description": "Run until tick 3000.", "category": "primary", "state": "active", "visible": true}
   ],
   "triggers": [
     {"id": 1, "once": true, "condition": {"type": "TickReached", "tick": 900}, "actions": [{"type": "ShowMessage", "text": "Doctrine divergence checkpoint"}]}
   ],
-  "rulesOverrides": {"timeLimit": 5000}
+  "rulesOverrides": {"timeLimit": 6000}
 }

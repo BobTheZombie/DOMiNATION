@@ -40,6 +40,15 @@ void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool 
   if (showDiplomacyPanel) {
     if (ImGui::Begin("Diplomacy")) {
       ImGui::TextUnformatted("Players and relationship state");
+      for (const auto& pl : world.players) {
+        ImGui::SeparatorText((std::string("P") + std::to_string(pl.id) + " - " + pl.civilization.displayName).c_str());
+        ImGui::TextWrapped("%s", pl.civilization.shortDescription.c_str());
+        ImGui::Text("eco %.2f mil %.2f sci %.2f | road %.2f rail %.2f supply %.2f trade %.2f",
+                    pl.civilization.economyBias, pl.civilization.militaryBias, pl.civilization.scienceBias,
+                    pl.civilization.roadBonus, pl.civilization.railBonus, pl.civilization.supplyBonus, pl.civilization.tradeRouteBonus);
+        ImGui::Text("doctrine aggr %.2f alliance %.2f trade %.2f tension %.2f",
+                    pl.civilization.aggressionBias, pl.civilization.allianceBias, pl.civilization.tradeBias, pl.civilization.worldTensionResponseBias);
+      }
       for (size_t i = 1; i < world.players.size(); ++i) {
         auto rel = world.diplomacy[0 * world.players.size() + i];
         ImGui::Text("Player %zu: %s", i, relation_name(rel));
