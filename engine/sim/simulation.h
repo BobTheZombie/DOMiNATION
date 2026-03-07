@@ -87,7 +87,7 @@ struct ProductionItem {
   int targetAge{0};
 };
 
-struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint16_t stealthRevealTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; uint32_t transportId{0}; std::vector<uint32_t> cargo; bool hasMoveOrder{false}; bool attackMove{false}; bool embarked{false}; bool selected{false}; };
+struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry}; float hp{100.0f}; float attack{8.0f}; float range{2.5f}; float speed{4.0f}; UnitRole role{UnitRole::Infantry}; AttackType attackType{AttackType::Melee}; UnitRole preferredTargetRole{UnitRole::Infantry}; std::array<uint16_t, static_cast<size_t>(UnitRole::Count)> vsRoleMultiplierPermille{1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000}; glm::vec2 pos{}; glm::vec2 renderPos{}; glm::vec2 target{}; glm::vec2 slotTarget{}; glm::vec2 moveDir{}; uint32_t targetUnit{}; uint32_t moveOrder{}; uint32_t attackMoveOrder{}; uint16_t targetLockTicks{}; uint16_t chaseTicks{}; uint16_t attackCooldownTicks{}; uint16_t lastTargetSwitchTick{}; uint16_t stuckTicks{}; uint16_t stealthRevealTicks{}; uint8_t orderPathLingerTicks{}; SupplyState supplyState{SupplyState::InSupply}; uint32_t transportId{0}; std::string definitionId; std::vector<uint32_t> cargo; bool hasMoveOrder{false}; bool attackMove{false}; bool embarked{false}; bool selected{false}; };
 
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
 struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
@@ -101,7 +101,7 @@ struct DenialZone { uint32_t id{0}; uint16_t team{0}; glm::vec2 pos{}; float rad
 
 struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
-struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType::House}; glm::vec2 pos{}; glm::vec2 size{2.0f, 2.0f}; bool underConstruction{true}; float buildProgress{0.0f}; float buildTime{10.0f}; float hp{1000.0f}; float maxHp{1000.0f}; std::vector<ProductionItem> queue; };
+struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType::House}; glm::vec2 pos{}; glm::vec2 size{2.0f, 2.0f}; bool underConstruction{true}; float buildProgress{0.0f}; float buildTime{10.0f}; float hp{1000.0f}; float maxHp{1000.0f}; std::string definitionId; std::vector<ProductionItem> queue; };
 
 struct ResourceNode { uint32_t id{}; ResourceNodeType type{ResourceNodeType::Forest}; glm::vec2 pos{}; float amount{1000.0f}; uint16_t owner{UINT16_MAX}; };
 struct TriggerArea { uint32_t id{}; glm::vec2 min{}; glm::vec2 max{}; };
@@ -115,11 +115,33 @@ struct MissionRuntimeState { bool briefingShown{false}; MissionStatus status{Mis
 
 struct CivilizationRuntime {
   std::string id{"default"};
+  std::string displayName{"Default"};
   float economyBias{1.0f};
   float militaryBias{1.0f};
   float scienceBias{1.0f};
   float aggression{1.0f};
   float defense{1.0f};
+  float diplomacyBias{1.0f};
+  float logisticsBias{1.0f};
+  float strategicBias{1.0f};
+  float aiWorkerTargetMult{1.0f};
+  float aiExpansionTiming{1.0f};
+  float aiResearchPriority{1.0f};
+  float aiReconPriority{1.0f};
+  float aiNavalPriority{1.0f};
+  float aiAirPriority{1.0f};
+  float aiStrategicPriority{1.0f};
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitAttackMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitHpMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitCostMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(UnitType::Count)> unitTrainTimeMult = [](){ std::array<float, static_cast<size_t>(UnitType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingCostMult = [](){ std::array<float, static_cast<size_t>(BuildingType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingBuildTimeMult = [](){ std::array<float, static_cast<size_t>(BuildingType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingHpMult = [](){ std::array<float, static_cast<size_t>(BuildingType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<float, static_cast<size_t>(BuildingType::Count)> buildingTrickleMult = [](){ std::array<float, static_cast<size_t>(BuildingType::Count)> a{}; a.fill(1.0f); return a; }();
+  std::array<std::string, static_cast<size_t>(UnitType::Count)> uniqueUnitDefs{};
+  std::array<std::string, static_cast<size_t>(BuildingType::Count)> uniqueBuildingDefs{};
+  std::vector<std::string> missionTags;
 };
 
 struct BiomeRuntime {

@@ -241,3 +241,16 @@ Perf counters now include `ROAD_COUNT`, `ACTIVE_TRADE_ROUTES`, `SUPPLIED_UNITS`,
 This branch adds deterministic mission objectives, trigger-action authored scripting, mission runtime state, and sandboxed Lua hooks for scenario orchestration.
 
 Smoke scenario: `scenarios/campaign_test.json` with optional script `scripts/campaign_test.lua`.
+
+## Civilization differentiation and deterministic save/load
+
+- Civilization runtime now supports economy/military/science plus diplomacy/logistics/strategic biases, doctrine modifiers, and per-family unique unit/building definition IDs loaded from `content/civilizations.json`.
+- Unique replacements are deterministic and replay/save-safe via authoritative `definitionId` persisted on spawned units/buildings.
+- Campaign mission/objective/trigger runtime fields used by authority are serialized in save files to preserve mid-mission parity.
+- Smoke commands:
+  - `./build/rts --headless --scenario scenarios/campaign_test.json --smoke --ticks 1200 --save /tmp/campaign_save.json --dump-hash`
+  - `./build/rts --headless --load /tmp/campaign_save.json --smoke --ticks 2200 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 2200 --dump-hash`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --threads 1 --hash-only`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --threads 4 --hash-only`
+  - `./build/rts --headless --scenario scenarios/civ_test.json --threads 8 --hash-only`

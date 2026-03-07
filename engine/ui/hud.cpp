@@ -110,6 +110,7 @@ void draw_hud(SDL_Window* window,
   ImGui::Text("Food %.0f | Wood %.0f | Metal %.0f | Wealth %.0f | Knowledge %.0f | Oil %.0f | Pop %u/%u | Age %s",
     p.resources[0], p.resources[1], p.resources[2], p.resources[3], p.resources[4], p.resources[5],
     p.popUsed, p.popCap, age_name(p.age));
+  ImGui::Text("Civ %s | eco %.2f mil %.2f sci %.2f dip %.2f log %.2f strat %.2f", p.civilization.displayName.c_str(), p.civilization.economyBias, p.civilization.militaryBias, p.civilization.scienceBias, p.civilization.diplomacyBias, p.civilization.logisticsBias, p.civilization.strategicBias);
   if (!overlay.empty()) ImGui::TextUnformatted(overlay.c_str());
   ImGui::End();
 
@@ -127,6 +128,7 @@ void draw_hud(SDL_Window* window,
       ImGui::Text("Unit #%u", u.id);
       ImGui::Text("Health: %.0f | Role: %s | Owner: P%u", u.hp, role_name(u.role), u.team);
       ImGui::Text("Supply: %s | Cargo: %zu", supply_name(u.supplyState), u.cargo.size());
+      ImGui::Text("DefId: %s", u.definitionId.empty()?"(base)":u.definitionId.c_str());
       break;
     }
     if (!found) {
@@ -135,6 +137,7 @@ void draw_hud(SDL_Window* window,
         ImGui::Text("Building #%u", b.id);
         ImGui::Text("Health: %.0f/%.0f | Owner: P%u", b.hp, b.maxHp, b.team);
         ImGui::Text("Queue items: %zu", b.queue.size());
+        ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
         found = true;
         break;
       }

@@ -1,35 +1,87 @@
 [
   {
-    "id": "agrarian_league",
-    "displayName": "Agrarian League",
-    "economyBias": 1.35,
-    "militaryBias": 0.9,
-    "scienceBias": 1.0,
-    "aggression": 0.85,
-    "defense": 1.1,
-    "preferredUnits": ["Infantry", "Archer"],
-    "uniqueModifiers": ["faster farms"]
+    "civilization_id": "rome",
+    "display_name": "Rome",
+    "economyBias": 0.95,
+    "militaryBias": 1.25,
+    "scienceBias": 0.9,
+    "aggression": 1.2,
+    "defense": 1.15,
+    "diplomacyBias": 0.9,
+    "logisticsBias": 1.0,
+    "strategicBias": 1.1,
+    "aiDoctrineModifiers": {"workerTargetMult": 0.95, "expansionTiming": 0.9, "researchPriority": 0.85, "reconPriority": 0.95, "navalPriority": 1.0, "airPriority": 1.0, "strategicPriority": 1.05},
+    "unitBonuses": {
+      "attackMult": {"Infantry": 1.2},
+      "hpMult": {"Infantry": 1.15},
+      "costMult": {"Infantry": 1.0}
+    },
+    "buildingBonuses": {"hpMult": {"Barracks": 1.15}},
+    "uniqueUnits": {"Infantry": "rome_legionary"},
+    "missionTags": ["military", "rome"]
   },
   {
-    "id": "iron_phalanx",
-    "displayName": "Iron Phalanx",
-    "economyBias": 0.9,
-    "militaryBias": 1.35,
-    "scienceBias": 0.85,
-    "aggression": 1.25,
-    "defense": 1.2,
-    "preferredUnits": ["Infantry", "Siege"],
-    "uniqueModifiers": ["stronger infantry"]
-  },
-  {
-    "id": "scholar_dynasty",
-    "displayName": "Scholar Dynasty",
-    "economyBias": 1.0,
+    "civilization_id": "china",
+    "display_name": "China",
+    "economyBias": 1.2,
     "militaryBias": 0.95,
-    "scienceBias": 1.4,
+    "scienceBias": 1.25,
+    "aggression": 0.9,
+    "defense": 1.0,
+    "diplomacyBias": 1.05,
+    "logisticsBias": 1.05,
+    "strategicBias": 1.0,
+    "aiDoctrineModifiers": {"workerTargetMult": 1.2, "expansionTiming": 1.05, "researchPriority": 1.25, "reconPriority": 1.2, "navalPriority": 1.0, "airPriority": 1.0, "strategicPriority": 1.0},
+    "buildingBonuses": {
+      "buildTimeMult": {"Farm": 0.85, "Library": 0.85},
+      "trickleMult": {"Farm": 1.2, "Library": 1.25}
+    },
+    "uniqueBuildings": {"Library": "china_academy"},
+    "missionTags": ["science", "economy"]
+  },
+  {
+    "civilization_id": "europe",
+    "display_name": "Europe",
+    "economyBias": 1.05,
+    "militaryBias": 1.05,
+    "scienceBias": 1.0,
     "aggression": 0.95,
+    "defense": 1.2,
+    "diplomacyBias": 1.05,
+    "logisticsBias": 1.0,
+    "strategicBias": 1.05,
+    "aiDoctrineModifiers": {"workerTargetMult": 1.0, "expansionTiming": 1.0, "researchPriority": 1.0, "reconPriority": 1.1, "navalPriority": 1.05, "airPriority": 1.1, "strategicPriority": 1.1},
+    "buildingBonuses": {"hpMult": {"AABattery": 1.25, "AntiMissileDefense": 1.25, "Barracks": 1.1}},
+    "uniqueBuildings": {"Barracks": "europe_fortified_barracks"},
+    "missionTags": ["defensive"]
+  },
+  {
+    "civilization_id": "middle_east",
+    "display_name": "Middle East",
+    "economyBias": 1.18,
+    "militaryBias": 0.95,
+    "scienceBias": 1.0,
+    "aggression": 1.0,
     "defense": 0.95,
-    "preferredUnits": ["Archer", "Cavalry"],
-    "uniqueModifiers": ["faster research"]
+    "diplomacyBias": 1.1,
+    "logisticsBias": 1.25,
+    "strategicBias": 1.1,
+    "aiDoctrineModifiers": {"workerTargetMult": 1.1, "expansionTiming": 1.0, "researchPriority": 1.0, "reconPriority": 1.05, "navalPriority": 1.1, "airPriority": 1.0, "strategicPriority": 1.15},
+    "buildingBonuses": {"trickleMult": {"Market": 1.3, "Mine": 1.1}, "costMult": {"Market": 0.85}},
+    "uniqueBuildings": {"Market": "middle_east_caravanserai"},
+    "missionTags": ["trade", "logistics"]
+  },
+  {
+    "civilization_id": "default",
+    "display_name": "Default",
+    "economyBias": 1.0,
+    "militaryBias": 1.0,
+    "scienceBias": 1.0,
+    "aggression": 1.0,
+    "defense": 1.0,
+    "diplomacyBias": 1.0,
+    "logisticsBias": 1.0,
+    "strategicBias": 1.0,
+    "aiDoctrineModifiers": {"workerTargetMult": 1.0, "expansionTiming": 1.0, "researchPriority": 1.0, "reconPriority": 1.0, "navalPriority": 1.0, "airPriority": 1.0, "strategicPriority": 1.0}
   }
 ]
