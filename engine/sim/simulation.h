@@ -227,7 +227,27 @@ struct TriggerCondition { TriggerType type{TriggerType::TickReached}; uint32_t t
 struct TriggerAction { TriggerActionType type{TriggerActionType::ShowMessage}; std::string text; uint32_t objectiveId{0}; ObjectiveState objectiveState{ObjectiveState::Active}; uint16_t player{UINT16_MAX}; std::array<float, static_cast<size_t>(Resource::Count)> resources{}; UnitType spawnUnitType{UnitType::Infantry}; BuildingType spawnBuildingType{BuildingType::House}; uint32_t spawnCount{0}; glm::vec2 spawnPos{}; uint16_t winner{0}; uint32_t areaId{0}; DiplomacyRelation diplomacy{DiplomacyRelation::Neutral}; uint16_t playerB{UINT16_MAX}; float worldTension{0.0f}; OperationType operationType{OperationType::RallyAndPush}; glm::vec2 operationTarget{}; std::string luaHook; };
 struct Trigger { uint32_t id{}; bool once{true}; bool fired{false}; TriggerCondition condition{}; std::vector<TriggerAction> actions; };
 struct ObjectiveLogEntry { uint32_t tick{0}; std::string text; };
-struct MissionDefinition { std::string title; std::string briefing; std::vector<std::string> introMessages; std::string victoryOutcomeTag{"victory"}; std::string defeatOutcomeTag{"defeat"}; std::string partialOutcomeTag{"partial_victory"}; std::string branchKey; std::string luaScriptFile; std::string luaScriptInline; };
+struct MissionMessageDefinition { std::string messageId; std::string title; std::string body; std::string category{"intelligence"}; std::string speaker; std::string faction; std::string portraitId; std::string iconId; std::string imageId; std::string styleTag; int priority{0}; uint32_t durationTicks{600}; bool sticky{false}; };
+struct MissionMessageRuntime { uint64_t sequence{0}; uint32_t tick{0}; std::string messageId; std::string title; std::string body; std::string category{"intelligence"}; std::string speaker; std::string faction; std::string portraitId; std::string iconId; std::string imageId; std::string styleTag; int priority{0}; uint32_t durationTicks{600}; bool sticky{false}; };
+struct ObjectiveTransitionDebugEntry { uint32_t tick{0}; uint32_t objectiveId{0}; ObjectiveState from{ObjectiveState::Inactive}; ObjectiveState to{ObjectiveState::Inactive}; uint32_t triggerId{0}; std::string actionType; std::string reason; };
+struct MissionDefinition {
+  std::string title;
+  std::string subtitle;
+  std::string locationLabel;
+  std::string briefing;
+  std::string debrief;
+  std::string factionSummary;
+  std::string carryoverSummary;
+  std::string briefingPortraitId;
+  std::string debriefPortraitId;
+  std::string missionImageId;
+  std::string factionIconId;
+  std::vector<std::string> scenarioTags;
+  std::vector<std::string> objectiveSummary;
+  std::vector<std::string> introMessages;
+  std::vector<MissionMessageDefinition> messageDefinitions;
+  std::string victoryOutcomeTag{"victory"}; std::string defeatOutcomeTag{"defeat"}; std::string partialOutcomeTag{"partial_victory"}; std::string branchKey; std::string luaScriptFile; std::string luaScriptInline;
+};
 struct MissionRuntimeState { bool briefingShown{false}; MissionStatus status{MissionStatus::InBriefing}; std::string resultTag; std::vector<uint32_t> activeObjectives; std::vector<std::string> luaHookLog; uint32_t firedTriggerCount{0}; uint32_t scriptedActionCount{0}; };
 
 struct CampaignCarryoverState {
@@ -465,6 +485,9 @@ struct World {
   std::vector<GuardianSiteInstance> guardianSites;
   std::vector<uint8_t> radarContactByPlayer;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
+  std::vector<MissionMessageRuntime> missionMessages;
+  std::vector<ObjectiveTransitionDebugEntry> objectiveDebugLog;
+  uint64_t nextMissionMessageSequence{1};
   MissionDefinition mission{};
   MissionRuntimeState missionRuntime{};
   CampaignCarryoverState campaign{};

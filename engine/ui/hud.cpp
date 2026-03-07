@@ -227,16 +227,22 @@ void draw_hud(SDL_Window* window,
   ImGui::End();
 
   ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 270.0f));
-  ImGui::SetNextWindowSize(ImVec2(382.0f, 220.0f));
-  ImGui::Begin("Mission", nullptr, barFlags);
+  ImGui::SetNextWindowSize(ImVec2(382.0f, 260.0f));
+  ImGui::Begin("Mission Objectives", nullptr, barFlags);
   ImGui::Text("%s", world.mission.title.empty() ? "Skirmish Mission" : world.mission.title.c_str());
-  if (!world.mission.briefing.empty()) ImGui::TextWrapped("%s", world.mission.briefing.c_str());
-  ImGui::Separator();
-  for (const auto& o : world.objectives) {
-    if (!o.visible && o.state != dom::sim::ObjectiveState::Completed && o.state != dom::sim::ObjectiveState::Failed) continue;
-    const bool primary = o.category == dom::sim::ObjectiveCategory::Primary || o.primary;
-    ImGui::BulletText("[%s] %s (%s)", primary ? "P" : "S", o.title.c_str(), objective_state_name(o.state));
-  }
+  if (!world.mission.subtitle.empty()) ImGui::TextDisabled("%s", world.mission.subtitle.c_str());
+  auto draw_group = [&](const char* label, dom::sim::ObjectiveCategory category) {
+    ImGui::SeparatorText(label);
+    for (const auto& o : world.objectives) {
+      if (o.category != category && !(category == dom::sim::ObjectiveCategory::Primary && o.primary)) continue;
+      if (!o.visible && o.state != dom::sim::ObjectiveState::Completed && o.state != dom::sim::ObjectiveState::Failed) continue;
+      ImGui::BulletText("%s (%s)", o.title.c_str(), objective_state_name(o.state));
+      if (!o.progressText.empty() || o.progressValue > 0.0f) ImGui::TextDisabled("progress: %s %.2f", o.progressText.c_str(), o.progressValue);
+    }
+  };
+  draw_group("Primary", dom::sim::ObjectiveCategory::Primary);
+  draw_group("Secondary", dom::sim::ObjectiveCategory::Secondary);
+  draw_group("Hidden/Revealed", dom::sim::ObjectiveCategory::HiddenOptional);
   ImGui::End();
 
   ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 90.0f));

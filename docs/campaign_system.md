@@ -45,3 +45,8 @@ Campaign runtime save uses `--save` with a campaign run. It stores mission progr
 - `./build/rts --headless --campaign campaigns/test_campaign.json --threads 8 --hash-only`
 - `./build/rts --headless --campaign campaigns/test_campaign.json --smoke --ticks 1200 --save /tmp/campaign_state.json --dump-hash`
 - `./build/rts --headless --load /tmp/campaign_state.json --smoke --dump-hash`
+
+## Presentation flow
+- Mission briefing/debrief presentation reads mission/campaign metadata and carryover state each mission.
+- Campaign progression panel surfaces current result, rewards/flags, pending branch, and carryover deltas.
+- Save/load preserves authoritative campaign progression and message ordering state used by mission presentation logs.

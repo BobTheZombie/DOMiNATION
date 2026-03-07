@@ -8,3 +8,7 @@ Mission runtime tracks briefing visibility, status, result tags, active objectiv
 Save/load parity notes: objective identity (`objective_id`), visibility/progress presentation, active state, trigger fire state, and mission runtime counters are serialized on authoritative saves used by campaign continuation.
 
 Civilization-specific mission design should bind by player civilization assignment (`players[].civilization`) and not random runtime branches; civ identity effects (economy/logistics/industry/doctrine/unique resolution) are deterministic and replay-safe.
+
+## Objective UX polish
+- Objectives are grouped as primary/secondary/hidden-revealed in mission UI.
+- Objective state transitions generate deterministic mission messages and a debug log entry (`triggerId`, action type, reason).

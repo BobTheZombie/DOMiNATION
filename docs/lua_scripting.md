@@ -64,3 +64,7 @@ Guardian mission helpers (existing campaign scripting surface):
 
 ## Strategic deterrence note
 Deterrence data is currently not writable from Lua; scenario data and simulation rules drive authoritative strategic posture/readiness.
+
+## Campaign presentation hooks
+- `show_message(text)` now feeds deterministic mission message ordering plus objective/event log output.
+- Recommended message convention for authored scripts: prefix text with category markers (`[briefing]`, `[intelligence]`, `[warning]`) when needed.

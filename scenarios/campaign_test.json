@@ -21,8 +21,23 @@
   ],
   "mission": {
     "title": "Campaign Smoke Test",
+    "subtitle": "Operation Ember Frontier",
+    "location": "Ash Valley",
     "briefing": "Hold your capital, complete core objectives, and trigger scripted outcomes.",
+    "debrief": "Operation report archived. Carryover and branch state updated.",
+    "factionSummary": "Frontier expedition command with limited reserves and doctrine-neutral roster.",
+    "carryoverSummary": "Carryover resources and campaign flags are injected on mission start.",
+    "briefingPortraitId": "ui_portrait_commander",
+    "debriefPortraitId": "ui_portrait_adjutant",
+    "missionImageId": "ui_campaign_frontier",
+    "factionIconId": "ui_faction_default",
+    "scenarioTags": ["smoke", "campaign", "deterministic"],
+    "objectiveSummary": ["Survive to tick 1200", "Scout center area"],
     "introMessages": ["Mission started", "Awaiting first milestone"],
+    "messages": [
+      {"id": "briefing_1", "title": "Command Briefing", "body": "Establish perimeter and hold the capital.", "category": "briefing", "speaker": "High Command", "faction": "Expedition", "portraitId": "ui_portrait_commander", "iconId": "ui_icon_briefing", "imageId": "ui_campaign_frontier", "style": "formal", "priority": 10, "durationTicks": 900, "sticky": true},
+      {"id": "intel_1", "title": "Signal Intercept", "body": "Hostile scouts detected near center area.", "category": "intelligence", "speaker": "Recon", "faction": "Expedition", "portraitId": "ui_portrait_recon", "iconId": "ui_icon_intel", "imageId": "ui_campaign_frontier", "style": "intel", "priority": 7, "durationTicks": 700, "sticky": false}
+    ],
     "victoryOutcome": "victory",
     "defeatOutcome": "defeat",
     "partialOutcome": "partial_victory",
@@ -33,8 +48,8 @@
     {"id": 1, "min": [40, 40], "max": [48, 48]}
   ],
   "objectives": [
-    {"id": 100, "objective_id": "survive_1200", "title": "Survive to tick 1200", "description": "Remain operational until tick 1200.", "category": "primary", "state": "inactive", "visible": true},
-    {"id": 101, "objective_id": "capture_zone", "title": "Scout center area", "description": "Enter the mission center zone.", "category": "secondary", "state": "inactive", "visible": true}
+    {"id": 100, "objective_id": "survive_1200", "title": "Survive to tick 1200", "description": "Remain operational until tick 1200.", "category": "primary", "state": "inactive", "visible": true, "progressText": "ticks held", "progressValue": 0},
+    {"id": 101, "objective_id": "capture_zone", "title": "Scout center area", "description": "Enter the mission center zone.", "category": "secondary", "state": "inactive", "visible": true, "progressText": "zone scouts", "progressValue": 0}
   ],
   "triggers": [
     {"id": 1, "once": true, "condition": {"type": "TickReached", "tick": 1}, "actions": [

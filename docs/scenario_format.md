@@ -154,3 +154,8 @@ Reference scenario: `scenarios/theater_operations_test.json`.
   - `strategicAlertLevel`, `deterrencePosture` (`RESTRAINED|NO_FIRST_USE|FLEXIBLE_RESPONSE|MASSIVE_RETALIATION|LAUNCH_ON_WARNING`)
   - `launchWarningActive`, `recentStrategicUseTick`, `retaliationCapability`, `secondStrikeCapability`
 - `strategicStrikes[]` now also supports `phase`, `interceptionResult`, `targetTeam`, `launchSystemCount`, `warningIssued`, `retaliationLaunch`, `secondStrikeLaunch`.
+
+## Mission presentation metadata
+`mission` now also supports: `subtitle`, `location`, `debrief`, `factionSummary`, `carryoverSummary`, `briefingPortraitId`, `debriefPortraitId`, `missionImageId`, `factionIconId`, `scenarioTags[]`, `objectiveSummary[]`, and `messages[]`.
+
+`messages[]` entry fields: `id`, `title`, `body`, `category`, optional `speaker`, `faction`, `portraitId`, `iconId`, `imageId`, `style`, `priority`, `durationTicks`, `sticky`.
