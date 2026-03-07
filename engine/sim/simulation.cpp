@@ -1933,8 +1933,16 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   return id;
 }
 
+uint16_t guardian_default_owner(const World& w, const GuardianDefinition& def) {
+  if (w.players.empty()) return 0;
+  if (def.joinMode == GuardianJoinMode::NeverJoin || def.behaviorMode == GuardianBehaviorMode::HostileEncounter) {
+    return static_cast<uint16_t>(w.players.size() > 1 ? 1 : 0);
+  }
+  return 0;
+}
+
 uint32_t spawn_guardian_unit(World& w, GuardianSiteInstance& site, const GuardianDefinition& def) {
-  const uint16_t owner = site.owner == UINT16_MAX ? 0 : site.owner;
+  const uint16_t owner = site.owner == UINT16_MAX ? guardian_default_owner(w, def) : site.owner;
   const uint32_t uid = spawn_unit(w, owner, UnitType::Siege, site.pos + glm::vec2{0.5f, 0.0f});
   for (auto& u : w.units) {
     if (u.id != uid) continue;
@@ -1943,9 +1951,23 @@ uint32_t spawn_guardian_unit(World& w, GuardianSiteInstance& site, const Guardia
     u.range = def.unitRange;
     u.speed = def.unitSpeed;
     u.role = UnitRole::Siege;
-    u.preferredTargetRole = UnitRole::Building;
-    u.vsRoleMultiplierPermille = {1300,1600,1200,1200,1000,1900,1000,1000};
     u.definitionId = def.associatedUnitDefinitionId.empty() ? def.guardianId : def.associatedUnitDefinitionId;
+    if (def.guardianId == "kraken") {
+      u.role = UnitRole::Naval;
+      u.preferredTargetRole = UnitRole::Transport;
+      u.vsRoleMultiplierPermille = {900,900,900,900,900,1800,1700,1300};
+    } else if (def.guardianId == "sandworm") {
+      u.role = UnitRole::Cavalry;
+      u.preferredTargetRole = UnitRole::Worker;
+      u.vsRoleMultiplierPermille = {1000,1450,1100,1200,1000,1500,1000,1000};
+    } else if (def.guardianId == "forest_spirit") {
+      u.role = UnitRole::Ranged;
+      u.preferredTargetRole = UnitRole::Infantry;
+      u.vsRoleMultiplierPermille = {1150,1100,1100,1000,900,1000,1000,1000};
+    } else {
+      u.preferredTargetRole = UnitRole::Building;
+      u.vsRoleMultiplierPermille = {1300,1600,1200,1200,1000,1900,1000,1000};
+    }
     break;
   }
   return uid;
@@ -1971,14 +1993,20 @@ bool activate_guardian_site(World& world, uint32_t siteInstanceId) {
   auto& site = world.guardianSites[static_cast<size_t>(idx)];
   const GuardianDefinition* def = find_guardian_definition(world, site.guardianId);
   if (!def || site.spawned || site.oneShotUsed) return false;
+  if (site.owner == UINT16_MAX) site.owner = guardian_default_owner(world, *def);
   spawn_guardian_unit(world, site, *def);
   site.spawned = true;
   site.siteActive = false;
   site.siteDepleted = true;
   ++world.guardiansSpawned;
-  emit_event(world, GameplayEventType::GuardianJoined, site.owner, site.owner, site.instanceId, def->displayName + " has emerged");
-  if (def->joinMode == GuardianJoinMode::DiscovererControl && site.owner < world.players.size()) {
+  const bool allied = def->joinMode == GuardianJoinMode::DiscovererControl && site.owner < world.players.size();
+  if (allied) {
     ++world.guardiansJoined;
+    ++world.alliedGuardianEvents;
+    emit_event(world, GameplayEventType::GuardianJoined, site.owner, site.owner, site.instanceId, def->displayName + " joined player");
+  } else {
+    ++world.hostileGuardianEvents;
+    emit_event(world, GameplayEventType::GuardianDiscovered, site.owner, site.owner, site.instanceId, def->displayName + " awakened hostile");
   }
   return true;
 }
@@ -1991,7 +2019,8 @@ bool reveal_guardian_site(World& world, uint32_t siteInstanceId, uint16_t discov
   if (!def) return false;
   if (site.discovered) return true;
   site.discovered = true;
-  site.owner = discoverer;
+  if (def->joinMode == GuardianJoinMode::DiscovererControl) site.owner = discoverer;
+  else if (site.owner == UINT16_MAX) site.owner = guardian_default_owner(world, *def);
   ++world.guardiansDiscovered;
   emit_event(world, GameplayEventType::GuardianDiscovered, discoverer, discoverer, site.instanceId,
     "Mythic guardian discovered: " + def->displayName);
@@ -2502,6 +2531,8 @@ void apply_world_defaults(World& w) {
   w.guardiansSpawned = 0;
   w.guardiansJoined = 0;
   w.guardiansKilled = 0;
+  w.hostileGuardianEvents = 0;
+  w.alliedGuardianEvents = 0;
   w.roads.clear();
   w.tradeRoutes.clear();
   w.operations.clear();
@@ -2866,6 +2897,7 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
         s.scenarioPlaced = true;
         w.guardianSites.push_back(std::move(s));
       }
+      std::sort(w.guardianSites.begin(), w.guardianSites.end(), [](const GuardianSiteInstance& a, const GuardianSiteInstance& b){ return a.instanceId < b.instanceId; });
     }
     if (mg.contains("counters") && mg["counters"].is_object()) {
       const auto& c = mg["counters"];
@@ -2873,6 +2905,8 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
       w.guardiansSpawned = c.value("spawned", w.guardiansSpawned);
       w.guardiansJoined = c.value("joined", w.guardiansJoined);
       w.guardiansKilled = c.value("killed", w.guardiansKilled);
+      w.hostileGuardianEvents = c.value("hostile_events", w.hostileGuardianEvents);
+      w.alliedGuardianEvents = c.value("allied_events", w.alliedGuardianEvents);
     }
   }
   if (j.contains("placements")) {
@@ -3016,13 +3050,13 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
   j["guardianDefinitions"] = nlohmann::json::array();
   for (const auto& d : w.guardianDefinitions) j["guardianDefinitions"].push_back({{"guardian_id",d.guardianId},{"display_name",d.displayName},{"biome_requirement",(int)d.biomeRequirement},{"site_type",guardian_site_type_name(d.siteType)},{"spawn_mode",guardian_spawn_mode_name(d.spawnMode)},{"max_per_map",d.maxPerMap},{"unique",d.unique},{"discovery_mode",guardian_discovery_mode_name(d.discoveryMode)},{"behavior_mode",guardian_behavior_mode_name(d.behaviorMode)},{"join_mode",guardian_join_mode_name(d.joinMode)},{"associated_unit_definition",d.associatedUnitDefinitionId},{"reward_hook",d.rewardHook},{"effect_hook",d.effectHook},{"scenario_only",d.scenarioOnly},{"procedural",d.procedural},{"rarity_permille",d.rarityPermille},{"min_spacing_cells",d.minSpacingCells},{"discovery_radius",d.discoveryRadius},{"unit",{{"hp",d.unitHp},{"attack",d.unitAttack},{"range",d.unitRange},{"speed",d.unitSpeed}}}});
-  j["mythicGuardians"] = {{"sites", nlohmann::json::array()}, {"counters", {{"discovered",w.guardiansDiscovered},{"spawned",w.guardiansSpawned},{"joined",w.guardiansJoined},{"killed",w.guardiansKilled}}}};
+  j["mythicGuardians"] = {{"sites", nlohmann::json::array()}, {"counters", {{"discovered",w.guardiansDiscovered},{"spawned",w.guardiansSpawned},{"joined",w.guardiansJoined},{"killed",w.guardiansKilled},{"hostile_events",w.hostileGuardianEvents},{"allied_events",w.alliedGuardianEvents}}}};
   for (const auto& s : w.guardianSites) {
     j["mythicGuardians"]["sites"].push_back({
       {"instance_id", s.instanceId}, {"guardian_id", s.guardianId}, {"site_type", guardian_site_type_name(s.siteType)}, {"pos", {s.pos.x, s.pos.y}},
       {"region_id", s.regionId}, {"node_id", s.nodeId}, {"discovered", s.discovered}, {"alive", s.alive}, {"owner", s.owner},
       {"site_active", s.siteActive}, {"site_depleted", s.siteDepleted}, {"spawned", s.spawned}, {"behavior_state", s.behaviorState},
-      {"cooldown_ticks", s.cooldownTicks}, {"one_shot_used", s.oneShotUsed}
+      {"cooldown_ticks", s.cooldownTicks}, {"one_shot_used", s.oneShotUsed}, {"scenario_placed", s.scenarioPlaced}
     });
   }
   j["biomeMap"] = w.biomeMap;
@@ -3066,6 +3100,8 @@ void on_authoritative_state_loaded(World& w) {
   w.uiTrainMenu = false;
   w.uiResearchMenu = false;
   w.placementActive = false;
+  std::sort(w.guardianDefinitions.begin(), w.guardianDefinitions.end(), [](const GuardianDefinition& a, const GuardianDefinition& b){ return a.guardianId < b.guardianId; });
+  std::sort(w.guardianSites.begin(), w.guardianSites.end(), [](const GuardianSiteInstance& a, const GuardianSiteInstance& b){ return a.instanceId < b.instanceId; });
   if (w.mountainRegionByCell.empty()) rebuild_mountain_regions(w);
   if (w.deepDeposits.empty() || w.undergroundNodes.empty() || w.undergroundEdges.empty()) rebuild_mountain_deposits(w);
   update_underground_economy(w, 0.0f);
@@ -3438,6 +3474,8 @@ void tick_world(World& w, float dt) {
   gLastStats.guardiansSpawned = w.guardiansSpawned;
   gLastStats.guardiansJoined = w.guardiansJoined;
   gLastStats.guardiansKilled = w.guardiansKilled;
+  gLastStats.hostileGuardianEvents = w.hostileGuardianEvents;
+  gLastStats.alliedGuardianEvents = w.alliedGuardianEvents;
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -3736,12 +3774,13 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.mountainRegionCount); hash_u32(h, w.surfaceDepositCount); hash_u32(h, w.deepDepositCount);
   hash_u32(h, w.activeMineShafts); hash_u32(h, w.activeTunnels); hash_u32(h, w.undergroundDepots); hash_float(h, w.undergroundYield);
   hash_u32(h, w.guardiansDiscovered); hash_u32(h, w.guardiansSpawned); hash_u32(h, w.guardiansJoined); hash_u32(h, w.guardiansKilled);
+  hash_u32(h, w.hostileGuardianEvents); hash_u32(h, w.alliedGuardianEvents);
   for (const auto& s : w.guardianSites) {
     hash_u32(h, s.instanceId); hash_u32(h, (uint32_t)s.siteType); hash_u32(h, (uint32_t)s.guardianId.size());
     hash_float(h, s.pos.x); hash_float(h, s.pos.y); hash_u32(h, static_cast<uint32_t>(s.regionId + 1)); hash_u32(h, static_cast<uint32_t>(s.nodeId + 1));
     hash_u32(h, s.discovered ? 1u : 0u); hash_u32(h, s.alive ? 1u : 0u); hash_u32(h, s.owner == UINT16_MAX ? 0xFFFFu : s.owner);
     hash_u32(h, s.siteActive ? 1u : 0u); hash_u32(h, s.siteDepleted ? 1u : 0u); hash_u32(h, s.spawned ? 1u : 0u);
-    hash_u32(h, s.behaviorState); hash_u32(h, s.cooldownTicks); hash_u32(h, s.oneShotUsed ? 1u : 0u);
+    hash_u32(h, s.behaviorState); hash_u32(h, s.cooldownTicks); hash_u32(h, s.oneShotUsed ? 1u : 0u); hash_u32(h, s.scenarioPlaced ? 1u : 0u);
   }
   for (const auto& d : w.deepDeposits) { hash_u32(h, d.id); hash_float(h, d.remaining); hash_u32(h, d.owner); hash_u32(h, d.active?1u:0u); }
   for (const auto& e : w.undergroundEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.active?1u:0u); }

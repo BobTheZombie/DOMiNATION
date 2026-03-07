@@ -92,7 +92,7 @@ Optional root object:
   - `guardian_id` (string)
   - `site_type` (`yeti_lair`, `abyssal_trench`, `dune_nest`, `sacred_grove`, `frozen_cavern`)
   - `pos` ([x, y])
-  - optional runtime seed state (`discovered`, `alive`, `owner`, `site_active`, `site_depleted`, `spawned`, `behavior_state`, `cooldown_ticks`, `one_shot_used`)
-- `mythicGuardians.counters` (optional): `discovered`, `spawned`, `joined`, `killed`
+  - optional runtime seed state (`discovered`, `alive`, `owner`, `site_active`, `site_depleted`, `spawned`, `behavior_state`, `cooldown_ticks`, `one_shot_used`, `scenario_placed`)
+- `mythicGuardians.counters` (optional): `discovered`, `spawned`, `joined`, `killed`, `hostile_events`, `allied_events`
 
-See `scenarios/mythic_guardians_test.json` for an authored example.
+See `scenarios/mythic_guardians_test.json` and `scenarios/mythic_guardians_multi_test.json` for authored examples.

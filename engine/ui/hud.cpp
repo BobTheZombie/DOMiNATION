@@ -133,9 +133,13 @@ void draw_hud(SDL_Window* window,
       ImGui::Text("Supply: %s | Cargo: %zu", supply_name(u.supplyState), u.cargo.size());
       ImGui::Text("DefId: %s", u.definitionId.empty()?"(base)":u.definitionId.c_str());
       for (const auto& s : world.guardianSites) {
-        if (u.definitionId != s.guardianId || glm::length(u.pos - s.pos) > 8.0f) continue;
-        ImGui::Text("Mythic Guardian: %s", s.guardianId.c_str());
-        ImGui::Text("Site: %s", s.discovered ? "discovered" : "hidden");
+        if (u.definitionId != s.guardianId || glm::length(u.pos - s.pos) > 10.0f) continue;
+        ImGui::SeparatorText("Mythic Guardian");
+        ImGui::Text("Guardian type: %s", s.guardianId.c_str());
+        ImGui::Text("Site type: %u", static_cast<unsigned>(s.siteType));
+        ImGui::Text("Discovered: %s | Spawned: %s | Alive: %s", s.discovered ? "yes" : "no", s.spawned ? "yes" : "no", s.alive ? "yes" : "no");
+        const std::string ownerLabel = s.owner == UINT16_MAX ? std::string("none") : (std::string("P") + std::to_string(s.owner));
+        ImGui::Text("Owner: %s", ownerLabel.c_str());
         break;
       }
       break;

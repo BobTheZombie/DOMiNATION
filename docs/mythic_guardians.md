@@ -1,72 +1,30 @@
 # Mythic Guardians
 
-Mythic Guardians are a deterministic, authoritative world layer for legendary biome-tied encounters.
+Mythic Guardians are deterministic, authoritative biome encounters.
 
-## Data model
+## Implemented guardians
 
-- Content file: `content/mythic_guardians.json`
-- Definition fields:
-  - `guardian_id`, `display_name`
-  - `biome_requirement`, `site_type`
-  - `spawn_mode`, `max_per_map`, `unique`
-  - `discovery_mode`, `behavior_mode`, `join_mode`
-  - `associated_unit_definition`
-  - optional `reward_hook`, `effect_hook`
-  - `scenario_only`, `procedural`
-  - procedural tuning (`rarity_permille`, `min_spacing_cells`, `discovery_radius`)
-  - optional unit stats override (`hp`, `attack`, `range`, `speed`)
+- Snow Yeti: snow mountain lair, joins discoverer.
+- Kraken: deep-ocean trench hostile naval guardian.
+- Sandworm: desert dune nest hostile ambush guardian.
+- Forest Spirit: forest/jungle sacred grove conditional ally (discoverer control by default).
 
-Runtime authoritative site state:
-- `instanceId`, `guardianId`, `siteType`
-- `pos`, `regionId`, `nodeId`
-- `discovered`, `alive`, `owner`
-- `siteActive`, `siteDepleted`, `spawned`
-- `behaviorState`, `cooldownTicks`, `oneShotUsed`
+## Authoritative runtime state
 
-## Snow Yeti
+Serialized + hashed fields include guardian definitions, site instances, discovery/spawn/alive/owner/depletion/behavior flags, and counters:
 
-- `guardian_id`: `snow_yeti`
-- Unique per map.
-- Site: `yeti_lair` (and framework supports `frozen_cavern`).
-- Discovers by proximity and deterministic reveal paths.
-- Spawns on discovery and joins discoverer (`discoverer_control`).
-- Implemented as a strong, slow, high-HP melee/shock unit profile.
-- No respawn after death (`oneShotUsed` and depleted site).
+- `discovered`, `spawned`, `joined`, `killed`
+- `hostile_events`, `allied_events`
 
-## Scenario schema
+Runtime caches (visual-only/debug-only) are excluded from guardian authority.
 
-Scenarios can author mythic sites with:
+## Scenario fields
 
-```json
-"mythicGuardians": {
-  "sites": [
-    {
-      "instance_id": 1,
-      "guardian_id": "snow_yeti",
-      "site_type": "yeti_lair",
-      "pos": [38.0, 36.0],
-      "discovered": false,
-      "spawned": false
-    }
-  ],
-  "counters": {
-    "discovered": 0,
-    "spawned": 0,
-    "joined": 0,
-    "killed": 0
-  }
-}
-```
+`mythicGuardians.sites[]` supports `guardian_id`, `site_type`, `pos`, and optional runtime state including `scenario_placed`.
 
-## Determinism and authoritative state
+`mythicGuardians.counters` supports `discovered`, `spawned`, `joined`, `killed`, `hostile_events`, `allied_events`.
 
-Included in authoritative hash/save/load:
-- definition/runtime site data
-- discovery/spawn/owner/alive state
-- guardian counters (`discovered`, `spawned`, `joined`, `killed`)
-
-Non-authoritative:
-- presentation-only visuals and overlays.
+See: `scenarios/mythic_guardians_test.json`, `scenarios/mythic_guardians_multi_test.json`.
 
 ## Lua hooks
 
@@ -74,11 +32,13 @@ Non-authoritative:
 - `reveal_guardian_site(instanceId, discovererPlayer)`
 - `assign_guardian_owner(instanceId, player)`
 
-## Extension path
+## Deterministic validation commands
 
-Data stubs included for:
-- Kraken (`abyssal_trench`)
-- Sandworm (`dune_nest`)
-- Forest Spirit (`sacred_grove`)
-
-Add future guardians by content-first definitions plus optional behavior handling.
+- `./build/rts --headless --smoke --ticks 1800 --seed 1234 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_test.json --smoke --ticks 2200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 2400 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 1 --hash-only`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 4 --hash-only`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 8 --hash-only`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1200 --save /tmp/guardian_save.json --dump-hash`
+- `./build/rts --headless --load /tmp/guardian_save.json --smoke --ticks 2400 --dump-hash`
