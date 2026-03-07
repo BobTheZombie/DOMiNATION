@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "seed": 4242,
+  "mapWidth": 128,
+  "mapHeight": 128,
+  "players": [
+    {
+      "id": 0,
+      "isHuman": false,
+      "isCPU": true,
+      "team": 0,
+      "civilization": "mercantile"
+    },
+    {
+      "id": 1,
+      "isHuman": false,
+      "isCPU": true,
+      "team": 1,
+      "civilization": "militarist"
+    }
+  ],
+  "cities": [
+    {
+      "id": 1,
+      "team": 0,
+      "pos": [
+        18,
+        18
+      ],
+      "capital": true
+    },
+    {
+      "id": 2,
+      "team": 0,
+      "pos": [
+        42,
+        28
+      ],
+      "capital": false
+    },
+    {
+      "id": 3,
+      "team": 0,
+      "pos": [
+        58,
+        36
+      ],
+      "capital": false
+    },
+    {
+      "id": 4,
+      "team": 1,
+      "pos": [
+        94,
+        94
+      ],
+      "capital": true
+    }
+  ],
+  "buildings": [
+    {
+      "id": 1,
+      "team": 0,
+      "type": "CityCenter",
+      "pos": [
+        18,
+        18
+      ]
+    },
+    {
+      "id": 2,
+      "team": 0,
+      "type": "Market",
+      "pos": [
+        42,
+        28
+      ]
+    },
+    {
+      "id": 3,
+      "team": 0,
+      "type": "Mine",
+      "pos": [
+        58,
+        36
+      ]
+    },
+    {
+      "id": 4,
+      "team": 1,
+      "type": "CityCenter",
+      "pos": [
+        94,
+        94
+      ]
+    },
+    {
+      "id": 5,
+      "team": 1,
+      "type": "Market",
+      "pos": [
+        86,
+        90
+      ]
+    }
+  ],
+  "units": [
+    {
+      "team": 0,
+      "type": "Infantry",
+      "pos": [
+        61,
+        37
+      ]
+    },
+    {
+      "team": 0,
+      "type": "Infantry",
+      "pos": [
+        76,
+        76
+      ]
+    },
+    {
+      "team": 1,
+      "type": "Infantry",
+      "pos": [
+        78,
+        78
+      ]
+    },
+    {
+      "team": 1,
+      "type": "Infantry",
+      "pos": [
+        84,
+        84
+      ]
+    }
+  ],
+  "railNodes": [
+    {
+      "id": 1,
+      "owner": 0,
+      "type": "Station",
+      "tile": [
+        18,
+        18
+      ],
+      "networkId": 1,
+      "active": true
+    },
+    {
+      "id": 2,
+      "owner": 0,
+      "type": "Junction",
+      "tile": [
+        42,
+        28
+      ],
+      "networkId": 1,
+      "active": true
+    },
+    {
+      "id": 3,
+      "owner": 0,
+      "type": "Depot",
+      "tile": [
+        58,
+        36
+      ],
+      "networkId": 1,
+      "active": true
+    },
+    {
+      "id": 4,
+      "owner": 1,
+      "type": "Station",
+      "tile": [
+        94,
+        94
+      ],
+      "networkId": 2,
+      "active": true
+    }
+  ],
+  "railEdges": [
+    {
+      "id": 1,
+      "owner": 0,
+      "aNode": 1,
+      "bNode": 2,
+      "quality": 1,
+      "bridge": false,
+      "tunnel": false,
+      "disrupted": false
+    },
+    {
+      "id": 2,
+      "owner": 0,
+      "aNode": 2,
+      "bNode": 3,
+      "quality": 1,
+      "bridge": true,
+      "tunnel": false,
+      "disrupted": true
+    }
+  ],
+  "railNetworks": [
+    {
+      "id": 1,
+      "owner": 0,
+      "nodeCount": 3,
+      "edgeCount": 2,
+      "active": true
+    },
+    {
+      "id": 2,
+      "owner": 1,
+      "nodeCount": 1,
+      "edgeCount": 0,
+      "active": false
+    }
+  ],
+  "trains": [
+    {
+      "id": 1,
+      "owner": 0,
+      "type": "Supply",
+      "state": 0,
+      "currentNode": 1,
+      "destinationNode": 3,
+      "currentEdge": 1,
+      "routeCursor": 0,
+      "segmentProgress": 0.35,
+      "speed": 0.05,
+      "cargo": 80.0,
+      "capacity": 120.0,
+      "cargoType": "Supply",
+      "lastRouteTick": 0,
+      "route": [
+        {
+          "edgeId": 1,
+          "toNode": 2
+        },
+        {
+          "edgeId": 2,
+          "toNode": 3
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "owner": 0,
+      "type": "Freight",
+      "state": 2,
+      "currentNode": 2,
+      "destinationNode": 1,
+      "currentEdge": 2,
+      "routeCursor": 1,
+      "segmentProgress": 0.1,
+      "speed": 0.045,
+      "cargo": 110.0,
+      "capacity": 160.0,
+      "cargoType": "Freight",
+      "lastRouteTick": 0,
+      "route": [
+        {
+          "edgeId": 2,
+          "toNode": 3
+        },
+        {
+          "edgeId": 1,
+          "toNode": 1
+        }
+      ]
+    }
+  ],
+  "mythicGuardians": {
+    "sites": [
+      {
+        "instance_id": 1,
+        "guardian_id": "snow_yeti",
+        "site_type": "yeti_lair",
+        "pos": [
+          20,
+          20
+        ],
+        "region_id": -1,
+        "node_id": -1,
+        "discovered": true,
+        "alive": true,
+        "owner": 0,
+        "site_active": true,
+        "site_depleted": false,
+        "spawned": true,
+        "behavior_state": 0,
+        "cooldown_ticks": 0,
+        "one_shot_used": false
+      }
+    ],
+    "counters": {
+      "discovered": 1,
+      "spawned": 1,
+      "joined": 0,
+      "killed": 0,
+      "hostile_events": 0,
+      "allied_events": 0
+    }
+  }
+}

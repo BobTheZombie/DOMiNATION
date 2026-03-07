@@ -1,5 +1,6 @@
 #include "game/ai/simple_ai.h"
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <glm/geometric.hpp>
 
@@ -107,6 +108,17 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     }
   };
 
+  auto maybeBuildRail = [&](const glm::vec2& p, dom::sim::RailNodeType type) {
+    uint32_t nid = world.railNodes.empty() ? 1u : world.railNodes.back().id + 1;
+    world.railNodes.push_back({nid, team, type, {(int)std::round(p.x), (int)std::round(p.y)}, 0u, true});
+    for (auto it = world.railNodes.rbegin() + 1; it != world.railNodes.rend(); ++it) {
+      if (it->owner != team) continue;
+      uint32_t eid = world.railEdges.empty() ? 1u : world.railEdges.back().id + 1;
+      world.railEdges.push_back({eid, team, it->id, nid, 1, false, false, false});
+      break;
+    }
+  };
+
   if (world.players[team].popCap - world.players[team].popUsed <= 2) maybeBuild(dom::sim::BuildingType::House, {10, 5});
   glm::vec2 mountainMinePos{};
   const bool hasMountainSpot = find_mountain_mine_spot(world, team, mountainMinePos);
@@ -130,6 +142,28 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     maybeBuild(dom::sim::BuildingType::Farm, {6, 4});
   }
   if (civ.scienceBias * civ.aiResearchPriority > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
+
+  if (world.players[team].age >= dom::sim::Age::Industrial && world.tick % 60 == 0) {
+    const bool economyRail = civ.economyBias >= 1.1f || civ.logisticsBias >= 1.1f;
+    const bool militaryRail = civ.militaryBias >= 1.1f || civ.aggression >= 1.05f;
+    if (economyRail) {
+      for (const auto& b : world.buildings) {
+        if (b.team != team || (b.type != dom::sim::BuildingType::Mine && b.type != dom::sim::BuildingType::Market)) continue;
+        maybeBuildRail(b.pos, b.type == dom::sim::BuildingType::Mine ? dom::sim::RailNodeType::Depot : dom::sim::RailNodeType::Junction);
+        break;
+      }
+    }
+    if (militaryRail) maybeBuildRail(rally, dom::sim::RailNodeType::Station);
+    // attack enemy chokepoints by disrupting first enemy edge when aggressive
+    if (civ.aggression >= 1.1f) {
+      for (auto& e : world.railEdges) if (e.owner != team && !dom::sim::players_allied(world, e.owner, team)) { e.disrupted = true; break; }
+    }
+    // defend own rail by clearing one disruption
+    if (civ.defense >= 1.05f) {
+      for (auto& e : world.railEdges) if (e.owner == team && e.disrupted) { e.disrupted = false; break; }
+    }
+  }
+
   maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
   if (civ.scienceBias * civ.aiReconPriority >= 1.0f || civ.defense >= 1.0f) maybeBuild(dom::sim::BuildingType::RadarTower, {9, 10});
   if (civ.militaryBias * civ.aiAirPriority >= 1.0f) maybeBuild(dom::sim::BuildingType::Airbase, {16, 10});

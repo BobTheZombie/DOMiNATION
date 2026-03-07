@@ -10,6 +10,9 @@ struct DebugVisualState {
   bool biomeMap{false};
   bool territoryControl{true};
   bool supplyRoutes{false};
+  bool railNetwork{false};
+  bool railSupply{false};
+  bool railFreight{false};
   bool operationTargets{false};
   bool aiState{false};
 };

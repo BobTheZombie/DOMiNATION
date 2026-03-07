@@ -107,6 +107,9 @@ enum class StrikeType : uint8_t { TacticalMissile, StrategicMissile, StrategicBo
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
 enum class TerrainClass : uint8_t { Land, ShallowWater, DeepWater };
+enum class RailNodeType : uint8_t { Junction, Station, Depot };
+enum class TrainType : uint8_t { Supply, Freight, Armored };
+enum class TrainState : uint8_t { Active, Inactive, Delayed };
 enum class BiomeType : uint8_t { TemperateGrassland, Steppe, Forest, Desert, Mediterranean, Jungle, Tundra, Arctic, Coast, Wetlands, Mountain, SnowMountain, Count };
 enum class WorldPreset : uint8_t { Pangaea, Continents, Archipelago, InlandSea, MountainWorld };
 enum class MineralType : uint8_t { Gold, Iron, Silver, Copper, Stone, Count };
@@ -148,6 +151,11 @@ struct Unit { uint32_t id{}; uint16_t team{}; UnitType type{UnitType::Infantry};
 struct RoadSegment { uint32_t id{}; uint16_t owner{UINT16_MAX}; glm::ivec2 a{}; glm::ivec2 b{}; uint8_t quality{1}; };
 struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32_t toCity{0}; bool active{false}; float efficiency{0.0f}; float wealthPerTick{0.0f}; uint32_t lastEvalTick{0}; };
 struct OperationOrder { uint32_t id{}; uint16_t team{}; OperationType type{OperationType::RallyAndPush}; glm::vec2 target{}; uint32_t assignedTick{0}; bool active{true}; };
+struct RailNode { uint32_t id{0}; uint16_t owner{UINT16_MAX}; RailNodeType type{RailNodeType::Junction}; glm::ivec2 tile{}; uint32_t networkId{0}; bool active{true}; };
+struct RailEdge { uint32_t id{0}; uint16_t owner{UINT16_MAX}; uint32_t aNode{0}; uint32_t bNode{0}; uint8_t quality{1}; bool bridge{false}; bool tunnel{false}; bool disrupted{false}; };
+struct RailNetwork { uint32_t id{0}; uint16_t owner{UINT16_MAX}; uint32_t nodeCount{0}; uint32_t edgeCount{0}; bool active{false}; };
+struct TrainRouteStep { uint32_t edgeId{0}; uint32_t toNode{0}; };
+struct Train { uint32_t id{0}; uint16_t owner{UINT16_MAX}; TrainType type{TrainType::Supply}; TrainState state{TrainState::Inactive}; uint32_t currentNode{0}; uint32_t destinationNode{0}; uint32_t currentEdge{0}; uint32_t routeCursor{0}; float segmentProgress{0.0f}; float speed{0.03f}; float cargo{0.0f}; float capacity{100.0f}; std::string cargoType{"Supply"}; uint32_t lastRouteTick{0}; std::vector<TrainRouteStep> route; };
 struct DiplomacyTreaty { bool tradeAgreement{false}; bool openBorders{false}; bool alliance{false}; bool nonAggression{false}; uint32_t lastChangedTick{0}; };
 struct EspionageOp { uint32_t id{0}; uint16_t actor{0}; uint16_t target{0}; EspionageOpType type{EspionageOpType::ReconCity}; uint32_t startTick{0}; uint32_t durationTicks{0}; EspionageOpState state{EspionageOpState::Active}; int effectStrength{0}; };
 struct AirUnit { uint32_t id{0}; uint16_t team{0}; AirUnitClass cls{AirUnitClass::Fighter}; AirMissionState state{AirMissionState::Airborne}; glm::vec2 pos{}; glm::vec2 missionTarget{}; float hp{100.0f}; float speed{6.0f}; uint32_t cooldownTicks{0}; bool missionPerformed{false}; };
@@ -282,6 +290,14 @@ struct SimulationStats {
   uint32_t guardiansKilled{0};
   uint32_t hostileGuardianEvents{0};
   uint32_t alliedGuardianEvents{0};
+  uint32_t railNodeCount{0};
+  uint32_t railEdgeCount{0};
+  uint32_t activeRailNetworks{0};
+  uint32_t activeTrains{0};
+  uint32_t activeSupplyTrains{0};
+  uint32_t activeFreightTrains{0};
+  float railThroughput{0.0f};
+  uint32_t disruptedRailRoutes{0};
 };
 
 struct ChunkCoord {
@@ -320,6 +336,7 @@ struct World {
   std::vector<uint8_t> fogMaskByPlayer;
   std::vector<Unit> units; std::vector<City> cities; std::vector<Building> buildings; std::vector<ResourceNode> resourceNodes;
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
+  std::vector<RailNode> railNodes; std::vector<RailEdge> railEdges; std::vector<RailNetwork> railNetworks; std::vector<Train> trains;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
   std::vector<EspionageOp> espionageOps; std::vector<StrategicPosture> strategicPosture;
   std::vector<AirUnit> airUnits;
@@ -358,6 +375,14 @@ struct World {
   uint32_t guardiansKilled{0};
   uint32_t hostileGuardianEvents{0};
   uint32_t alliedGuardianEvents{0};
+  uint32_t railNodeCount{0};
+  uint32_t railEdgeCount{0};
+  uint32_t activeRailNetworks{0};
+  uint32_t activeTrains{0};
+  uint32_t activeSupplyTrains{0};
+  uint32_t activeFreightTrains{0};
+  float railThroughput{0.0f};
+  uint32_t disruptedRailRoutes{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 

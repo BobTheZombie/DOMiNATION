@@ -291,3 +291,21 @@ Reference docs: `docs/mythic_guardians.md`.
   - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 8 --hash-only`
   - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1200 --save /tmp/guardian_save.json --dump-hash`
   - `./build/rts --headless --load /tmp/guardian_save.json --smoke --ticks 2400 --dump-hash`
+
+
+## Industrial rail logistics (deterministic)
+
+This build includes authoritative railroad logistics:
+- deterministic rail nodes/edges/networks
+- deterministic supply/freight train state
+- rail throughput/disruption counters in PERF output
+- scenario support: `railNodes`, `railEdges`, `railNetworks`, `trains`
+
+Smoke commands:
+- `./build/rts --headless --smoke --ticks 2200 --seed 1234 --dump-hash`
+- `./build/rts --headless --scenario scenarios/rail_logistics_test.json --smoke --ticks 2600 --dump-hash`
+- `./build/rts --headless --scenario scenarios/rail_logistics_test.json --threads 1 --hash-only`
+- `./build/rts --headless --scenario scenarios/rail_logistics_test.json --threads 4 --hash-only`
+- `./build/rts --headless --scenario scenarios/rail_logistics_test.json --threads 8 --hash-only`
+- `./build/rts --headless --scenario scenarios/rail_logistics_test.json --smoke --ticks 1400 --save /tmp/rail_save.json --dump-hash`
+- `./build/rts --headless --load /tmp/rail_save.json --smoke --ticks 2600 --dump-hash`

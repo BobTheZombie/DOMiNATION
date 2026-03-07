@@ -109,3 +109,14 @@ Scenario files now support and/or emit:
 - `mythicCandidates[]` (`siteType`, `cell`, `score`)
 
 `seed + map size + worldPreset` remain the deterministic source of truth. Overrides are optional for authored/scenario-locked maps.
+
+
+## Rail logistics fields
+
+Optional fields for industrial logistics scenarios:
+- `railNodes`: `{id, owner, type: Junction|Station|Depot, tile:[x,y], networkId, active}`
+- `railEdges`: `{id, owner, aNode, bNode, quality, bridge, tunnel, disrupted}`
+- `railNetworks`: `{id, owner, nodeCount, edgeCount, active}`
+- `trains`: `{id, owner, type: Supply|Freight|Armored, state, currentNode, destinationNode, currentEdge, routeCursor, segmentProgress, speed, cargo, capacity, cargoType, lastRouteTick, route:[{edgeId,toNode}]}`
+
+Reference scenario: `scenarios/rail_logistics_test.json`.

@@ -66,3 +66,13 @@ Stylized RTS game art should prioritize readability at strategic zoom levels.
 ## Mountain rendering updates
 - Added snow-capped mountain biome palette (`snow_capped_mountains`) for strategic visibility.
 - Minimap now reflects snow mountain biome color separation.
+
+
+## Rail rendering hooks
+
+Renderer draws:
+- rail segments distinct from roads
+- train markers (supply/freight/armored colors) on nodes/edges
+- debug panel counters for rail nodes/edges/networks/trains/throughput/disruption
+
+This is intentionally minimal and deterministic-authoritative state driven.
