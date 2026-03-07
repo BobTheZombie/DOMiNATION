@@ -55,6 +55,14 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
     }
   }
   ImGui::End();
+
+  if (ImGui::Begin("Mythic Guardians")) {
+    ImGui::Text("sites=%zu discovered=%u spawned=%u joined=%u killed=%u", world.guardianSites.size(), world.guardiansDiscovered, world.guardiansSpawned, world.guardiansJoined, world.guardiansKilled);
+    for (const auto& s : world.guardianSites) {
+      ImGui::BulletText("id=%u guardian=%s discovered=%d spawned=%d owner=%u alive=%d depleted=%d", s.instanceId, s.guardianId.c_str(), s.discovered?1:0, s.spawned?1:0, s.owner, s.alive?1:0, s.siteDepleted?1:0);
+    }
+  }
+  ImGui::End();
 #endif
 }
 } // namespace dom::debug

@@ -187,6 +187,15 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   std::sort(army.begin(), army.end());
   if (army.empty()) return;
 
+  for (const auto& s : world.guardianSites) {
+    if (s.discovered || !s.siteActive || s.siteDepleted) continue;
+    if (glm::length(s.pos - base) < 45.0f) {
+      dom::sim::issue_move(world, team, army, s.pos);
+      ++world.aiDecisionCount;
+      return;
+    }
+  }
+
   float tensionFactor = std::clamp(1.0f - world.worldTension / 180.0f, 0.5f, 1.2f);
   const float expansionTiming = std::max(0.7f, civ.aiExpansionTiming);
   int attackThreshold = std::clamp((int)std::round((((gAttackEarly ? 5.0f : 8.0f) * expansionTiming) / std::max(0.7f, civ.aggression)) * tensionFactor), 3, 12);

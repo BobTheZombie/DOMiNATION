@@ -76,7 +76,10 @@ void push_gameplay_notifications(dom::sim::World& world, UiState& uiState) {
                    ev.type == dom::sim::GameplayEventType::AllianceFormed ||
                    ev.type == dom::sim::GameplayEventType::AllianceBroken ||
                    ev.type == dom::sim::GameplayEventType::TradeAgreementCreated ||
-                   ev.type == dom::sim::GameplayEventType::PostureChanged;
+                   ev.type == dom::sim::GameplayEventType::PostureChanged ||
+                   ev.type == dom::sim::GameplayEventType::GuardianDiscovered ||
+                   ev.type == dom::sim::GameplayEventType::GuardianJoined ||
+                   ev.type == dom::sim::GameplayEventType::GuardianKilled;
     if (!include) continue;
     uiState.notifications.push_back({ev.text.empty() ? "Strategic event updated" : ev.text, world.tick + 900u});
   }
@@ -129,6 +132,12 @@ void draw_hud(SDL_Window* window,
       ImGui::Text("Health: %.0f | Role: %s | Owner: P%u", u.hp, role_name(u.role), u.team);
       ImGui::Text("Supply: %s | Cargo: %zu", supply_name(u.supplyState), u.cargo.size());
       ImGui::Text("DefId: %s", u.definitionId.empty()?"(base)":u.definitionId.c_str());
+      for (const auto& s : world.guardianSites) {
+        if (u.definitionId != s.guardianId || glm::length(u.pos - s.pos) > 8.0f) continue;
+        ImGui::Text("Mythic Guardian: %s", s.guardianId.c_str());
+        ImGui::Text("Site: %s", s.discovered ? "discovered" : "hidden");
+        break;
+      }
       break;
     }
     if (!found) {

@@ -256,3 +256,15 @@ Smoke scenario: `scenarios/campaign_test.json` with optional script `scripts/cam
   - `./build/rts --headless --scenario scenarios/civ_test.json --threads 8 --hash-only`
 
 - Mountain extraction + underground tunnel network layer (deterministic node/edge model, snow-capped mountain generation, deep deposits).
+
+## Mythic Guardians (new)
+
+The engine now includes a reusable deterministic Mythic Guardian layer:
+
+- Data-driven definitions in `content/mythic_guardians.json`
+- Deterministic procedural + scenario-authored guardian sites
+- First full guardian: **Snow Yeti** (unique legendary shock unit)
+- Save/load/replay-authoritative guardian state
+- Basic AI/UI/editor/scenario integration
+
+Reference docs: `docs/mythic_guardians.md`.

@@ -12,6 +12,7 @@ struct ScenarioEditorState {
   int selectedBiome{0};
   float terrainDelta{0.1f};
   int brushRadius{2};
+  int selectedGuardianDef{0};
   char saveName[96]{"editor_scenario.json"};
 };
 

@@ -214,3 +214,9 @@ Civilization identity is data-driven from `content/civilizations.json` and inclu
 - Authoritative deterministic mountain regions (`mountainRegions`) and cell-region map.
 - Two-layer deposits: `surfaceDeposits` and `deepDeposits`.
 - Underground logistics graph (`undergroundNodes`, `undergroundEdges`) is serialized and replay-safe.
+
+## Mythic Guardians world layer
+
+A new deterministic authoritative layer tracks mythic guardian definitions and runtime site instances. Definitions are loaded from `content/mythic_guardians.json`, procedural sites are generated deterministically from seed + biome constraints, and scenario-authored sites are supported via `mythicGuardians.sites`.
+
+Authoritative state includes discovery/spawn/owner/alive/depleted flags and guardian counters (`GUARDIAN_SITE_COUNT`, `GUARDIANS_DISCOVERED`, `GUARDIANS_SPAWNED`, `GUARDIANS_JOINED`, `GUARDIANS_KILLED`) used by hash/save/load/perf.
