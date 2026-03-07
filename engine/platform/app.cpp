@@ -292,6 +292,10 @@ struct CampaignMissionEntry {
   std::string briefing;
   std::string debrief;
   std::string introImage;
+  std::string locationLabel;
+  std::string portraitId;
+  std::string factionIconId;
+  std::vector<std::string> tags;
   std::vector<std::string> expectedOutcomes;
   std::vector<std::string> prerequisites;
   std::vector<std::pair<std::string, std::string>> nextByOutcome;
@@ -363,6 +367,10 @@ bool parse_campaign_file(const std::string& path, CampaignDefinition& out, std::
     e.briefing = m.value("briefing", std::string(""));
     e.debrief = m.value("debrief", std::string(""));
     e.introImage = m.value("intro_image", std::string(""));
+    e.locationLabel = m.value("location", std::string(""));
+    e.portraitId = m.value("portrait", std::string(""));
+    e.factionIconId = m.value("faction_icon", std::string(""));
+    if (m.contains("tags")) e.tags = m.at("tags").get<std::vector<std::string>>();
     if (m.contains("expected_outcomes")) e.expectedOutcomes = m.at("expected_outcomes").get<std::vector<std::string>>();
     if (m.contains("prerequisites")) e.prerequisites = m.at("prerequisites").get<std::vector<std::string>>();
     if (m.contains("next")) for (auto it = m["next"].begin(); it != m["next"].end(); ++it) e.nextByOutcome.push_back({it.key(), it.value().get<std::string>()});
@@ -551,7 +559,14 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["guardiansDiscovered"] = w.guardiansDiscovered; j["guardiansSpawned"] = w.guardiansSpawned; j["guardiansJoined"] = w.guardiansJoined; j["guardiansKilled"] = w.guardiansKilled; j["hostileGuardianEvents"] = w.hostileGuardianEvents; j["alliedGuardianEvents"] = w.alliedGuardianEvents;
   j["objectiveLog"] = nlohmann::json::array();
   for (const auto& l : w.objectiveLog) j["objectiveLog"].push_back({{"tick", l.tick}, {"text", l.text}});
-  j["mission"] = {{"title", w.mission.title}, {"briefing", w.mission.briefing}, {"introMessages", w.mission.introMessages}, {"victoryOutcome", w.mission.victoryOutcomeTag}, {"defeatOutcome", w.mission.defeatOutcomeTag}, {"partialOutcome", w.mission.partialOutcomeTag}, {"branchKey", w.mission.branchKey}, {"luaScript", w.mission.luaScriptFile}, {"luaInline", w.mission.luaScriptInline}};
+  j["mission"] = {{"title", w.mission.title}, {"subtitle", w.mission.subtitle}, {"location", w.mission.locationLabel}, {"briefing", w.mission.briefing}, {"debrief", w.mission.debrief}, {"factionSummary", w.mission.factionSummary}, {"carryoverSummary", w.mission.carryoverSummary}, {"briefingPortraitId", w.mission.briefingPortraitId}, {"debriefPortraitId", w.mission.debriefPortraitId}, {"missionImageId", w.mission.missionImageId}, {"factionIconId", w.mission.factionIconId}, {"scenarioTags", w.mission.scenarioTags}, {"objectiveSummary", w.mission.objectiveSummary}, {"introMessages", w.mission.introMessages}, {"victoryOutcome", w.mission.victoryOutcomeTag}, {"defeatOutcome", w.mission.defeatOutcomeTag}, {"partialOutcome", w.mission.partialOutcomeTag}, {"branchKey", w.mission.branchKey}, {"luaScript", w.mission.luaScriptFile}, {"luaInline", w.mission.luaScriptInline}};
+  j["mission"]["messages"] = nlohmann::json::array();
+  for (const auto& md : w.mission.messageDefinitions) j["mission"]["messages"].push_back({{"id", md.messageId}, {"title", md.title}, {"body", md.body}, {"category", md.category}, {"speaker", md.speaker}, {"faction", md.faction}, {"portraitId", md.portraitId}, {"iconId", md.iconId}, {"imageId", md.imageId}, {"style", md.styleTag}, {"priority", md.priority}, {"durationTicks", md.durationTicks}, {"sticky", md.sticky}});
+  j["missionMessages"] = nlohmann::json::array();
+  for (const auto& mm : w.missionMessages) j["missionMessages"].push_back({{"sequence", mm.sequence}, {"tick", mm.tick}, {"messageId", mm.messageId}, {"title", mm.title}, {"body", mm.body}, {"category", mm.category}, {"speaker", mm.speaker}, {"faction", mm.faction}, {"portraitId", mm.portraitId}, {"iconId", mm.iconId}, {"imageId", mm.imageId}, {"style", mm.styleTag}, {"priority", mm.priority}, {"durationTicks", mm.durationTicks}, {"sticky", mm.sticky}});
+  j["objectiveDebugLog"] = nlohmann::json::array();
+  for (const auto& od : w.objectiveDebugLog) j["objectiveDebugLog"].push_back({{"tick", od.tick}, {"objectiveId", od.objectiveId}, {"from", (int)od.from}, {"to", (int)od.to}, {"triggerId", od.triggerId}, {"actionType", od.actionType}, {"reason", od.reason}});
+  j["nextMissionMessageSequence"] = w.nextMissionMessageSequence;
   j["missionRuntime"] = {{"briefingShown", w.missionRuntime.briefingShown}, {"status", (int)w.missionRuntime.status}, {"resultTag", w.missionRuntime.resultTag}, {"activeObjectives", w.missionRuntime.activeObjectives}, {"luaHookLog", w.missionRuntime.luaHookLog}, {"firedTriggerCount", w.missionRuntime.firedTriggerCount}, {"scriptedActionCount", w.missionRuntime.scriptedActionCount}};
   j["campaign"] = {{"campaignId", w.campaign.campaignId}, {"playerCivilizationId", w.campaign.playerCivilizationId}, {"unlockedAge", w.campaign.unlockedAge}, {"resources", w.campaign.resources}, {"veteranUnitIds", w.campaign.veteranUnitIds}, {"discoveredGuardians", w.campaign.discoveredGuardians}, {"worldTension", w.campaign.worldTension}, {"unlockedRewards", w.campaign.unlockedRewards}, {"previousMissionResult", w.campaign.previousMissionResult}, {"pendingBranchKey", w.campaign.pendingBranchKey}};
   nlohmann::json cflags=nlohmann::json::object(); for (const auto& kv : w.campaign.flags) cflags[kv.first]=kv.second; j["campaign"]["flags"] = cflags;
@@ -749,7 +764,12 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.guardiansDiscovered = j.value("guardiansDiscovered",0u); w.guardiansSpawned = j.value("guardiansSpawned",0u); w.guardiansJoined = j.value("guardiansJoined",0u); w.guardiansKilled = j.value("guardiansKilled",0u); w.hostileGuardianEvents = j.value("hostileGuardianEvents",0u); w.alliedGuardianEvents = j.value("alliedGuardianEvents",0u);
   w.objectiveLog.clear();
   if (j.contains("objectiveLog")) for (const auto& jl : j.at("objectiveLog")) { w.objectiveLog.push_back({jl.value("tick", 0u), jl.value("text", "")}); }
-  if (j.contains("mission")) { const auto& m = j.at("mission"); w.mission.title = m.value("title", ""); w.mission.briefing = m.value("briefing", ""); if (m.contains("introMessages")) w.mission.introMessages = m.at("introMessages").get<std::vector<std::string>>(); w.mission.victoryOutcomeTag = m.value("victoryOutcome", "victory"); w.mission.defeatOutcomeTag = m.value("defeatOutcome", "defeat"); w.mission.partialOutcomeTag = m.value("partialOutcome", "partial_victory"); w.mission.branchKey = m.value("branchKey", ""); w.mission.luaScriptFile = m.value("luaScript", ""); w.mission.luaScriptInline = m.value("luaInline", ""); }
+  if (j.contains("mission")) { const auto& m = j.at("mission"); w.mission.title = m.value("title", ""); w.mission.subtitle = m.value("subtitle", ""); w.mission.locationLabel = m.value("location", ""); w.mission.briefing = m.value("briefing", ""); w.mission.debrief = m.value("debrief", ""); w.mission.factionSummary = m.value("factionSummary", ""); w.mission.carryoverSummary = m.value("carryoverSummary", ""); w.mission.briefingPortraitId = m.value("briefingPortraitId", "ui_portrait_default"); w.mission.debriefPortraitId = m.value("debriefPortraitId", "ui_portrait_default"); w.mission.missionImageId = m.value("missionImageId", "ui_mission_default"); w.mission.factionIconId = m.value("factionIconId", "ui_faction_default"); if (m.contains("scenarioTags")) w.mission.scenarioTags = m.at("scenarioTags").get<std::vector<std::string>>(); if (m.contains("objectiveSummary")) w.mission.objectiveSummary = m.at("objectiveSummary").get<std::vector<std::string>>(); if (m.contains("introMessages")) w.mission.introMessages = m.at("introMessages").get<std::vector<std::string>>(); if (m.contains("messages")) { w.mission.messageDefinitions.clear(); for (const auto& md : m.at("messages")) { dom::sim::MissionMessageDefinition def{}; def.messageId = md.value("id", std::string("")); def.title = md.value("title", std::string("Mission Update")); def.body = md.value("body", std::string("")); def.category = md.value("category", std::string("intelligence")); def.speaker = md.value("speaker", std::string("")); def.faction = md.value("faction", std::string("")); def.portraitId = md.value("portraitId", std::string("ui_portrait_default")); def.iconId = md.value("iconId", std::string("ui_icon_event")); def.imageId = md.value("imageId", std::string("ui_mission_default")); def.styleTag = md.value("style", std::string("default")); def.priority = md.value("priority", 0); def.durationTicks = md.value("durationTicks", 600u); def.sticky = md.value("sticky", false); w.mission.messageDefinitions.push_back(std::move(def)); } } w.mission.victoryOutcomeTag = m.value("victoryOutcome", "victory"); w.mission.defeatOutcomeTag = m.value("defeatOutcome", "defeat"); w.mission.partialOutcomeTag = m.value("partialOutcome", "partial_victory"); w.mission.branchKey = m.value("branchKey", ""); w.mission.luaScriptFile = m.value("luaScript", ""); w.mission.luaScriptInline = m.value("luaInline", ""); }
+  w.missionMessages.clear();
+  if (j.contains("missionMessages")) for (const auto& mm : j.at("missionMessages")) { dom::sim::MissionMessageRuntime m{}; m.sequence = mm.value("sequence", 0ull); m.tick = mm.value("tick", 0u); m.messageId = mm.value("messageId", ""); m.title = mm.value("title", ""); m.body = mm.value("body", ""); m.category = mm.value("category", "intelligence"); m.speaker = mm.value("speaker", ""); m.faction = mm.value("faction", ""); m.portraitId = mm.value("portraitId", "ui_portrait_default"); m.iconId = mm.value("iconId", "ui_icon_event"); m.imageId = mm.value("imageId", "ui_mission_default"); m.styleTag = mm.value("style", "default"); m.priority = mm.value("priority", 0); m.durationTicks = mm.value("durationTicks", 600u); m.sticky = mm.value("sticky", false); w.missionMessages.push_back(std::move(m)); }
+  w.objectiveDebugLog.clear();
+  if (j.contains("objectiveDebugLog")) for (const auto& od : j.at("objectiveDebugLog")) { dom::sim::ObjectiveTransitionDebugEntry e{}; e.tick = od.value("tick", 0u); e.objectiveId = od.value("objectiveId", 0u); e.from = static_cast<dom::sim::ObjectiveState>(od.value("from", 0)); e.to = static_cast<dom::sim::ObjectiveState>(od.value("to", 0)); e.triggerId = od.value("triggerId", 0u); e.actionType = od.value("actionType", ""); e.reason = od.value("reason", ""); w.objectiveDebugLog.push_back(std::move(e)); }
+  w.nextMissionMessageSequence = j.value("nextMissionMessageSequence", 1ull);
   if (j.contains("campaign")) { const auto& c = j.at("campaign"); w.campaign.campaignId = c.value("campaignId", std::string("")); w.campaign.playerCivilizationId = c.value("playerCivilizationId", std::string("")); w.campaign.unlockedAge = static_cast<uint8_t>(c.value("unlockedAge", 0)); if (c.contains("resources")) w.campaign.resources = c.at("resources").get<std::array<float, static_cast<size_t>(dom::sim::Resource::Count)>>(); if (c.contains("veteranUnitIds")) w.campaign.veteranUnitIds = c.at("veteranUnitIds").get<std::vector<uint32_t>>(); if (c.contains("discoveredGuardians")) w.campaign.discoveredGuardians = c.at("discoveredGuardians").get<std::vector<std::string>>(); w.campaign.worldTension = c.value("worldTension", 0.0f); if (c.contains("unlockedRewards")) w.campaign.unlockedRewards = c.at("unlockedRewards").get<std::vector<std::string>>(); w.campaign.previousMissionResult = c.value("previousMissionResult", std::string("")); w.campaign.pendingBranchKey = c.value("pendingBranchKey", std::string("")); if (c.contains("flags")) for (auto it=c["flags"].begin(); it!=c["flags"].end(); ++it) w.campaign.flags.push_back({it.key(), it.value().get<bool>()}); if (c.contains("variables")) for (auto it=c["variables"].begin(); it!=c["variables"].end(); ++it) w.campaign.variables.push_back({it.key(), it.value().get<int64_t>()}); }
   if (j.contains("missionRuntime")) { const auto& mr = j.at("missionRuntime"); w.missionRuntime.briefingShown = mr.value("briefingShown", false); w.missionRuntime.status = static_cast<dom::sim::MissionStatus>(mr.value("status", 1)); w.missionRuntime.resultTag = mr.value("resultTag", ""); if (mr.contains("activeObjectives")) w.missionRuntime.activeObjectives = mr.at("activeObjectives").get<std::vector<uint32_t>>(); if (mr.contains("luaHookLog")) w.missionRuntime.luaHookLog = mr.at("luaHookLog").get<std::vector<std::string>>(); w.missionRuntime.firedTriggerCount = mr.value("firedTriggerCount", 0u); w.missionRuntime.scriptedActionCount = mr.value("scriptedActionCount", 0u); }
   const auto& jm = j.at("match");
@@ -949,6 +969,12 @@ int run_campaign_headless(const CliOptions& o) {
 
     remainingTicks -= missionTicks;
     const std::string resultTag = mission_result_tag(world);
+    for (size_t i = 1; i < world.missionMessages.size(); ++i) {
+      if (world.missionMessages[i-1].sequence > world.missionMessages[i].sequence) {
+        std::cerr << "Smoke failure: mission message ordering invalid\n";
+        return 170;
+      }
+    }
     update_campaign_carryover_from_world(campaign, world, resultTag);
     if (world.missionRuntime.status == dom::sim::MissionStatus::Defeat) campaign.failedMissions.push_back(mission->missionId);
     else campaign.completedMissions.push_back(mission->missionId);
@@ -1849,26 +1875,55 @@ int run_app(int argc, char** argv) {
       }
       if (showCampaignPanel && !world.campaign.campaignId.empty()) {
         ImGui::Begin("Campaign Briefing", &showCampaignPanel);
-        ImGui::Text("Campaign: %s", world.campaign.campaignId.c_str());
-        ImGui::TextWrapped("Mission: %s", world.mission.title.c_str());
+        ImGui::Text("%s", world.mission.title.c_str());
+        if (!world.mission.subtitle.empty()) ImGui::TextDisabled("%s", world.mission.subtitle.c_str());
+        if (!world.mission.locationLabel.empty()) ImGui::Text("Location: %s", world.mission.locationLabel.c_str());
+        ImGui::Text("Portrait: %s", world.mission.briefingPortraitId.empty() ? "ui_portrait_default (fallback)" : world.mission.briefingPortraitId.c_str());
+        ImGui::Text("Artwork: %s", world.mission.missionImageId.empty() ? "ui_mission_default (fallback)" : world.mission.missionImageId.c_str());
         ImGui::Separator();
         ImGui::TextWrapped("%s", world.mission.briefing.c_str());
-        ImGui::Separator();
-        ImGui::Text("Carryover Civ: %s", world.campaign.playerCivilizationId.c_str());
-        ImGui::Text("Carryover Previous Result: %s", world.campaign.previousMissionResult.c_str());
-        ImGui::Text("Carryover Food: %.1f", world.campaign.resources[0]);
-        ImGui::Text("Carryover Wealth: %.1f", world.campaign.resources[3]);
+        if (!world.mission.factionSummary.empty()) { ImGui::SeparatorText("Faction"); ImGui::TextWrapped("%s", world.mission.factionSummary.c_str()); }
+        if (!world.mission.objectiveSummary.empty()) { ImGui::SeparatorText("Key Objectives"); for (const auto& l : world.mission.objectiveSummary) ImGui::BulletText("%s", l.c_str()); }
+        ImGui::SeparatorText("Carryover");
+        ImGui::Text("Civ: %s", world.campaign.playerCivilizationId.c_str());
+        ImGui::Text("Previous Result: %s", world.campaign.previousMissionResult.c_str());
+        ImGui::Text("Food %.1f  Wealth %.1f  Knowledge %.1f", world.campaign.resources[0], world.campaign.resources[3], world.campaign.resources[4]);
+        if (!world.mission.scenarioTags.empty()) { ImGui::SeparatorText("Tags"); for (const auto& t : world.mission.scenarioTags) { ImGui::SameLine(); ImGui::Text("[%s]", t.c_str()); } }
         ImGui::End();
       }
       if (showCampaignDebriefPanel && !world.campaign.campaignId.empty()) {
-        ImGui::Begin("Campaign Progression", &showCampaignDebriefPanel);
-        ImGui::Text("Mission Result: %s", world.missionRuntime.resultTag.c_str());
+        ImGui::Begin("Campaign Debrief & Progression", &showCampaignDebriefPanel);
+        ImGui::Text("Result: %s", world.missionRuntime.resultTag.c_str());
         ImGui::Text("Status: %d", (int)world.missionRuntime.status);
+        if (!world.mission.debrief.empty()) ImGui::TextWrapped("%s", world.mission.debrief.c_str());
+        ImGui::SeparatorText("Objectives");
+        for (const auto& o : world.objectives) {
+          const bool primary = (o.category == dom::sim::ObjectiveCategory::Primary || o.primary);
+          if (o.state == dom::sim::ObjectiveState::Completed || o.state == dom::sim::ObjectiveState::Failed) ImGui::BulletText("%s %s -> %s", primary?"[Primary]":"[Secondary]", o.title.c_str(), (o.state==dom::sim::ObjectiveState::Completed?"Completed":"Failed"));
+        }
+        ImGui::SeparatorText("Campaign");
         ImGui::Text("Flags: %zu", world.campaign.flags.size());
         ImGui::Text("Rewards: %zu", world.campaign.unlockedRewards.size());
-        ImGui::Text("Pending Branch: %s", world.campaign.pendingBranchKey.c_str());
+        ImGui::Text("Pending Branch: %s", world.campaign.pendingBranchKey.empty() ? "(none)" : world.campaign.pendingBranchKey.c_str());
+        ImGui::Text("Debrief Portrait: %s", world.mission.debriefPortraitId.empty() ? "ui_portrait_default (fallback)" : world.mission.debriefPortraitId.c_str());
+        if (!world.campaign.unlockedRewards.empty()) { for (const auto& r : world.campaign.unlockedRewards) ImGui::BulletText("Reward: %s", r.c_str()); }
         ImGui::End();
       }
+      ImGui::Begin("Mission Message Log");
+      ImGui::Text("Queued messages: %zu", world.missionMessages.size());
+      for (auto it = world.missionMessages.rbegin(); it != world.missionMessages.rend(); ++it) {
+        ImGui::Text("[%llu @%u] %s | %s", (unsigned long long)it->sequence, it->tick, it->category.c_str(), it->title.c_str());
+        if (!it->speaker.empty()) ImGui::TextDisabled("speaker=%s portrait=%s icon=%s", it->speaker.c_str(), it->portraitId.c_str(), it->iconId.c_str());
+        ImGui::TextWrapped("%s", it->body.c_str());
+        ImGui::Separator();
+      }
+      ImGui::End();
+      ImGui::Begin("Objective Transition Debug");
+      for (auto it = world.objectiveDebugLog.rbegin(); it != world.objectiveDebugLog.rend(); ++it) {
+        ImGui::Text("tick=%u obj=%u trigger=%u %s", it->tick, it->objectiveId, it->triggerId, it->actionType.c_str());
+        ImGui::TextDisabled("reason: %s", it->reason.c_str());
+      }
+      ImGui::End();
       if (showSelectionPanel) {
         ImGui::Begin("Selection", &showSelectionPanel);
         ImGui::Text("Mode: %s", editorMode ? "Editor selection" : "Gameplay selection");

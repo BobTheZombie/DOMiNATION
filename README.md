@@ -358,3 +358,7 @@ Smoke and thread parity:
 - Save/load parity:
   - `./build/rts --headless --scenario scenarios/strategic_deterrence_test.json --smoke --ticks 1800 --save /tmp/deterrence_save.json --dump-hash`
   - `./build/rts --headless --load /tmp/deterrence_save.json --smoke --ticks 3600 --dump-hash`
+
+## Campaign presentation layer
+- Added authored campaign briefing/debrief windows, mission message log, campaign progression summary, and objective transition debug panes (ImGui).
+- Story metadata is data-driven (`portraitId`, `iconId`, `imageId`, style tags) and non-authoritative; deterministic mission/campaign state remains authoritative.

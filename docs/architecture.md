@@ -276,3 +276,7 @@ The simulation now includes an authoritative industrial economy subsystem with r
 - Strategic strike lifecycle is deterministic and phase-based (`Unavailable -> Preparing -> Ready -> Launched -> Intercepted/Detonated -> Resolved`).
 - Strategic defense uses detector/anti-missile coverage plus electronics/doctrine bonuses to produce deterministic interception outcomes (`Undetected/Detected/PartiallyIntercepted/FullyIntercepted/ReducedEffect`).
 - Retaliation/second-strike is rule-driven from surviving launch capability, ready stockpile, posture, and tension state.
+
+## Campaign/story presentation determinism
+- Authoritative simulation state keeps mission status, objective state transitions, trigger execution, message ordering sequence, and campaign carryover.
+- Presentation-only metadata (portrait/icon/image/style IDs) is consumed by UI and never mutates sim outside existing trigger/Lua command paths.

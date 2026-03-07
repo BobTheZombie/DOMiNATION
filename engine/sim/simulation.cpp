@@ -175,6 +175,10 @@ World* gLuaWorld = nullptr;
 UnitType parse_unit(const std::string& v);
 BuildingType parse_building(const std::string& v);
 OperationType parse_operation_type(const std::string& s);
+size_t ridx(Resource r);
+int bidx(BuildingType b);
+uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 pos);
+std::string resolved_building_definition_id(const World& w, uint16_t team, BuildingType type);
 
 DiplomacyRelation parse_lua_relation(const std::string& value) {
   if (value == "allied" || value == "Allied") return DiplomacyRelation::Allied;
@@ -3795,13 +3799,55 @@ bool validate_size(const World& w, const std::vector<float>& v) { return (int)v.
 bool validate_size_u8(const World& w, const std::vector<uint8_t>& v) { return (int)v.size() == w.width * w.height; }
 bool validate_size_i32(const World& w, const std::vector<int32_t>& v) { return (int)v.size() == w.width * w.height; }
 
+void enqueue_mission_message(World& w, const MissionMessageDefinition& def) {
+  MissionMessageRuntime msg{};
+  msg.sequence = w.nextMissionMessageSequence++;
+  msg.tick = w.tick;
+  msg.messageId = def.messageId;
+  msg.title = def.title;
+  msg.body = def.body;
+  msg.category = def.category;
+  msg.speaker = def.speaker;
+  msg.faction = def.faction;
+  msg.portraitId = def.portraitId;
+  msg.iconId = def.iconId;
+  msg.imageId = def.imageId;
+  msg.styleTag = def.styleTag;
+  msg.priority = def.priority;
+  msg.durationTicks = def.durationTicks;
+  msg.sticky = def.sticky;
+  w.missionMessages.push_back(std::move(msg));
+}
+
+void enqueue_text_message(World& w, const std::string& text, const std::string& category, uint32_t triggerId) {
+  MissionMessageDefinition def{};
+  def.messageId = std::string("trigger_") + std::to_string(triggerId) + "_" + std::to_string(w.tick);
+  def.title = category.empty() ? std::string("Mission Update") : category;
+  def.body = text;
+  def.category = category.empty() ? std::string("objective_update") : category;
+  def.durationTicks = 600;
+  enqueue_mission_message(w, def);
+  w.objectiveLog.push_back({w.tick, text});
+}
+
 void eval_triggers(World& w) {
   std::sort(w.triggers.begin(), w.triggers.end(), [](const Trigger& a, const Trigger& b){ return a.id < b.id; });
-  auto apply_objective_state = [&](uint32_t oid, ObjectiveState st, uint16_t actor) {
+  auto apply_objective_state = [&](uint32_t oid, ObjectiveState st, uint16_t actor, uint32_t triggerId, const std::string& actionType) {
     for (auto& o : w.objectives) if (o.id == oid) {
+      const ObjectiveState prev = o.state;
       if (o.state != st) {
         ++w.objectiveStateChangeCount;
         if (st == ObjectiveState::Completed) emit_event(w, GameplayEventType::ObjectiveCompleted, actor, o.owner, o.id, o.title);
+        ObjectiveTransitionDebugEntry dbg{};
+        dbg.tick = w.tick;
+        dbg.objectiveId = oid;
+        dbg.from = prev;
+        dbg.to = st;
+        dbg.triggerId = triggerId;
+        dbg.actionType = actionType;
+        dbg.reason = std::string("trigger ") + std::to_string(triggerId) + " action " + actionType;
+        w.objectiveDebugLog.push_back(std::move(dbg));
+        enqueue_text_message(w, o.title + " -> " + objective_state_name(st), "objective_update", triggerId);
       }
       o.state = st;
     }
@@ -3843,10 +3889,10 @@ void eval_triggers(World& w) {
     ++w.missionRuntime.firedTriggerCount;
     for (const auto& a : t.actions) {
       ++w.missionRuntime.scriptedActionCount;
-      if (a.type == TriggerActionType::ShowMessage) w.objectiveLog.push_back({w.tick, a.text});
-      else if (a.type == TriggerActionType::ActivateObjective) apply_objective_state(a.objectiveId, ObjectiveState::Active, a.player);
-      else if (a.type == TriggerActionType::CompleteObjective) apply_objective_state(a.objectiveId, ObjectiveState::Completed, a.player);
-      else if (a.type == TriggerActionType::FailObjective) apply_objective_state(a.objectiveId, ObjectiveState::Failed, a.player);
+      if (a.type == TriggerActionType::ShowMessage) enqueue_text_message(w, a.text, "intelligence", t.id);
+      else if (a.type == TriggerActionType::ActivateObjective) apply_objective_state(a.objectiveId, ObjectiveState::Active, a.player, t.id, "ActivateObjective");
+      else if (a.type == TriggerActionType::CompleteObjective) apply_objective_state(a.objectiveId, ObjectiveState::Completed, a.player, t.id, "CompleteObjective");
+      else if (a.type == TriggerActionType::FailObjective) apply_objective_state(a.objectiveId, ObjectiveState::Failed, a.player, t.id, "FailObjective");
       else if (a.type == TriggerActionType::GrantResources) { if (a.player < w.players.size()) for (size_t i = 0; i < a.resources.size(); ++i) w.players[a.player].resources[i] += a.resources[i]; }
       else if (a.type == TriggerActionType::SpawnUnits) { for (uint32_t i = 0; i < a.spawnCount; ++i) spawn_unit(w, a.player, a.spawnUnitType, {a.spawnPos.x + 0.7f * i, a.spawnPos.y}); }
       else if (a.type == TriggerActionType::SpawnBuildings) {
@@ -4418,15 +4464,47 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (j.contains("mission")) {
     const auto& m = j["mission"];
     w.mission.title = m.value("title", std::string(""));
+    w.mission.subtitle = m.value("subtitle", std::string(""));
+    w.mission.locationLabel = m.value("location", std::string(""));
     w.mission.briefing = m.value("briefing", std::string(""));
+    w.mission.debrief = m.value("debrief", std::string(""));
+    w.mission.factionSummary = m.value("factionSummary", std::string(""));
+    w.mission.carryoverSummary = m.value("carryoverSummary", std::string(""));
+    w.mission.briefingPortraitId = m.value("briefingPortraitId", std::string("ui_portrait_default"));
+    w.mission.debriefPortraitId = m.value("debriefPortraitId", std::string("ui_portrait_default"));
+    w.mission.missionImageId = m.value("missionImageId", std::string("ui_mission_default"));
+    w.mission.factionIconId = m.value("factionIconId", std::string("ui_faction_default"));
+    if (m.contains("scenarioTags") && m["scenarioTags"].is_array()) w.mission.scenarioTags = m["scenarioTags"].get<std::vector<std::string>>();
+    if (m.contains("objectiveSummary") && m["objectiveSummary"].is_array()) w.mission.objectiveSummary = m["objectiveSummary"].get<std::vector<std::string>>();
     if (m.contains("introMessages") && m["introMessages"].is_array()) w.mission.introMessages = m["introMessages"].get<std::vector<std::string>>();
+    if (m.contains("messages") && m["messages"].is_array()) {
+      w.mission.messageDefinitions.clear();
+      for (const auto& md : m["messages"]) {
+        MissionMessageDefinition def{};
+        def.messageId = md.value("id", std::string("msg_" + std::to_string(w.mission.messageDefinitions.size()+1)));
+        def.title = md.value("title", std::string("Mission Update"));
+        def.body = md.value("body", std::string(""));
+        def.category = md.value("category", std::string("intelligence"));
+        def.speaker = md.value("speaker", std::string(""));
+        def.faction = md.value("faction", std::string(""));
+        def.portraitId = md.value("portraitId", std::string("ui_portrait_default"));
+        def.iconId = md.value("iconId", std::string("ui_icon_event"));
+        def.imageId = md.value("imageId", std::string("ui_mission_default"));
+        def.styleTag = md.value("style", std::string("default"));
+        def.priority = md.value("priority", 0);
+        def.durationTicks = md.value("durationTicks", 600u);
+        def.sticky = md.value("sticky", false);
+        w.mission.messageDefinitions.push_back(std::move(def));
+      }
+    }
     w.mission.victoryOutcomeTag = m.value("victoryOutcome", std::string("victory"));
     w.mission.defeatOutcomeTag = m.value("defeatOutcome", std::string("defeat"));
     w.mission.partialOutcomeTag = m.value("partialOutcome", std::string("partial_victory"));
     w.mission.branchKey = m.value("branchKey", std::string(""));
     w.mission.luaScriptFile = m.value("luaScript", std::string(""));
     w.mission.luaScriptInline = m.value("luaInline", std::string(""));
-    for (const auto& msg : w.mission.introMessages) w.objectiveLog.push_back({w.tick, msg});
+    for (const auto& msg : w.mission.introMessages) enqueue_text_message(w, msg, "briefing", 0);
+    for (const auto& md : w.mission.messageDefinitions) enqueue_mission_message(w, md);
   }
   rebuild_mountain_regions(w);
   if (j.contains("mountainRegions") && j["mountainRegions"].is_array()) {
@@ -4578,7 +4656,9 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   for (const auto& mc : w.mythicCandidates) j["mythicCandidates"].push_back({{"siteType",(int)mc.siteType},{"cell",mc.cell},{"score",mc.score}});
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"objective_id",o.objectiveId},{"title",o.title},{"description",o.description.empty()?o.text:o.description},{"primary",o.primary},{"category",objective_category_name(o.category)},{"state",objective_state_name(o.state)},{"owner",o.owner},{"visible",o.visible},{"progressText",o.progressText},{"progressValue",o.progressValue}});
-  j["mission"] = {{"title",w.mission.title},{"briefing",w.mission.briefing},{"introMessages",w.mission.introMessages},{"victoryOutcome",w.mission.victoryOutcomeTag},{"defeatOutcome",w.mission.defeatOutcomeTag},{"partialOutcome",w.mission.partialOutcomeTag},{"branchKey",w.mission.branchKey},{"luaScript",w.mission.luaScriptFile},{"luaInline",w.mission.luaScriptInline}};
+  j["mission"] = {{"title",w.mission.title},{"subtitle",w.mission.subtitle},{"location",w.mission.locationLabel},{"briefing",w.mission.briefing},{"debrief",w.mission.debrief},{"factionSummary",w.mission.factionSummary},{"carryoverSummary",w.mission.carryoverSummary},{"briefingPortraitId",w.mission.briefingPortraitId},{"debriefPortraitId",w.mission.debriefPortraitId},{"missionImageId",w.mission.missionImageId},{"factionIconId",w.mission.factionIconId},{"scenarioTags",w.mission.scenarioTags},{"objectiveSummary",w.mission.objectiveSummary},{"introMessages",w.mission.introMessages},{"victoryOutcome",w.mission.victoryOutcomeTag},{"defeatOutcome",w.mission.defeatOutcomeTag},{"partialOutcome",w.mission.partialOutcomeTag},{"branchKey",w.mission.branchKey},{"luaScript",w.mission.luaScriptFile},{"luaInline",w.mission.luaScriptInline}};
+  j["mission"]["messages"] = nlohmann::json::array();
+  for (const auto& md : w.mission.messageDefinitions) j["mission"]["messages"].push_back({{"id",md.messageId},{"title",md.title},{"body",md.body},{"category",md.category},{"speaker",md.speaker},{"faction",md.faction},{"portraitId",md.portraitId},{"iconId",md.iconId},{"imageId",md.imageId},{"style",md.styleTag},{"priority",md.priority},{"durationTicks",md.durationTicks},{"sticky",md.sticky}});
   j["triggers"] = nlohmann::json::array();
   for (const auto& t : w.triggers) {
     nlohmann::json jt; jt["id"]=t.id; jt["once"]=t.once;
@@ -5364,6 +5444,7 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.navalCombatEvents);
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
+  for (const auto& m : w.missionMessages) { hash_u32(h, (uint32_t)m.tick); hash_u32(h, (uint32_t)m.sequence); hash_u32(h, (uint32_t)m.title.size()); hash_u32(h, (uint32_t)m.body.size()); hash_u32(h, (uint32_t)m.category.size()); }
   hash_u32(h, (uint32_t)w.missionRuntime.status); hash_u32(h, (uint32_t)w.missionRuntime.briefingShown); hash_u32(h, (uint32_t)w.missionRuntime.resultTag.size());
   hash_u32(h, w.missionRuntime.firedTriggerCount); hash_u32(h, w.missionRuntime.scriptedActionCount);
   for (uint32_t id : w.missionRuntime.activeObjectives) hash_u32(h, id);
