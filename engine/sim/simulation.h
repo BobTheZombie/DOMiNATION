@@ -54,7 +54,9 @@ enum class StrikeType : uint8_t { TacticalMissile, StrategicMissile, StrategicBo
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
 enum class TerrainClass : uint8_t { Land, ShallowWater, DeepWater };
-enum class BiomeType : uint8_t { TemperateGrassland, Steppe, Forest, Desert, Mediterranean, Jungle, Tundra, Arctic, Coast, Wetlands, Mountain, Count };
+enum class BiomeType : uint8_t { TemperateGrassland, Steppe, Forest, Desert, Mediterranean, Jungle, Tundra, Arctic, Coast, Wetlands, Mountain, SnowMountain, Count };
+enum class MineralType : uint8_t { Gold, Iron, Silver, Copper, Stone, Count };
+enum class UndergroundNodeType : uint8_t { Shaft, Deposit, Junction, Depot, Exit };
 
 struct GameplayEvent {
   GameplayEventType type{GameplayEventType::UnitDied};
@@ -104,6 +106,11 @@ struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; boo
 struct Building { uint32_t id{}; uint16_t team{}; BuildingType type{BuildingType::House}; glm::vec2 pos{}; glm::vec2 size{2.0f, 2.0f}; bool underConstruction{true}; float buildProgress{0.0f}; float buildTime{10.0f}; float hp{1000.0f}; float maxHp{1000.0f}; std::string definitionId; std::vector<ProductionItem> queue; };
 
 struct ResourceNode { uint32_t id{}; ResourceNodeType type{ResourceNodeType::Forest}; glm::vec2 pos{}; float amount{1000.0f}; uint16_t owner{UINT16_MAX}; };
+struct MountainRegion { uint32_t id{0}; int minX{0}; int minY{0}; int maxX{0}; int maxY{0}; int peakCell{-1}; int centerCell{-1}; uint32_t cellCount{0}; };
+struct SurfaceDeposit { uint32_t id{0}; uint32_t regionId{0}; MineralType mineral{MineralType::Iron}; int cell{-1}; float remaining{0.0f}; uint16_t owner{UINT16_MAX}; };
+struct DeepDeposit { uint32_t id{0}; uint32_t regionId{0}; uint32_t nodeId{0}; MineralType mineral{MineralType::Gold}; int cell{-1}; float richness{0.0f}; float remaining{0.0f}; uint16_t owner{UINT16_MAX}; bool active{true}; };
+struct UndergroundNode { uint32_t id{0}; uint32_t regionId{0}; UndergroundNodeType type{UndergroundNodeType::Junction}; int cell{-1}; uint32_t linkedBuildingId{0}; uint16_t owner{UINT16_MAX}; bool active{true}; };
+struct UndergroundEdge { uint32_t id{0}; uint32_t regionId{0}; uint32_t a{0}; uint32_t b{0}; uint16_t owner{UINT16_MAX}; bool active{true}; };
 struct TriggerArea { uint32_t id{}; glm::vec2 min{}; glm::vec2 max{}; };
 struct Objective { uint32_t id{}; std::string objectiveId; std::string title; std::string description; std::string text; bool primary{true}; ObjectiveCategory category{ObjectiveCategory::Primary}; uint16_t owner{UINT16_MAX}; ObjectiveState state{ObjectiveState::Inactive}; bool visible{true}; float progressValue{0.0f}; std::string progressText; };
 struct TriggerCondition { TriggerType type{TriggerType::TickReached}; uint32_t tick{0}; uint32_t entityId{0}; BuildingType buildingType{BuildingType::House}; uint32_t areaId{0}; uint16_t player{UINT16_MAX}; uint32_t objectiveId{0}; float worldTension{0.0f}; DiplomacyRelation diplomacy{DiplomacyRelation::Neutral}; uint16_t playerB{UINT16_MAX}; };
@@ -200,6 +207,13 @@ struct SimulationStats {
   uint32_t strategicStrikes{0};
   uint32_t interceptions{0};
   uint32_t activeDenialZones{0};
+  uint32_t mountainRegionCount{0};
+  uint32_t surfaceDepositCount{0};
+  uint32_t deepDepositCount{0};
+  uint32_t activeMineShafts{0};
+  uint32_t activeTunnels{0};
+  uint32_t undergroundDepots{0};
+  float undergroundYield{0.0f};
 };
 
 struct ChunkCoord {
@@ -234,6 +248,12 @@ struct World {
   std::vector<DetectorSite> detectors;
   std::vector<StrategicStrike> strategicStrikes;
   std::vector<DenialZone> denialZones;
+  std::vector<int32_t> mountainRegionByCell;
+  std::vector<MountainRegion> mountainRegions;
+  std::vector<SurfaceDeposit> surfaceDeposits;
+  std::vector<DeepDeposit> deepDeposits;
+  std::vector<UndergroundNode> undergroundNodes;
+  std::vector<UndergroundEdge> undergroundEdges;
   std::vector<uint8_t> radarContactByPlayer;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   MissionDefinition mission{};
@@ -248,6 +268,9 @@ struct World {
   uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
   uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};
   uint32_t radarRevealEvents{0}; uint32_t strategicStrikeEvents{0}; uint32_t interceptionEvents{0}; uint32_t airMissionEvents{0};
+  uint32_t mountainRegionCount{0}; uint32_t surfaceDepositCount{0}; uint32_t deepDepositCount{0};
+  uint32_t activeMineShafts{0}; uint32_t activeTunnels{0}; uint32_t undergroundDepots{0};
+  float undergroundYield{0.0f};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 
@@ -279,6 +302,8 @@ void cancel_build_placement(World& world);
 const BiomeRuntime& biome_runtime(BiomeType biome);
 BiomeType biome_at(const World& world, int cellIndex);
 std::string building_visual_variant_id(const World& world, const Building& building);
+bool valid_mine_shaft_placement(const World& world, glm::ivec2 tile);
+bool deep_deposit_available(const World& world, uint32_t depositId, uint16_t team);
 
 bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitType type);
 bool enqueue_age_research(World& world, uint16_t team, uint32_t buildingId);
