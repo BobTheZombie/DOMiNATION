@@ -35,8 +35,8 @@ void draw_scenario_editor(dom::sim::World& world, const glm::vec2& cameraCenter,
   if (ImGui::Button("Apply terrain at camera")) apply_terrain_tool(world, state.terrainTool, state.selectedBiome, state.terrainDelta, state.brushRadius, cameraCenter);
 
   ImGui::SeparatorText("Object placement");
-  const char* objTools[] = {"place cities", "place buildings", "place resources", "place units", "place rail hub/line"};
-  ImGui::Combo("Placement", &state.objectTool, objTools, 5);
+  const char* objTools[] = {"place cities", "place buildings", "place resources", "place units", "place rail hub/line", "place industrial building"};
+  ImGui::Combo("Placement", &state.objectTool, objTools, 6);
   ImGui::SliderInt("Owner", &state.selectedPlayer, 0, std::max(0, static_cast<int>(world.players.size()) - 1));
   if (ImGui::Button("Place at camera")) place_editor_object(world, state.objectTool, static_cast<uint16_t>(state.selectedPlayer), cameraCenter);
 
@@ -49,6 +49,11 @@ void draw_scenario_editor(dom::sim::World& world, const glm::vec2& cameraCenter,
     ImGui::InputFloat("Metal", &p.resources[2]);
     ImGui::InputFloat("Wealth", &p.resources[3]);
     ImGui::InputFloat("Knowledge", &p.resources[4]);
+    ImGui::InputFloat("Steel", &p.refinedGoods[0]);
+    ImGui::InputFloat("Fuel", &p.refinedGoods[1]);
+    ImGui::InputFloat("Munitions", &p.refinedGoods[2]);
+    ImGui::InputFloat("Machine Parts", &p.refinedGoods[3]);
+    ImGui::InputFloat("Electronics", &p.refinedGoods[4]);
     if (world.players.size() > 1) {
       bool allied = dom::sim::players_allied(world, 0, 1);
       if (ImGui::Checkbox("P0<->P1 alliance", &allied)) {

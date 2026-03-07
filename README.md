@@ -313,3 +313,14 @@ Smoke commands:
 ## Campaign progression
 
 Use `--campaign campaigns/test_campaign.json` for deterministic multi-mission progression with carryover/branching and campaign save-load support.
+
+## Industrial economy smoke checks
+```bash
+./build/rts --headless --smoke --ticks 2600 --seed 1234 --dump-hash
+./build/rts --headless --scenario scenarios/industrial_economy_test.json --smoke --ticks 3000 --dump-hash
+./build/rts --headless --scenario scenarios/industrial_economy_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/industrial_economy_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/industrial_economy_test.json --threads 8 --hash-only
+./build/rts --headless --scenario scenarios/industrial_economy_test.json --smoke --ticks 1600 --save /tmp/industrial_save.json --dump-hash
+./build/rts --headless --load /tmp/industrial_save.json --smoke --ticks 3000 --dump-hash
+```

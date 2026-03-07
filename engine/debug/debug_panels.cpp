@@ -59,6 +59,15 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   }
   ImGui::End();
 
+
+  if (ImGui::Begin("Industrial Economy")) {
+    ImGui::Text("factory_count=%u active=%u blocked=%u", world.factoryCount, world.activeFactories, world.blockedFactories);
+    ImGui::Text("throughput=%.2f steel=%.2f fuel=%.2f munitions=%.2f machine_parts=%.2f electronics=%.2f",
+                world.industrialThroughput,
+                world.refinedOutputByTick[0], world.refinedOutputByTick[1], world.refinedOutputByTick[2], world.refinedOutputByTick[3], world.refinedOutputByTick[4]);
+  }
+  ImGui::End();
+
   if (ImGui::Begin("Mission Debug")) {
     ImGui::Text("status=%u briefingShown=%s result=%s", (unsigned)world.missionRuntime.status, world.missionRuntime.briefingShown?"yes":"no", world.missionRuntime.resultTag.c_str());
     ImGui::Text("triggers fired=%u scripted actions=%u", world.missionRuntime.firedTriggerCount, world.missionRuntime.scriptedActionCount);

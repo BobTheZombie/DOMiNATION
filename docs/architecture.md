@@ -256,3 +256,6 @@ Rail state is serialized in scenario/save files and included in `state_hash` for
 ## Campaign progression layer
 
 Campaign orchestration is data-driven and deterministic. Mission simulation remains authoritative in C++; campaign runtime carries compact state between missions and resolves explicit next-mission mappings by outcome/branch keys.
+
+## Industrial economy layer
+The simulation now includes an authoritative industrial economy subsystem with refined goods, deterministic factory cycles, and logistics-aware throughput. Factory state and per-player refined-good stockpiles are serialized and hashed for deterministic replay/save-load parity.

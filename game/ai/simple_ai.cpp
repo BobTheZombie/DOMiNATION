@@ -143,6 +143,16 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   }
   if (civ.scienceBias * civ.aiResearchPriority > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
 
+  const bool industrialEra = world.players[team].age >= dom::sim::Age::Industrial;
+  if (industrialEra || (world.tick > 900 && civ.economyBias > 1.05f)) {
+    if (count_buildings(world, team, dom::sim::BuildingType::SteelMill) == 0 && count_buildings(world, team, dom::sim::BuildingType::Mine) > 0) maybeBuild(dom::sim::BuildingType::SteelMill, {12, 6});
+    if (count_buildings(world, team, dom::sim::BuildingType::Refinery) == 0) maybeBuild(dom::sim::BuildingType::Refinery, {14, 5});
+    if (count_buildings(world, team, dom::sim::BuildingType::MunitionsPlant) == 0 && civ.militaryBias >= 1.0f) maybeBuild(dom::sim::BuildingType::MunitionsPlant, {15, 8});
+    if (count_buildings(world, team, dom::sim::BuildingType::MachineWorks) == 0 && (civ.economyBias >= 1.0f || civ.militaryBias >= 1.1f)) maybeBuild(dom::sim::BuildingType::MachineWorks, {13, 10});
+    if (count_buildings(world, team, dom::sim::BuildingType::ElectronicsLab) == 0 && civ.scienceBias >= 1.0f) maybeBuild(dom::sim::BuildingType::ElectronicsLab, {10, 11});
+    if (count_buildings(world, team, dom::sim::BuildingType::FactoryHub) == 0 && (civ.logisticsBias >= 1.0f || civ.economyBias >= 1.1f)) maybeBuild(dom::sim::BuildingType::FactoryHub, {16, 10});
+  }
+
   if (world.players[team].age >= dom::sim::Age::Industrial && world.tick % 60 == 0) {
     const bool economyRail = civ.economyBias >= 1.1f || civ.logisticsBias >= 1.1f;
     const bool militaryRail = civ.militaryBias >= 1.1f || civ.aggression >= 1.05f;

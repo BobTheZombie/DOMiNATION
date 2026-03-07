@@ -124,3 +124,10 @@ Reference scenario: `scenarios/rail_logistics_test.json`.
 ## Campaign-linked scenarios
 
 Scenarios used by campaigns remain standard scenario files. Campaign carryover is injected into mission startup (player civ/age/resources/world tension + script-visible flags/variables) and mission outcomes drive campaign progression.
+
+## Industrial economy additions
+- `players[].refinedGoods`: object with `steel`, `fuel`, `munitions`, `machine_parts`, `electronics`.
+- `buildings[].factory`: optional authoritative factory state (`recipeIndex`, `cycleProgress`, `inputBuffer`, `outputBuffer`, `paused`, `blocked`, `active`, `throughputBonus`).
+- `industrialRecipes`: optional per-scenario recipe array with fields `output`, `outputAmount`, `cycleTime`, `inputResources` (array), `inputGoods` (array).
+
+Example scenario: `scenarios/industrial_economy_test.json`.
