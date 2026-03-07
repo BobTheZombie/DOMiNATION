@@ -194,3 +194,9 @@ Headless/interactive perf outputs now include:
 - ImGui gameplay panels issue validated authoritative simulation commands; panel code does not directly mutate arbitrary gameplay state.
 - Scenario editor interactions author world state through editor actions and persist through deterministic scenario export, then re-enter via deterministic scenario ingest.
 - Event log and notifications are presentation layers sourced from deterministic gameplay event stream and remain non-authoritative.
+
+## Strategic warfare layer (deterministic)
+- Air units are authoritative entities with mission states: `Airborne`, `Attacking`, `Returning`.
+- Radar/sensor network is rebuilt deterministically from buildings and mobile detectors each tick.
+- Strategic strikes run through deterministic phases: prep -> warning/travel -> interception resolution -> area impact/denial zone.
+- New perf counters: `AIR_UNIT_COUNT`, `DETECTOR_COUNT`, `RADAR_REVEALS`, `STRATEGIC_STRIKES`, `INTERCEPTIONS`, `ACTIVE_DENIAL_ZONES`.

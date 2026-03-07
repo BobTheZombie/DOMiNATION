@@ -182,6 +182,7 @@ float building_vision_radius(BuildingType type);
 float unit_detection_radius(const Unit& u);
 bool unit_has_stealth(const Unit& u);
 bool unit_is_recon(const Unit& u);
+bool unit_is_air(UnitType t);
 
 
 void emit_event(World& w, GameplayEventType type, uint16_t actor, uint16_t subject, uint32_t entityId, std::string text = {}) {
@@ -205,6 +206,12 @@ const char* building_name(BuildingType t) {
     case BuildingType::Barracks: return "Barracks";
     case BuildingType::Wonder: return "Wonder";
     case BuildingType::Port: return "Port";
+    case BuildingType::RadarTower: return "RadarTower";
+    case BuildingType::MobileRadar: return "MobileRadar";
+    case BuildingType::Airbase: return "Airbase";
+    case BuildingType::MissileSilo: return "MissileSilo";
+    case BuildingType::AABattery: return "AABattery";
+    case BuildingType::AntiMissileDefense: return "AntiMissileDefense";
     case BuildingType::Count: break;
   }
   return "House";
@@ -220,6 +227,12 @@ BuildingType parse_building(const std::string& v) {
   if (v == "Barracks") return BuildingType::Barracks;
   if (v == "Wonder") return BuildingType::Wonder;
   if (v == "Port") return BuildingType::Port;
+  if (v == "RadarTower") return BuildingType::RadarTower;
+  if (v == "MobileRadar") return BuildingType::MobileRadar;
+  if (v == "Airbase") return BuildingType::Airbase;
+  if (v == "MissileSilo") return BuildingType::MissileSilo;
+  if (v == "AABattery") return BuildingType::AABattery;
+  if (v == "AntiMissileDefense") return BuildingType::AntiMissileDefense;
   return BuildingType::House;
 }
 
@@ -234,6 +247,14 @@ const char* unit_name(UnitType t) {
     case UnitType::LightWarship: return "LightWarship";
     case UnitType::HeavyWarship: return "HeavyWarship";
     case UnitType::BombardShip: return "BombardShip";
+    case UnitType::Fighter: return "Fighter";
+    case UnitType::Interceptor: return "Interceptor";
+    case UnitType::Bomber: return "Bomber";
+    case UnitType::StrategicBomber: return "StrategicBomber";
+    case UnitType::ReconDrone: return "ReconDrone";
+    case UnitType::StrikeDrone: return "StrikeDrone";
+    case UnitType::TacticalMissile: return "TacticalMissile";
+    case UnitType::StrategicMissile: return "StrategicMissile";
     case UnitType::Count: break;
   }
   return "Infantry";
@@ -248,6 +269,14 @@ UnitType parse_unit(const std::string& v) {
   if (v == "LightWarship") return UnitType::LightWarship;
   if (v == "HeavyWarship") return UnitType::HeavyWarship;
   if (v == "BombardShip") return UnitType::BombardShip;
+  if (v == "Fighter") return UnitType::Fighter;
+  if (v == "Interceptor") return UnitType::Interceptor;
+  if (v == "Bomber") return UnitType::Bomber;
+  if (v == "StrategicBomber") return UnitType::StrategicBomber;
+  if (v == "ReconDrone") return UnitType::ReconDrone;
+  if (v == "StrikeDrone") return UnitType::StrikeDrone;
+  if (v == "TacticalMissile") return UnitType::TacticalMissile;
+  if (v == "StrategicMissile") return UnitType::StrategicMissile;
   return UnitType::Infantry;
 }
 
@@ -517,6 +546,15 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::BombardShip)].popCost = 3;
   gUnitDefs[uidx(UnitType::BombardShip)].role = UnitRole::Naval;
 
+  gUnitDefs[uidx(UnitType::Fighter)].trainTime = 18.0f; gUnitDefs[uidx(UnitType::Fighter)].cost[ridx(Resource::Metal)] = 120; gUnitDefs[uidx(UnitType::Fighter)].cost[ridx(Resource::Oil)] = 20; gUnitDefs[uidx(UnitType::Fighter)].role = UnitRole::Ranged;
+  gUnitDefs[uidx(UnitType::Interceptor)] = gUnitDefs[uidx(UnitType::Fighter)]; gUnitDefs[uidx(UnitType::Interceptor)].cost[ridx(Resource::Metal)] = 110;
+  gUnitDefs[uidx(UnitType::Bomber)].trainTime = 22.0f; gUnitDefs[uidx(UnitType::Bomber)].cost[ridx(Resource::Metal)] = 150; gUnitDefs[uidx(UnitType::Bomber)].cost[ridx(Resource::Oil)] = 40; gUnitDefs[uidx(UnitType::Bomber)].role = UnitRole::Siege;
+  gUnitDefs[uidx(UnitType::StrategicBomber)] = gUnitDefs[uidx(UnitType::Bomber)]; gUnitDefs[uidx(UnitType::StrategicBomber)].trainTime = 28.0f; gUnitDefs[uidx(UnitType::StrategicBomber)].cost[ridx(Resource::Metal)] = 220;
+  gUnitDefs[uidx(UnitType::ReconDrone)].trainTime = 14.0f; gUnitDefs[uidx(UnitType::ReconDrone)].cost[ridx(Resource::Metal)] = 80; gUnitDefs[uidx(UnitType::ReconDrone)].cost[ridx(Resource::Knowledge)] = 40; gUnitDefs[uidx(UnitType::ReconDrone)].role = UnitRole::Ranged;
+  gUnitDefs[uidx(UnitType::StrikeDrone)] = gUnitDefs[uidx(UnitType::ReconDrone)]; gUnitDefs[uidx(UnitType::StrikeDrone)].cost[ridx(Resource::Metal)] = 120;
+  gUnitDefs[uidx(UnitType::TacticalMissile)].trainTime = 26.0f; gUnitDefs[uidx(UnitType::TacticalMissile)].cost[ridx(Resource::Metal)] = 180; gUnitDefs[uidx(UnitType::TacticalMissile)].cost[ridx(Resource::Oil)] = 80; gUnitDefs[uidx(UnitType::TacticalMissile)].role = UnitRole::Siege;
+  gUnitDefs[uidx(UnitType::StrategicMissile)] = gUnitDefs[uidx(UnitType::TacticalMissile)]; gUnitDefs[uidx(UnitType::StrategicMissile)].trainTime = 36.0f; gUnitDefs[uidx(UnitType::StrategicMissile)].cost[ridx(Resource::Metal)] = 260;
+
   gAgeResearchTime = 35.0f;
   gAgeResearchCost[ridx(Resource::Knowledge)] = 130;
   gAgeResearchCost[ridx(Resource::Wealth)] = 110;
@@ -619,6 +657,7 @@ bool unit_can_embark(UnitType t) {
 bool unit_cell_valid(const World& w, const Unit& u, int cell) {
   TerrainClass tc = terrain_class_at(w, cell);
   if (u.embarked) return false;
+  if (unit_is_air(u.type)) return true;
   if (unit_is_naval(u.type)) return is_water_class(tc);
   return !is_water_class(tc);
 }
@@ -893,6 +932,92 @@ float unit_detection_radius(const Unit& u) {
   return 0.0f;
 }
 
+
+bool unit_is_air(UnitType t) {
+  return t == UnitType::Fighter || t == UnitType::Interceptor || t == UnitType::Bomber || t == UnitType::StrategicBomber || t == UnitType::ReconDrone || t == UnitType::StrikeDrone || t == UnitType::TacticalMissile || t == UnitType::StrategicMissile;
+}
+
+AirUnitClass air_class_for(UnitType t) {
+  if (t == UnitType::Interceptor) return AirUnitClass::Interceptor;
+  if (t == UnitType::Bomber) return AirUnitClass::Bomber;
+  if (t == UnitType::StrategicBomber) return AirUnitClass::StrategicBomber;
+  if (t == UnitType::ReconDrone) return AirUnitClass::ReconDrone;
+  if (t == UnitType::StrikeDrone) return AirUnitClass::StrikeDrone;
+  return AirUnitClass::Fighter;
+}
+
+float detector_radius(DetectorType t) {
+  if (t == DetectorType::AirbaseRadar) return 18.0f;
+  if (t == DetectorType::SatelliteUplink) return 30.0f;
+  if (t == DetectorType::NavalSensor) return 12.0f;
+  if (t == DetectorType::AntiMissileDefense) return 10.0f;
+  if (t == DetectorType::AABattery) return 9.0f;
+  return 14.0f;
+}
+
+void rebuild_detector_sites(World& w) {
+  w.detectors.clear();
+  uint32_t nextId = 1;
+  for (const auto& b : w.buildings) {
+    if (b.hp <= 0.0f || b.underConstruction) continue;
+    DetectorType dt{}; bool ok = true; bool contact = false;
+    if (b.type == BuildingType::RadarTower) dt = DetectorType::RadarTower;
+    else if (b.type == BuildingType::MobileRadar) { dt = DetectorType::MobileRadar; contact = true; }
+    else if (b.type == BuildingType::Airbase) dt = DetectorType::AirbaseRadar;
+    else if (b.type == BuildingType::AABattery) dt = DetectorType::AABattery;
+    else if (b.type == BuildingType::AntiMissileDefense) dt = DetectorType::AntiMissileDefense;
+    else ok = false;
+    if (ok) w.detectors.push_back({nextId++, b.team, dt, b.pos, detector_radius(dt), contact, true});
+  }
+  for (const auto& u : w.units) {
+    if (u.hp <= 0 || u.embarked) continue;
+    if (u.type == UnitType::LightWarship || u.type == UnitType::HeavyWarship) w.detectors.push_back({nextId++, u.team, DetectorType::NavalSensor, u.pos, detector_radius(DetectorType::NavalSensor), true, true});
+    if (u.type == UnitType::ReconDrone) w.detectors.push_back({nextId++, u.team, DetectorType::ReconDrone, u.pos, 11.0f, false, true});
+  }
+}
+
+void update_air_and_strategic_warfare(World& w, float dt) {
+  for (auto& z : w.denialZones) if (z.ticksRemaining > 0) --z.ticksRemaining;
+  w.denialZones.erase(std::remove_if(w.denialZones.begin(), w.denialZones.end(), [](const DenialZone& z){ return z.ticksRemaining == 0; }), w.denialZones.end());
+
+  for (auto& a : w.airUnits) {
+    if (a.cooldownTicks > 0) --a.cooldownTicks;
+    glm::vec2 target = a.state == AirMissionState::Returning ? glm::vec2{20.0f + a.team * 75.0f, 20.0f + a.team * 75.0f} : a.missionTarget;
+    glm::vec2 d = target - a.pos;
+    float len = glm::length(d);
+    if (len > 0.1f) a.pos += (d / len) * a.speed * dt;
+    a.pos.x = std::clamp(a.pos.x, 0.0f, (float)w.width - 0.01f);
+    a.pos.y = std::clamp(a.pos.y, 0.0f, (float)w.height - 0.01f);
+    if (len < 1.5f && a.state == AirMissionState::Airborne) a.state = AirMissionState::Attacking;
+    else if (len < 1.5f && a.state == AirMissionState::Attacking) { a.state = AirMissionState::Returning; a.missionPerformed = true; ++w.airMissionEvents; }
+    else if (len < 2.0f && a.state == AirMissionState::Returning) { a.state = AirMissionState::Airborne; }
+  }
+
+  for (auto& s : w.strategicStrikes) {
+    if (s.resolved) continue;
+    if (s.prepTicksRemaining > 0) { --s.prepTicksRemaining; continue; }
+    if (!s.launched) { s.launched = true; ++w.strategicStrikeEvents; continue; }
+    if (s.travelTicksRemaining > 0) { --s.travelTicksRemaining; continue; }
+    int defensive = 0;
+    for (const auto& d : w.detectors) {
+      if ((d.type == DetectorType::AntiMissileDefense || d.type == DetectorType::AABattery) && d.team != s.team && glm::length(d.pos - s.target) <= d.radius) ++defensive;
+    }
+    const int roll = (int)((s.id * 1103515245u + w.tick * 97u + s.team * 13u) % 100);
+    if (defensive == 0) s.interceptionState = 0;
+    else if (roll < 25) s.interceptionState = 1;
+    else if (roll < 65) s.interceptionState = 2;
+    else s.interceptionState = 3;
+    if (s.interceptionState > 0) ++w.interceptionEvents;
+    if (s.interceptionState <= 1) {
+      for (auto& u : w.units) if (u.hp > 0 && glm::length(u.pos - s.target) < 5.0f) u.hp -= s.type == StrikeType::StrategicMissile ? 160.0f : 90.0f;
+      for (auto& b : w.buildings) if (b.hp > 0 && glm::length(b.pos - s.target) < 6.0f) b.hp -= s.type == StrikeType::StrategicMissile ? 480.0f : 250.0f;
+      w.denialZones.push_back({(uint32_t)(w.denialZones.size()+1), s.team, s.target, s.type == StrikeType::StrategicMissile ? 9.0f : 6.0f, s.type == StrikeType::StrategicMissile ? 220u : 120u});
+      w.worldTension = std::min(100.0f, w.worldTension + (s.type == StrikeType::StrategicMissile ? 7.0f : 3.0f));
+    }
+    s.resolved = true;
+  }
+}
+
 void recompute_fog(World& w) {
   const int cells = w.width * w.height;
   const size_t playerCount = w.players.size();
@@ -938,6 +1063,21 @@ void recompute_fog(World& w) {
   for (const auto& u : w.units) {
     if (u.hp <= 0.0f || u.embarked) continue;
     reveal_disc(u.team, u.pos, unit_vision_radius(u));
+  }
+  for (const auto& a : w.airUnits) reveal_disc(a.team, a.pos, a.cls == AirUnitClass::ReconDrone ? 12.0f : 7.0f);
+
+  w.radarContactByPlayer.assign(playerCount * static_cast<size_t>(cells), 0);
+  for (const auto& d : w.detectors) {
+    if (!d.active || d.team >= playerCount) continue;
+    const size_t base = static_cast<size_t>(d.team) * static_cast<size_t>(cells);
+    for (const auto& air : w.airUnits) {
+      if (air.team == d.team || players_allied(w, air.team, d.team)) continue;
+      if (glm::length(air.pos - d.pos) > d.radius) continue;
+      int tile = cell_of(w, air.pos);
+      w.radarContactByPlayer[base + static_cast<size_t>(tile)] = 255;
+      ++w.radarRevealEvents;
+      if (!d.revealContactOnly) w.fogVisibilityByPlayer[base + static_cast<size_t>(tile)] = 255;
+    }
   }
 
   for (size_t p = 0; p < playerCount; ++p) {
@@ -1215,6 +1355,10 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   else if (type == UnitType::LightWarship) { nu.hp = 190; nu.attack = 8.0f; nu.range = 4.8f; nu.speed = 5.4f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Transport; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1100,1500}; }
   else if (type == UnitType::HeavyWarship) { nu.hp = 280; nu.attack = 16.0f; nu.range = 4.6f; nu.speed = 4.0f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Naval; nu.vsRoleMultiplierPermille = {1000,1000,1000,1000,1000,1000,1450,1000}; }
   else if (type == UnitType::BombardShip) { nu.hp = 240; nu.attack = 18.0f; nu.range = 7.2f; nu.speed = 3.6f; nu.role = UnitRole::Naval; nu.preferredTargetRole = UnitRole::Building; nu.vsRoleMultiplierPermille = {900,900,900,1000,900,1700,1000,1000}; }
+  else if (type == UnitType::Fighter || type == UnitType::Interceptor) { nu.hp = 90; nu.attack = 12.0f; nu.range = 4.8f; nu.speed = 8.4f; nu.role = UnitRole::Ranged; }
+  else if (type == UnitType::Bomber || type == UnitType::StrategicBomber) { nu.hp = 120; nu.attack = 22.0f; nu.range = 6.0f; nu.speed = 6.3f; nu.role = UnitRole::Siege; nu.preferredTargetRole = UnitRole::Building; }
+  else if (type == UnitType::ReconDrone || type == UnitType::StrikeDrone) { nu.hp = 60; nu.attack = type == UnitType::StrikeDrone ? 9.0f : 3.0f; nu.range = 5.4f; nu.speed = 8.8f; nu.role = UnitRole::Ranged; }
+  else if (type == UnitType::TacticalMissile || type == UnitType::StrategicMissile) { nu.hp = 30; nu.attack = 40.0f; nu.range = 2.0f; nu.speed = 10.0f; nu.role = UnitRole::Siege; }
   if (!unit_cell_valid(w, nu, cell_of(w, nu.pos))) {
     for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
       int c = y * w.width + x;
@@ -1654,6 +1798,11 @@ void apply_world_defaults(World& w) {
   w.treaties.assign(w.players.size() * w.players.size(), DiplomacyTreaty{});
   w.strategicPosture.assign(w.players.size(), StrategicPosture::Defensive);
   w.espionageOps.clear();
+  w.airUnits.clear();
+  w.detectors.clear();
+  w.strategicStrikes.clear();
+  w.denialZones.clear();
+  w.radarContactByPlayer.clear();
   w.worldTension = 0.0f;
   for (size_t i = 0; i < w.players.size(); ++i) {
     set_relation(w, static_cast<uint16_t>(i), static_cast<uint16_t>(i), DiplomacyRelation::Allied);
@@ -1803,6 +1952,10 @@ void initialize_world(World& w, uint32_t seed) {
   w.buildings.clear();
   w.buildings.push_back({1, 0, BuildingType::CityCenter, {20, 20}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
   w.buildings.push_back({2, 1, BuildingType::CityCenter, {95, 95}, gBuildDefs[bidx(BuildingType::CityCenter)].size, false, 1.0f, 0.0f, 2200.0f, 2200.0f, {}});
+  w.buildings.push_back({3, 0, BuildingType::RadarTower, {26, 18}, {2.0f,2.0f}, false, 1.0f, 0.0f, 750.0f, 750.0f, {}});
+  w.buildings.push_back({4, 1, BuildingType::Airbase, {88, 99}, {2.0f,2.0f}, false, 1.0f, 0.0f, 900.0f, 900.0f, {}});
+  w.buildings.push_back({5, 0, BuildingType::MissileSilo, {24, 16}, {2.0f,2.0f}, false, 1.0f, 0.0f, 1000.0f, 1000.0f, {}});
+  w.buildings.push_back({6, 1, BuildingType::AntiMissileDefense, {90, 94}, {2.0f,2.0f}, false, 1.0f, 0.0f, 820.0f, 820.0f, {}});
   for (int i = 0; i < 3; ++i) {
     spawn_unit(w, 0, UnitType::Worker, {18.0f + i * 0.8f, 24.0f});
     spawn_unit(w, 1, UnitType::Worker, {92.0f + i * 0.8f, 89.0f});
@@ -1811,6 +1964,9 @@ void initialize_world(World& w, uint32_t seed) {
     spawn_unit(w, 0, UnitType::Infantry, {17.0f + i * 0.8f, 22.0f});
     spawn_unit(w, 1, UnitType::Infantry, {91.0f + i * 0.8f, 87.0f});
   }
+  w.airUnits.push_back({1,0,AirUnitClass::ReconDrone,AirMissionState::Airborne,{24.0f,24.0f},{85.0f,85.0f},60.0f,8.5f,0,false});
+  w.airUnits.push_back({2,1,AirUnitClass::Bomber,AirMissionState::Airborne,{96.0f,96.0f},{22.0f,22.0f},120.0f,6.0f,0,false});
+  w.strategicStrikes.push_back({1,0,StrikeType::StrategicMissile,{24.0f,16.0f},{90.0f,94.0f},120,170,0,0,false,false});
   spawn_biome_resources(w);
   ensure_base_roads(w);
   recompute_trade_routes(w);
@@ -1941,8 +2097,11 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   if (j.contains("cities")) for (const auto& c : j["cities"]) { City cc{}; cc.id=c.value("id",0u); cc.team=c.value("team",0u); cc.pos={c["pos"][0].get<float>(), c["pos"][1].get<float>()}; cc.level=c.value("level",1); cc.capital=c.value("capital",false); w.cities.push_back(cc); }
   w.units.clear();
   if (j.contains("units")) for (const auto& u : j["units"]) { spawn_unit(w, u.value("team",0u), parse_unit(u.value("type", std::string("Infantry"))), {u["pos"][0].get<float>(), u["pos"][1].get<float>()}); }
+  if (j.contains("airUnits")) for (const auto& a : j["airUnits"]) { AirUnit au{}; au.id=a.value("id",(uint32_t)(w.airUnits.size()+1)); au.team=a.value("team",0u); au.cls=(AirUnitClass)a.value("class",0); au.state=(AirMissionState)a.value("state",0); au.pos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; au.missionTarget={a["missionTarget"][0].get<float>(),a["missionTarget"][1].get<float>()}; au.hp=a.value("hp",100.0f); au.speed=a.value("speed",6.0f); au.cooldownTicks=a.value("cooldownTicks",0u); au.missionPerformed=a.value("missionPerformed",false); w.airUnits.push_back(au); }
   w.buildings.clear();
   if (j.contains("buildings")) { uint32_t id=1; for (const auto& b : j["buildings"]) { Building bb{}; bb.id=b.value("id",id++); bb.team=b.value("team",0u); bb.type=parse_building(b.value("type",std::string("House"))); bb.pos={b["pos"][0].get<float>(), b["pos"][1].get<float>()}; bb.size=gBuildDefs[bidx(bb.type)].size; bb.underConstruction=b.value("underConstruction", false); bb.buildProgress=bb.underConstruction?b.value("buildProgress",0.0f):1.0f; bb.buildTime=gBuildDefs[bidx(bb.type)].buildTime; bb.maxHp=(bb.type==BuildingType::CityCenter?2200.0f:1000.0f); bb.hp=b.value("hp", bb.maxHp); w.buildings.push_back(bb);} }
+  if (j.contains("strategicStrikes")) for (const auto& st : j["strategicStrikes"]) { StrategicStrike ss{}; ss.id=st.value("id",(uint32_t)(w.strategicStrikes.size()+1)); ss.team=st.value("team",0u); ss.type=(StrikeType)st.value("type",0); ss.from={st["from"][0].get<float>(),st["from"][1].get<float>()}; ss.target={st["target"][0].get<float>(),st["target"][1].get<float>()}; ss.prepTicksRemaining=st.value("prepTicksRemaining",0u); ss.travelTicksRemaining=st.value("travelTicksRemaining",0u); ss.cooldownTicks=st.value("cooldownTicks",0u); ss.interceptionState=st.value("interceptionState",(uint8_t)0); ss.launched=st.value("launched",false); ss.resolved=st.value("resolved",false); w.strategicStrikes.push_back(ss); }
+  if (j.contains("denialZones")) for (const auto& dz : j["denialZones"]) { DenialZone z{}; z.id=dz.value("id",(uint32_t)(w.denialZones.size()+1)); z.team=dz.value("team",0u); z.pos={dz["pos"][0].get<float>(),dz["pos"][1].get<float>()}; z.radius=dz.value("radius",6.0f); z.ticksRemaining=dz.value("ticksRemaining",0u); w.denialZones.push_back(z); }
   w.resourceNodes.clear();
   w.roads.clear();
   if (j.contains("roads")) { uint32_t rid=1; for (const auto& rr : j["roads"]) { RoadSegment r{}; r.id = rr.value("id", rid++); r.owner = rr.value("owner", (uint16_t)UINT16_MAX); r.a = {rr["a"][0].get<int>(), rr["a"][1].get<int>()}; r.b = {rr["b"][0].get<int>(), rr["b"][1].get<int>()}; r.quality = rr.value("quality", 1); w.roads.push_back(r);} }
@@ -1977,6 +2136,9 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["cities"] = nlohmann::json::array(); for (const auto& c : w.cities) j["cities"].push_back({{"id",c.id},{"team",c.team},{"pos",{c.pos.x,c.pos.y}},{"level",c.level},{"capital",c.capital}});
   j["units"] = nlohmann::json::array(); for (const auto& u : w.units) j["units"].push_back({{"id",u.id},{"team",u.team},{"type",unit_name(u.type)},{"pos",{u.pos.x,u.pos.y}}});
   j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp}});
+  j["airUnits"] = nlohmann::json::array(); for (const auto& a : w.airUnits) j["airUnits"].push_back({{"id",a.id},{"team",a.team},{"class",(int)a.cls},{"state",(int)a.state},{"pos",{a.pos.x,a.pos.y}},{"missionTarget",{a.missionTarget.x,a.missionTarget.y}},{"hp",a.hp},{"speed",a.speed},{"cooldownTicks",a.cooldownTicks},{"missionPerformed",a.missionPerformed}});
+  j["strategicStrikes"] = nlohmann::json::array(); for (const auto& st : w.strategicStrikes) j["strategicStrikes"].push_back({{"id",st.id},{"team",st.team},{"type",(int)st.type},{"from",{st.from.x,st.from.y}},{"target",{st.target.x,st.target.y}},{"prepTicksRemaining",st.prepTicksRemaining},{"travelTicksRemaining",st.travelTicksRemaining},{"cooldownTicks",st.cooldownTicks},{"interceptionState",st.interceptionState},{"launched",st.launched},{"resolved",st.resolved}});
+  j["denialZones"] = nlohmann::json::array(); for (const auto& dz : w.denialZones) j["denialZones"].push_back({{"id",dz.id},{"team",dz.team},{"pos",{dz.pos.x,dz.pos.y}},{"radius",dz.radius},{"ticksRemaining",dz.ticksRemaining}});
   j["resourceNodes"] = nlohmann::json::array(); for (const auto& r : w.resourceNodes) { std::string t="Forest"; if (r.type==ResourceNodeType::Ore) t="Ore"; else if (r.type==ResourceNodeType::Farmable) t="Farmable"; else if (r.type==ResourceNodeType::Ruins) t="Ruins"; j["resourceNodes"].push_back({{"id",r.id},{"type",t},{"pos",{r.pos.x,r.pos.y}},{"amount",r.amount},{"owner",r.owner}}); }
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
   j["biomeMap"] = w.biomeMap;
@@ -2044,6 +2206,8 @@ void tick_world(World& w, float dt) {
   update_world_tension(w);
   update_ai_diplomacy(w);
   update_operations(w);
+  rebuild_detector_sites(w);
+  update_air_and_strategic_warfare(w, dt);
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
   apply_trade_income(w, dt);
@@ -2351,6 +2515,12 @@ void tick_world(World& w, float dt) {
   gLastStats.activeNavalOperations = 0;
   gLastStats.coastalTargets = 0;
   gLastStats.navalCombatEvents = w.navalCombatEvents;
+  gLastStats.airUnitCount = static_cast<uint32_t>(w.airUnits.size());
+  gLastStats.detectorCount = static_cast<uint32_t>(w.detectors.size());
+  gLastStats.radarReveals = w.radarRevealEvents;
+  gLastStats.strategicStrikes = w.strategicStrikeEvents;
+  gLastStats.interceptions = w.interceptionEvents;
+  gLastStats.activeDenialZones = static_cast<uint32_t>(w.denialZones.size());
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -2478,9 +2648,11 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
   auto it = std::find_if(world.buildings.begin(), world.buildings.end(), [&](const Building& b) { return b.id == buildingId && b.team == team && !b.underConstruction; });
   if (it == world.buildings.end()) return false;
   if (it->type == BuildingType::CityCenter && type != UnitType::Worker) return false;
-  if (it->type == BuildingType::Barracks && (type == UnitType::Worker || unit_is_naval(type))) return false;
-  if (it->type == BuildingType::Port && !unit_is_naval(type)) return false;
-  if (it->type != BuildingType::Port && unit_is_naval(type)) return false;
+  if (it->type == BuildingType::Barracks && (type == UnitType::Worker || unit_is_naval(type) || unit_is_air(type))) return false;
+  if (it->type == BuildingType::Port && (!unit_is_naval(type) || unit_is_air(type))) return false;
+  if (it->type == BuildingType::Airbase && !(type == UnitType::Fighter || type == UnitType::Interceptor || type == UnitType::Bomber || type == UnitType::StrategicBomber || type == UnitType::ReconDrone || type == UnitType::StrikeDrone)) return false;
+  if (it->type == BuildingType::MissileSilo && !(type == UnitType::TacticalMissile || type == UnitType::StrategicMissile)) return false;
+  if (it->type != BuildingType::Port && it->type != BuildingType::Airbase && it->type != BuildingType::MissileSilo && (unit_is_naval(type) || unit_is_air(type))) return false;
   auto& p = world.players[team];
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
   if (!spend(p.resources, gUnitDefs[uidx(type)].cost)) return false;
@@ -2618,6 +2790,12 @@ uint64_t state_hash(const World& w) {
   }
   hash_u32(h, w.diplomacyEventCount);
   hash_u32(h, w.postureChangeCount);
+  for (const auto& a : w.airUnits) { hash_u32(h,a.id); hash_u32(h,a.team); hash_u32(h,(uint32_t)a.cls); hash_u32(h,(uint32_t)a.state); hash_float(h,a.pos.x); hash_float(h,a.pos.y); hash_float(h,a.missionTarget.x); hash_float(h,a.missionTarget.y); hash_float(h,a.hp); hash_float(h,a.speed); hash_u32(h,a.cooldownTicks); hash_u32(h,a.missionPerformed?1u:0u); }
+  for (const auto& d : w.detectors) { hash_u32(h,d.id); hash_u32(h,d.team); hash_u32(h,(uint32_t)d.type); hash_float(h,d.pos.x); hash_float(h,d.pos.y); hash_float(h,d.radius); hash_u32(h,d.revealContactOnly?1u:0u); hash_u32(h,d.active?1u:0u); }
+  for (const auto& st : w.strategicStrikes) { hash_u32(h,st.id); hash_u32(h,st.team); hash_u32(h,(uint32_t)st.type); hash_float(h,st.from.x); hash_float(h,st.from.y); hash_float(h,st.target.x); hash_float(h,st.target.y); hash_u32(h,st.prepTicksRemaining); hash_u32(h,st.travelTicksRemaining); hash_u32(h,st.cooldownTicks); hash_u32(h,st.interceptionState); hash_u32(h,st.launched?1u:0u); hash_u32(h,st.resolved?1u:0u); }
+  for (const auto& dz : w.denialZones) { hash_u32(h,dz.id); hash_u32(h,dz.team); hash_float(h,dz.pos.x); hash_float(h,dz.pos.y); hash_float(h,dz.radius); hash_u32(h,dz.ticksRemaining); }
+  for (uint8_t v : w.radarContactByPlayer) hash_u32(h, v);
+  hash_u32(h, w.radarRevealEvents); hash_u32(h, w.strategicStrikeEvents); hash_u32(h, w.interceptionEvents); hash_u32(h, w.airMissionEvents);
   for (uint8_t v : w.fog) hash_u32(h, v);
   for (uint8_t v : w.fogVisibilityByPlayer) hash_u32(h, v);
   for (uint8_t v : w.fogExploredByPlayer) hash_u32(h, v);
