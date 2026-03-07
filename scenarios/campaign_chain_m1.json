@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "seed": 1337,
+  "mapWidth": 96,
+  "mapHeight": 96,
+  "players": [
+    {"id": 0, "isHuman": true, "isCPU": false, "team": 0, "civilization": "default"},
+    {"id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "default"}
+  ],
+  "cities": [
+    {"id": 1, "team": 0, "pos": [18, 18], "capital": true},
+    {"id": 2, "team": 1, "pos": [78, 78], "capital": true}
+  ],
+  "buildings": [
+    {"id": 1, "team": 0, "type": "CityCenter", "pos": [18, 18], "underConstruction": false},
+    {"id": 2, "team": 1, "type": "CityCenter", "pos": [78, 78], "underConstruction": false}
+  ],
+  "units": [
+    {"id": 1, "team": 0, "type": "Infantry", "pos": [20, 20]},
+    {"id": 2, "team": 1, "type": "Infantry", "pos": [75, 75]}
+  ],
+  "mission": {
+    "title": "Opening Operation",
+    "briefing": "Establish momentum and choose a campaign route.",
+    "victoryOutcome": "victory",
+    "defeatOutcome": "defeat",
+    "partialOutcome": "partial_victory",
+    "luaScript": "scripts/campaign_chain.lua"
+  },
+  "triggers": [
+    {"id": 1, "once": true, "condition": {"type": "TickReached", "tick": 1}, "actions": [{"type": "RunLuaHook", "luaHook": "on_mission_start"}]},
+    {"id": 2, "once": true, "condition": {"type": "TickReached", "tick": 420}, "actions": [{"type": "EndMatchVictory", "winner": 0}]}
+  ]
+}

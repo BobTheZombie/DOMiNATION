@@ -184,6 +184,21 @@ struct ObjectiveLogEntry { uint32_t tick{0}; std::string text; };
 struct MissionDefinition { std::string title; std::string briefing; std::vector<std::string> introMessages; std::string victoryOutcomeTag{"victory"}; std::string defeatOutcomeTag{"defeat"}; std::string partialOutcomeTag{"partial_victory"}; std::string branchKey; std::string luaScriptFile; std::string luaScriptInline; };
 struct MissionRuntimeState { bool briefingShown{false}; MissionStatus status{MissionStatus::InBriefing}; std::string resultTag; std::vector<uint32_t> activeObjectives; std::vector<std::string> luaHookLog; uint32_t firedTriggerCount{0}; uint32_t scriptedActionCount{0}; };
 
+struct CampaignCarryoverState {
+  std::string campaignId;
+  std::string playerCivilizationId;
+  uint8_t unlockedAge{0};
+  std::array<float, static_cast<size_t>(Resource::Count)> resources{};
+  std::vector<uint32_t> veteranUnitIds;
+  std::vector<std::string> discoveredGuardians;
+  float worldTension{0.0f};
+  std::vector<std::string> unlockedRewards;
+  std::vector<std::pair<std::string, bool>> flags;
+  std::vector<std::pair<std::string, int64_t>> variables;
+  std::string previousMissionResult;
+  std::string pendingBranchKey;
+};
+
 struct CivilizationRuntime {
   std::string id{"default"};
   std::string displayName{"Default"};
@@ -298,6 +313,10 @@ struct SimulationStats {
   uint32_t activeFreightTrains{0};
   float railThroughput{0.0f};
   uint32_t disruptedRailRoutes{0};
+  uint32_t campaignMissionCount{0};
+  uint32_t campaignFlagsSet{0};
+  uint32_t campaignResourcesCount{0};
+  uint32_t campaignBranchesTaken{0};
 };
 
 struct ChunkCoord {
@@ -355,6 +374,7 @@ struct World {
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   MissionDefinition mission{};
   MissionRuntimeState missionRuntime{};
+  CampaignCarryoverState campaign{};
   std::vector<PlayerState> players;
   bool godMode{false}; uint32_t tick{0}; bool gameOver{false}; uint16_t winner{0}; MatchConfig config{}; MatchResult match{}; WonderState wonder{};
   bool uiBuildMenu{false}; bool uiTrainMenu{false}; bool uiResearchMenu{false}; bool placementActive{false}; BuildingType placementType{BuildingType::House}; glm::vec2 placementPos{}; bool placementValid{false};

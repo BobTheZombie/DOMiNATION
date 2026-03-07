@@ -7,3 +7,7 @@
 
 
 Lua hooks continue to run in sandbox; civilization mission tags are available through player civilization data and remain deterministic because hook execution log and mission runtime counters are serialized in authority saves.
+
+## Campaign-safe Lua hooks
+
+Available campaign APIs at deterministic mission hook points: `get_campaign_flag`, `set_campaign_flag`, `get_campaign_resource`, `add_campaign_resource`, `get_previous_mission_result`, `set_campaign_branch`, `unlock_campaign_reward`, `get_campaign_variable`.
