@@ -170,6 +170,27 @@ bool assign_guardian_owner(World& w, uint32_t siteInstanceId, uint16_t owner);
 lua_State* gLuaState = nullptr;
 World* gLuaWorld = nullptr;
 
+UnitType parse_unit(const std::string& v);
+BuildingType parse_building(const std::string& v);
+OperationType parse_operation_type(const std::string& s);
+
+DiplomacyRelation parse_lua_relation(const std::string& value) {
+  if (value == "allied" || value == "Allied") return DiplomacyRelation::Allied;
+  if (value == "war" || value == "War") return DiplomacyRelation::War;
+  if (value == "ceasefire" || value == "Ceasefire") return DiplomacyRelation::Ceasefire;
+  return DiplomacyRelation::Neutral;
+}
+
+size_t lua_resource_index(const std::string& name) {
+  if (name == "Food") return ridx(Resource::Food);
+  if (name == "Wood") return ridx(Resource::Wood);
+  if (name == "Metal") return ridx(Resource::Metal);
+  if (name == "Wealth") return ridx(Resource::Wealth);
+  if (name == "Knowledge") return ridx(Resource::Knowledge);
+  if (name == "Oil") return ridx(Resource::Oil);
+  return static_cast<size_t>(Resource::Count);
+}
+
 int lua_activate_objective(lua_State* L) {
   if (!gLuaWorld) return 0;
   uint32_t oid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
@@ -202,6 +223,89 @@ int lua_get_objective_state(lua_State* L) {
   uint32_t oid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
   for (const auto& o : gLuaWorld->objectives) if (o.id == oid) { lua_pushinteger(L, (int)o.state); return 1; }
   lua_pushinteger(L, 0); return 1;
+}
+int lua_spawn_unit(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const UnitType type = parse_unit(luaL_checkstring(L, 1));
+  const float x = static_cast<float>(luaL_checknumber(L, 2));
+  const float y = static_cast<float>(luaL_checknumber(L, 3));
+  const uint16_t owner = static_cast<uint16_t>(luaL_checkinteger(L, 4));
+  if (owner < gLuaWorld->players.size()) spawn_unit(*gLuaWorld, owner, type, {x, y});
+  return 0;
+}
+int lua_spawn_building(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const BuildingType type = parse_building(luaL_checkstring(L, 1));
+  const float x = static_cast<float>(luaL_checknumber(L, 2));
+  const float y = static_cast<float>(luaL_checknumber(L, 3));
+  const uint16_t owner = static_cast<uint16_t>(luaL_checkinteger(L, 4));
+  if (owner >= gLuaWorld->players.size()) return 0;
+  uint32_t nextId = 1;
+  for (const auto& b : gLuaWorld->buildings) nextId = std::max(nextId, b.id + 1);
+  Building b{};
+  b.id = nextId;
+  b.team = owner;
+  b.type = type;
+  b.pos = {x, y};
+  b.size = gBuildDefs[bidx(type)].size;
+  b.underConstruction = false;
+  b.buildProgress = 1.0f;
+  b.buildTime = gBuildDefs[bidx(type)].buildTime;
+  b.maxHp = (type == BuildingType::CityCenter ? 2200.0f : 1000.0f);
+  b.hp = b.maxHp;
+  b.definitionId = resolved_building_definition_id(*gLuaWorld, owner, type);
+  gLuaWorld->buildings.push_back(b);
+  return 0;
+}
+int lua_grant_resource(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const uint16_t player = static_cast<uint16_t>(luaL_checkinteger(L, 1));
+  const std::string resource = luaL_checkstring(L, 2);
+  const float amount = static_cast<float>(luaL_checknumber(L, 3));
+  if (player >= gLuaWorld->players.size()) return 0;
+  const size_t idx = lua_resource_index(resource);
+  if (idx < static_cast<size_t>(Resource::Count)) gLuaWorld->players[player].resources[idx] += amount;
+  return 0;
+}
+int lua_set_relation(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const uint16_t a = static_cast<uint16_t>(luaL_checkinteger(L, 1));
+  const uint16_t b = static_cast<uint16_t>(luaL_checkinteger(L, 2));
+  const DiplomacyRelation rel = parse_lua_relation(luaL_checkstring(L, 3));
+  set_relation(*gLuaWorld, a, b, rel);
+  return 0;
+}
+int lua_launch_operation(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const OperationType type = parse_operation_type(luaL_checkstring(L, 1));
+  const uint16_t player = static_cast<uint16_t>(luaL_checkinteger(L, 2));
+  const float tx = static_cast<float>(luaL_checknumber(L, 3));
+  const float ty = static_cast<float>(luaL_checknumber(L, 4));
+  if (player >= gLuaWorld->players.size()) return 0;
+  const uint32_t id = gLuaWorld->operations.empty() ? 1u : gLuaWorld->operations.back().id + 1;
+  gLuaWorld->operations.push_back({id, player, type, {tx, ty}, gLuaWorld->tick, true});
+  return 0;
+}
+int lua_reveal_area(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const uint16_t player = static_cast<uint16_t>(luaL_checkinteger(L, 1));
+  const float cx = static_cast<float>(luaL_checknumber(L, 2));
+  const float cy = static_cast<float>(luaL_checknumber(L, 3));
+  const float radius = static_cast<float>(luaL_checknumber(L, 4));
+  if (player >= gLuaWorld->players.size() || radius <= 0.0f) return 0;
+  const int minX = std::max(0, static_cast<int>(std::floor(cx - radius)));
+  const int maxX = std::min(gLuaWorld->width - 1, static_cast<int>(std::ceil(cx + radius)));
+  const int minY = std::max(0, static_cast<int>(std::floor(cy - radius)));
+  const int maxY = std::min(gLuaWorld->height - 1, static_cast<int>(std::ceil(cy + radius)));
+  const float r2 = radius * radius;
+  for (int y = minY; y <= maxY; ++y) {
+    for (int x = minX; x <= maxX; ++x) {
+      const float dx = (x + 0.5f) - cx;
+      const float dy = (y + 0.5f) - cy;
+      if (dx * dx + dy * dy <= r2) gLuaWorld->fog[y * gLuaWorld->width + x] = 0;
+    }
+  }
+  return 0;
 }
 int lua_activate_guardian_site(lua_State* L) {
   if (!gLuaWorld) return 0;
@@ -289,10 +393,26 @@ void ensure_lua(World& w) {
   lua_pushnil(gLuaState); lua_setglobal(gLuaState, "io");
   lua_pushnil(gLuaState); lua_setglobal(gLuaState, "os");
   lua_pushnil(gLuaState); lua_setglobal(gLuaState, "package");
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "debug");
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "dofile");
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "loadfile");
+  lua_pushnil(gLuaState); lua_setglobal(gLuaState, "require");
+  lua_getglobal(gLuaState, "math");
+  if (lua_istable(gLuaState, -1)) {
+    lua_pushnil(gLuaState); lua_setfield(gLuaState, -2, "random");
+    lua_pushnil(gLuaState); lua_setfield(gLuaState, -2, "randomseed");
+  }
+  lua_pop(gLuaState, 1);
   lua_register(gLuaState, "activate_objective", lua_activate_objective);
   lua_register(gLuaState, "complete_objective", lua_complete_objective);
   lua_register(gLuaState, "fail_objective", lua_fail_objective);
   lua_register(gLuaState, "show_message", lua_show_message);
+  lua_register(gLuaState, "spawn_unit", lua_spawn_unit);
+  lua_register(gLuaState, "spawn_building", lua_spawn_building);
+  lua_register(gLuaState, "grant_resource", lua_grant_resource);
+  lua_register(gLuaState, "set_relation", lua_set_relation);
+  lua_register(gLuaState, "launch_operation", lua_launch_operation);
+  lua_register(gLuaState, "reveal_area", lua_reveal_area);
   lua_register(gLuaState, "get_tick", lua_get_tick);
   lua_register(gLuaState, "get_objective_state", lua_get_objective_state);
   lua_register(gLuaState, "get_player_alive", lua_get_player_alive);
@@ -4004,9 +4124,65 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
   w.triggers.clear();
   if (j.contains("triggers")) for (const auto& t : j["triggers"]) {
     Trigger tr{}; tr.id=t.value("id",0u); tr.once=t.value("once",true); auto c=t["condition"]; std::string ctype=c.value("type",std::string("TickReached"));
-    if (ctype=="UnitDestroyed" || ctype=="EntityDestroyed") tr.condition.type=TriggerType::UnitDestroyed; else if (ctype=="BuildingDestroyed") tr.condition.type=TriggerType::BuildingDestroyed; else if (ctype=="BuildingCompleted") tr.condition.type=TriggerType::BuildingCompleted; else if (ctype=="ObjectiveCompleted") tr.condition.type=TriggerType::ObjectiveCompleted; else if (ctype=="ObjectiveFailed") tr.condition.type=TriggerType::ObjectiveFailed; else if (ctype=="AreaEntered") tr.condition.type=TriggerType::AreaEntered; else if (ctype=="PlayerEliminated") tr.condition.type=TriggerType::PlayerEliminated; else tr.condition.type=TriggerType::TickReached;
-    tr.condition.tick=c.value("tick",0u); tr.condition.entityId=c.value("entityId",0u); tr.condition.buildingType=parse_building(c.value("buildingType",std::string("House"))); tr.condition.areaId=c.value("areaId",0u); tr.condition.player=c.value("player",(uint16_t)UINT16_MAX); tr.condition.objectiveId=c.value("objectiveId",0u);
-    if (t.contains("actions")) for (const auto& a : t["actions"]) { TriggerAction ac{}; std::string at=a.value("type",std::string("ShowMessage")); if (at=="ActivateObjective") ac.type=TriggerActionType::ActivateObjective; else if (at=="CompleteObjective") ac.type=TriggerActionType::CompleteObjective; else if (at=="FailObjective") ac.type=TriggerActionType::FailObjective; else if (at=="GrantResources") ac.type=TriggerActionType::GrantResources; else if (at=="SpawnUnits") ac.type=TriggerActionType::SpawnUnits; else if (at=="EndMatchVictory") ac.type=TriggerActionType::EndMatchVictory; else if (at=="EndMatchDefeat") ac.type=TriggerActionType::EndMatchDefeat; else if (at=="RunLuaHook") ac.type=TriggerActionType::RunLuaHook; else ac.type=TriggerActionType::ShowMessage; ac.text=a.value("text",""); ac.objectiveId=a.value("objectiveId",0u); ac.player=a.value("player",(uint16_t)UINT16_MAX); if (a.contains("resources")) { auto r=a["resources"]; ac.resources[ridx(Resource::Food)] = r.value("Food",0.0f); ac.resources[ridx(Resource::Wood)] = r.value("Wood",0.0f); ac.resources[ridx(Resource::Metal)] = r.value("Metal",0.0f); ac.resources[ridx(Resource::Wealth)] = r.value("Wealth",0.0f); ac.resources[ridx(Resource::Knowledge)] = r.value("Knowledge",0.0f); ac.resources[ridx(Resource::Oil)] = r.value("Oil",0.0f); } ac.spawnUnitType=parse_unit(a.value("unitType",std::string("Infantry"))); ac.spawnCount=a.value("count",0u); if (a.contains("pos")) ac.spawnPos={a["pos"][0].get<float>(),a["pos"][1].get<float>()}; ac.winner=a.value("winner",0u); ac.areaId=a.value("areaId",0u); ac.luaHook=a.value("luaHook",std::string("")); tr.actions.push_back(ac);} w.triggers.push_back(tr);} 
+    if (ctype=="UnitDestroyed" || ctype=="EntityDestroyed") tr.condition.type=TriggerType::UnitDestroyed;
+    else if (ctype=="BuildingDestroyed") tr.condition.type=TriggerType::BuildingDestroyed;
+    else if (ctype=="BuildingCompleted") tr.condition.type=TriggerType::BuildingCompleted;
+    else if (ctype=="ObjectiveCompleted") tr.condition.type=TriggerType::ObjectiveCompleted;
+    else if (ctype=="ObjectiveFailed") tr.condition.type=TriggerType::ObjectiveFailed;
+    else if (ctype=="AreaEntered") tr.condition.type=TriggerType::AreaEntered;
+    else if (ctype=="PlayerEliminated") tr.condition.type=TriggerType::PlayerEliminated;
+    else if (ctype=="DiplomacyChanged") tr.condition.type=TriggerType::DiplomacyChanged;
+    else if (ctype=="WorldTensionReached") tr.condition.type=TriggerType::WorldTensionReached;
+    else if (ctype=="StrategicStrikeLaunched") tr.condition.type=TriggerType::StrategicStrikeLaunched;
+    else if (ctype=="WonderCompleted") tr.condition.type=TriggerType::WonderCompleted;
+    else if (ctype=="CargoLanded") tr.condition.type=TriggerType::CargoLanded;
+    else tr.condition.type=TriggerType::TickReached;
+    tr.condition.tick=c.value("tick",0u);
+    tr.condition.entityId=c.value("entityId",0u);
+    tr.condition.buildingType=parse_building(c.value("buildingType",std::string("House")));
+    tr.condition.areaId=c.value("areaId",0u);
+    tr.condition.player=c.value("player",(uint16_t)UINT16_MAX);
+    tr.condition.playerB=c.value("playerB",(uint16_t)UINT16_MAX);
+    tr.condition.objectiveId=c.value("objectiveId",0u);
+    tr.condition.worldTension=c.value("worldTension",0.0f);
+    tr.condition.diplomacy=parse_relation(c.value("relation",std::string("Neutral")));
+    if (t.contains("actions")) for (const auto& a : t["actions"]) {
+      TriggerAction ac{};
+      std::string at=a.value("type",std::string("ShowMessage"));
+      if (at=="ActivateObjective") ac.type=TriggerActionType::ActivateObjective;
+      else if (at=="CompleteObjective") ac.type=TriggerActionType::CompleteObjective;
+      else if (at=="FailObjective") ac.type=TriggerActionType::FailObjective;
+      else if (at=="GrantResources") ac.type=TriggerActionType::GrantResources;
+      else if (at=="SpawnUnits") ac.type=TriggerActionType::SpawnUnits;
+      else if (at=="SpawnBuildings") ac.type=TriggerActionType::SpawnBuildings;
+      else if (at=="ChangeDiplomacy") ac.type=TriggerActionType::ChangeDiplomacy;
+      else if (at=="SetWorldTension") ac.type=TriggerActionType::SetWorldTension;
+      else if (at=="RevealArea") ac.type=TriggerActionType::RevealArea;
+      else if (at=="LaunchOperation") ac.type=TriggerActionType::LaunchOperation;
+      else if (at=="EndMatchVictory") ac.type=TriggerActionType::EndMatchVictory;
+      else if (at=="EndMatchDefeat") ac.type=TriggerActionType::EndMatchDefeat;
+      else if (at=="RunLuaHook") ac.type=TriggerActionType::RunLuaHook;
+      else ac.type=TriggerActionType::ShowMessage;
+      ac.text=a.value("text","");
+      ac.objectiveId=a.value("objectiveId",0u);
+      ac.player=a.value("player",(uint16_t)UINT16_MAX);
+      ac.playerB=a.value("playerB",(uint16_t)UINT16_MAX);
+      if (a.contains("resources")) { auto r=a["resources"]; ac.resources[ridx(Resource::Food)] = r.value("Food",0.0f); ac.resources[ridx(Resource::Wood)] = r.value("Wood",0.0f); ac.resources[ridx(Resource::Metal)] = r.value("Metal",0.0f); ac.resources[ridx(Resource::Wealth)] = r.value("Wealth",0.0f); ac.resources[ridx(Resource::Knowledge)] = r.value("Knowledge",0.0f); ac.resources[ridx(Resource::Oil)] = r.value("Oil",0.0f); }
+      ac.spawnUnitType=parse_unit(a.value("unitType",std::string("Infantry")));
+      ac.spawnBuildingType=parse_building(a.value("buildingType",std::string("House")));
+      ac.spawnCount=a.value("count",0u);
+      if (a.contains("pos")) ac.spawnPos={a["pos"][0].get<float>(),a["pos"][1].get<float>()};
+      ac.winner=a.value("winner",0u);
+      ac.areaId=a.value("areaId",0u);
+      ac.diplomacy=parse_relation(a.value("relation",std::string("Neutral")));
+      ac.worldTension=a.value("worldTension",0.0f);
+      ac.operationType=parse_operation_type(a.value("operationType",std::string("RallyAndPush")));
+      if (a.contains("operationTarget")) ac.operationTarget={a["operationTarget"][0].get<float>(),a["operationTarget"][1].get<float>()};
+      ac.luaHook=a.value("luaHook",std::string(""));
+      tr.actions.push_back(ac);
+    }
+    w.triggers.push_back(tr);
+  }
   if (j.contains("mission")) {
     const auto& m = j["mission"];
     w.mission.title = m.value("title", std::string(""));
