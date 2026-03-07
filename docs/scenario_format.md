@@ -146,3 +146,11 @@ Optional fields for authored operational state:
 - `operationalObjectives[]`: `{id, owner, theaterId, objectiveType, targetRegion:[minX,minY,maxX,maxY], requiredForce, startTick, durationTicks, outcome, active, armyGroups[], navalTaskForces[], airWings[]}`
 
 Reference scenario: `scenarios/theater_operations_test.json`.
+
+
+### Strategic deterrence additions
+- `strategicDeterrence[]` optional per-player authoritative setup:
+  - `strategicCapabilityEnabled`, `strategicStockpile`, `strategicReadyCount`, `strategicPreparingCount`
+  - `strategicAlertLevel`, `deterrencePosture` (`RESTRAINED|NO_FIRST_USE|FLEXIBLE_RESPONSE|MASSIVE_RETALIATION|LAUNCH_ON_WARNING`)
+  - `launchWarningActive`, `recentStrategicUseTick`, `retaliationCapability`, `secondStrikeCapability`
+- `strategicStrikes[]` now also supports `phase`, `interceptionResult`, `targetTeam`, `launchSystemCount`, `warningIssued`, `retaliationLaunch`, `secondStrikeLaunch`.

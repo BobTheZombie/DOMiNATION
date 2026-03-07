@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "seed": 1234,
+  "map": {"width": 128, "height": 128},
+  "worldTension": 52.0,
+  "players": [
+    {"id": 0, "age": 6, "isHuman": false, "isCPU": true, "civilization": "iron_phalanx", "team": 0, "popCap": 40,
+     "startingResources": {"Food": 900, "Wood": 800, "Metal": 1200, "Wealth": 900, "Knowledge": 700, "Oil": 500},
+     "refinedGoods": {"munitions": 80, "electronics": 60, "fuel": 40, "machine_parts": 30, "steel": 50}},
+    {"id": 1, "age": 7, "isHuman": false, "isCPU": true, "civilization": "scholar_dynasty", "team": 1, "popCap": 40,
+     "startingResources": {"Food": 900, "Wood": 800, "Metal": 1200, "Wealth": 900, "Knowledge": 700, "Oil": 500},
+     "refinedGoods": {"munitions": 80, "electronics": 80, "fuel": 40, "machine_parts": 40, "steel": 50}}
+  ],
+  "placements": {
+    "cities": [
+      {"id": 1, "team": 0, "pos": [24, 24], "level": 3, "capital": true},
+      {"id": 2, "team": 1, "pos": [99, 99], "level": 3, "capital": true}
+    ],
+    "buildings": [
+      {"id": 10, "team": 0, "type": "CityCenter", "pos": [24, 24], "underConstruction": false, "hp": 2200},
+      {"id": 11, "team": 0, "type": "MissileSilo", "pos": [18, 20], "underConstruction": false, "hp": 1100},
+      {"id": 12, "team": 0, "type": "RadarTower", "pos": [21, 22], "underConstruction": false, "hp": 900},
+      {"id": 20, "team": 1, "type": "CityCenter", "pos": [99, 99], "underConstruction": false, "hp": 2200},
+      {"id": 21, "team": 1, "type": "MissileSilo", "pos": [102, 95], "underConstruction": false, "hp": 1100},
+      {"id": 22, "team": 1, "type": "RadarTower", "pos": [95, 95], "underConstruction": false, "hp": 900},
+      {"id": 23, "team": 1, "type": "AntiMissileDefense", "pos": [100, 94], "underConstruction": false, "hp": 900},
+      {"id": 24, "team": 1, "type": "AABattery", "pos": [96, 99], "underConstruction": false, "hp": 900}
+    ],
+    "units": [
+      {"id": 100, "team": 0, "type": "Infantry", "pos": [28, 28]},
+      {"id": 101, "team": 1, "type": "Infantry", "pos": [95, 98]}
+    ]
+  },
+  "diplomacyRelations": [
+    {"a": 0, "b": 1, "relation": "War"}
+  ],
+  "strategicDeterrence": [
+    {"player": 0, "strategicCapabilityEnabled": true, "strategicStockpile": 4, "strategicReadyCount": 2, "strategicPreparingCount": 2, "strategicAlertLevel": 2, "deterrencePosture": "FLEXIBLE_RESPONSE", "launchWarningActive": false, "recentStrategicUseTick": 0, "retaliationCapability": true, "secondStrikeCapability": true},
+    {"player": 1, "strategicCapabilityEnabled": true, "strategicStockpile": 5, "strategicReadyCount": 3, "strategicPreparingCount": 3, "strategicAlertLevel": 3, "deterrencePosture": "MASSIVE_RETALIATION", "launchWarningActive": false, "recentStrategicUseTick": 0, "retaliationCapability": true, "secondStrikeCapability": true}
+  ],
+  "strategicStrikes": [
+    {"id": 1, "team": 0, "type": 1, "from": [18, 20], "target": [99, 99], "targetTeam": 1, "prepTicksRemaining": 120, "travelTicksRemaining": 170, "cooldownTicks": 0, "interceptionState": 0, "phase": 1, "interceptionResult": 0, "launched": false, "resolved": false}
+  ],
+  "rulesOverrides": {"timeLimit": 8000, "disabledVictoryTypes": []}
+}

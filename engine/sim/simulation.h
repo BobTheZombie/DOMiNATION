@@ -105,6 +105,9 @@ enum class AirUnitClass : uint8_t { Fighter, Interceptor, Bomber, StrategicBombe
 enum class AirMissionState : uint8_t { Airborne, Attacking, Returning };
 enum class DetectorType : uint8_t { RadarTower, MobileRadar, ReconDrone, NavalSensor, AirbaseRadar, SatelliteUplink, AABattery, AntiMissileDefense };
 enum class StrikeType : uint8_t { TacticalMissile, StrategicMissile, StrategicBomberStrike, AbstractWMD };
+enum class DeterrencePosture : uint8_t { Restrained, NoFirstUse, FlexibleResponse, MassiveRetaliation, LaunchOnWarning };
+enum class StrategicStrikePhase : uint8_t { Unavailable, Preparing, Ready, Launched, Intercepted, Detonated, Resolved };
+enum class StrategicInterceptionResult : uint8_t { Undetected, Detected, PartiallyIntercepted, FullyIntercepted, ReducedEffect };
 
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard, Encirclement, NavalBlockade, StrategicBombing, MissileStrikeCampaign };
@@ -191,8 +194,20 @@ struct DiplomacyTreaty { bool tradeAgreement{false}; bool openBorders{false}; bo
 struct EspionageOp { uint32_t id{0}; uint16_t actor{0}; uint16_t target{0}; EspionageOpType type{EspionageOpType::ReconCity}; uint32_t startTick{0}; uint32_t durationTicks{0}; EspionageOpState state{EspionageOpState::Active}; int effectStrength{0}; };
 struct AirUnit { uint32_t id{0}; uint16_t team{0}; AirUnitClass cls{AirUnitClass::Fighter}; AirMissionState state{AirMissionState::Airborne}; glm::vec2 pos{}; glm::vec2 missionTarget{}; float hp{100.0f}; float speed{6.0f}; uint32_t cooldownTicks{0}; bool missionPerformed{false}; };
 struct DetectorSite { uint32_t id{0}; uint16_t team{0}; DetectorType type{DetectorType::RadarTower}; glm::vec2 pos{}; float radius{12.0f}; bool revealContactOnly{false}; bool active{true}; };
-struct StrategicStrike { uint32_t id{0}; uint16_t team{0}; StrikeType type{StrikeType::TacticalMissile}; glm::vec2 from{}; glm::vec2 target{}; uint32_t prepTicksRemaining{0}; uint32_t travelTicksRemaining{0}; uint32_t cooldownTicks{0}; uint8_t interceptionState{0}; bool launched{false}; bool resolved{false}; };
+struct StrategicStrike { uint32_t id{0}; uint16_t team{0}; StrikeType type{StrikeType::TacticalMissile}; glm::vec2 from{}; glm::vec2 target{}; uint32_t prepTicksRemaining{0}; uint32_t travelTicksRemaining{0}; uint32_t cooldownTicks{0}; uint8_t interceptionState{0}; bool launched{false}; bool resolved{false}; StrategicStrikePhase phase{StrategicStrikePhase::Unavailable}; StrategicInterceptionResult interceptionResult{StrategicInterceptionResult::Undetected}; uint16_t targetTeam{UINT16_MAX}; uint16_t launchSystemCount{1}; bool warningIssued{false}; bool retaliationLaunch{false}; bool secondStrikeLaunch{false}; };
 struct DenialZone { uint32_t id{0}; uint16_t team{0}; glm::vec2 pos{}; float radius{6.0f}; uint32_t ticksRemaining{0}; };
+struct StrategicDeterrenceState {
+  bool strategicCapabilityEnabled{false};
+  uint16_t strategicStockpile{0};
+  uint16_t strategicReadyCount{0};
+  uint16_t strategicPreparingCount{0};
+  uint8_t strategicAlertLevel{0};
+  DeterrencePosture deterrencePosture{DeterrencePosture::Restrained};
+  bool launchWarningActive{false};
+  uint32_t recentStrategicUseTick{0};
+  bool retaliationCapability{false};
+  bool secondStrikeCapability{false};
+};
 
 struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
@@ -334,6 +349,13 @@ struct SimulationStats {
   uint32_t radarReveals{0};
   uint32_t strategicStrikes{0};
   uint32_t interceptions{0};
+  uint32_t strategicStockpileTotal{0};
+  uint32_t strategicReadyTotal{0};
+  uint32_t strategicPreparingTotal{0};
+  uint32_t strategicWarnings{0};
+  uint32_t strategicRetaliations{0};
+  uint32_t secondStrikeReadyCount{0};
+  uint32_t deterrencePostureChanges{0};
   uint32_t activeDenialZones{0};
   uint32_t mountainRegionCount{0};
   uint32_t mountainChainCount{0};
@@ -431,6 +453,7 @@ struct World {
   std::vector<AirUnit> airUnits;
   std::vector<DetectorSite> detectors;
   std::vector<StrategicStrike> strategicStrikes;
+  std::vector<StrategicDeterrenceState> strategicDeterrence;
   std::vector<DenialZone> denialZones;
   std::vector<int32_t> mountainRegionByCell;
   std::vector<MountainRegion> mountainRegions;
@@ -456,6 +479,9 @@ struct World {
   uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
   uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};
   uint32_t radarRevealEvents{0}; uint32_t strategicStrikeEvents{0}; uint32_t interceptionEvents{0}; uint32_t airMissionEvents{0};
+  uint32_t strategicWarningEvents{0}; uint32_t strategicRetaliationEvents{0};
+  uint32_t strategicStockpileTotal{0}; uint32_t strategicReadyTotal{0}; uint32_t strategicPreparingTotal{0}; uint32_t secondStrikeReadyCount{0};
+  uint32_t deterrencePostureChangeCount{0};
   uint32_t mountainRegionCount{0}; uint32_t surfaceDepositCount{0}; uint32_t deepDepositCount{0};
   uint32_t mountainChainCount{0}; uint32_t riverCount{0}; uint32_t lakeCount{0}; uint32_t startCandidateCount{0}; uint32_t mythicCandidateCount{0};
   uint32_t activeMineShafts{0}; uint32_t activeTunnels{0}; uint32_t undergroundDepots{0};
