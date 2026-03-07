@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "seed": 1234,
+  "map": { "width": 128, "height": 128 },
+  "players": [
+    { "id": 0, "isHuman": false, "isCPU": true, "team": 0, "civilization": "default" },
+    { "id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "default" }
+  ],
+  "placements": {
+    "cities": [
+      { "id": 1, "team": 0, "pos": [18.0, 18.0], "level": 2, "capital": true },
+      { "id": 2, "team": 1, "pos": [92.0, 92.0], "level": 2, "capital": true }
+    ],
+    "buildings": [
+      { "id": 1, "team": 0, "type": "CityCenter", "pos": [18.0, 18.0], "underConstruction": false },
+      { "id": 2, "team": 1, "type": "CityCenter", "pos": [92.0, 92.0], "underConstruction": false },
+      { "id": 3, "team": 0, "type": "Mine", "pos": [58.5, 51.5], "underConstruction": false }
+    ]
+  },
+  "mission": {
+    "title": "Mountain Mining Test",
+    "briefing": "Validate mountain extraction, shafts, and deterministic tunnel logistics.",
+    "introMessages": ["Mountain shafts initialized."]
+  }
+}

@@ -44,6 +44,20 @@ bool coastal_city_exists(const dom::sim::World& w, uint16_t team) {
   return false;
 }
 
+
+
+bool find_mountain_mine_spot(const dom::sim::World& w, uint16_t team, glm::vec2& out) {
+  for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
+    const int cell = y * w.width + x;
+    auto biome = dom::sim::biome_at(w, cell);
+    if (!(biome == dom::sim::BiomeType::Mountain || biome == dom::sim::BiomeType::SnowMountain)) continue;
+    if (w.territoryOwner[cell] != team) continue;
+    if (!dom::sim::valid_mine_shaft_placement(w, {x, y})) continue;
+    out = {x + 0.5f, y + 0.5f};
+    return true;
+  }
+  return false;
+}
 TeamStrength strength_near(const dom::sim::World& w, uint16_t team, glm::vec2 p, float r) {
   TeamStrength s{};
   for (const auto& u : w.units) {
@@ -94,13 +108,23 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   };
 
   if (world.players[team].popCap - world.players[team].popUsed <= 2) maybeBuild(dom::sim::BuildingType::House, {10, 5});
+  glm::vec2 mountainMinePos{};
+  const bool hasMountainSpot = find_mountain_mine_spot(world, team, mountainMinePos);
+  if (count_buildings(world, team, dom::sim::BuildingType::Mine) == 0) {
+    if (hasMountainSpot) {
+      dom::sim::start_build_placement(world, team, dom::sim::BuildingType::Mine);
+      dom::sim::update_build_placement(world, team, mountainMinePos);
+      dom::sim::confirm_build_placement(world, team);
+    } else {
+      maybeBuild(dom::sim::BuildingType::Mine, {8, 8});
+    }
+  }
+
   if (civ.economyBias >= civ.militaryBias) {
     maybeBuild(dom::sim::BuildingType::Farm, {6, 4});
     maybeBuild(dom::sim::BuildingType::LumberCamp, {4, 8});
     maybeBuild(dom::sim::BuildingType::Market, {11, 9});
-    maybeBuild(dom::sim::BuildingType::Mine, {8, 8});
   } else {
-    maybeBuild(dom::sim::BuildingType::Mine, {8, 8});
     maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
     maybeBuild(dom::sim::BuildingType::LumberCamp, {4, 8});
     maybeBuild(dom::sim::BuildingType::Farm, {6, 4});

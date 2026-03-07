@@ -408,7 +408,19 @@ BiomeType parse_biome_type(const std::string& id) {
   if (id == "coast_littoral") return BiomeType::Coast;
   if (id == "wetlands_marsh") return BiomeType::Wetlands;
   if (id == "mountain_highlands") return BiomeType::Mountain;
+  if (id == "snow_mountains" || id == "snow_capped_mountains") return BiomeType::SnowMountain;
   return BiomeType::TemperateGrassland;
+}
+
+const char* mineral_name(MineralType m) {
+  switch (m) {
+    case MineralType::Gold: return "gold";
+    case MineralType::Iron: return "iron";
+    case MineralType::Silver: return "silver";
+    case MineralType::Copper: return "copper";
+    case MineralType::Stone: return "stone";
+    default: return "iron";
+  }
 }
 
 const char* building_family_name(BuildingType t) {
@@ -861,14 +873,17 @@ void assign_biomes(World& w) {
   for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
     const int i = y * w.width + x;
     const float h = w.heightmap[i];
+    const float rugged = sample_noise_2d(w.seed + 401, x, y, 0.21f);
     const float moisture = std::clamp(w.fertility[i] * 0.7f + sample_noise_2d(w.seed + 17, x, y, 0.13f) * 0.3f, 0.0f, 1.0f);
     const float lat = std::abs((float)y / std::max(1, w.height - 1) - 0.5f) * 2.0f;
     const float temp = std::clamp((1.0f - lat) * 0.8f + sample_noise_2d(w.seed + 51, x, y, 0.09f) * 0.2f - std::max(0.0f, h) * 0.3f, 0.0f, 1.0f);
     BiomeType b = BiomeType::TemperateGrassland;
     TerrainClass tc = static_cast<TerrainClass>(w.terrainClass[i]);
     if (tc != TerrainClass::Land) b = BiomeType::Coast;
-    else if (h > 0.65f) b = BiomeType::Mountain;
-    else if (temp < 0.18f) b = BiomeType::Arctic;
+    else if (h > 0.72f || (h > 0.64f && rugged > 0.6f)) {
+      const bool snowCap = h > 0.86f || (h > 0.78f && temp < 0.36f);
+      b = snowCap ? BiomeType::SnowMountain : BiomeType::Mountain;
+    } else if (temp < 0.18f) b = BiomeType::Arctic;
     else if (temp < 0.28f) b = BiomeType::Tundra;
     else if (temp > 0.75f && moisture < 0.25f) b = BiomeType::Desert;
     else if (temp > 0.68f && moisture > 0.72f) b = BiomeType::Jungle;
@@ -880,6 +895,147 @@ void assign_biomes(World& w) {
   }
 }
 
+void rebuild_mountain_regions(World& w) {
+  const int cells = w.width * w.height;
+  w.mountainRegionByCell.assign(static_cast<size_t>(cells), -1);
+  w.mountainRegions.clear();
+  std::vector<uint8_t> seen(static_cast<size_t>(cells), 0);
+  uint32_t nextRegionId = 1;
+  for (int i = 0; i < cells; ++i) {
+    if (seen[i]) continue;
+    BiomeType b = biome_at(w, i);
+    if (!(b == BiomeType::Mountain || b == BiomeType::SnowMountain)) continue;
+    std::queue<int> q;
+    q.push(i);
+    seen[i] = 1;
+    MountainRegion region{};
+    region.id = nextRegionId++;
+    region.minX = region.maxX = i % w.width;
+    region.minY = region.maxY = i / w.width;
+    float bestH = -1000.0f;
+    int weightedX = 0;
+    int weightedY = 0;
+    while (!q.empty()) {
+      const int c = q.front(); q.pop();
+      const int cx = c % w.width;
+      const int cy = c / w.width;
+      w.mountainRegionByCell[static_cast<size_t>(c)] = static_cast<int32_t>(region.id);
+      region.cellCount++;
+      weightedX += cx;
+      weightedY += cy;
+      region.minX = std::min(region.minX, cx);
+      region.maxX = std::max(region.maxX, cx);
+      region.minY = std::min(region.minY, cy);
+      region.maxY = std::max(region.maxY, cy);
+      if (w.heightmap[static_cast<size_t>(c)] > bestH) { bestH = w.heightmap[static_cast<size_t>(c)]; region.peakCell = c; }
+      for (auto [dx, dy] : kNeighborOrder) {
+        const int nx = cx + dx;
+        const int ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+        const int ni = ny * w.width + nx;
+        if (seen[static_cast<size_t>(ni)]) continue;
+        BiomeType nb = biome_at(w, ni);
+        if (!(nb == BiomeType::Mountain || nb == BiomeType::SnowMountain)) continue;
+        seen[static_cast<size_t>(ni)] = 1;
+        q.push(ni);
+      }
+    }
+    if (region.cellCount > 0) {
+      region.centerCell = (weightedY / static_cast<int>(region.cellCount)) * w.width + (weightedX / static_cast<int>(region.cellCount));
+      w.mountainRegions.push_back(region);
+    }
+  }
+}
+
+void rebuild_mountain_deposits(World& w) {
+  w.surfaceDeposits.clear();
+  w.deepDeposits.clear();
+  w.undergroundNodes.clear();
+  w.undergroundEdges.clear();
+  uint32_t sid = 1;
+  uint32_t did = 1;
+  uint32_t nid = 1;
+  uint32_t eid = 1;
+  const std::array<MineralType, 5> minerals{MineralType::Gold, MineralType::Iron, MineralType::Silver, MineralType::Copper, MineralType::Stone};
+  for (const auto& region : w.mountainRegions) {
+    if (region.cellCount < 6) continue;
+    const int surfaceCount = std::max(1, static_cast<int>(region.cellCount / 42));
+    const int deepCount = std::max(1, static_cast<int>(region.cellCount / 28));
+    for (int i = 0; i < surfaceCount; ++i) {
+      int cx = std::clamp(region.minX + ((i + 1) * 7 + static_cast<int>(region.id)) % std::max(1, region.maxX - region.minX + 1), 0, w.width - 1);
+      int cy = std::clamp(region.minY + ((i + 2) * 5 + static_cast<int>(region.id) * 3) % std::max(1, region.maxY - region.minY + 1), 0, w.height - 1);
+      int cell = cy * w.width + cx;
+      if (w.mountainRegionByCell[static_cast<size_t>(cell)] != static_cast<int32_t>(region.id)) continue;
+      SurfaceDeposit sd{};
+      sd.id = sid++;
+      sd.regionId = region.id;
+      sd.mineral = minerals[(i + static_cast<int>(region.id)) % minerals.size()];
+      sd.cell = cell;
+      sd.remaining = 800.0f + 120.0f * ((i + static_cast<int>(region.id)) % 5);
+      w.surfaceDeposits.push_back(sd);
+      w.resourceNodes.push_back({static_cast<uint32_t>(w.resourceNodes.size()+1), ResourceNodeType::Ore, {cx + 0.5f, cy + 0.5f}, sd.remaining, UINT16_MAX});
+    }
+
+    UndergroundNode shaft{};
+    shaft.id = nid++;
+    shaft.regionId = region.id;
+    shaft.type = UndergroundNodeType::Shaft;
+    shaft.cell = region.centerCell;
+    w.undergroundNodes.push_back(shaft);
+
+    UndergroundNode depot{};
+    depot.id = nid++;
+    depot.regionId = region.id;
+    depot.type = UndergroundNodeType::Depot;
+    depot.cell = region.centerCell;
+    w.undergroundNodes.push_back(depot);
+
+    UndergroundEdge root{};
+    root.id = eid++;
+    root.regionId = region.id;
+    root.a = shaft.id;
+    root.b = depot.id;
+    w.undergroundEdges.push_back(root);
+
+    uint32_t prevNode = depot.id;
+    for (int i = 0; i < deepCount; ++i) {
+      int cell = region.peakCell;
+      if (cell < 0) cell = region.centerCell;
+      int cx = (cell % w.width) + (i % 2 ? 1 : -1);
+      int cy = (cell / w.width) + (i % 3 ? 1 : -1);
+      cx = std::clamp(cx, region.minX, region.maxX);
+      cy = std::clamp(cy, region.minY, region.maxY);
+      cell = cy * w.width + cx;
+      if (w.mountainRegionByCell[static_cast<size_t>(cell)] != static_cast<int32_t>(region.id)) cell = region.centerCell;
+
+      UndergroundNode dn{};
+      dn.id = nid++;
+      dn.regionId = region.id;
+      dn.type = UndergroundNodeType::Deposit;
+      dn.cell = cell;
+      w.undergroundNodes.push_back(dn);
+
+      DeepDeposit dd{};
+      dd.id = did++;
+      dd.regionId = region.id;
+      dd.nodeId = dn.id;
+      dd.mineral = minerals[(i + 2 + static_cast<int>(region.id)) % 4];
+      dd.cell = cell;
+      dd.richness = 1.7f + 0.2f * (i % 3);
+      dd.remaining = 1800.0f + 300.0f * (i % 4);
+      w.deepDeposits.push_back(dd);
+
+      UndergroundEdge e{};
+      e.id = eid++;
+      e.regionId = region.id;
+      e.a = prevNode;
+      e.b = dn.id;
+      w.undergroundEdges.push_back(e);
+      prevNode = dn.id;
+    }
+  }
+}
+
 void spawn_biome_resources(World& w) {
   w.resourceNodes.clear();
   uint32_t nextId = 1;
@@ -888,9 +1044,14 @@ void spawn_biome_resources(World& w) {
     BiomeType b = biome_at(w, i);
     if (b == BiomeType::Coast) { w.resourceNodes.push_back({nextId++, ResourceNodeType::Ruins, {(float)x + 0.5f, (float)y + 0.5f}, 1200.0f, UINT16_MAX}); continue; }
     if (b == BiomeType::Forest || b == BiomeType::Jungle || b == BiomeType::Wetlands) w.resourceNodes.push_back({nextId++, ResourceNodeType::Forest, {(float)x + 0.5f, (float)y + 0.5f}, 1500.0f, UINT16_MAX});
-    else if (b == BiomeType::Mountain || b == BiomeType::Steppe || b == BiomeType::Desert) w.resourceNodes.push_back({nextId++, ResourceNodeType::Ore, {(float)x + 0.5f, (float)y + 0.5f}, 1300.0f, UINT16_MAX});
+    else if (b == BiomeType::Mountain || b == BiomeType::SnowMountain || b == BiomeType::Steppe || b == BiomeType::Desert) {
+      float amount = (b == BiomeType::Mountain || b == BiomeType::SnowMountain) ? 2400.0f : 1300.0f;
+      w.resourceNodes.push_back({nextId++, ResourceNodeType::Ore, {(float)x + 0.5f, (float)y + 0.5f}, amount, UINT16_MAX});
+    }
     else w.resourceNodes.push_back({nextId++, ResourceNodeType::Farmable, {(float)x + 0.5f, (float)y + 0.5f}, 1400.0f, UINT16_MAX});
   }
+  rebuild_mountain_regions(w);
+  rebuild_mountain_deposits(w);
 }
 
 void rebuild_terrain_classes(World& w) {
@@ -902,6 +1063,52 @@ void rebuild_terrain_classes(World& w) {
     else w.terrainClass[i] = (uint8_t)TerrainClass::Land;
   }
 }
+
+int mountain_region_id_at(const World& w, int cell) {
+  if (cell < 0 || cell >= w.width * w.height || w.mountainRegionByCell.empty()) return 0;
+  return w.mountainRegionByCell[static_cast<size_t>(cell)];
+}
+
+bool region_has_active_tunnel(const World& w, uint32_t regionId, uint16_t team) {
+  for (const auto& e : w.undergroundEdges) {
+    if (e.regionId == regionId && e.active && (e.owner == UINT16_MAX || e.owner == team)) return true;
+  }
+  return false;
+}
+
+void update_underground_economy(World& w, float dt) {
+  w.undergroundYield = 0.0f;
+  w.activeMineShafts = 0;
+  w.activeTunnels = 0;
+  w.undergroundDepots = 0;
+  for (const auto& n : w.undergroundNodes) if (n.type == UndergroundNodeType::Depot && n.active) ++w.undergroundDepots;
+  for (const auto& e : w.undergroundEdges) if (e.active) ++w.activeTunnels;
+
+  for (const auto& b : w.buildings) {
+    if (b.type != BuildingType::Mine || b.underConstruction || b.hp <= 0.0f) continue;
+    const int cell = std::clamp((int)b.pos.y,0,w.height-1) * w.width + std::clamp((int)b.pos.x,0,w.width-1);
+    const int rid = mountain_region_id_at(w, cell);
+    if (rid <= 0) continue;
+    ++w.activeMineShafts;
+    const bool connected = region_has_active_tunnel(w, static_cast<uint32_t>(rid), b.team);
+    const float rate = connected ? 1.35f : 0.45f;
+    for (auto& d : w.deepDeposits) {
+      if (d.regionId != static_cast<uint32_t>(rid) || d.remaining <= 0.0f || !d.active) continue;
+      if (d.owner == UINT16_MAX) d.owner = b.team;
+      if (d.owner != b.team) continue;
+      float mined = std::min(d.remaining, rate * dt * 20.0f * d.richness);
+      d.remaining -= mined;
+      w.players[b.team].resources[ridx(Resource::Metal)] += mined * 0.18f;
+      w.undergroundYield += mined;
+      break;
+    }
+  }
+
+  w.mountainRegionCount = static_cast<uint32_t>(w.mountainRegions.size());
+  w.surfaceDepositCount = static_cast<uint32_t>(w.surfaceDeposits.size());
+  w.deepDepositCount = static_cast<uint32_t>(w.deepDeposits.size());
+}
+
 float fertility_at(const World& w, glm::vec2 p) {
   int x = std::clamp((int)p.x, 0, w.width - 1);
   int y = std::clamp((int)p.y, 0, w.height - 1);
@@ -1007,6 +1214,23 @@ void recompute_population(World& w) {
   for (const auto& u : w.units) if (u.hp > 0) w.players[u.team].popUsed += gUnitDefs[uidx(u.type)].popCost;
 }
 
+
+bool valid_mine_shaft_placement_impl(const World& w, glm::ivec2 tile) {
+  if (tile.x < 0 || tile.y < 0 || tile.x >= w.width || tile.y >= w.height) return false;
+  const int cell = tile.y * w.width + tile.x;
+  if (w.mountainRegionByCell.empty()) return false;
+  if (w.mountainRegionByCell[static_cast<size_t>(cell)] <= 0) return false;
+  return biome_at(w, cell) == BiomeType::Mountain || biome_at(w, cell) == BiomeType::SnowMountain;
+}
+
+bool deep_deposit_available_impl(const World& w, uint32_t depositId, uint16_t team) {
+  for (const auto& d : w.deepDeposits) {
+    if (d.id != depositId) continue;
+    if (!d.active || d.remaining <= 0.0f) return false;
+    return d.owner == UINT16_MAX || d.owner == team;
+  }
+  return false;
+}
 bool placeable(const World& w, uint16_t team, BuildingType type, glm::vec2 pos) {
   const BuildDef& d = gBuildDefs[bidx(type)];
   if (pos.x < d.size.x || pos.y < d.size.y || pos.x > w.width - d.size.x || pos.y > w.height - d.size.y) return false;
@@ -1018,6 +1242,8 @@ bool placeable(const World& w, uint16_t team, BuildingType type, glm::vec2 pos) 
   if (!territoryOk) return false;
   if (type == BuildingType::Port) {
     if (terrain_class_at(w, ty * w.width + tx) != TerrainClass::Land || !has_adjacent_coast(w, pos)) return false;
+  } else if (type == BuildingType::Mine) {
+    if (!valid_mine_shaft_placement_impl(w, {tx, ty})) return false;
   } else if (is_water_class(terrain_class_at(w, ty * w.width + tx))) return false;
   float centerH = w.heightmap[ty * w.width + tx];
   for (int oy = -1; oy <= 1; ++oy) for (int ox = -1; ox <= 1; ++ox) {
@@ -2159,9 +2385,9 @@ void initialize_world(World& w, uint32_t seed) {
   }
   rebuild_terrain_classes(w);
   assign_biomes(w);
+  spawn_biome_resources(w);
 
   apply_world_defaults(w);
-  w.resourceNodes.clear();
   w.roads.clear();
   w.triggerAreas.clear();
   w.objectives.clear();
@@ -2354,6 +2580,74 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     w.mission.luaScriptInline = m.value("luaInline", std::string(""));
     for (const auto& msg : w.mission.introMessages) w.objectiveLog.push_back({w.tick, msg});
   }
+  rebuild_mountain_regions(w);
+  if (j.contains("mountainRegions") && j["mountainRegions"].is_array()) {
+    w.mountainRegions.clear();
+    for (const auto& mr : j["mountainRegions"]) {
+      MountainRegion m{};
+      m.id = mr.value("id", (uint32_t)(w.mountainRegions.size()+1));
+      m.minX = mr.value("minX", 0); m.minY = mr.value("minY", 0); m.maxX = mr.value("maxX", 0); m.maxY = mr.value("maxY", 0);
+      m.peakCell = mr.value("peakCell", -1); m.centerCell = mr.value("centerCell", -1); m.cellCount = mr.value("cellCount", 0u);
+      w.mountainRegions.push_back(m);
+    }
+  }
+  w.surfaceDeposits.clear();
+  if (j.contains("surfaceDeposits") && j["surfaceDeposits"].is_array()) {
+    for (const auto& sdj : j["surfaceDeposits"]) {
+      SurfaceDeposit sd{};
+      sd.id = sdj.value("id", (uint32_t)(w.surfaceDeposits.size()+1));
+      sd.regionId = sdj.value("regionId", 0u);
+      sd.mineral = static_cast<MineralType>(sdj.value("mineral", 1));
+      sd.cell = sdj.value("cell", -1);
+      sd.remaining = sdj.value("remaining", 800.0f);
+      sd.owner = sdj.value("owner", (uint16_t)UINT16_MAX);
+      w.surfaceDeposits.push_back(sd);
+    }
+  }
+  w.deepDeposits.clear();
+  if (j.contains("deepDeposits") && j["deepDeposits"].is_array()) {
+    for (const auto& ddj : j["deepDeposits"]) {
+      DeepDeposit dd{};
+      dd.id = ddj.value("id", (uint32_t)(w.deepDeposits.size()+1));
+      dd.regionId = ddj.value("regionId", 0u);
+      dd.nodeId = ddj.value("nodeId", 0u);
+      dd.mineral = static_cast<MineralType>(ddj.value("mineral", 0));
+      dd.cell = ddj.value("cell", -1);
+      dd.richness = ddj.value("richness", 1.5f);
+      dd.remaining = ddj.value("remaining", 1600.0f);
+      dd.owner = ddj.value("owner", (uint16_t)UINT16_MAX);
+      dd.active = ddj.value("active", true);
+      w.deepDeposits.push_back(dd);
+    }
+  }
+  w.undergroundNodes.clear();
+  if (j.contains("undergroundNodes") && j["undergroundNodes"].is_array()) {
+    for (const auto& nj : j["undergroundNodes"]) {
+      UndergroundNode n{};
+      n.id = nj.value("id", (uint32_t)(w.undergroundNodes.size()+1));
+      n.regionId = nj.value("regionId", 0u);
+      n.type = static_cast<UndergroundNodeType>(nj.value("type", 2));
+      n.cell = nj.value("cell", -1);
+      n.linkedBuildingId = nj.value("linkedBuildingId", 0u);
+      n.owner = nj.value("owner", (uint16_t)UINT16_MAX);
+      n.active = nj.value("active", true);
+      w.undergroundNodes.push_back(n);
+    }
+  }
+  w.undergroundEdges.clear();
+  if (j.contains("undergroundEdges") && j["undergroundEdges"].is_array()) {
+    for (const auto& ej : j["undergroundEdges"]) {
+      UndergroundEdge e{};
+      e.id = ej.value("id", (uint32_t)(w.undergroundEdges.size()+1));
+      e.regionId = ej.value("regionId", 0u);
+      e.a = ej.value("a", 0u); e.b = ej.value("b", 0u);
+      e.owner = ej.value("owner", (uint16_t)UINT16_MAX);
+      e.active = ej.value("active", true);
+      w.undergroundEdges.push_back(e);
+    }
+  }
+  if (w.deepDeposits.empty() || w.undergroundNodes.empty() || w.undergroundEdges.empty()) rebuild_mountain_deposits(w);
+
   w.missionRuntime.status = MissionStatus::Running;
   w.missionRuntime.briefingShown = false;
   recompute_population(w);
@@ -2374,6 +2668,11 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["strategicStrikes"] = nlohmann::json::array(); for (const auto& st : w.strategicStrikes) j["strategicStrikes"].push_back({{"id",st.id},{"team",st.team},{"type",(int)st.type},{"from",{st.from.x,st.from.y}},{"target",{st.target.x,st.target.y}},{"prepTicksRemaining",st.prepTicksRemaining},{"travelTicksRemaining",st.travelTicksRemaining},{"cooldownTicks",st.cooldownTicks},{"interceptionState",st.interceptionState},{"launched",st.launched},{"resolved",st.resolved}});
   j["denialZones"] = nlohmann::json::array(); for (const auto& dz : w.denialZones) j["denialZones"].push_back({{"id",dz.id},{"team",dz.team},{"pos",{dz.pos.x,dz.pos.y}},{"radius",dz.radius},{"ticksRemaining",dz.ticksRemaining}});
   j["resourceNodes"] = nlohmann::json::array(); for (const auto& r : w.resourceNodes) { std::string t="Forest"; if (r.type==ResourceNodeType::Ore) t="Ore"; else if (r.type==ResourceNodeType::Farmable) t="Farmable"; else if (r.type==ResourceNodeType::Ruins) t="Ruins"; j["resourceNodes"].push_back({{"id",r.id},{"type",t},{"pos",{r.pos.x,r.pos.y}},{"amount",r.amount},{"owner",r.owner}}); }
+  j["mountainRegions"] = nlohmann::json::array(); for (const auto& mr : w.mountainRegions) j["mountainRegions"].push_back({{"id",mr.id},{"minX",mr.minX},{"minY",mr.minY},{"maxX",mr.maxX},{"maxY",mr.maxY},{"peakCell",mr.peakCell},{"centerCell",mr.centerCell},{"cellCount",mr.cellCount}});
+  j["surfaceDeposits"] = nlohmann::json::array(); for (const auto& sd : w.surfaceDeposits) j["surfaceDeposits"].push_back({{"id",sd.id},{"regionId",sd.regionId},{"mineral",(int)sd.mineral},{"cell",sd.cell},{"remaining",sd.remaining},{"owner",sd.owner}});
+  j["deepDeposits"] = nlohmann::json::array(); for (const auto& dd : w.deepDeposits) j["deepDeposits"].push_back({{"id",dd.id},{"regionId",dd.regionId},{"nodeId",dd.nodeId},{"mineral",(int)dd.mineral},{"cell",dd.cell},{"richness",dd.richness},{"remaining",dd.remaining},{"owner",dd.owner},{"active",dd.active}});
+  j["undergroundNodes"] = nlohmann::json::array(); for (const auto& n : w.undergroundNodes) j["undergroundNodes"].push_back({{"id",n.id},{"regionId",n.regionId},{"type",(int)n.type},{"cell",n.cell},{"linkedBuildingId",n.linkedBuildingId},{"owner",n.owner},{"active",n.active}});
+  j["undergroundEdges"] = nlohmann::json::array(); for (const auto& e : w.undergroundEdges) j["undergroundEdges"].push_back({{"id",e.id},{"regionId",e.regionId},{"a",e.a},{"b",e.b},{"owner",e.owner},{"active",e.active}});
   j["roads"] = nlohmann::json::array(); for (const auto& r : w.roads) j["roads"].push_back({{"id",r.id},{"owner",r.owner},{"a",{r.a.x,r.a.y}},{"b",{r.b.x,r.b.y}},{"quality",r.quality}});
   j["biomeMap"] = w.biomeMap;
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
@@ -2416,6 +2715,9 @@ void on_authoritative_state_loaded(World& w) {
   w.uiTrainMenu = false;
   w.uiResearchMenu = false;
   w.placementActive = false;
+  if (w.mountainRegionByCell.empty()) rebuild_mountain_regions(w);
+  if (w.deepDeposits.empty() || w.undergroundNodes.empty() || w.undergroundEdges.empty()) rebuild_mountain_deposits(w);
+  update_underground_economy(w, 0.0f);
   w.gameOver = w.match.phase != MatchPhase::Running;
   w.winner = w.match.winner;
 }
@@ -2448,6 +2750,7 @@ void tick_world(World& w, float dt) {
 
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f;
   apply_trade_income(w, dt);
+  update_underground_economy(w, dt);
 
   for (auto& b : w.buildings) {
     auto& owner = w.players[b.team];
@@ -2759,6 +3062,13 @@ void tick_world(World& w, float dt) {
   gLastStats.strategicStrikes = w.strategicStrikeEvents;
   gLastStats.interceptions = w.interceptionEvents;
   gLastStats.activeDenialZones = static_cast<uint32_t>(w.denialZones.size());
+  gLastStats.mountainRegionCount = w.mountainRegionCount;
+  gLastStats.surfaceDepositCount = w.surfaceDepositCount;
+  gLastStats.deepDepositCount = w.deepDepositCount;
+  gLastStats.activeMineShafts = w.activeMineShafts;
+  gLastStats.activeTunnels = w.activeTunnels;
+  gLastStats.undergroundDepots = w.undergroundDepots;
+  gLastStats.undergroundYield = w.undergroundYield;
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -2796,6 +3106,9 @@ void process_chunk_range(const World& world, ChunkRange range, const std::functi
   const int end = std::clamp(range.end, start, static_cast<int>(gChunks.chunks.size()));
   for (int i = start; i < end; ++i) fn(i);
 }
+
+bool valid_mine_shaft_placement(const World& world, glm::ivec2 tile) { return valid_mine_shaft_placement_impl(world, tile); }
+bool deep_deposit_available(const World& world, uint32_t depositId, uint16_t team) { return deep_deposit_available_impl(world, depositId, team); }
 
 void issue_move(World& w, uint16_t team, const std::vector<uint32_t>& ids, glm::vec2 target) {
   if (!gameplay_orders_allowed(w)) { ++w.rejectedCommandCount; return; }
@@ -2971,6 +3284,14 @@ uint64_t map_setup_hash(const World& w) {
   for (const auto& b : w.buildings) { hash_u32(h, b.id); hash_u32(h, b.team); hash_u32(h, (uint32_t)b.type); hash_float(h, b.pos.x); hash_float(h, b.pos.y); }
   for (const auto& u : w.units) { hash_u32(h, u.id); hash_u32(h, u.team); hash_u32(h, (uint32_t)u.type); hash_float(h, u.pos.x); hash_float(h, u.pos.y); }
   for (const auto& r : w.resourceNodes) { hash_u32(h, r.id); hash_u32(h, (uint32_t)r.type); hash_float(h, r.pos.x); hash_float(h, r.pos.y); hash_float(h, r.amount); }
+  for (int32_t v : w.mountainRegionByCell) hash_u32(h, static_cast<uint32_t>(v + 1));
+  for (const auto& mr : w.mountainRegions) {
+    hash_u32(h, mr.id); hash_u32(h, mr.minX); hash_u32(h, mr.minY); hash_u32(h, mr.maxX); hash_u32(h, mr.maxY); hash_u32(h, mr.peakCell + 1); hash_u32(h, mr.centerCell + 1); hash_u32(h, mr.cellCount);
+  }
+  for (const auto& sd : w.surfaceDeposits) { hash_u32(h, sd.id); hash_u32(h, sd.regionId); hash_u32(h, (uint32_t)sd.mineral); hash_u32(h, sd.cell + 1); hash_float(h, sd.remaining); }
+  for (const auto& dd : w.deepDeposits) { hash_u32(h, dd.id); hash_u32(h, dd.regionId); hash_u32(h, dd.nodeId); hash_u32(h, (uint32_t)dd.mineral); hash_u32(h, dd.cell + 1); hash_float(h, dd.remaining); }
+  for (const auto& n : w.undergroundNodes) { hash_u32(h, n.id); hash_u32(h, n.regionId); hash_u32(h, (uint32_t)n.type); hash_u32(h, n.cell + 1); }
+  for (const auto& e : w.undergroundEdges) { hash_u32(h, e.id); hash_u32(h, e.regionId); hash_u32(h, e.a); hash_u32(h, e.b); hash_u32(h, e.active?1u:0u); }
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& r : w.roads) { hash_u32(h, r.id); hash_u32(h, r.owner); hash_u32(h, (uint32_t)r.a.x); hash_u32(h, (uint32_t)r.a.y); hash_u32(h, (uint32_t)r.b.x); hash_u32(h, (uint32_t)r.b.y); hash_u32(h, r.quality); }
   return h;
@@ -3043,6 +3364,10 @@ uint64_t state_hash(const World& w) {
   for (const auto& dz : w.denialZones) { hash_u32(h,dz.id); hash_u32(h,dz.team); hash_float(h,dz.pos.x); hash_float(h,dz.pos.y); hash_float(h,dz.radius); hash_u32(h,dz.ticksRemaining); }
   for (uint8_t v : w.radarContactByPlayer) hash_u32(h, v);
   hash_u32(h, w.radarRevealEvents); hash_u32(h, w.strategicStrikeEvents); hash_u32(h, w.interceptionEvents); hash_u32(h, w.airMissionEvents);
+  hash_u32(h, w.mountainRegionCount); hash_u32(h, w.surfaceDepositCount); hash_u32(h, w.deepDepositCount);
+  hash_u32(h, w.activeMineShafts); hash_u32(h, w.activeTunnels); hash_u32(h, w.undergroundDepots); hash_float(h, w.undergroundYield);
+  for (const auto& d : w.deepDeposits) { hash_u32(h, d.id); hash_float(h, d.remaining); hash_u32(h, d.owner); hash_u32(h, d.active?1u:0u); }
+  for (const auto& e : w.undergroundEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.active?1u:0u); }
   for (uint8_t v : w.fog) hash_u32(h, v);
   for (uint8_t v : w.fogVisibilityByPlayer) hash_u32(h, v);
   for (uint8_t v : w.fogExploredByPlayer) hash_u32(h, v);
