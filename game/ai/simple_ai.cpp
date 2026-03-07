@@ -107,6 +107,10 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   }
   if (civ.scienceBias > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
   maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
+  if (civ.scienceBias >= 1.0f || civ.defense >= 1.0f) maybeBuild(dom::sim::BuildingType::RadarTower, {9, 10});
+  if (civ.militaryBias >= 1.0f) maybeBuild(dom::sim::BuildingType::Airbase, {16, 10});
+  if (world.worldTension > 35.0f || civ.scienceBias > 1.05f) maybeBuild(dom::sim::BuildingType::MissileSilo, {18, 12});
+  if (world.worldTension > 30.0f || civ.defense > 1.0f) { maybeBuild(dom::sim::BuildingType::AABattery, {7, 13}); maybeBuild(dom::sim::BuildingType::AntiMissileDefense, {6, 15}); }
 
   const bool navalRelevant = map_has_navigable_water(world) && coastal_city_exists(world, team);
   if (navalRelevant) maybeBuild(dom::sim::BuildingType::Port, {9, 3});
@@ -121,6 +125,22 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (count_units(world, team, dom::sim::UnitType::Archer) < archTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Archer);
     if (count_units(world, team, dom::sim::UnitType::Cavalry) < cavTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Cavalry);
     if (count_units(world, team, dom::sim::UnitType::Siege) < siegeTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Siege);
+  }
+
+  uint32_t airbase = first_building(world, team, dom::sim::BuildingType::Airbase);
+  if (airbase) {
+    int fighterTarget = std::clamp((int)std::round(2.0f * civ.militaryBias + (world.worldTension > 40.0f ? 2.0f : 0.0f)), 1, 8);
+    int bomberTarget = std::clamp((int)std::round(1.5f * civ.militaryBias + (civ.aggression > 1.1f ? 1.0f : 0.0f)), 1, 5);
+    int reconTarget = std::clamp((int)std::round(1.0f + 2.0f * civ.scienceBias), 1, 4);
+    if (count_units(world, team, dom::sim::UnitType::Fighter) < fighterTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Fighter);
+    if (count_units(world, team, dom::sim::UnitType::Interceptor) < fighterTarget / 2) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Interceptor);
+    if (count_units(world, team, dom::sim::UnitType::Bomber) < bomberTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Bomber);
+    if (count_units(world, team, dom::sim::UnitType::ReconDrone) < reconTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::ReconDrone);
+  }
+  uint32_t silo = first_building(world, team, dom::sim::BuildingType::MissileSilo);
+  if (silo && world.worldTension > 50.0f && civ.scienceBias >= 1.0f) {
+    if (count_units(world, team, dom::sim::UnitType::TacticalMissile) < 2) dom::sim::enqueue_train_unit(world, team, silo, dom::sim::UnitType::TacticalMissile);
+    if (count_units(world, team, dom::sim::UnitType::StrategicMissile) < 1) dom::sim::enqueue_train_unit(world, team, silo, dom::sim::UnitType::StrategicMissile);
   }
 
   uint32_t lib = first_building(world, team, dom::sim::BuildingType::Library);

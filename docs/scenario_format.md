@@ -53,3 +53,9 @@ Reference sample: `scenarios/diplomacy_test.json`.
 - Authored fields currently include map dimensions, players, units, cities, buildings, resource nodes, roads, biome map, trigger areas/objectives/triggers, diplomacy/treaties/world tension where present.
 - Unsupported authoring fields are surfaced in-editor; they are not silently mutated by panel-only UI state.
 - Round-trip expectation: save -> reload -> resave keeps stable human-readable JSON with minimal unrelated churn.
+
+## Strategic warfare extensions
+- Optional `airUnits` array stores authoritative air missions (`id`, `team`, `class`, `state`, `pos`, `missionTarget`, `hp`, `speed`, `cooldownTicks`, `missionPerformed`).
+- Optional `strategicStrikes` array stores strike prep/travel/interception state.
+- New placeable building types: `RadarTower`, `MobileRadar`, `Airbase`, `MissileSilo`, `AABattery`, `AntiMissileDefense`.
+- Optional `denialZones` array persists temporary strategic denial effects.

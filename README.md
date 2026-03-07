@@ -228,3 +228,10 @@ Perf counters now include `ROAD_COUNT`, `ACTIVE_TRADE_ROUTES`, `SUPPLIED_UNITS`,
 - UI panels are presentation-only and read state from authoritative `World` data each frame.
 - Event Log + Notifications consume deterministic gameplay events stream.
 - Command History panel records recently issued authoritative commands for debugging and smoke verification.
+
+## Strategic warfare smoke checks
+- `./build/rts --headless --smoke --ticks 2200 --seed 1234 --dump-hash`
+- `./build/rts --headless --smoke --ticks 2200 --seed 1234 --threads 1 --hash-only`
+- `./build/rts --headless --smoke --ticks 2200 --seed 1234 --threads 4 --hash-only`
+- `./build/rts --headless --smoke --ticks 2200 --seed 1234 --threads 8 --hash-only`
+- `./build/rts --headless --scenario scenarios/strategic_warfare_test.json --smoke --ticks 2600 --dump-hash`

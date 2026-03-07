@@ -57,3 +57,8 @@ Stylized RTS game art should prioritize readability at strategic zoom levels.
 ## Editor preview overlays
 - The renderer supports a lightweight editor preview overlay (tinted circle/ghost marker) for brush/object placement feedback.
 - Preview color encodes validity (green valid / red invalid) and remains camera-zoom independent.
+
+## Strategic warfare visuals
+- Air units render with unit markers and mission-target indicators.
+- Debug/GOD overlays include radar contact coverage and denial-zone circles.
+- Strategic warning notifications highlight incoming strike travel phases and interception outcomes.

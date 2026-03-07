@@ -10,8 +10,8 @@ namespace dom::sim {
 
 enum class Resource : uint8_t { Food, Wood, Metal, Wealth, Knowledge, Oil, Count };
 enum class Age : uint8_t { Ancient, Classical, Medieval, Gunpowder, Enlightenment, Industrial, Modern, Information };
-enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege, TransportShip, LightWarship, HeavyWarship, BombardShip, Count };
-enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder, Port, Count };
+enum class UnitType : uint8_t { Worker, Infantry, Archer, Cavalry, Siege, TransportShip, LightWarship, HeavyWarship, BombardShip, Fighter, Interceptor, Bomber, StrategicBomber, ReconDrone, StrikeDrone, TacticalMissile, StrategicMissile, Count };
+enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, Market, Library, Barracks, Wonder, Port, RadarTower, MobileRadar, Airbase, MissileSilo, AABattery, AntiMissileDefense, Count };
 enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building, Naval, Transport, Count };
 enum class AttackType : uint8_t { Melee, Ranged };
 enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
@@ -44,6 +44,10 @@ enum class DiplomacyRelation : uint8_t { Allied, Neutral, War, Ceasefire };
 enum class EspionageOpType : uint8_t { ReconCity, RevealRoute, SabotageEconomy, SabotageSupply, CounterIntel };
 enum class EspionageOpState : uint8_t { Active, Completed, Failed };
 enum class StrategicPosture : uint8_t { Expansionist, Defensive, TradeFocused, Escalating, TotalWar };
+enum class AirUnitClass : uint8_t { Fighter, Interceptor, Bomber, StrategicBomber, ReconDrone, StrikeDrone };
+enum class AirMissionState : uint8_t { Airborne, Attacking, Returning };
+enum class DetectorType : uint8_t { RadarTower, MobileRadar, ReconDrone, NavalSensor, AirbaseRadar, SatelliteUplink, AABattery, AntiMissileDefense };
+enum class StrikeType : uint8_t { TacticalMissile, StrategicMissile, StrategicBomberStrike, AbstractWMD };
 
 enum class SupplyState : uint8_t { InSupply, LowSupply, OutOfSupply };
 enum class OperationType : uint8_t { AssaultCity, DefendBorder, SecureRoute, RaidEconomy, RallyAndPush, AmphibiousAssault, NavalPatrol, CoastalBombard };
@@ -88,6 +92,10 @@ struct TradeRoute { uint32_t id{}; uint16_t team{}; uint32_t fromCity{0}; uint32
 struct OperationOrder { uint32_t id{}; uint16_t team{}; OperationType type{OperationType::RallyAndPush}; glm::vec2 target{}; uint32_t assignedTick{0}; bool active{true}; };
 struct DiplomacyTreaty { bool tradeAgreement{false}; bool openBorders{false}; bool alliance{false}; bool nonAggression{false}; uint32_t lastChangedTick{0}; };
 struct EspionageOp { uint32_t id{0}; uint16_t actor{0}; uint16_t target{0}; EspionageOpType type{EspionageOpType::ReconCity}; uint32_t startTick{0}; uint32_t durationTicks{0}; EspionageOpState state{EspionageOpState::Active}; int effectStrength{0}; };
+struct AirUnit { uint32_t id{0}; uint16_t team{0}; AirUnitClass cls{AirUnitClass::Fighter}; AirMissionState state{AirMissionState::Airborne}; glm::vec2 pos{}; glm::vec2 missionTarget{}; float hp{100.0f}; float speed{6.0f}; uint32_t cooldownTicks{0}; bool missionPerformed{false}; };
+struct DetectorSite { uint32_t id{0}; uint16_t team{0}; DetectorType type{DetectorType::RadarTower}; glm::vec2 pos{}; float radius{12.0f}; bool revealContactOnly{false}; bool active{true}; };
+struct StrategicStrike { uint32_t id{0}; uint16_t team{0}; StrikeType type{StrikeType::TacticalMissile}; glm::vec2 from{}; glm::vec2 target{}; uint32_t prepTicksRemaining{0}; uint32_t travelTicksRemaining{0}; uint32_t cooldownTicks{0}; uint8_t interceptionState{0}; bool launched{false}; bool resolved{false}; };
+struct DenialZone { uint32_t id{0}; uint16_t team{0}; glm::vec2 pos{}; float radius{6.0f}; uint32_t ticksRemaining{0}; };
 
 struct City { uint32_t id{}; uint16_t team{}; glm::vec2 pos{}; int level{1}; bool capital{false}; };
 
@@ -160,6 +168,12 @@ struct SimulationStats {
   uint32_t activeNavalOperations{0};
   uint32_t coastalTargets{0};
   uint32_t navalCombatEvents{0};
+  uint32_t airUnitCount{0};
+  uint32_t detectorCount{0};
+  uint32_t radarReveals{0};
+  uint32_t strategicStrikes{0};
+  uint32_t interceptions{0};
+  uint32_t activeDenialZones{0};
 };
 
 struct ChunkCoord {
@@ -190,6 +204,11 @@ struct World {
   std::vector<RoadSegment> roads; std::vector<TradeRoute> tradeRoutes; std::vector<OperationOrder> operations;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
   std::vector<EspionageOp> espionageOps; std::vector<StrategicPosture> strategicPosture;
+  std::vector<AirUnit> airUnits;
+  std::vector<DetectorSite> detectors;
+  std::vector<StrategicStrike> strategicStrikes;
+  std::vector<DenialZone> denialZones;
+  std::vector<uint8_t> radarContactByPlayer;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
   std::vector<PlayerState> players;
   bool godMode{false}; uint32_t tick{0}; bool gameOver{false}; uint16_t winner{0}; MatchConfig config{}; MatchResult match{}; WonderState wonder{};
@@ -200,6 +219,7 @@ struct World {
   uint32_t diplomacyEventCount{0}; uint32_t postureChangeCount{0};
   uint32_t suppliedUnits{0}; uint32_t lowSupplyUnits{0}; uint32_t outOfSupplyUnits{0};
   uint32_t embarkEvents{0}; uint32_t disembarkEvents{0}; uint32_t navalCombatEvents{0};
+  uint32_t radarRevealEvents{0}; uint32_t strategicStrikeEvents{0}; uint32_t interceptionEvents{0}; uint32_t airMissionEvents{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 
