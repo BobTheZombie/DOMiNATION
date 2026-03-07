@@ -60,3 +60,7 @@ Guardian mission helpers (existing campaign scripting surface):
 - `activate_guardian_site(site_instance_id)`
 - `reveal_guardian_site(site_instance_id)`
 - `assign_guardian_owner(site_instance_id, player)`
+
+
+## Strategic deterrence note
+Deterrence data is currently not writable from Lua; scenario data and simulation rules drive authoritative strategic posture/readiness.

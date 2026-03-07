@@ -349,3 +349,12 @@ Smoke and thread parity:
 ./build/rts --headless --scenario scenarios/theater_operations_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/theater_operations_test.json --threads 8 --hash-only
 ```
+
+
+## Strategic deterrence smoke
+- `./build/rts --headless --smoke --ticks 3200 --seed 1234 --dump-hash`
+- `./build/rts --headless --scenario scenarios/strategic_deterrence_test.json --smoke --ticks 3600 --dump-hash`
+- Thread parity: `--threads 1|4|8 --hash-only` against `scenarios/strategic_deterrence_test.json`
+- Save/load parity:
+  - `./build/rts --headless --scenario scenarios/strategic_deterrence_test.json --smoke --ticks 1800 --save /tmp/deterrence_save.json --dump-hash`
+  - `./build/rts --headless --load /tmp/deterrence_save.json --smoke --ticks 3600 --dump-hash`

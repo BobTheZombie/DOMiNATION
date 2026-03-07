@@ -88,7 +88,19 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   }
   ImGui::End();
 
-  if (ImGui::Begin("Mission Debug")) {
+
+  if (ImGui::Begin("Strategic Deterrence")) {
+    ImGui::Text("STRATEGIC_STOCKPILE_TOTAL=%u STRATEGIC_READY_TOTAL=%u STRATEGIC_PREPARING_TOTAL=%u", world.strategicStockpileTotal, world.strategicReadyTotal, world.strategicPreparingTotal);
+    ImGui::Text("STRATEGIC_LAUNCHES=%u STRATEGIC_WARNINGS=%u STRATEGIC_INTERCEPTIONS=%u", world.strategicStrikeEvents, world.strategicWarningEvents, world.interceptionEvents);
+    ImGui::Text("STRATEGIC_RETALIATIONS=%u SECOND_STRIKE_READY_COUNT=%u DETERRENCE_POSTURE_CHANGES=%u", world.strategicRetaliationEvents, world.secondStrikeReadyCount, world.deterrencePostureChangeCount);
+    for (size_t i = 0; i < world.strategicDeterrence.size(); ++i) {
+      const auto& d = world.strategicDeterrence[i];
+      ImGui::BulletText("P%zu cap=%d stockpile=%u ready=%u prep=%u alert=%u warning=%d retaliation=%d secondStrike=%d", i, d.strategicCapabilityEnabled?1:0, d.strategicStockpile, d.strategicReadyCount, d.strategicPreparingCount, d.strategicAlertLevel, d.launchWarningActive?1:0, d.retaliationCapability?1:0, d.secondStrikeCapability?1:0);
+    }
+  }
+  ImGui::End();
+
+    if (ImGui::Begin("Mission Debug")) {
     ImGui::Text("status=%u briefingShown=%s result=%s", (unsigned)world.missionRuntime.status, world.missionRuntime.briefingShown?"yes":"no", world.missionRuntime.resultTag.c_str());
     ImGui::Text("triggers fired=%u scripted actions=%u", world.missionRuntime.firedTriggerCount, world.missionRuntime.scriptedActionCount);
     ImGui::Separator();

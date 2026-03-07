@@ -269,3 +269,10 @@ The simulation now includes an authoritative industrial economy subsystem with r
 - Theater planning executes deterministically on fixed cadence and uses stable iteration/order-preserving assignment rules.
 - Doctrine modifiers bias operational intent (offensive pressure, defensive posture, supply corridor protection, naval and air emphasis).
 - Operational state is serialized and included in authoritative state hashing for replay/save-load/thread parity.
+
+
+## Strategic deterrence layer
+- Authoritative per-player `strategicDeterrence` state stores capability, stockpile, readiness/preparing counts, alert, posture, warning, recent use tick, retaliation, and second-strike capability.
+- Strategic strike lifecycle is deterministic and phase-based (`Unavailable -> Preparing -> Ready -> Launched -> Intercepted/Detonated -> Resolved`).
+- Strategic defense uses detector/anti-missile coverage plus electronics/doctrine bonuses to produce deterministic interception outcomes (`Undetected/Detected/PartiallyIntercepted/FullyIntercepted/ReducedEffect`).
+- Retaliation/second-strike is rule-driven from surviving launch capability, ready stockpile, posture, and tension state.
