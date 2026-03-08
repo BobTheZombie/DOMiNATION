@@ -35,7 +35,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   static int idx = 0;
   auto profile = dom::sim::last_tick_profile();
   auto stats = dom::sim::last_simulation_stats();
-  simHistory[idx] = static_cast<float>(profile.totalMs);
+  simHistory[idx] = static_cast<float>(profile.navMs + profile.combatMs);
   navHistory[idx] = static_cast<float>(profile.navMs);
   combatHistory[idx] = static_cast<float>(profile.combatMs);
   jobsHistory[idx] = static_cast<float>(stats.jobCount);

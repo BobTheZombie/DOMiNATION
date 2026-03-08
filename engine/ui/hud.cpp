@@ -8,6 +8,7 @@
 #include <SDL2/SDL.h>
 
 #include <algorithm>
+#include <glm/geometric.hpp>
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
