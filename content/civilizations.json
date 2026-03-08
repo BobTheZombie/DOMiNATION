@@ -56,13 +56,13 @@
       ]
     },
     "aiDoctrineModifiers": {
-      "workerTargetMult": 0.96,
-      "expansionTiming": 0.92,
+      "workerTargetMult": 0.92,
+      "expansionTiming": 0.86,
       "researchPriority": 0.9,
       "reconPriority": 0.95,
       "navalPriority": 0.95,
       "airPriority": 0.9,
-      "strategicPriority": 1.1
+      "strategicPriority": 1.06
     },
     "unitBonuses": {
       "attackMult": {
@@ -178,13 +178,13 @@
       ]
     },
     "aiDoctrineModifiers": {
-      "workerTargetMult": 1.2,
-      "expansionTiming": 1.02,
+      "workerTargetMult": 1.26,
+      "expansionTiming": 1.08,
       "researchPriority": 1.24,
       "reconPriority": 1.1,
       "navalPriority": 1.0,
       "airPriority": 1.0,
-      "strategicPriority": 1.02
+      "strategicPriority": 0.98
     },
     "unitBonuses": {
       "attackMult": {
@@ -381,11 +381,11 @@
     "aiDoctrineModifiers": {
       "navalPriority": 0.85,
       "airPriority": 0.95,
-      "strategicPriority": 1.1
+      "strategicPriority": 1.12
     },
     "unitBonuses": {
       "attackMult": {
-        "Siege": 1.2,
+        "Siege": 1.22,
         "Infantry": 1.08
       },
       "hpMult": {
@@ -469,9 +469,9 @@
       }
     },
     "aiDoctrineModifiers": {
-      "navalPriority": 1.2,
-      "airPriority": 1.22,
-      "strategicPriority": 1.2
+      "navalPriority": 1.16,
+      "airPriority": 1.26,
+      "strategicPriority": 1.24
     },
     "unitBonuses": {
       "attackMult": {
@@ -814,9 +814,9 @@
       }
     },
     "aiDoctrineModifiers": {
-      "workerTargetMult": 1.1,
-      "navalPriority": 0.9,
-      "strategicPriority": 0.95
+      "workerTargetMult": 1.14,
+      "navalPriority": 0.92,
+      "strategicPriority": 1.0
     },
     "unitBonuses": {
       "attackMult": {
@@ -907,9 +907,9 @@
       ]
     },
     "aiDoctrineModifiers": {
-      "researchPriority": 1.16,
-      "strategicPriority": 1.2,
-      "reconPriority": 1.08
+      "researchPriority": 1.18,
+      "strategicPriority": 1.24,
+      "reconPriority": 1.12
     },
     "unitBonuses": {
       "attackMult": {

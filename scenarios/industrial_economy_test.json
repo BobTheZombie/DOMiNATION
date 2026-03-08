@@ -4,40 +4,297 @@
   "mapWidth": 128,
   "mapHeight": 128,
   "players": [
-    {"id": 0, "isHuman": false, "isCPU": true, "team": 0, "civilization": "mercantile", "startingResources": {"Food": 700, "Wood": 700, "Metal": 1300, "Wealth": 900, "Knowledge": 700, "Oil": 1000}},
-    {"id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "militarist", "startingResources": {"Food": 700, "Wood": 700, "Metal": 1300, "Wealth": 900, "Knowledge": 700, "Oil": 1000}}
+    {
+      "id": 0,
+      "isHuman": false,
+      "isCPU": true,
+      "team": 0,
+      "civilization": "mercantile",
+      "startingResources": {
+        "Food": 1800,
+        "Wood": 1800,
+        "Metal": 6000,
+        "Wealth": 3000,
+        "Knowledge": 2600,
+        "Oil": 4000
+      }
+    },
+    {
+      "id": 1,
+      "isHuman": false,
+      "isCPU": true,
+      "team": 1,
+      "civilization": "militarist",
+      "startingResources": {
+        "Food": 1800,
+        "Wood": 1800,
+        "Metal": 6000,
+        "Wealth": 3000,
+        "Knowledge": 2600,
+        "Oil": 4000
+      }
+    }
   ],
   "cities": [
-    {"id": 1, "team": 0, "pos": [24, 24], "capital": true},
-    {"id": 2, "team": 1, "pos": [96, 96], "capital": true}
+    {
+      "id": 1,
+      "team": 0,
+      "pos": [
+        24,
+        24
+      ],
+      "capital": true
+    },
+    {
+      "id": 2,
+      "team": 1,
+      "pos": [
+        96,
+        96
+      ],
+      "capital": true
+    }
   ],
   "buildings": [
-    {"id": 1, "team": 0, "type": "CityCenter", "pos": [24, 24]},
-    {"id": 2, "team": 0, "type": "Mine", "pos": [31, 28]},
-    {"id": 3, "team": 0, "type": "SteelMill", "pos": [34, 28], "factory": {"recipeIndex": 0}},
-    {"id": 4, "team": 0, "type": "Refinery", "pos": [37, 28], "factory": {"recipeIndex": 1}},
-    {"id": 5, "team": 0, "type": "MunitionsPlant", "pos": [40, 28], "factory": {"recipeIndex": 2}},
-    {"id": 6, "team": 0, "type": "MachineWorks", "pos": [43, 28], "factory": {"recipeIndex": 3}},
-    {"id": 7, "team": 0, "type": "ElectronicsLab", "pos": [46, 28], "factory": {"recipeIndex": 4}},
-    {"id": 8, "team": 0, "type": "Barracks", "pos": [29, 24]},
-    {"id": 9, "team": 0, "type": "Airbase", "pos": [33, 24]},
-    {"id": 10, "team": 0, "type": "MissileSilo", "pos": [37, 24]},
-    {"id": 11, "team": 0, "type": "RadarTower", "pos": [41, 24]},
-    {"id": 12, "team": 1, "type": "CityCenter", "pos": [96, 96]},
-    {"id": 13, "team": 1, "type": "Barracks", "pos": [90, 92]}
+    {
+      "id": 1,
+      "team": 0,
+      "type": "CityCenter",
+      "pos": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": 2,
+      "team": 0,
+      "type": "Mine",
+      "pos": [
+        31,
+        28
+      ]
+    },
+    {
+      "id": 3,
+      "team": 0,
+      "type": "SteelMill",
+      "pos": [
+        34,
+        28
+      ],
+      "factory": {
+        "recipeIndex": 0
+      }
+    },
+    {
+      "id": 4,
+      "team": 0,
+      "type": "Refinery",
+      "pos": [
+        37,
+        28
+      ],
+      "factory": {
+        "recipeIndex": 1
+      }
+    },
+    {
+      "id": 5,
+      "team": 0,
+      "type": "MunitionsPlant",
+      "pos": [
+        40,
+        28
+      ],
+      "factory": {
+        "recipeIndex": 2
+      }
+    },
+    {
+      "id": 6,
+      "team": 0,
+      "type": "MachineWorks",
+      "pos": [
+        43,
+        28
+      ],
+      "factory": {
+        "recipeIndex": 3
+      }
+    },
+    {
+      "id": 7,
+      "team": 0,
+      "type": "ElectronicsLab",
+      "pos": [
+        46,
+        28
+      ],
+      "factory": {
+        "recipeIndex": 4
+      }
+    },
+    {
+      "id": 8,
+      "team": 0,
+      "type": "Barracks",
+      "pos": [
+        29,
+        24
+      ]
+    },
+    {
+      "id": 9,
+      "team": 0,
+      "type": "Airbase",
+      "pos": [
+        33,
+        24
+      ]
+    },
+    {
+      "id": 10,
+      "team": 0,
+      "type": "MissileSilo",
+      "pos": [
+        37,
+        24
+      ]
+    },
+    {
+      "id": 11,
+      "team": 0,
+      "type": "RadarTower",
+      "pos": [
+        41,
+        24
+      ]
+    },
+    {
+      "id": 12,
+      "team": 1,
+      "type": "CityCenter",
+      "pos": [
+        96,
+        96
+      ]
+    },
+    {
+      "id": 13,
+      "team": 1,
+      "type": "Barracks",
+      "pos": [
+        90,
+        92
+      ]
+    }
   ],
   "units": [
-    {"team": 0, "type": "Worker", "pos": [33, 27]},
-    {"team": 0, "type": "Worker", "pos": [36, 27]},
-    {"team": 0, "type": "Infantry", "pos": [30, 25]},
-    {"team": 1, "type": "Infantry", "pos": [92, 94]}
+    {
+      "team": 0,
+      "type": "Worker",
+      "pos": [
+        33,
+        27
+      ]
+    },
+    {
+      "team": 0,
+      "type": "Worker",
+      "pos": [
+        36,
+        27
+      ]
+    },
+    {
+      "team": 0,
+      "type": "Infantry",
+      "pos": [
+        30,
+        25
+      ]
+    },
+    {
+      "team": 1,
+      "type": "Infantry",
+      "pos": [
+        92,
+        94
+      ]
+    }
   ],
   "roads": [
-    {"id": 1, "owner": 0, "a": [24,24], "b": [25,24]},
-    {"id": 2, "owner": 0, "a": [25,24], "b": [26,24]},
-    {"id": 3, "owner": 0, "a": [26,24], "b": [27,25]},
-    {"id": 4, "owner": 0, "a": [27,25], "b": [28,26]},
-    {"id": 5, "owner": 0, "a": [28,26], "b": [29,27]},
-    {"id": 6, "owner": 0, "a": [29,27], "b": [34,28]}
+    {
+      "id": 1,
+      "owner": 0,
+      "a": [
+        24,
+        24
+      ],
+      "b": [
+        25,
+        24
+      ]
+    },
+    {
+      "id": 2,
+      "owner": 0,
+      "a": [
+        25,
+        24
+      ],
+      "b": [
+        26,
+        24
+      ]
+    },
+    {
+      "id": 3,
+      "owner": 0,
+      "a": [
+        26,
+        24
+      ],
+      "b": [
+        27,
+        25
+      ]
+    },
+    {
+      "id": 4,
+      "owner": 0,
+      "a": [
+        27,
+        25
+      ],
+      "b": [
+        28,
+        26
+      ]
+    },
+    {
+      "id": 5,
+      "owner": 0,
+      "a": [
+        28,
+        26
+      ],
+      "b": [
+        29,
+        27
+      ]
+    },
+    {
+      "id": 6,
+      "owner": 0,
+      "a": [
+        29,
+        27
+      ],
+      "b": [
+        34,
+        28
+      ]
+    }
   ]
 }

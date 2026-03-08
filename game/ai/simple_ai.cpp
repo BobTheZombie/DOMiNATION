@@ -97,6 +97,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
 
   const auto& civ = world.players[team].civilization;
   const bool armageddon = world.armageddonActive;
+  const auto flowPhase = dom::sim::compute_match_flow_phase(world);
   uint32_t cc = first_building(world, team, dom::sim::BuildingType::CityCenter);
   const int workerTarget = std::clamp((int)std::round((5.0f * civ.economyBias + 1.5f) * civ.aiWorkerTargetMult), 4, 16);
   if (cc && count_units(world, team, dom::sim::UnitType::Worker) < workerTarget) dom::sim::enqueue_train_unit(world, team, cc, dom::sim::UnitType::Worker);
@@ -145,7 +146,8 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   if (civ.scienceBias * civ.aiResearchPriority > 0.9f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
 
   const bool industrialEra = world.players[team].age >= dom::sim::Age::Industrial;
-  if (industrialEra || (world.tick > 900 && civ.economyBias > 1.05f)) {
+  const bool industrialWindow = industrialEra || flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation || (world.tick > 760 && civ.economyBias > 1.02f);
+  if (industrialWindow) {
     if (count_buildings(world, team, dom::sim::BuildingType::SteelMill) == 0 && count_buildings(world, team, dom::sim::BuildingType::Mine) > 0) maybeBuild(dom::sim::BuildingType::SteelMill, {12, 6});
     if (count_buildings(world, team, dom::sim::BuildingType::Refinery) == 0) maybeBuild(dom::sim::BuildingType::Refinery, {14, 5});
     if (count_buildings(world, team, dom::sim::BuildingType::MunitionsPlant) == 0 && civ.militaryBias >= 1.0f) maybeBuild(dom::sim::BuildingType::MunitionsPlant, {15, 8});
@@ -154,7 +156,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (count_buildings(world, team, dom::sim::BuildingType::FactoryHub) == 0 && (civ.logisticsBias >= 1.0f || civ.economyBias >= 1.1f)) maybeBuild(dom::sim::BuildingType::FactoryHub, {16, 10});
   }
 
-  if (world.players[team].age >= dom::sim::Age::Industrial && world.tick % 60 == 0) {
+  if ((world.players[team].age >= dom::sim::Age::Industrial || flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation) && world.tick % 60 == 0) {
     const bool economyRail = civ.economyBias >= 1.1f || civ.logisticsBias >= 1.1f;
     const bool militaryRail = civ.militaryBias >= 1.1f || civ.aggression >= 1.05f;
     if (economyRail) {
@@ -178,7 +180,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
   if (civ.scienceBias * civ.aiReconPriority >= 1.0f || civ.defense >= 1.0f) maybeBuild(dom::sim::BuildingType::RadarTower, {9, 10});
   if (civ.militaryBias * civ.aiAirPriority >= 1.0f) maybeBuild(dom::sim::BuildingType::Airbase, {16, 10});
-  if (world.worldTension > 35.0f || civ.scienceBias * civ.aiStrategicPriority > 1.05f || civ.strategicBias > 1.05f) maybeBuild(dom::sim::BuildingType::MissileSilo, {18, 12});
+  if (flowPhase >= dom::sim::MatchFlowPhase::StrategicCrisis || world.worldTension > 48.0f || civ.scienceBias * civ.aiStrategicPriority > 1.1f || civ.strategicBias > 1.1f) maybeBuild(dom::sim::BuildingType::MissileSilo, {18, 12});
   if (world.worldTension > 30.0f || civ.defense > 1.0f) { maybeBuild(dom::sim::BuildingType::AABattery, {7, 13}); maybeBuild(dom::sim::BuildingType::AntiMissileDefense, {6, 15}); }
 
   const bool navalRelevant = map_has_navigable_water(world) && coastal_city_exists(world, team);
@@ -186,10 +188,21 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
 
   uint32_t barracks = first_building(world, team, dom::sim::BuildingType::Barracks);
   if (barracks) {
-    int infTarget = std::clamp((int)std::round(5.0f * civ.militaryBias), 3, 12);
-    int archTarget = std::clamp((int)std::round(2.0f * civ.scienceBias + 1.0f), 1, 6);
-    int cavTarget = std::clamp((int)std::round(2.0f * civ.aggression + 1.0f), 1, 6);
-    int siegeTarget = std::clamp((int)std::round(2.0f * civ.defense), 1, 4);
+    float infBias = civ.militaryBias;
+    float archBias = civ.scienceBias;
+    float cavBias = civ.aggression;
+    float siegeBias = civ.defense;
+    if (civ.id == "rome") { infBias *= 1.18f; siegeBias *= 1.08f; }
+    else if (civ.id == "china") { archBias *= 1.16f; infBias *= 0.96f; }
+    else if (civ.id == "usa") { infBias *= 0.95f; siegeBias *= 1.08f; }
+    else if (civ.id == "russia") { infBias *= 1.12f; cavBias *= 0.9f; siegeBias *= 1.15f; }
+    else if (civ.id == "japan") { cavBias *= 1.1f; archBias *= 1.1f; }
+    else if (civ.id == "egypt") { siegeBias *= 1.14f; infBias *= 1.05f; }
+    else if (civ.id == "tartaria") { archBias *= 1.12f; siegeBias *= 1.12f; }
+    int infTarget = std::clamp((int)std::round(5.0f * infBias), 3, 16);
+    int archTarget = std::clamp((int)std::round(2.0f * archBias + 1.0f), 1, 7);
+    int cavTarget = std::clamp((int)std::round(2.0f * cavBias + 1.0f), 1, 7);
+    int siegeTarget = std::clamp((int)std::round(2.0f * siegeBias), 1, 5);
     if (count_units(world, team, dom::sim::UnitType::Infantry) < infTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Infantry);
     if (count_units(world, team, dom::sim::UnitType::Archer) < archTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Archer);
     if (count_units(world, team, dom::sim::UnitType::Cavalry) < cavTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Cavalry);
@@ -207,7 +220,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (count_units(world, team, dom::sim::UnitType::ReconDrone) < reconTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::ReconDrone);
   }
   uint32_t silo = first_building(world, team, dom::sim::BuildingType::MissileSilo);
-  if (silo && world.worldTension > 50.0f && civ.scienceBias >= 1.0f) {
+  if (silo && (flowPhase >= dom::sim::MatchFlowPhase::StrategicCrisis || world.worldTension > 62.0f) && civ.scienceBias >= 1.0f) {
     if (count_units(world, team, dom::sim::UnitType::TacticalMissile) < 2) dom::sim::enqueue_train_unit(world, team, silo, dom::sim::UnitType::TacticalMissile);
     if (count_units(world, team, dom::sim::UnitType::StrategicMissile) < 1) dom::sim::enqueue_train_unit(world, team, silo, dom::sim::UnitType::StrategicMissile);
   }

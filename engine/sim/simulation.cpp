@@ -1397,7 +1397,7 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::House)].popCapBonus = 5;
 
   gBuildDefs[bidx(BuildingType::Farm)].size = {2.6f, 2.6f};
-  gBuildDefs[bidx(BuildingType::Farm)].buildTime = 14.0f;
+  gBuildDefs[bidx(BuildingType::Farm)].buildTime = 13.0f;
   gBuildDefs[bidx(BuildingType::Farm)].cost[ridx(Resource::Wood)] = 80;
   gBuildDefs[bidx(BuildingType::Farm)].trickle[ridx(Resource::Food)] = 1.9f;
 
@@ -1407,7 +1407,7 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::LumberCamp)].trickle[ridx(Resource::Wood)] = 1.6f;
 
   gBuildDefs[bidx(BuildingType::Mine)].size = {2.6f, 2.6f};
-  gBuildDefs[bidx(BuildingType::Mine)].buildTime = 15.0f;
+  gBuildDefs[bidx(BuildingType::Mine)].buildTime = 14.0f;
   gBuildDefs[bidx(BuildingType::Mine)].cost[ridx(Resource::Wood)] = 60;
   gBuildDefs[bidx(BuildingType::Mine)].cost[ridx(Resource::Metal)] = 40;
   gBuildDefs[bidx(BuildingType::Mine)].trickle[ridx(Resource::Metal)] = 1.4f;
@@ -1425,7 +1425,7 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::Library)].trickle[ridx(Resource::Knowledge)] = 1.5f;
 
   gBuildDefs[bidx(BuildingType::Barracks)].size = {3.0f, 3.0f};
-  gBuildDefs[bidx(BuildingType::Barracks)].buildTime = 20.0f;
+  gBuildDefs[bidx(BuildingType::Barracks)].buildTime = 19.0f;
   gBuildDefs[bidx(BuildingType::Barracks)].cost[ridx(Resource::Wood)] = 130;
   gBuildDefs[bidx(BuildingType::Barracks)].cost[ridx(Resource::Metal)] = 70;
 
@@ -1441,12 +1441,12 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::Port)].cost[ridx(Resource::Metal)] = 80;
 
   gBuildDefs[bidx(BuildingType::SteelMill)].size = {3.2f, 3.2f};
-  gBuildDefs[bidx(BuildingType::SteelMill)].buildTime = 26.0f;
+  gBuildDefs[bidx(BuildingType::SteelMill)].buildTime = 24.0f;
   gBuildDefs[bidx(BuildingType::SteelMill)].cost[ridx(Resource::Metal)] = 160;
   gBuildDefs[bidx(BuildingType::SteelMill)].cost[ridx(Resource::Wealth)] = 100;
 
   gBuildDefs[bidx(BuildingType::Refinery)].size = {3.2f, 3.2f};
-  gBuildDefs[bidx(BuildingType::Refinery)].buildTime = 24.0f;
+  gBuildDefs[bidx(BuildingType::Refinery)].buildTime = 23.0f;
   gBuildDefs[bidx(BuildingType::Refinery)].cost[ridx(Resource::Metal)] = 130;
   gBuildDefs[bidx(BuildingType::Refinery)].cost[ridx(Resource::Wealth)] = 90;
 
@@ -1466,7 +1466,7 @@ void set_default_defs() {
   gBuildDefs[bidx(BuildingType::ElectronicsLab)].cost[ridx(Resource::Knowledge)] = 130;
 
   gBuildDefs[bidx(BuildingType::FactoryHub)].size = {3.4f, 3.4f};
-  gBuildDefs[bidx(BuildingType::FactoryHub)].buildTime = 28.0f;
+  gBuildDefs[bidx(BuildingType::FactoryHub)].buildTime = 26.0f;
   gBuildDefs[bidx(BuildingType::FactoryHub)].cost[ridx(Resource::Metal)] = 180;
   gBuildDefs[bidx(BuildingType::FactoryHub)].cost[ridx(Resource::Wealth)] = 140;
 
@@ -1477,7 +1477,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Worker)].attackType = AttackType::Melee;
   gUnitDefs[uidx(UnitType::Worker)].preferredTargetRole = UnitRole::Worker;
 
-  gUnitDefs[uidx(UnitType::Infantry)].trainTime = 12.0f;
+  gUnitDefs[uidx(UnitType::Infantry)].trainTime = 11.0f;
   gUnitDefs[uidx(UnitType::Infantry)].cost[ridx(Resource::Food)] = 70;
   gUnitDefs[uidx(UnitType::Infantry)].cost[ridx(Resource::Metal)] = 30;
   gUnitDefs[uidx(UnitType::Infantry)].popCost = 1;
@@ -1548,7 +1548,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::TacticalMissile)].trainTime = 26.0f; gUnitDefs[uidx(UnitType::TacticalMissile)].cost[ridx(Resource::Metal)] = 180; gUnitDefs[uidx(UnitType::TacticalMissile)].cost[ridx(Resource::Oil)] = 80; gUnitDefs[uidx(UnitType::TacticalMissile)].role = UnitRole::Siege;
   gUnitDefs[uidx(UnitType::StrategicMissile)] = gUnitDefs[uidx(UnitType::TacticalMissile)]; gUnitDefs[uidx(UnitType::StrategicMissile)].trainTime = 36.0f; gUnitDefs[uidx(UnitType::StrategicMissile)].cost[ridx(Resource::Metal)] = 260;
 
-  gAgeResearchTime = 35.0f;
+  gAgeResearchTime = 33.0f;
   gAgeResearchCost[ridx(Resource::Knowledge)] = 130;
   gAgeResearchCost[ridx(Resource::Wealth)] = 110;
 }
@@ -4358,6 +4358,47 @@ const char* posture_name(StrategicPosture posture) {
   return "DEFENSIVE";
 }
 
+const char* match_flow_phase_name(MatchFlowPhase phase) {
+  switch (phase) {
+    case MatchFlowPhase::EarlyExpansion: return "EARLY_EXPANSION";
+    case MatchFlowPhase::RegionalContest: return "REGIONAL_CONTEST";
+    case MatchFlowPhase::IndustrialEscalation: return "INDUSTRIAL_ESCALATION";
+    case MatchFlowPhase::StrategicCrisis: return "STRATEGIC_CRISIS";
+    case MatchFlowPhase::ArmageddonEndgame: return "ARMAGEDDON_ENDGAME";
+  }
+  return "EARLY_EXPANSION";
+}
+
+MatchFlowPhase compute_match_flow_phase(const World& world) {
+  if (world.armageddonActive) return MatchFlowPhase::ArmageddonEndgame;
+  int alivePlayers = 0;
+  float ageSum = 0.0f;
+  for (const auto& p : world.players) {
+    if (!p.alive) continue;
+    ++alivePlayers;
+    ageSum += static_cast<float>(p.age);
+  }
+  const float avgAge = alivePlayers > 0 ? ageSum / static_cast<float>(alivePlayers) : 0.0f;
+  int combatUnits = 0;
+  for (const auto& u : world.units) if (u.hp > 0.0f && u.type != UnitType::Worker) ++combatUnits;
+  int factories = 0;
+  for (const auto& b : world.buildings) {
+    if (b.underConstruction || b.hp <= 0.0f) continue;
+    if (b.type == BuildingType::SteelMill || b.type == BuildingType::Refinery || b.type == BuildingType::MunitionsPlant || b.type == BuildingType::MachineWorks || b.type == BuildingType::ElectronicsLab || b.type == BuildingType::FactoryHub) ++factories;
+  }
+  const bool strategicHot = world.worldTension >= 72.0f || world.strategicStrikeEvents > 0 || world.strategicStockpileTotal >= 4 || world.strategicReadyTotal >= 2;
+  if (world.tick < 650 && avgAge <= static_cast<float>(Age::Classical) && combatUnits < 28 && factories == 0) {
+    return MatchFlowPhase::EarlyExpansion;
+  }
+  if ((avgAge < static_cast<float>(Age::Industrial) && world.tick < 1500 && !strategicHot) || (world.worldTension < 44.0f && factories < 2)) {
+    return MatchFlowPhase::RegionalContest;
+  }
+  if (!strategicHot && (avgAge < static_cast<float>(Age::Modern) || world.industrialThroughput < 9.0f || world.railThroughput < 4.0f)) {
+    return MatchFlowPhase::IndustrialEscalation;
+  }
+  return MatchFlowPhase::StrategicCrisis;
+}
+
 int compute_player_score(const World& world, uint16_t playerId) {
   if (playerId >= world.players.size()) return 0;
   const auto& p = world.players[playerId];
@@ -4368,11 +4409,20 @@ int compute_player_score(const World& world, uint16_t playerId) {
   for (const auto& u : world.units) if (u.team == playerId && u.hp > 0) ++unitsAlive;
   for (const auto& b : world.buildings) if (b.team == playerId && !b.underConstruction && b.hp > 0.0f) ++buildingsAlive;
   const int capitals = controlled_capitals(world, playerId);
+  int industrialBuildings = 0;
+  for (const auto& b : world.buildings) if (b.team == playerId && !b.underConstruction && b.hp > 0.0f && (b.type == BuildingType::SteelMill || b.type == BuildingType::Refinery || b.type == BuildingType::MunitionsPlant || b.type == BuildingType::MachineWorks || b.type == BuildingType::ElectronicsLab || b.type == BuildingType::FactoryHub)) ++industrialBuildings;
+  int refined = 0;
+  for (float g : p.refinedGoods) refined += static_cast<int>(std::floor(g));
+  int strategicReady = 0;
+  if (playerId < world.strategicDeterrence.size()) {
+    strategicReady = static_cast<int>(world.strategicDeterrence[playerId].strategicReadyCount);
+  }
   return resources * world.config.scoreResourceWeight +
       unitsAlive * world.config.scoreUnitWeight +
       buildingsAlive * world.config.scoreBuildingWeight +
       ((int)p.age + 1) * world.config.scoreAgeWeight +
-      capitals * world.config.scoreCapitalWeight;
+      capitals * world.config.scoreCapitalWeight +
+      industrialBuildings * 140 + refined * 4 + strategicReady * 120;
 }
 
 
@@ -4382,6 +4432,8 @@ void apply_world_defaults(World& w) {
   w.players[0].isHuman = true; w.players[0].isCPU = false; w.players[0].teamId = 0; w.players[0].civilization = civilization_runtime_for("default");
   w.players[1].isHuman = false; w.players[1].isCPU = true; w.players[1].teamId = 1; w.players[1].civilization = civilization_runtime_for("default");
   w.tick = 0;
+  w.matchFlowPhase = MatchFlowPhase::EarlyExpansion;
+  w.matchFlowPhaseTick = 0;
   w.match = {};
   w.wonder = {};
   w.gameOver = false;
@@ -5601,6 +5653,20 @@ void tick_world(World& w, float dt) {
   update_air_and_strategic_warfare(w, dt);
   update_guardian_sites(w);
 
+  const MatchFlowPhase phaseNow = compute_match_flow_phase(w);
+  if (phaseNow != w.matchFlowPhase) {
+    w.matchFlowPhase = phaseNow;
+    w.matchFlowPhaseTick = w.tick;
+    MissionMessageDefinition flowMsg{};
+    flowMsg.messageId = std::string("match_flow_") + std::to_string(w.tick);
+    flowMsg.title = "Match Phase: " + std::string(match_flow_phase_name(phaseNow));
+    flowMsg.body = "Phase transition to " + std::string(match_flow_phase_name(phaseNow)) + ".";
+    flowMsg.category = "match_flow";
+    flowMsg.durationTicks = 900;
+    enqueue_mission_message(w, flowMsg);
+    w.objectiveLog.push_back({w.tick, flowMsg.title});
+  }
+
   const float armageddonFoodFactor = w.armageddonActive ? 0.75f : 1.0f;
   const float armageddonIndustryFactor = w.armageddonActive ? 0.85f : 1.0f;
   for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f * p.civilization.resourceGatherMult[ridx(Resource::Food)] * armageddonFoodFactor;
@@ -5887,6 +5953,10 @@ void tick_world(World& w, float dt) {
     }
   }
 
+  if (w.matchFlowPhase == MatchFlowPhase::StrategicCrisis && !w.armageddonActive) {
+    w.worldTension = std::max(w.worldTension, 58.0f);
+  }
+
   if ((w.config.allowConquest || w.lastManStandingModeActive) && alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
 
   uint16_t wonderOwner = std::numeric_limits<uint16_t>::max();
@@ -6036,6 +6106,9 @@ void tick_world(World& w, float dt) {
   gLastStats.ideologyAlignmentShifts = w.ideologyAlignmentShifts;
   gLastStats.blocTradeBonusUsage = w.blocTradeBonusUsage;
   gLastStats.blocOperationCoordinationCount = w.blocOperationCoordinationCount;
+  gLastStats.matchFlowPhase = static_cast<uint32_t>(w.matchFlowPhase);
+  gLastStats.matchFlowPhaseTick = w.matchFlowPhaseTick;
+  gLastStats.matchFlowProgress = w.tick > 0 ? static_cast<float>(w.tick - w.matchFlowPhaseTick) / static_cast<float>(std::max(1u, w.tick)) : 0.0f;
   gLastStats.contentFallbackCount = w.civContentResolutionFallbacks;
   gLastStats.civPresentationResolves = w.uniqueUnitsProduced + w.uniqueBuildingsConstructed;
   gLastStats.guardianPresentationResolves = w.guardiansDiscovered + w.guardiansSpawned + static_cast<uint32_t>(w.guardianSites.size());
@@ -6452,6 +6525,8 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.activeWorldEventCount);
   hash_u32(h, w.resolvedWorldEventCount);
   hash_u32(h, w.triggeredWorldEventCount);
+  hash_u32(h, static_cast<uint32_t>(w.matchFlowPhase));
+  hash_u32(h, w.matchFlowPhaseTick);
   for (float v : w.refinedOutputByTick) hash_float(h, v);
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);
