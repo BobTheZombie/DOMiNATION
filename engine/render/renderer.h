@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/sim/simulation.h"
+#include "engine/render/terrain_materials.h"
 #include <glm/vec2.hpp>
 #include <vector>
 
@@ -24,6 +25,8 @@ void generate_minimap_image(const dom::sim::World& world, int resolution, std::v
 void toggle_territory_overlay();
 void toggle_border_overlay();
 void toggle_fog_overlay();
+void toggle_terrain_material_overlay();
+void toggle_water_overlay();
 double last_draw_ms();
 
 struct EditorPreview {

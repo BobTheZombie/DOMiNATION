@@ -429,3 +429,25 @@ Dynamic ideology alignment and deterministic alliance bloc behavior are now supp
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+## Terrain presentation layer (first-pass strategy map)
+
+Renderer now resolves deterministic terrain materials from authoritative world data only (biome map, terrain class, elevation, fertility, river/lake/coast markers, mountain biomes, resource/world feature placement).
+
+Debug panel overlays:
+- `terrain material overlay`
+- `water feature overlay`
+- counters: `TERRAIN_MATERIAL_RESOLVES`, `WATER_FEATURE_RESOLVES`, `FOREST_CLUSTER_COUNT`, `MOUNTAIN_FEATURE_COUNT`, `PRESENTATION_FALLBACK_COUNT`
+
+Determinism validation commands:
+```bash
+./build/rts --headless --smoke --ticks 400 --dump-hash
+./build/rts --headless --smoke --ticks 400 --seed 1234 --world-preset continents --dump-hash
+./build/rts --headless --smoke --ticks 400 --seed 1234 --world-preset archipelago --dump-hash
+./build/rts --headless --smoke --ticks 400 --seed 1234 --world-preset mountain_world --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 600 --dump-hash
+./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```

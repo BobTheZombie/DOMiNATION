@@ -321,3 +321,14 @@ Dynamic ideology alignment and deterministic alliance bloc behavior are now supp
 
 ### Determinism contract
 The UI pass is presentation-only: no authoritative gameplay systems were modified. Authoritative command processing, simulation order, and hash computation remain in simulation/runtime layers.
+
+## Terrain presentation subsystem (renderer-only)
+
+A renderer-local terrain presentation resolver now maps authoritative simulation terrain data to deterministic visual materials and feature markers.
+
+Key property: this subsystem is read-only over simulation state and does not mutate authoritative gameplay data, preserving deterministic hashes for equal seed/scenario/inputs/ticks/thread-count.
+
+Primary files:
+- `engine/render/terrain_materials.h`
+- `engine/render/terrain_materials.cpp`
+- `engine/render/renderer.cpp`

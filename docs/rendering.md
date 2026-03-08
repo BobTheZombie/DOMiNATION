@@ -93,3 +93,31 @@ Asset lookup failures remain non-fatal and presentation-only.
 - Minimap panel now has a dedicated framed region and strategic marker summary text for situational awareness.
 - Strategic warnings use explicit semantic colors (warning/success/failure/info) via shared ImGui theme helpers.
 - Missing icon/portrait references continue to fall back deterministically to existing placeholders.
+
+## Deterministic terrain presentation pass
+
+The renderer now uses a dedicated terrain material resolver (`engine/render/terrain_materials.*`) to map each cell to a stable material id and palette.
+
+Material classes include:
+- grassland, steppe/plains, forest ground, desert, mediterranean, jungle, tundra, snow/arctic, wetlands
+- mountain, snow mountain
+- littoral coast
+- river, lake, shallow ocean, deep ocean
+
+Mountain/cliff readability:
+- slope-derived cliff strokes are rendered from heightmap deltas
+- snow-cap accents are applied on snow-mountain and high-elevation peaks
+
+Water readability:
+- rivers and lakes are resolved before generic water classes
+- littoral coastline is derived deterministically from land cells adjacent to water
+
+Feature clutter:
+- deterministic forest canopy clusters from biome/material and tile coordinates
+- deterministic markers for resource nodes, deep deposits, and revealed guardian sites
+- far-zoom marker simplification for strategic readability
+
+Debug integration:
+- terrain material overlay toggle
+- water overlay toggle
+- counters: TERRAIN_MATERIAL_RESOLVES, WATER_FEATURE_RESOLVES, FOREST_CLUSTER_COUNT, MOUNTAIN_FEATURE_COUNT, PRESENTATION_FALLBACK_COUNT
