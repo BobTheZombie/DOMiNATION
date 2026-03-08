@@ -225,7 +225,7 @@ void draw_hud(SDL_Window* window,
     theme::section_header("Crisis/Event Feed");
     int shown = 0;
     for (auto it = world.worldEvents.rbegin(); it != world.worldEvents.rend() && shown < 5; ++it, ++shown) {
-      const auto ep = dom::sim::event_content_presentation(it->id, it->category);
+      const auto ep = dom::sim::event_content_presentation(it->eventId, it->category);
       const auto iconId = icons::resolve_icon_id(world, 0, ep.iconId, "event", "ui_icon_event");
       ImGui::BulletText("%s %s [%s] %s", icons::glyph_for_icon(iconId), it->displayName.c_str(), world_event_category_name(it->category), world_event_state_name(it->state));
     }
