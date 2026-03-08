@@ -209,3 +209,31 @@ Rules implemented:
 - Minimap coherence: larger capital dots + deterministic color accents for major region categories.
 
 No city/region render caches are serialized. Presentation reconstructs each frame from authoritative state.
+
+
+## Strategic movement and logistics visualization layer
+
+A new presentation-only strategic visualization pass renders deterministic overlays reconstructed from authoritative world state.
+
+Features:
+- movement intent paths for unit orders (infantry/armor/naval/air/rail-styled variants)
+- city/factory/port-to-force supply and logistics flow hints
+- rail throughput pulses, train markers, and hub glow markers
+- frontline pressure and contested-zone heat overlays
+- theater objective direction arrows and objective rings
+
+Determinism rules:
+- no authoritative simulation writes are performed by renderer/debug code
+- animation phase derives only from `world.tick` + stable IDs
+- identical seed/scenario/commands/ticks/threads preserve authoritative hash output
+
+Debug counters (Debug Visualization → Strategic Visualization):
+- `MOVEMENT_PATH_RESOLVES`
+- `SUPPLY_FLOW_RESOLVES`
+- `RAIL_VISUAL_EVENTS`
+- `FRONTLINE_ZONE_UPDATES`
+- `THEATER_VISUAL_RESOLVES`
+- `VISUAL_FALLBACK_COUNT`
+- `RAIL_FLOW_LINES`
+- `TRAIN_MARKERS`
+- `LOGISTICS_VISUAL_EVENTS`

@@ -11,6 +11,7 @@ void sync_debug_visuals(const DebugVisualState& state) {
   static bool lastEntityPresentation = false;
   static bool lastVisualFeedback = true;
   static bool lastFeedbackOverlay = false;
+  static bool lastStrategicVisuals = true;
   if (state.territoryControl != lastTerritory) {
     dom::render::toggle_territory_overlay();
     lastTerritory = state.territoryControl;
@@ -42,6 +43,10 @@ void sync_debug_visuals(const DebugVisualState& state) {
   if (state.visualFeedbackOverlayDebug != lastFeedbackOverlay) {
     dom::render::set_visual_feedback_overlay_debug(state.visualFeedbackOverlayDebug);
     lastFeedbackOverlay = state.visualFeedbackOverlayDebug;
+  }
+  if (state.strategicVisualization != lastStrategicVisuals) {
+    dom::render::set_strategic_visualization_enabled(state.strategicVisualization);
+    lastStrategicVisuals = state.strategicVisualization;
   }
 }
 } // namespace dom::debug
