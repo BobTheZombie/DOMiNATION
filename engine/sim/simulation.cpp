@@ -393,6 +393,43 @@ int lua_assign_guardian_owner(lua_State* L) {
   assign_guardian_owner(*gLuaWorld, static_cast<uint32_t>(luaL_checkinteger(L, 1)), static_cast<uint16_t>(luaL_checkinteger(L, 2)));
   return 0;
 }
+int lua_get_world_event_state(lua_State* L) {
+  if (!gLuaWorld) { lua_pushstring(L, "inactive"); return 1; }
+  const std::string id = luaL_checkstring(L, 1);
+  for (const auto& e : gLuaWorld->worldEvents) if (e.eventId == id) {
+    if (e.state == WorldEventState::Active) { lua_pushstring(L, "active"); return 1; }
+    if (e.state == WorldEventState::Resolved) { lua_pushstring(L, "resolved"); return 1; }
+  }
+  lua_pushstring(L, "inactive");
+  return 1;
+}
+int lua_trigger_world_event(lua_State* L) {
+  if (!gLuaWorld) return 0;
+  const std::string id = luaL_checkstring(L, 1);
+  for (const auto& d : gLuaWorld->worldEventDefinitions) {
+    if (d.eventId != id) continue;
+    WorldEventInstance e{};
+    e.eventId = d.eventId;
+    e.displayName = d.displayName;
+    e.category = d.category;
+    e.scope = d.scope;
+    e.targetPlayer = d.targetPlayer;
+    e.targetRegion = d.targetRegion;
+    e.targetTheater = d.targetTheater;
+    e.targetBiome = d.targetBiome;
+    e.startTick = gLuaWorld->tick;
+    e.durationTicks = std::max(1u, d.defaultDuration);
+    e.severity = std::max(0.1f, d.baseSeverity);
+    e.state = WorldEventState::Active;
+    e.effectPayload = world_event_category_name(e.category);
+    e.campaignTags = d.campaignTags;
+    e.scriptedHook = d.scriptedHook;
+    gLuaWorld->worldEvents.push_back(std::move(e));
+    ++gLuaWorld->triggeredWorldEventCount;
+    break;
+  }
+  return 0;
+}
 void ensure_lua(World& w) {
   if (gLuaState) return;
   gLuaState = luaL_newstate();
@@ -427,6 +464,8 @@ void ensure_lua(World& w) {
   lua_register(gLuaState, "activate_guardian_site", lua_activate_guardian_site);
   lua_register(gLuaState, "reveal_guardian_site", lua_reveal_guardian_site);
   lua_register(gLuaState, "assign_guardian_owner", lua_assign_guardian_owner);
+  lua_register(gLuaState, "get_world_event_state", lua_get_world_event_state);
+  lua_register(gLuaState, "trigger_world_event", lua_trigger_world_event);
   lua_register(gLuaState, "get_campaign_flag", lua_get_campaign_flag);
   lua_register(gLuaState, "set_campaign_flag", lua_set_campaign_flag);
   lua_register(gLuaState, "get_campaign_resource", lua_get_campaign_resource);
@@ -547,6 +586,10 @@ void load_guardian_defs(World& w);
 void generate_guardian_sites(World& w);
 void update_guardian_sites(World& w);
 uint32_t spawn_guardian_unit(World& w, GuardianSiteInstance& site, const GuardianDefinition& def);
+void load_world_event_defs(World& w);
+void update_world_events(World& w);
+void enqueue_mission_message(World& w, const MissionMessageDefinition& def);
+void enqueue_text_message(World& w, const std::string& text, const std::string& category, uint32_t triggerId);
 
 float unit_vision_radius(const Unit& u);
 float building_vision_radius(BuildingType type);
@@ -733,6 +776,98 @@ const char* mission_status_name(MissionStatus s) {
     case MissionStatus::PartialVictory: return "partial_victory";
   }
   return "running";
+}
+
+const char* world_event_category_name(WorldEventCategory c) {
+  switch (c) {
+    case WorldEventCategory::Climate: return "climate";
+    case WorldEventCategory::Health: return "health";
+    case WorldEventCategory::Economic: return "economic";
+    case WorldEventCategory::Political: return "political";
+    case WorldEventCategory::Industrial: return "industrial";
+    case WorldEventCategory::Strategic: return "strategic";
+    case WorldEventCategory::Mythic: return "mythic";
+  }
+  return "climate";
+}
+
+WorldEventCategory parse_world_event_category(const std::string& v) {
+  if (v == "health") return WorldEventCategory::Health;
+  if (v == "economic") return WorldEventCategory::Economic;
+  if (v == "political") return WorldEventCategory::Political;
+  if (v == "industrial") return WorldEventCategory::Industrial;
+  if (v == "strategic") return WorldEventCategory::Strategic;
+  if (v == "mythic") return WorldEventCategory::Mythic;
+  return WorldEventCategory::Climate;
+}
+
+const char* world_event_scope_name(WorldEventScope s) {
+  switch (s) {
+    case WorldEventScope::Global: return "global";
+    case WorldEventScope::Regional: return "regional";
+    case WorldEventScope::Player: return "player";
+    case WorldEventScope::Theater: return "theater";
+    case WorldEventScope::Biome: return "biome";
+  }
+  return "global";
+}
+
+WorldEventScope parse_world_event_scope(const std::string& v) {
+  if (v == "regional") return WorldEventScope::Regional;
+  if (v == "player") return WorldEventScope::Player;
+  if (v == "theater") return WorldEventScope::Theater;
+  if (v == "biome") return WorldEventScope::Biome;
+  return WorldEventScope::Global;
+}
+
+const char* world_event_state_name(WorldEventState s) {
+  switch (s) {
+    case WorldEventState::Inactive: return "inactive";
+    case WorldEventState::Active: return "active";
+    case WorldEventState::Resolved: return "resolved";
+  }
+  return "inactive";
+}
+
+WorldEventState parse_world_event_state(const std::string& v) {
+  if (v == "active") return WorldEventState::Active;
+  if (v == "resolved") return WorldEventState::Resolved;
+  return WorldEventState::Inactive;
+}
+
+const char* world_event_trigger_name(WorldEventTriggerType t) {
+  switch (t) {
+    case WorldEventTriggerType::None: return "none";
+    case WorldEventTriggerType::WorldTensionHigh: return "world_tension_high";
+    case WorldEventTriggerType::LowFoodReserve: return "low_food_reserve";
+    case WorldEventTriggerType::RailDisruption: return "rail_disruption";
+    case WorldEventTriggerType::PlagueRisk: return "plague_risk";
+    case WorldEventTriggerType::StrategicEscalation: return "strategic_escalation";
+    case WorldEventTriggerType::GuardianPressure: return "guardian_pressure";
+    case WorldEventTriggerType::CampaignFlag: return "campaign_flag";
+    case WorldEventTriggerType::AuthoredTick: return "authored_tick";
+    case WorldEventTriggerType::Scripted: return "scripted";
+  }
+  return "none";
+}
+
+WorldEventTriggerType parse_world_event_trigger(const std::string& v) {
+  if (v == "world_tension_high") return WorldEventTriggerType::WorldTensionHigh;
+  if (v == "low_food_reserve") return WorldEventTriggerType::LowFoodReserve;
+  if (v == "rail_disruption") return WorldEventTriggerType::RailDisruption;
+  if (v == "plague_risk") return WorldEventTriggerType::PlagueRisk;
+  if (v == "strategic_escalation") return WorldEventTriggerType::StrategicEscalation;
+  if (v == "guardian_pressure") return WorldEventTriggerType::GuardianPressure;
+  if (v == "campaign_flag") return WorldEventTriggerType::CampaignFlag;
+  if (v == "authored_tick") return WorldEventTriggerType::AuthoredTick;
+  if (v == "scripted") return WorldEventTriggerType::Scripted;
+  return WorldEventTriggerType::None;
+}
+
+bool has_campaign_tag(const World& w, const std::string& tag) {
+  if (tag.empty()) return true;
+  for (const auto& kv : w.campaign.flags) if (kv.first == tag && kv.second) return true;
+  return false;
 }
 
 BiomeType parse_biome_type(const std::string& id) {
@@ -2142,6 +2277,8 @@ void rebuild_detector_sites(World& w) {
 
 void update_strategic_deterrence(World& w) {
   if (w.strategicDeterrence.size() != w.players.size()) w.strategicDeterrence.assign(w.players.size(), StrategicDeterrenceState{});
+  if (w.worldEventDefinitions.empty()) load_world_event_defs(w);
+  if (w.worldEventDefinitions.empty()) load_world_event_defs(w);
   w.strategicStockpileTotal = 0;
   w.strategicReadyTotal = 0;
   w.strategicPreparingTotal = 0;
@@ -3506,6 +3643,143 @@ void update_espionage(World& w) {
   }
 }
 
+void load_world_event_defs(World& w) {
+  w.worldEventDefinitions.clear();
+  std::ifstream f("content/world_events.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.contains("events") || !j["events"].is_array()) return;
+  for (const auto& e : j["events"]) {
+    WorldEventDefinition d{};
+    d.eventId = e.value("event_id", std::string(""));
+    if (d.eventId.empty()) continue;
+    d.displayName = e.value("display_name", d.eventId);
+    d.category = parse_world_event_category(e.value("category", std::string("climate")));
+    d.triggerType = parse_world_event_trigger(e.value("trigger", std::string("none")));
+    d.scope = parse_world_event_scope(e.value("scope", std::string("global")));
+    d.targetPlayer = e.value("target_player", static_cast<uint16_t>(UINT16_MAX));
+    d.targetRegion = e.value("target_region", -1);
+    d.targetTheater = e.value("target_theater", -1);
+    d.targetBiome = e.value("target_biome", -1);
+    d.minTick = e.value("min_tick", 0u);
+    d.cooldownTicks = e.value("cooldown_ticks", 1200u);
+    d.defaultDuration = e.value("duration", 1200u);
+    d.triggerThreshold = e.value("trigger_threshold", 0.0f);
+    d.baseSeverity = e.value("severity", 1.0f);
+    d.authored = e.value("authored", false);
+    d.scriptedHook = e.value("scripted_hook", std::string(""));
+    if (e.contains("campaign_tags") && e["campaign_tags"].is_array()) d.campaignTags = e["campaign_tags"].get<std::vector<std::string>>();
+    w.worldEventDefinitions.push_back(std::move(d));
+  }
+  std::sort(w.worldEventDefinitions.begin(), w.worldEventDefinitions.end(), [](const WorldEventDefinition& a, const WorldEventDefinition& b){ return a.eventId < b.eventId; });
+}
+
+bool world_event_triggered(const World& w, const WorldEventDefinition& d) {
+  if (w.tick < d.minTick) return false;
+  for (const auto& t : d.campaignTags) if (!has_campaign_tag(w, t)) return false;
+  switch (d.triggerType) {
+    case WorldEventTriggerType::WorldTensionHigh:
+      return w.worldTension >= d.triggerThreshold;
+    case WorldEventTriggerType::LowFoodReserve: {
+      if (d.scope == WorldEventScope::Player && d.targetPlayer < w.players.size()) return w.players[d.targetPlayer].resources[ridx(Resource::Food)] <= d.triggerThreshold;
+      float food = 0.0f;
+      for (const auto& p : w.players) food += p.resources[ridx(Resource::Food)];
+      return food <= d.triggerThreshold * std::max(1.0f, (float)w.players.size());
+    }
+    case WorldEventTriggerType::RailDisruption:
+      return w.disruptedRailRoutes >= static_cast<uint32_t>(std::max(0.0f, d.triggerThreshold));
+    case WorldEventTriggerType::PlagueRisk: {
+      const float cityPressure = (float)w.cities.size() / std::max(1.0f, (float)(w.width * w.height)) * 10000.0f;
+      return cityPressure >= d.triggerThreshold;
+    }
+    case WorldEventTriggerType::StrategicEscalation:
+      return w.strategicStrikeEvents >= static_cast<uint32_t>(std::max(0.0f, d.triggerThreshold)) || w.worldTension >= std::max(65.0f, d.triggerThreshold);
+    case WorldEventTriggerType::GuardianPressure:
+      return w.guardiansDiscovered >= static_cast<uint32_t>(std::max(0.0f, d.triggerThreshold));
+    case WorldEventTriggerType::CampaignFlag:
+      return !d.campaignTags.empty();
+    case WorldEventTriggerType::AuthoredTick:
+      return true;
+    case WorldEventTriggerType::Scripted:
+      return false;
+    case WorldEventTriggerType::None:
+    default:
+      return false;
+  }
+}
+
+void apply_world_event_effect(World& w, const WorldEventInstance& ev) {
+  const float s = std::max(0.1f, ev.severity);
+  if (ev.category == WorldEventCategory::Climate) {
+    for (auto& p : w.players) p.resources[ridx(Resource::Food)] = std::max(0.0f, p.resources[ridx(Resource::Food)] - 0.25f * s);
+  } else if (ev.category == WorldEventCategory::Health) {
+    for (auto& u : w.units) if (u.hp > 0.0f) u.hp = std::max(1.0f, u.hp - 0.06f * s);
+  } else if (ev.category == WorldEventCategory::Economic) {
+    for (auto& p : w.players) p.resources[ridx(Resource::Wealth)] = std::max(0.0f, p.resources[ridx(Resource::Wealth)] - 0.30f * s);
+  } else if (ev.category == WorldEventCategory::Political) {
+    w.worldTension = std::min(100.0f, w.worldTension + 0.04f * s);
+  } else if (ev.category == WorldEventCategory::Industrial) {
+    for (auto& p : w.players) p.resources[ridx(Resource::Metal)] = std::max(0.0f, p.resources[ridx(Resource::Metal)] - 0.18f * s);
+  } else if (ev.category == WorldEventCategory::Strategic) {
+    w.worldTension = std::min(100.0f, w.worldTension + 0.08f * s);
+    for (auto& d : w.strategicDeterrence) d.strategicAlertLevel = static_cast<uint8_t>(std::min(5, (int)d.strategicAlertLevel + 1));
+  } else if (ev.category == WorldEventCategory::Mythic) {
+    w.hostileGuardianEvents += static_cast<uint32_t>(s >= 1.0f ? 1 : 0);
+  }
+}
+
+void update_world_events(World& w) {
+  if (w.worldEventDefinitions.empty()) return;
+  std::sort(w.worldEvents.begin(), w.worldEvents.end(), [](const WorldEventInstance& a, const WorldEventInstance& b){ if (a.startTick != b.startTick) return a.startTick < b.startTick; return a.eventId < b.eventId; });
+
+  if (w.tick % 20 == 0) {
+    for (const auto& d : w.worldEventDefinitions) {
+      bool active = false;
+      uint32_t lastStart = 0;
+      for (const auto& ev : w.worldEvents) {
+        if (ev.eventId != d.eventId) continue;
+        if (ev.state == WorldEventState::Active) active = true;
+        lastStart = std::max(lastStart, ev.startTick);
+      }
+      if (active) continue;
+      if (lastStart > 0 && w.tick < lastStart + d.cooldownTicks) continue;
+      if (!world_event_triggered(w, d)) continue;
+      WorldEventInstance ev{};
+      ev.eventId = d.eventId;
+      ev.displayName = d.displayName;
+      ev.category = d.category;
+      ev.scope = d.scope;
+      ev.targetPlayer = d.targetPlayer;
+      ev.targetRegion = d.targetRegion;
+      ev.targetTheater = d.targetTheater;
+      ev.targetBiome = d.targetBiome;
+      ev.startTick = w.tick;
+      ev.durationTicks = std::max(1u, d.defaultDuration);
+      ev.severity = std::max(0.1f, d.baseSeverity + (w.worldTension / 100.0f) * 0.35f);
+      ev.state = WorldEventState::Active;
+      ev.effectPayload = world_event_category_name(ev.category);
+      ev.campaignTags = d.campaignTags;
+      ev.scriptedHook = d.scriptedHook;
+      w.worldEvents.push_back(std::move(ev));
+      ++w.triggeredWorldEventCount;
+      enqueue_text_message(w, "Crisis: " + d.displayName, "world_event", 0);
+    }
+  }
+
+  w.activeWorldEventCount = 0;
+  for (auto& ev : w.worldEvents) {
+    if (ev.state != WorldEventState::Active) continue;
+    if (w.tick % 20 == 0) apply_world_event_effect(w, ev);
+    if (w.tick >= ev.startTick + ev.durationTicks) {
+      ev.state = WorldEventState::Resolved;
+      ++w.resolvedWorldEventCount;
+      enqueue_text_message(w, "Resolved: " + ev.displayName, "world_event", 0);
+      continue;
+    }
+    ++w.activeWorldEventCount;
+  }
+}
+
 void update_ai_diplomacy(World& w) {
   if (w.tick % 60 != 0) return;
   for (auto& p : w.players) {
@@ -3519,10 +3793,19 @@ void update_ai_diplomacy(World& w) {
       int es = military_strength(w, e.id);
       if (es > bestEnemyStr) { bestEnemyStr = es; bestEnemy = e.id; }
     }
+    int crisisPressure = 0;
+    for (const auto& ev : w.worldEvents) {
+      if (ev.state != WorldEventState::Active) continue;
+      if (ev.scope == WorldEventScope::Player && ev.targetPlayer != p.id) continue;
+      if (ev.category == WorldEventCategory::Strategic || ev.category == WorldEventCategory::Political) crisisPressure += 2;
+      else if (ev.category == WorldEventCategory::Economic || ev.category == WorldEventCategory::Industrial) crisisPressure += 1;
+      else if (ev.category == WorldEventCategory::Mythic) crisisPressure += 1;
+    }
+
     StrategicPosture next = StrategicPosture::Defensive;
-    if (w.worldTension > 70.0f || (bestEnemy != p.id && players_at_war(w, p.id, bestEnemy))) next = StrategicPosture::TotalWar;
-    else if (w.worldTension > (45.0f / std::max(0.75f, p.civilization.worldTensionResponseBias)) || p.civilization.aggression * p.civilization.aggressionBias > 1.15f) next = StrategicPosture::Escalating;
-    else if (p.civilization.economyBias > p.civilization.militaryBias) next = StrategicPosture::TradeFocused;
+    if (w.worldTension > 70.0f || crisisPressure >= 4 || (bestEnemy != p.id && players_at_war(w, p.id, bestEnemy))) next = StrategicPosture::TotalWar;
+    else if (w.worldTension > (45.0f / std::max(0.75f, p.civilization.worldTensionResponseBias)) || crisisPressure >= 2 || p.civilization.aggression * p.civilization.aggressionBias > 1.15f) next = StrategicPosture::Escalating;
+    else if (p.civilization.economyBias > p.civilization.militaryBias && crisisPressure == 0) next = StrategicPosture::TradeFocused;
     else if (ownStr > std::max(1, bestEnemyStr)) next = StrategicPosture::Expansionist;
     if (p.id < w.strategicPosture.size() && w.strategicPosture[p.id] != next) {
       w.strategicPosture[p.id] = next;
@@ -4057,6 +4340,7 @@ void initialize_world(World& w, uint32_t seed) {
   load_defs_once();
   load_guardian_defs(w);
   load_industrial_recipes(w);
+  load_world_event_defs(w);
   gNav.cache.clear();
   gPendingNavRequests.clear();
   gCompletedNavResults.clear();
@@ -4522,6 +4806,57 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     }
     w.triggers.push_back(tr);
   }
+  if (j.contains("worldEventDefinitions") && j["worldEventDefinitions"].is_array()) {
+    for (const auto& e : j["worldEventDefinitions"]) {
+      WorldEventDefinition d{};
+      d.eventId = e.value("event_id", std::string(""));
+      if (d.eventId.empty()) continue;
+      auto it = std::find_if(w.worldEventDefinitions.begin(), w.worldEventDefinitions.end(), [&](const WorldEventDefinition& ex){ return ex.eventId == d.eventId; });
+      d.displayName = e.value("display_name", d.eventId);
+      d.category = parse_world_event_category(e.value("category", std::string("climate")));
+      d.triggerType = parse_world_event_trigger(e.value("trigger", std::string("none")));
+      d.scope = parse_world_event_scope(e.value("scope", std::string("global")));
+      d.targetPlayer = e.value("target_player", static_cast<uint16_t>(UINT16_MAX));
+      d.targetRegion = e.value("target_region", -1);
+      d.targetTheater = e.value("target_theater", -1);
+      d.targetBiome = e.value("target_biome", -1);
+      d.minTick = e.value("min_tick", 0u);
+      d.cooldownTicks = e.value("cooldown_ticks", 1200u);
+      d.defaultDuration = e.value("duration", 1200u);
+      d.triggerThreshold = e.value("trigger_threshold", 0.0f);
+      d.baseSeverity = e.value("severity", 1.0f);
+      d.authored = e.value("authored", true);
+      d.scriptedHook = e.value("scripted_hook", std::string(""));
+      if (e.contains("campaign_tags") && e["campaign_tags"].is_array()) d.campaignTags = e["campaign_tags"].get<std::vector<std::string>>();
+      if (it == w.worldEventDefinitions.end()) w.worldEventDefinitions.push_back(std::move(d));
+      else *it = std::move(d);
+    }
+    std::sort(w.worldEventDefinitions.begin(), w.worldEventDefinitions.end(), [](const WorldEventDefinition& a, const WorldEventDefinition& b){ return a.eventId < b.eventId; });
+  }
+  if (j.contains("worldEvents") && j["worldEvents"].is_array()) {
+    w.worldEvents.clear();
+    for (const auto& e : j["worldEvents"]) {
+      WorldEventInstance ev{};
+      ev.eventId = e.value("event_id", std::string(""));
+      if (ev.eventId.empty()) continue;
+      ev.displayName = e.value("display_name", ev.eventId);
+      ev.category = parse_world_event_category(e.value("category", std::string("climate")));
+      ev.scope = parse_world_event_scope(e.value("scope", std::string("global")));
+      ev.targetPlayer = e.value("target_player", static_cast<uint16_t>(UINT16_MAX));
+      ev.targetRegion = e.value("target_region", -1);
+      ev.targetTheater = e.value("target_theater", -1);
+      ev.targetBiome = e.value("target_biome", -1);
+      ev.startTick = e.value("start_tick", 0u);
+      ev.durationTicks = e.value("duration", 0u);
+      ev.severity = e.value("severity", 1.0f);
+      ev.state = parse_world_event_state(e.value("state", std::string("inactive")));
+      ev.effectPayload = e.value("effect_payload", std::string(""));
+      if (e.contains("campaign_tags") && e["campaign_tags"].is_array()) ev.campaignTags = e["campaign_tags"].get<std::vector<std::string>>();
+      ev.scriptedHook = e.value("scripted_hook", std::string(""));
+      w.worldEvents.push_back(std::move(ev));
+    }
+  }
+
   if (j.contains("mission")) {
     const auto& m = j["mission"];
     w.mission.title = m.value("title", std::string(""));
@@ -4715,6 +5050,25 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   for (const auto& sc : w.startCandidates) j["startCandidates"].push_back({{"cell",sc.cell},{"score",sc.score},{"civBiasMask",sc.civBiasMask}});
   j["mythicCandidates"] = nlohmann::json::array();
   for (const auto& mc : w.mythicCandidates) j["mythicCandidates"].push_back({{"siteType",(int)mc.siteType},{"cell",mc.cell},{"score",mc.score}});
+  j["worldEventDefinitions"] = nlohmann::json::array();
+  for (const auto& d : w.worldEventDefinitions) {
+    j["worldEventDefinitions"].push_back({
+      {"event_id", d.eventId}, {"display_name", d.displayName}, {"category", world_event_category_name(d.category)},
+      {"trigger", world_event_trigger_name(d.triggerType)}, {"scope", world_event_scope_name(d.scope)},
+      {"target_player", d.targetPlayer}, {"target_region", d.targetRegion}, {"target_theater", d.targetTheater}, {"target_biome", d.targetBiome},
+      {"min_tick", d.minTick}, {"cooldown_ticks", d.cooldownTicks}, {"duration", d.defaultDuration}, {"trigger_threshold", d.triggerThreshold},
+      {"severity", d.baseSeverity}, {"authored", d.authored}, {"campaign_tags", d.campaignTags}, {"scripted_hook", d.scriptedHook}
+    });
+  }
+  j["worldEvents"] = nlohmann::json::array();
+  for (const auto& e : w.worldEvents) {
+    j["worldEvents"].push_back({
+      {"event_id", e.eventId}, {"display_name", e.displayName}, {"category", world_event_category_name(e.category)},
+      {"scope", world_event_scope_name(e.scope)}, {"target_player", e.targetPlayer}, {"target_region", e.targetRegion}, {"target_theater", e.targetTheater}, {"target_biome", e.targetBiome},
+      {"start_tick", e.startTick}, {"duration", e.durationTicks}, {"severity", e.severity}, {"state", world_event_state_name(e.state)},
+      {"effect_payload", e.effectPayload}, {"campaign_tags", e.campaignTags}, {"scripted_hook", e.scriptedHook}
+    });
+  }
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"objective_id",o.objectiveId},{"title",o.title},{"description",o.description.empty()?o.text:o.description},{"primary",o.primary},{"category",objective_category_name(o.category)},{"state",objective_state_name(o.state)},{"owner",o.owner},{"visible",o.visible},{"progressText",o.progressText},{"progressValue",o.progressValue}});
   j["mission"] = {{"title",w.mission.title},{"subtitle",w.mission.subtitle},{"location",w.mission.locationLabel},{"briefing",w.mission.briefing},{"debrief",w.mission.debrief},{"factionSummary",w.mission.factionSummary},{"carryoverSummary",w.mission.carryoverSummary},{"briefingPortraitId",w.mission.briefingPortraitId},{"debriefPortraitId",w.mission.debriefPortraitId},{"missionImageId",w.mission.missionImageId},{"factionIconId",w.mission.factionIconId},{"scenarioTags",w.mission.scenarioTags},{"objectiveSummary",w.mission.objectiveSummary},{"introMessages",w.mission.introMessages},{"victoryOutcome",w.mission.victoryOutcomeTag},{"defeatOutcome",w.mission.defeatOutcomeTag},{"partialOutcome",w.mission.partialOutcomeTag},{"branchKey",w.mission.branchKey},{"luaScript",w.mission.luaScriptFile},{"luaInline",w.mission.luaScriptInline}};
@@ -4793,6 +5147,7 @@ void tick_world(World& w, float dt) {
   recompute_supply(w);
   update_espionage(w);
   update_world_tension(w);
+  update_world_events(w);
   update_ai_diplomacy(w);
   update_operations(w);
   rebuild_detector_sites(w);
@@ -5191,6 +5546,9 @@ void tick_world(World& w, float dt) {
   gLastStats.civIndustryOutput = w.civIndustryOutput;
   gLastStats.civLogisticsBonusUsage = w.civLogisticsBonusUsage;
   gLastStats.civOperationCount = w.civOperationCount;
+  gLastStats.activeWorldEvents = w.activeWorldEventCount;
+  gLastStats.resolvedWorldEvents = w.resolvedWorldEventCount;
+  gLastStats.totalWorldEventsTriggered = w.triggeredWorldEventCount;
   for (const auto& u : w.units) {
     if (unit_is_naval(u.type) && u.hp > 0 && !u.embarked) ++gLastStats.navalUnitCount;
     if (u.type == UnitType::TransportShip && u.hp > 0) ++gLastStats.transportCount;
@@ -5550,6 +5908,9 @@ uint64_t state_hash(const World& w) {
   hash_float(h, w.civIndustryOutput);
   hash_float(h, w.civLogisticsBonusUsage);
   hash_u32(h, w.civOperationCount);
+  hash_u32(h, w.activeWorldEventCount);
+  hash_u32(h, w.resolvedWorldEventCount);
+  hash_u32(h, w.triggeredWorldEventCount);
   for (float v : w.refinedOutputByTick) hash_float(h, v);
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);
@@ -5560,6 +5921,21 @@ uint64_t state_hash(const World& w) {
   for (const auto& o : w.objectives) { hash_u32(h, o.id); hash_u32(h, (uint32_t)o.state); }
   for (const auto& l : w.objectiveLog) { hash_u32(h, l.tick); hash_u32(h, (uint32_t)l.text.size()); }
   for (const auto& m : w.missionMessages) { hash_u32(h, (uint32_t)m.tick); hash_u32(h, (uint32_t)m.sequence); hash_u32(h, (uint32_t)m.title.size()); hash_u32(h, (uint32_t)m.body.size()); hash_u32(h, (uint32_t)m.category.size()); }
+  for (const auto& e : w.worldEvents) {
+    hash_u32(h, static_cast<uint32_t>(e.eventId.size()));
+    hash_u32(h, static_cast<uint32_t>(e.displayName.size()));
+    hash_u32(h, static_cast<uint32_t>(e.category));
+    hash_u32(h, static_cast<uint32_t>(e.scope));
+    hash_u32(h, e.targetPlayer == UINT16_MAX ? 0xFFFFu : e.targetPlayer);
+    hash_u32(h, static_cast<uint32_t>(e.targetRegion + 1));
+    hash_u32(h, static_cast<uint32_t>(e.targetTheater + 1));
+    hash_u32(h, static_cast<uint32_t>(e.targetBiome + 1));
+    hash_u32(h, e.startTick);
+    hash_u32(h, e.durationTicks);
+    hash_float(h, e.severity);
+    hash_u32(h, static_cast<uint32_t>(e.state));
+    hash_u32(h, static_cast<uint32_t>(e.effectPayload.size()));
+  }
   hash_u32(h, (uint32_t)w.missionRuntime.status); hash_u32(h, (uint32_t)w.missionRuntime.briefingShown); hash_u32(h, (uint32_t)w.missionRuntime.resultTag.size());
   hash_u32(h, w.missionRuntime.firedTriggerCount); hash_u32(h, w.missionRuntime.scriptedActionCount);
   for (uint32_t id : w.missionRuntime.activeObjectives) hash_u32(h, id);

@@ -55,6 +55,28 @@ const char* objective_state_name(dom::sim::ObjectiveState st) {
   return "Inactive";
 }
 
+const char* world_event_state_name(dom::sim::WorldEventState st) {
+  switch (st) {
+    case dom::sim::WorldEventState::Inactive: return "Inactive";
+    case dom::sim::WorldEventState::Active: return "Active";
+    case dom::sim::WorldEventState::Resolved: return "Resolved";
+  }
+  return "Inactive";
+}
+
+const char* world_event_category_name(dom::sim::WorldEventCategory c) {
+  switch (c) {
+    case dom::sim::WorldEventCategory::Climate: return "Climate";
+    case dom::sim::WorldEventCategory::Health: return "Health";
+    case dom::sim::WorldEventCategory::Economic: return "Economic";
+    case dom::sim::WorldEventCategory::Political: return "Political";
+    case dom::sim::WorldEventCategory::Industrial: return "Industrial";
+    case dom::sim::WorldEventCategory::Strategic: return "Strategic";
+    case dom::sim::WorldEventCategory::Mythic: return "Mythic";
+  }
+  return "Climate";
+}
+
 const char* supply_name(dom::sim::SupplyState state) {
   switch (state) {
     case dom::sim::SupplyState::InSupply: return "In Supply";
@@ -249,6 +271,12 @@ void draw_hud(SDL_Window* window,
   draw_group("Primary", dom::sim::ObjectiveCategory::Primary);
   draw_group("Secondary", dom::sim::ObjectiveCategory::Secondary);
   draw_group("Hidden/Revealed", dom::sim::ObjectiveCategory::HiddenOptional);
+  ImGui::SeparatorText("World Crises");
+  ImGui::Text("Active %u | Resolved %u | Triggered %u", world.activeWorldEventCount, world.resolvedWorldEventCount, world.triggeredWorldEventCount);
+  int shown = 0;
+  for (auto it = world.worldEvents.rbegin(); it != world.worldEvents.rend() && shown < 6; ++it, ++shown) {
+    ImGui::BulletText("%s [%s, sev %.2f] (%s)", it->displayName.c_str(), world_event_category_name(it->category), it->severity, world_event_state_name(it->state));
+  }
   ImGui::End();
 
   ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 90.0f));
