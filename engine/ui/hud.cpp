@@ -3,6 +3,8 @@
 #include "engine/ui/production_menu.h"
 #include "engine/ui/research_panel.h"
 #include "engine/ui/ui_theme.h"
+#include "engine/ui/ui_icons.h"
+#include "engine/ui/ui_alerts.h"
 #include "engine/debug/debug_panels.h"
 #include "engine/debug/debug_visuals.h"
 #include "engine/editor/scenario_editor.h"
@@ -81,6 +83,7 @@ ImVec4 objective_color(dom::sim::ObjectiveState st) {
 }
 
 void draw_selection_summary(dom::sim::World& world, const std::vector<uint32_t>& selected) {
+  const auto civEmblem = icons::civ_emblem_icon_id(world, 0);
   theme::section_header("Selection & Context");
   if (selected.empty()) {
     ImGui::TextUnformatted("No active selection");
@@ -90,18 +93,22 @@ void draw_selection_summary(dom::sim::World& world, const std::vector<uint32_t>&
   uint32_t id = selected.front();
   for (const auto& u : world.units) {
     if (u.id != id) continue;
-    ImGui::Text("Unit #%u | Team P%u", u.id, u.team);
+    ImGui::Text("%s %s Unit #%u | Team P%u", icons::glyph_for_icon(civEmblem), civEmblem.c_str(), u.id, u.team);
     ImGui::Text("HP %.0f | Supply %s | Cargo %zu", u.hp, supply_name(u.supplyState), u.cargo.size());
     const auto info = dom::sim::unit_content_presentation(world, u.team, u.type, u.definitionId);
-    ImGui::Text("%s [%s]", info.displayName.c_str(), info.iconId.c_str());
+    const auto resolvedIcon = icons::resolve_icon_id(world, u.team, info.iconId, "unit", "ui_icon_unit_generic_fallback");
+    ImGui::Text("%s %s | %s", icons::glyph_for_icon(resolvedIcon), info.displayName.c_str(), resolvedIcon.c_str());
+    if (info.unique) ImGui::TextColored(theme::state_color_info(), "Unique content");
     return;
   }
   for (const auto& b : world.buildings) {
     if (b.id != id) continue;
-    ImGui::Text("Building #%u | Team P%u", b.id, b.team);
+    ImGui::Text("%s %s Building #%u | Team P%u", icons::glyph_for_icon(civEmblem), civEmblem.c_str(), b.id, b.team);
     ImGui::Text("HP %.0f / %.0f | Queue %zu", b.hp, b.maxHp, b.queue.size());
     const auto info = dom::sim::building_content_presentation(world, b.team, b.type, b.definitionId);
-    ImGui::Text("%s [%s]", info.displayName.c_str(), info.iconId.c_str());
+    const auto resolvedIcon = icons::resolve_icon_id(world, b.team, info.iconId, "building", "ui_icon_building_generic_fallback");
+    ImGui::Text("%s %s | %s", icons::glyph_for_icon(resolvedIcon), info.displayName.c_str(), resolvedIcon.c_str());
+    if (info.unique) ImGui::TextColored(theme::state_color_info(), "Unique content");
     if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery) {
       ImGui::Text("Factory %s | throughput %.2f", b.factory.active ? "active" : "idle", b.factory.throughputBonus);
     }
@@ -119,10 +126,19 @@ void draw_top_bar(const ImGuiViewport* vp, dom::sim::World& world, const std::st
 
   ImGui::Text("%s | Age %s | Population %u/%u", p.civilization.displayName.c_str(), age_name(p.age), p.popUsed, p.popCap);
   ImGui::Separator();
-  ImGui::Text("Food %.0f  Wood %.0f  Metal %.0f  Wealth %.0f  Knowledge %.0f  Oil %.0f",
-              p.resources[0], p.resources[1], p.resources[2], p.resources[3], p.resources[4], p.resources[5]);
-  ImGui::Text("Steel %.1f  Fuel %.1f  Munitions %.1f  Machine %.1f  Electronics %.1f",
-              p.refinedGoods[0], p.refinedGoods[1], p.refinedGoods[2], p.refinedGoods[3], p.refinedGoods[4]);
+  ImGui::Text("%s Food %.0f  %s Wood %.0f  %s Metal %.0f  %s Wealth %.0f  %s Knowledge %.0f  %s Oil %.0f",
+              icons::glyph_for_icon("ui_icon_resource_food"), p.resources[0],
+              icons::glyph_for_icon("ui_icon_resource_wood"), p.resources[1],
+              icons::glyph_for_icon("ui_icon_resource_metal"), p.resources[2],
+              icons::glyph_for_icon("ui_icon_resource_wealth"), p.resources[3],
+              icons::glyph_for_icon("ui_icon_resource_knowledge"), p.resources[4],
+              icons::glyph_for_icon("ui_icon_resource_oil"), p.resources[5]);
+  ImGui::Text("%s Steel %.1f  %s Fuel %.1f  %s Munitions %.1f  %s Machine %.1f  %s Electronics %.1f",
+              icons::glyph_for_icon("ui_icon_refined_steel"), p.refinedGoods[0],
+              icons::glyph_for_icon("ui_icon_refined_fuel"), p.refinedGoods[1],
+              icons::glyph_for_icon("ui_icon_refined_munitions"), p.refinedGoods[2],
+              icons::glyph_for_icon("ui_icon_refined_machine_parts"), p.refinedGoods[3],
+              icons::glyph_for_icon("ui_icon_refined_electronics"), p.refinedGoods[4]);
   theme::state_text("World tension:", (std::to_string(static_cast<int>(world.worldTension * 100.0f)) + "%").c_str(), world.worldTension > 0.75f ? theme::state_color_warning() : theme::state_color_info());
   if (world.armageddonActive) {
     ImGui::SameLine();
@@ -169,6 +185,7 @@ void draw_hud(SDL_Window* window,
     [&](const HudNotification& n) { return world.tick >= n.expireTick; }), uiState.notifications.end());
 
   ImGuiViewport* vp = ImGui::GetMainViewport();
+  icons::reset_frame_counters();
   const ImVec4 accent = theme::civ_accent(world, 0);
   const float uiScale = ImGui::GetIO().FontGlobalScale > 0.0f ? ImGui::GetIO().FontGlobalScale : 1.0f;
   theme::ScopedHudTheme scopedTheme(uiScale, accent);
@@ -181,9 +198,15 @@ void draw_hud(SDL_Window* window,
   ImGui::SetNextWindowSize(ImVec2(412.0f, 390.0f));
   if (ImGui::Begin("Strategic Alerts", nullptr, panelFlags)) {
     theme::section_header("Alerts");
-    if (world.armageddonActive) ImGui::TextColored(theme::state_color_failure(), "Nuclear Armageddon escalation active");
-    if (world.worldTension >= 0.9f) ImGui::TextColored(theme::state_color_warning(), "World tension threshold nearing critical");
-    for (const auto& n : uiState.notifications) ImGui::BulletText("%s", n.text.c_str());
+    const auto alerts = alerts::build_alert_queue(world, uiState);
+    for (const auto& a : alerts) {
+      ImVec4 sev = theme::state_color_info();
+      if (a.severity == alerts::Severity::Warning) sev = theme::state_color_warning();
+      else if (a.severity == alerts::Severity::Critical) sev = theme::state_color_failure();
+      else if (a.severity == alerts::Severity::Apocalyptic) sev = ImVec4(0.95f, 0.25f, 0.75f, 1.0f);
+      ImGui::TextColored(sev, "%s %s (%s)", icons::glyph_for_icon(a.iconId), a.title.c_str(), alerts::severity_name(a.severity));
+      if (!a.subtitle.empty()) ImGui::TextDisabled("  %s", a.subtitle.c_str());
+    }
 
     theme::section_header("Mission Objectives");
     auto draw_group = [&](const char* label, dom::sim::ObjectiveCategory category) {
@@ -191,7 +214,7 @@ void draw_hud(SDL_Window* window,
       for (const auto& o : world.objectives) {
         if (o.category != category && !(category == dom::sim::ObjectiveCategory::Primary && o.primary)) continue;
         if (!o.visible && o.state != dom::sim::ObjectiveState::Completed && o.state != dom::sim::ObjectiveState::Failed) continue;
-        ImGui::TextColored(objective_color(o.state), "• %s", o.title.c_str());
+        ImGui::TextColored(objective_color(o.state), "%s %s", icons::glyph_for_icon("ui_icon_objective"), o.title.c_str());
         if (!o.progressText.empty() || o.progressValue > 0.0f) ImGui::TextDisabled("  %s %.2f", o.progressText.c_str(), o.progressValue);
       }
     };
@@ -202,7 +225,9 @@ void draw_hud(SDL_Window* window,
     theme::section_header("Crisis/Event Feed");
     int shown = 0;
     for (auto it = world.worldEvents.rbegin(); it != world.worldEvents.rend() && shown < 5; ++it, ++shown) {
-      ImGui::BulletText("%s [%s] %s", it->displayName.c_str(), world_event_category_name(it->category), world_event_state_name(it->state));
+      const auto ep = dom::sim::event_content_presentation(it->id, it->category);
+      const auto iconId = icons::resolve_icon_id(world, 0, ep.iconId, "event", "ui_icon_event");
+      ImGui::BulletText("%s %s [%s] %s", icons::glyph_for_icon(iconId), it->displayName.c_str(), world_event_category_name(it->category), world_event_state_name(it->state));
     }
   }
   ImGui::End();
@@ -214,7 +239,8 @@ void draw_hud(SDL_Window* window,
     theme::section_header("Message Log");
     int shown = 0;
     for (auto it = world.missionMessages.rbegin(); it != world.missionMessages.rend() && shown < 5; ++it, ++shown) {
-      ImGui::BulletText("[%u] %s: %s", it->tick, it->title.empty() ? it->category.c_str() : it->title.c_str(), it->body.c_str());
+      const auto iconId = icons::resolve_icon_id(world, 0, it->iconId, it->category.empty() ? "event" : it->category, "ui_icon_event");
+      ImGui::BulletText("[%u] %s %s: %s", it->tick, icons::glyph_for_icon(iconId), it->title.empty() ? it->category.c_str() : it->title.c_str(), it->body.c_str());
     }
   }
   ImGui::End();
@@ -227,7 +253,7 @@ void draw_hud(SDL_Window* window,
     ImGui::TextUnformatted("Minimap active in renderer.");
     ImGui::SliderInt("Zoom", &uiState.minimapZoomLevel, 1, 5);
     ImGui::Text("Viewport marker: centered");
-    ImGui::Text("Markers: theaters %zu | crises %u", world.theaterCommands.size(), world.activeWorldEventCount);
+    ImGui::Text("Markers: theaters %zu | crises %u | marker id %s", world.theaterCommands.size(), world.activeWorldEventCount, icons::resolve_marker_id("warning", 0).c_str());
   }
   ImGui::End();
 

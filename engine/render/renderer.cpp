@@ -10,6 +10,7 @@
 #include <vector>
 #include <string_view>
 #include <chrono>
+#include "engine/ui/ui_icons.h"
 
 namespace dom::render {
 namespace {
@@ -790,6 +791,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   for (const auto& u : w.units) {
     if (u.selected) draw_ring(u.renderPos, 0.86f, 0.19f, {1.0f, 0.95f, 0.25f});
     else if (dragSet.contains(u.id)) draw_ring(u.renderPos, 0.70f, 0.13f, {0.85f, 0.85f, 0.85f});
+    if (u.supplyState == dom::sim::SupplyState::LowSupply) { (void)dom::ui::icons::resolve_marker_id("warning", u.team); draw_ring(u.renderPos, 0.54f, 0.09f, {0.95f, 0.65f, 0.22f}); }
+    if (u.supplyState == dom::sim::SupplyState::OutOfSupply) { (void)dom::ui::icons::resolve_marker_id("warning", u.team); draw_ring(u.renderPos, 0.60f, 0.10f, {0.95f, 0.22f, 0.22f}); }
   }
 
   for (const auto& cty : w.cities) {
@@ -819,7 +822,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glVertex2f(cty.pos.x + h * 0.55f, cty.pos.y + 0.15f);
     glEnd();
 
-    if (cty.capital || cty.level >= 4) draw_ring(cty.pos, core + 0.42f, 0.09f, {0.95f, 0.88f, 0.3f});
+    if (cty.capital || cty.level >= 4) { (void)dom::ui::icons::resolve_marker_id("capital", cty.team); draw_ring(cty.pos, core + 0.42f, 0.09f, {0.95f, 0.88f, 0.3f}); }
   }
 
   if (gEntityPresentationDebug) {

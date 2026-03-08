@@ -69,3 +69,7 @@ Unit/building presentation for map entities resolves deterministically in this o
 5. Fallback icon/silhouette id
 
 Fallbacks are non-fatal and reported through debug counters.
+
+## UI emblem/icon fallback chain
+UI presentation resolves in fixed order: exact content icon -> civilization emblem/theme mapping -> category icon -> default fallback icon.
+Debug counters expose `ICON_RESOLVE_COUNT`, `MARKER_RESOLVE_COUNT`, `ALERT_RESOLVE_COUNT`, and `PRESENTATION_FALLBACK_COUNT`.

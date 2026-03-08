@@ -50,3 +50,7 @@ Guardians may now include deterministic presentation IDs (`icon_id`, `portrait_i
 ## Guardian site map readability
 
 Revealed guardian sites now render with strategic-site silhouettes and deterministic fallback presentation resolution (`guardian_content_presentation`) when explicit themed assets are missing.
+
+## Guardian marker/readability pass
+- Revealed guardian sites render dedicated world marker categories with deterministic fallback marker IDs.
+- Guardian alerts surface through the strategic alert queue using severity-based styling.

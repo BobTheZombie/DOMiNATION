@@ -71,6 +71,8 @@ add_executable(rts
   engine/assets/texture_atlas.cpp
   engine/tools/asset_browser.cpp
   engine/ui/hud.cpp
+  engine/ui/ui_icons.cpp
+  engine/ui/ui_alerts.cpp
   engine/ui/ui_theme.cpp
   engine/ui/production_menu.cpp
   engine/ui/research_panel.cpp
