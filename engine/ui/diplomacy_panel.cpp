@@ -1,4 +1,5 @@
 #include "engine/ui/diplomacy_panel.h"
+#include "engine/ui/ui_theme.h"
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -10,8 +11,8 @@ namespace dom::ui {
 namespace {
 const char* relation_name(dom::sim::DiplomacyRelation rel) {
   switch (rel) {
-    case dom::sim::DiplomacyRelation::Allied: return "ally";
-    case dom::sim::DiplomacyRelation::War: return "war";
+    case dom::sim::DiplomacyRelation::Allied: return "allied";
+    case dom::sim::DiplomacyRelation::War: return "at war";
     default: return "neutral";
   }
 }
@@ -47,49 +48,35 @@ void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool 
 #else
   if (world.players.empty()) return;
   if (showDiplomacyPanel) {
-    if (ImGui::Begin("Diplomacy")) {
-      ImGui::TextUnformatted("Players and relationship state");
+    if (ImGui::Begin("Diplomacy Overview")) {
+      theme::section_header("Civilizations & Relations");
       for (const auto& pl : world.players) {
-        ImGui::SeparatorText((std::string("P") + std::to_string(pl.id) + " - " + pl.civilization.displayName).c_str());
+        ImGui::SeparatorText((std::string("P") + std::to_string(pl.id) + " · " + pl.civilization.displayName).c_str());
         ImGui::TextWrapped("%s", pl.civilization.shortDescription.c_str());
-        ImGui::Text("eco %.2f mil %.2f sci %.2f | road %.2f rail %.2f supply %.2f trade %.2f",
-                    pl.civilization.economyBias, pl.civilization.militaryBias, pl.civilization.scienceBias,
-                    pl.civilization.roadBonus, pl.civilization.railBonus, pl.civilization.supplyBonus, pl.civilization.tradeRouteBonus);
-        ImGui::Text("doctrine aggr %.2f alliance %.2f trade %.2f tension %.2f",
-                    pl.civilization.aggressionBias, pl.civilization.allianceBias, pl.civilization.tradeBias, pl.civilization.worldTensionResponseBias);
-        ImGui::Text("theme=%s doctrineTags=%zu missionTags=%zu", pl.civilization.themeId.c_str(), pl.civilization.doctrineTags.size(), pl.civilization.missionTags.size());
-        ImGui::Text("ideology: primary=%s secondary=%s", pl.civilization.ideology.primary.c_str(), pl.civilization.ideology.secondary.c_str());
+        ImGui::Text("Ideology: %s / %s", pl.civilization.ideology.primary.c_str(), pl.civilization.ideology.secondary.c_str());
         int bi = bloc_index_for_player(world, pl.id);
-        if (bi >= 0) { const auto& b = world.allianceBlocs[(size_t)bi]; ImGui::Text("bloc: %s cohesion=%.2f threat=%.2f", b.blocId.c_str(), b.cohesion, b.threatLevel); }
-        else ImGui::TextUnformatted("bloc: none");
-        std::vector<std::string> highlights;
-        for (size_t i=0;i<pl.civilization.uniqueUnitDefs.size();++i) if (!pl.civilization.uniqueUnitDefs[i].empty()) highlights.push_back(pl.civilization.uniqueUnitDefs[i]);
-        for (size_t i=0;i<pl.civilization.uniqueBuildingDefs.size();++i) if (!pl.civilization.uniqueBuildingDefs[i].empty()) highlights.push_back(pl.civilization.uniqueBuildingDefs[i]);
-        std::sort(highlights.begin(), highlights.end());
-        if (!highlights.empty()) {
-          std::string joined;
-          for (size_t i=0;i<highlights.size();++i) { if (i) joined += ", "; joined += highlights[i]; }
-          ImGui::TextWrapped("unique content: %s", joined.c_str());
+        if (bi >= 0) {
+          const auto& b = world.allianceBlocs[(size_t)bi];
+          ImGui::Text("Bloc %s | cohesion %.2f threat %.2f", b.blocId.c_str(), b.cohesion, b.threatLevel);
+        } else {
+          ImGui::TextDisabled("Bloc: none");
         }
-        if (pl.id < world.strategicDeterrence.size()) { const auto& ds = world.strategicDeterrence[pl.id]; ImGui::Text("deterrence cap=%d stockpile=%u ready=%u prep=%u alert=%u warning=%d retaliation=%d secondStrike=%d", ds.strategicCapabilityEnabled?1:0, ds.strategicStockpile, ds.strategicReadyCount, ds.strategicPreparingCount, ds.strategicAlertLevel, ds.launchWarningActive?1:0, ds.retaliationCapability?1:0, ds.secondStrikeCapability?1:0); }
-      }
-      if (ImGui::CollapsingHeader("Alliance Blocs", ImGuiTreeNodeFlags_DefaultOpen)) {
-        for (const auto& b : world.allianceBlocs) {
-          if (b.lifecycleState != 1) continue;
-          ImGui::SeparatorText(b.blocId.c_str());
-          ImGui::Text("members=%zu cohesion=%.2f threat=%.2f", b.members.size(), b.cohesion, b.threatLevel);
-          if (!b.rivalBlocIds.empty()) ImGui::Text("rival=%s", b.rivalBlocIds.front().c_str());
+        if (pl.id < world.strategicDeterrence.size()) {
+          const auto& ds = world.strategicDeterrence[pl.id];
+          ImGui::Text("Deterrence: stockpile %u | ready %u | alert %u", ds.strategicStockpile, ds.strategicReadyCount, ds.strategicAlertLevel);
         }
       }
+
+      theme::section_header("Treaties / Direct Actions");
       for (size_t i = 1; i < world.players.size(); ++i) {
         auto rel = world.diplomacy[0 * world.players.size() + i];
-        ImGui::Text("Player %zu: %s", i, relation_name(rel));
+        ImGui::Text("P0 ↔ P%zu: %s", i, relation_name(rel));
         ImGui::PushID(static_cast<int>(i));
         if (ImGui::Button("Declare war")) dom::sim::declare_war(world, 0, static_cast<uint16_t>(i));
         ImGui::SameLine();
-        if (ImGui::Button("Form alliance")) dom::sim::form_alliance(world, 0, static_cast<uint16_t>(i));
+        if (ImGui::Button("Alliance")) dom::sim::form_alliance(world, 0, static_cast<uint16_t>(i));
         ImGui::SameLine();
-        if (ImGui::Button("Trade agreement")) dom::sim::establish_trade_agreement(world, 0, static_cast<uint16_t>(i));
+        if (ImGui::Button("Trade")) dom::sim::establish_trade_agreement(world, 0, static_cast<uint16_t>(i));
         ImGui::PopID();
       }
     }
@@ -97,23 +84,19 @@ void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool 
   }
 
   if (!showOperationsPanel) return;
-  if (!ImGui::Begin("Operations")) { ImGui::End(); return; }
-  ImGui::Text("Theaters: %zu | Objectives: %zu | ArmyGroups: %zu | NavalTF: %zu | AirWings: %zu",
+  if (!ImGui::Begin("Operations & Theaters")) { ImGui::End(); return; }
+  theme::section_header("Strategic Posture");
+  ImGui::Text("Theaters %zu | Objectives %zu | Army Groups %zu | Naval TF %zu | Air Wings %zu",
               world.theaterCommands.size(), world.operationalObjectives.size(), world.armyGroups.size(), world.navalTaskForces.size(), world.airWings.size());
   for (const auto& t : world.theaterCommands) {
     ImGui::SeparatorText((std::string("Theater ") + std::to_string(t.theaterId)).c_str());
-    ImGui::Text("owner=%u bounds=[%d,%d]-[%d,%d] supply=%.2f threat=%.2f", t.owner, t.bounds.x, t.bounds.y, t.bounds.z, t.bounds.w, t.supplyStatus, t.threatLevel);
-    ImGui::Text("assigned forces: army=%zu naval=%zu air=%zu", t.assignedArmyGroups.size(), t.assignedNavalTaskForces.size(), t.assignedAirWings.size());
+    ImGui::Text("Owner P%u | supply %.2f threat %.2f", t.owner, t.supplyStatus, t.threatLevel);
+    ImGui::Text("Forces: army %zu naval %zu air %zu", t.assignedArmyGroups.size(), t.assignedNavalTaskForces.size(), t.assignedAirWings.size());
     for (uint32_t objectiveId : t.activeOperations) {
       auto it = std::find_if(world.operationalObjectives.begin(), world.operationalObjectives.end(), [&](const dom::sim::OperationalObjective& o){ return o.id == objectiveId; });
       if (it == world.operationalObjectives.end()) continue;
-      ImGui::BulletText("objective %u %s required=%u start=%u dur=%u outcome=%u",
-                        it->id, op_name(it->objectiveType), it->requiredForce, it->startTick, it->durationTicks, (unsigned)it->outcome);
+      ImGui::BulletText("Objective %u · %s · required %u", it->id, op_name(it->objectiveType), it->requiredForce);
     }
-  }
-  for (const auto& op : world.operations) {
-    if (!op.active) continue;
-    ImGui::BulletText("legacy op: %s @ (%.1f, %.1f) tick=%u", op_name(op.type), op.target.x, op.target.y, op.assignedTick);
   }
   ImGui::End();
 #endif

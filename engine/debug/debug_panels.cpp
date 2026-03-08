@@ -1,4 +1,5 @@
 #include "engine/debug/debug_panels.h"
+#include "engine/ui/ui_theme.h"
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -10,6 +11,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   (void)world; (void)state;
 #else
   if (!ImGui::Begin("Debug Visualization")) { ImGui::End(); return; }
+  dom::ui::theme::section_header("Debug Overlays");
   ImGui::Checkbox("pathfinding grid", &state.pathfindingGrid);
   ImGui::Checkbox("chunk boundaries", &state.chunkBoundaries);
   ImGui::Checkbox("biome map", &state.biomeMap);
@@ -28,6 +30,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::End();
 
   if (!ImGui::Begin("Perf Graphs")) { ImGui::End(); return; }
+  dom::ui::theme::section_header("Simulation Performance");
   static float simHistory[120]{};
   static float navHistory[120]{};
   static float combatHistory[120]{};
@@ -47,7 +50,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::End();
 
 
-  if (ImGui::Begin("Rail Logistics")) {
+  if (ImGui::Begin("Debug · Rail Logistics")) {
     ImGui::Text("nodes=%zu edges=%zu networks=%zu trains=%zu", world.railNodes.size(), world.railEdges.size(), world.railNetworks.size(), world.trains.size());
     ImGui::Text("active trains supply=%u freight=%u throughput=%.2f disrupted=%u", world.activeSupplyTrains, world.activeFreightTrains, world.railThroughput, world.disruptedRailRoutes);
     if (!world.railNodes.empty()) {
@@ -64,7 +67,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::End();
 
 
-  if (ImGui::Begin("Industrial Economy")) {
+  if (ImGui::Begin("Debug · Industrial Economy")) {
     ImGui::Text("factory_count=%u active=%u blocked=%u", world.factoryCount, world.activeFactories, world.blockedFactories);
     ImGui::Text("throughput=%.2f steel=%.2f fuel=%.2f munitions=%.2f machine_parts=%.2f electronics=%.2f",
                 world.industrialThroughput,
@@ -72,7 +75,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   }
   ImGui::End();
 
-  if (ImGui::Begin("Civilization Identity")) {
+  if (ImGui::Begin("Debug · Civilization Identity")) {
     ImGui::Text("UNIQUE_UNITS_PRODUCED=%u UNIQUE_BUILDINGS_CONSTRUCTED=%u", world.uniqueUnitsProduced, world.uniqueBuildingsConstructed);
     ImGui::Text("CIV_CONTENT_RESOLUTION_FALLBACKS=%u", world.civContentResolutionFallbacks);
     ImGui::Text("ROME=%u CHINA=%u EUROPE=%u MIDDLEEAST=%u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
@@ -92,7 +95,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::End();
 
 
-  if (ImGui::Begin("Strategic Deterrence")) {
+  if (ImGui::Begin("Debug · Strategic Deterrence")) {
     ImGui::Text("STRATEGIC_STOCKPILE_TOTAL=%u STRATEGIC_READY_TOTAL=%u STRATEGIC_PREPARING_TOTAL=%u", world.strategicStockpileTotal, world.strategicReadyTotal, world.strategicPreparingTotal);
     ImGui::Text("STRATEGIC_LAUNCHES=%u STRATEGIC_WARNINGS=%u STRATEGIC_INTERCEPTIONS=%u", world.strategicStrikeEvents, world.strategicWarningEvents, world.interceptionEvents);
     ImGui::Text("STRATEGIC_RETALIATIONS=%u SECOND_STRIKE_READY_COUNT=%u DETERRENCE_POSTURE_CHANGES=%u", world.strategicRetaliationEvents, world.secondStrikeReadyCount, world.deterrencePostureChangeCount);
@@ -108,7 +111,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   }
   ImGui::End();
 
-    if (ImGui::Begin("Mission Debug")) {
+    if (ImGui::Begin("Debug · Mission")) {
     ImGui::Text("status=%u briefingShown=%s result=%s", (unsigned)world.missionRuntime.status, world.missionRuntime.briefingShown?"yes":"no", world.missionRuntime.resultTag.c_str());
     ImGui::Text("triggers fired=%u scripted actions=%u", world.missionRuntime.firedTriggerCount, world.missionRuntime.scriptedActionCount);
     ImGui::Separator();
@@ -125,7 +128,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   }
   ImGui::End();
 
-  if (ImGui::Begin("Mythic Guardians")) {
+  if (ImGui::Begin("Debug · Mythic Guardians")) {
     ImGui::Text("sites=%zu discovered=%u spawned=%u joined=%u killed=%u", world.guardianSites.size(), world.guardiansDiscovered, world.guardiansSpawned, world.guardiansJoined, world.guardiansKilled);
     for (const auto& s : world.guardianSites) {
       ImGui::BulletText("id=%u guardian=%s discovered=%d spawned=%d owner=%u alive=%d depleted=%d", s.instanceId, s.guardianId.c_str(), s.discovered?1:0, s.spawned?1:0, s.owner, s.alive?1:0, s.siteDepleted?1:0);
