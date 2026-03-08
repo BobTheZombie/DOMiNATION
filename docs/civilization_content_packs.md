@@ -52,3 +52,8 @@ For building visual resolution:
 5. deterministic fallback `default_family`
 
 The lookup is content-only and does not alter authoritative gameplay state.
+
+## UI accent and fallback presentation
+- Civ accent tinting in HUD/panels is derived from civilization runtime bias values and is presentation-only.
+- Content icon/portrait IDs shown in polished panels still resolve via deterministic content lookup; missing assets use the same fallback IDs.
+- Unique content markers are surfaced in player-facing context cards without changing authoritative unit/building definitions.

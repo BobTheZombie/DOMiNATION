@@ -24,3 +24,8 @@ This document describes the lightweight authored campaign/story presentation sta
 
 ## Fallback behavior
 Portrait/icon/image references resolve to deterministic fallback IDs when missing (`ui_portrait_default` and scoped icon fallbacks). Debug HUD surfaces resolved IDs for authored validation.
+
+## UI polish integration
+- Mission messages are now surfaced in a compact chronological message log region in the command deck.
+- Objective presentation is grouped by primary/secondary/hidden-revealed categories with strong visual state treatment for active/completed/failed.
+- Crisis/event summaries remain deterministic in ordering and are rendered in a dedicated strategic feed.

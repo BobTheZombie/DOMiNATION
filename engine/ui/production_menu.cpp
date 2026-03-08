@@ -1,4 +1,5 @@
 #include "engine/ui/production_menu.h"
+#include "engine/ui/ui_theme.h"
 
 #include <utility>
 #include <string>
@@ -20,7 +21,6 @@ const char* unit_name(dom::sim::UnitType t) {
   }
 }
 
-
 std::string unit_button_label(const dom::sim::World& world, uint16_t team, dom::sim::UnitType type) {
   const std::string defId = (team < world.players.size() && !world.players[team].civilization.uniqueUnitDefs[(size_t)type].empty())
     ? world.players[team].civilization.uniqueUnitDefs[(size_t)type]
@@ -40,21 +40,33 @@ void queue_item_ui(dom::sim::World& world, dom::sim::Building& b, size_t idx) {
 #ifdef DOM_HAS_IMGUI
   auto& it = b.queue[idx];
   ImGui::PushID(static_cast<int>(idx));
-  ImGui::Text("%zu) %s | %.1fs", idx + 1, unit_name(it.unitType), it.remaining);
+  ImGui::Text("%zu) %s", idx + 1, unit_name(it.unitType));
+  ImGui::SameLine();
+  ImGui::TextDisabled("%.1fs", it.remaining);
   ImGui::SameLine();
   if (ImGui::SmallButton("Cancel")) {
     dom::sim::cancel_queue_item(world, 0, b.id, idx);
     ImGui::PopID();
     return;
   }
-  ImGui::SameLine();
-  if (idx > 0 && ImGui::SmallButton("Up")) std::swap(b.queue[idx], b.queue[idx - 1]);
-  ImGui::SameLine();
-  if (idx + 1 < b.queue.size() && ImGui::SmallButton("Down")) std::swap(b.queue[idx], b.queue[idx + 1]);
   ImGui::PopID();
 #else
   (void)world; (void)b; (void)idx;
 #endif
+}
+
+void train_card(dom::sim::World& world, uint16_t team, uint32_t buildingId, dom::sim::UnitType type, const char* costInfo, bool locked, const char* lockReason) {
+  ImGui::PushID(static_cast<int>(type));
+  ImGui::BeginChild("card", ImVec2(0.0f, 58.0f), true);
+  ImGui::TextUnformatted(unit_button_label(world, team, type).c_str());
+  ImGui::TextDisabled("%s", costInfo);
+  if (locked) {
+    ImGui::TextColored(theme::state_color_warning(), "Locked: %s", lockReason);
+  } else if (ImGui::Button("Queue")) {
+    dom::sim::enqueue_train_unit(world, team, buildingId, type);
+  }
+  ImGui::EndChild();
+  ImGui::PopID();
 }
 }
 
@@ -63,7 +75,7 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
   (void)world; (void)selected;
 #else
   if (!world.uiTrainMenu) return;
-  if (!ImGui::Begin("Production Menu", &world.uiTrainMenu)) { ImGui::End(); return; }
+  if (!ImGui::Begin("Production Command", &world.uiTrainMenu)) { ImGui::End(); return; }
 
   uint32_t bid = selected_production_building(world, selected);
   if (!bid) {
@@ -74,40 +86,35 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
 
   dom::sim::Building* building = nullptr;
   for (auto& b : world.buildings) if (b.id == bid) building = &b;
-  if (!building) {
-    ImGui::End();
-    return;
-  }
+  if (!building) { ImGui::End(); return; }
 
-  ImGui::Text("Building #%u", building->id);
+  ImGui::Text("Building #%u | Queue %zu", building->id, building->queue.size());
   const uint16_t ownerTeam = building->team;
-  ImGui::TextUnformatted("Cost/Build Time: Worker 50/8s, Infantry 60/10s, Ranged 70/12s, Cavalry 90/16s, Siege 110/22s");
+  theme::section_header("Build Cards");
 
   if (building->type == dom::sim::BuildingType::Barracks) {
-    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Infantry).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Infantry);
-    ImGui::SameLine();
-    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Archer).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Archer);
-    ImGui::SameLine();
-    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Siege).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Siege);
+    train_card(world, ownerTeam, building->id, dom::sim::UnitType::Infantry, "Cost 60 | 10s", false, "");
+    train_card(world, ownerTeam, building->id, dom::sim::UnitType::Archer, "Cost 70 | 12s", false, "");
+    train_card(world, ownerTeam, building->id, dom::sim::UnitType::Siege, "Cost 110 | 22s", building->queue.size() > 4, "Queue full");
   } else if (building->type == dom::sim::BuildingType::Port) {
-    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Cavalry).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Cavalry);
+    train_card(world, ownerTeam, building->id, dom::sim::UnitType::Cavalry, "Cost 90 | 16s", false, "");
   } else if (building->type == dom::sim::BuildingType::Mine) {
-    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Siege).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Siege);
-
+    train_card(world, ownerTeam, building->id, dom::sim::UnitType::Siege, "Cost 110 | 22s", false, "");
   } else if (building->type == dom::sim::BuildingType::SteelMill || building->type == dom::sim::BuildingType::Refinery || building->type == dom::sim::BuildingType::MunitionsPlant || building->type == dom::sim::BuildingType::MachineWorks || building->type == dom::sim::BuildingType::ElectronicsLab || building->type == dom::sim::BuildingType::FactoryHub) {
-    ImGui::SeparatorText("Industrial");
-    ImGui::Text("Recipe index: %u", building->factory.recipeIndex);
-    ImGui::Text("State: %s%s", building->factory.active ? "active" : "idle", building->factory.blocked ? " (blocked)" : "");
+    theme::section_header("Industrial Output");
+    ImGui::Text("Recipe index: %u (%s)", building->factory.recipeIndex, building->factory.active ? "active" : "idle");
+    if (building->factory.blocked) ImGui::TextColored(theme::state_color_warning(), "Blocked: missing inputs");
     if (ImGui::Button("Steel")) building->factory.recipeIndex = 0;
     ImGui::SameLine(); if (ImGui::Button("Fuel")) building->factory.recipeIndex = 1;
     ImGui::SameLine(); if (ImGui::Button("Munitions")) building->factory.recipeIndex = 2;
     if (ImGui::Button("Machine Parts")) building->factory.recipeIndex = 3;
     ImGui::SameLine(); if (ImGui::Button("Electronics")) building->factory.recipeIndex = 4;
   } else {
-    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Worker).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Worker);
+    train_card(world, ownerTeam, building->id, dom::sim::UnitType::Worker, "Cost 50 | 8s", false, "");
   }
 
-  ImGui::SeparatorText("Queue");
+  theme::section_header("Queue State");
+  if (building->queue.empty()) ImGui::TextDisabled("Queue is empty");
   for (size_t i = 0; i < building->queue.size(); ++i) queue_item_ui(world, *building, i);
 
   ImGui::End();

@@ -70,6 +70,7 @@ add_executable(rts
   engine/assets/texture_atlas.cpp
   engine/tools/asset_browser.cpp
   engine/ui/hud.cpp
+  engine/ui/ui_theme.cpp
   engine/ui/production_menu.cpp
   engine/ui/research_panel.cpp
   engine/ui/diplomacy_panel.cpp

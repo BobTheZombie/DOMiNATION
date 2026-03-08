@@ -87,3 +87,9 @@ UI content references are manifest-driven. Missing icon/portrait assets resolve 
 - portrait fallback: `ui_portrait_default`
 
 Asset lookup failures remain non-fatal and presentation-only.
+
+## HUD/panel presentation rules
+- HUD panel readability targets: 1080p, 1440p, 4K with existing UI/global font scaling.
+- Minimap panel now has a dedicated framed region and strategic marker summary text for situational awareness.
+- Strategic warnings use explicit semantic colors (warning/success/failure/info) via shared ImGui theme helpers.
+- Missing icon/portrait references continue to fall back deterministically to existing placeholders.

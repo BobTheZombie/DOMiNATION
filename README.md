@@ -412,3 +412,20 @@ Expected checks:
 
 ## Ideology and Alliance Blocs
 Dynamic ideology alignment and deterministic alliance bloc behavior are now supported. See `docs/ideology_bloc_system.md` and `scenarios/bloc_test.json` for format and validation commands.
+
+## UI/UX polish pass (HUD + panel hierarchy)
+- Added a structured HUD layout with clear regions: top strategy bar, right-side strategic alerts/objectives feed, bottom command deck, and minimap corner frame (`engine/ui/hud.cpp`).
+- Unified panel presentation now flows through shared ImGui theme helpers in `engine/ui/ui_theme.*`.
+- Production, Research, Diplomacy, and Operations panels were updated to a consistent visual language and information hierarchy while keeping authoritative simulation logic unchanged.
+
+### Deterministic smoke suite (UI integration)
+```bash
+./build/rts --headless --smoke --ticks 400 --dump-hash
+./build/rts --headless --campaign campaigns/test_campaign.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 600 --dump-hash
+./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```

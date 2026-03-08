@@ -2,6 +2,7 @@
 #include "engine/ui/diplomacy_panel.h"
 #include "engine/ui/production_menu.h"
 #include "engine/ui/research_panel.h"
+#include "engine/ui/ui_theme.h"
 #include "engine/debug/debug_panels.h"
 #include "engine/debug/debug_visuals.h"
 #include "engine/editor/scenario_editor.h"
@@ -30,21 +31,6 @@ const char* age_name(dom::sim::Age age) {
   }
   return "Unknown";
 }
-
-const char* role_name(dom::sim::UnitRole role) {
-  switch (role) {
-    case dom::sim::UnitRole::Infantry: return "Infantry";
-    case dom::sim::UnitRole::Ranged: return "Ranged";
-    case dom::sim::UnitRole::Cavalry: return "Cavalry";
-    case dom::sim::UnitRole::Siege: return "Siege";
-    case dom::sim::UnitRole::Worker: return "Worker";
-    case dom::sim::UnitRole::Building: return "Building";
-    case dom::sim::UnitRole::Naval: return "Naval";
-    case dom::sim::UnitRole::Transport: return "Transport";
-    default: return "Unknown";
-  }
-}
-
 
 const char* objective_state_name(dom::sim::ObjectiveState st) {
   switch (st) {
@@ -87,29 +73,63 @@ const char* supply_name(dom::sim::SupplyState state) {
   return "Unknown";
 }
 
-const char* unit_type_name(dom::sim::UnitType t) {
-  switch (t) {
-    case dom::sim::UnitType::Worker: return "Worker";
-    case dom::sim::UnitType::Infantry: return "Infantry";
-    case dom::sim::UnitType::Archer: return "Archer";
-    case dom::sim::UnitType::Cavalry: return "Cavalry";
-    case dom::sim::UnitType::Siege: return "Siege";
-    default: return "Special";
-  }
+ImVec4 objective_color(dom::sim::ObjectiveState st) {
+  if (st == dom::sim::ObjectiveState::Completed) return theme::state_color_success();
+  if (st == dom::sim::ObjectiveState::Failed) return theme::state_color_failure();
+  if (st == dom::sim::ObjectiveState::Active) return theme::state_color_info();
+  return ImVec4(0.70f, 0.70f, 0.70f, 1.0f);
 }
 
-const char* building_type_name(dom::sim::BuildingType t) {
-  switch (t) {
-    case dom::sim::BuildingType::CityCenter: return "CityCenter";
-    case dom::sim::BuildingType::House: return "House";
-    case dom::sim::BuildingType::Farm: return "Farm";
-    case dom::sim::BuildingType::LumberCamp: return "LumberCamp";
-    case dom::sim::BuildingType::Mine: return "Mine";
-    case dom::sim::BuildingType::Market: return "Market";
-    case dom::sim::BuildingType::Library: return "Library";
-    case dom::sim::BuildingType::Barracks: return "Barracks";
-    default: return "Building";
+void draw_selection_summary(dom::sim::World& world, const std::vector<uint32_t>& selected) {
+  theme::section_header("Selection & Context");
+  if (selected.empty()) {
+    ImGui::TextUnformatted("No active selection");
+    return;
   }
+  ImGui::Text("Selected: %zu", selected.size());
+  uint32_t id = selected.front();
+  for (const auto& u : world.units) {
+    if (u.id != id) continue;
+    ImGui::Text("Unit #%u | Team P%u", u.id, u.team);
+    ImGui::Text("HP %.0f | Supply %s | Cargo %zu", u.hp, supply_name(u.supplyState), u.cargo.size());
+    const auto info = dom::sim::unit_content_presentation(world, u.team, u.type, u.definitionId);
+    ImGui::Text("%s [%s]", info.displayName.c_str(), info.iconId.c_str());
+    return;
+  }
+  for (const auto& b : world.buildings) {
+    if (b.id != id) continue;
+    ImGui::Text("Building #%u | Team P%u", b.id, b.team);
+    ImGui::Text("HP %.0f / %.0f | Queue %zu", b.hp, b.maxHp, b.queue.size());
+    const auto info = dom::sim::building_content_presentation(world, b.team, b.type, b.definitionId);
+    ImGui::Text("%s [%s]", info.displayName.c_str(), info.iconId.c_str());
+    if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery) {
+      ImGui::Text("Factory %s | throughput %.2f", b.factory.active ? "active" : "idle", b.factory.throughputBonus);
+    }
+    return;
+  }
+  ImGui::Text("Selection id #%u not visible", id);
+}
+
+void draw_top_bar(const ImGuiViewport* vp, dom::sim::World& world, const std::string& overlay) {
+  const auto& p = world.players[0];
+  ImGuiWindowFlags f = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + 8.0f, vp->Pos.y + 8.0f));
+  ImGui::SetNextWindowSize(ImVec2(vp->Size.x - 16.0f, 95.0f));
+  if (!ImGui::Begin("Top Strategy Bar", nullptr, f)) { ImGui::End(); return; }
+
+  ImGui::Text("%s | Age %s | Population %u/%u", p.civilization.displayName.c_str(), age_name(p.age), p.popUsed, p.popCap);
+  ImGui::Separator();
+  ImGui::Text("Food %.0f  Wood %.0f  Metal %.0f  Wealth %.0f  Knowledge %.0f  Oil %.0f",
+              p.resources[0], p.resources[1], p.resources[2], p.resources[3], p.resources[4], p.resources[5]);
+  ImGui::Text("Steel %.1f  Fuel %.1f  Munitions %.1f  Machine %.1f  Electronics %.1f",
+              p.refinedGoods[0], p.refinedGoods[1], p.refinedGoods[2], p.refinedGoods[3], p.refinedGoods[4]);
+  theme::state_text("World tension:", (std::to_string(static_cast<int>(world.worldTension * 100.0f)) + "%").c_str(), world.worldTension > 0.75f ? theme::state_color_warning() : theme::state_color_info());
+  if (world.armageddonActive) {
+    ImGui::SameLine();
+    ImGui::TextColored(theme::state_color_failure(), "[ARMAGEDDON ACTIVE]");
+  }
+  if (!overlay.empty()) ImGui::TextColored(theme::state_color_info(), "%s", overlay.c_str());
+  ImGui::End();
 }
 
 } // namespace
@@ -141,162 +161,74 @@ void draw_hud(SDL_Window* window,
               const std::string& overlay) {
   (void)window;
 #ifndef DOM_HAS_IMGUI
-  (void)world;
-  (void)selected;
-  (void)uiState;
-  (void)overlay;
+  (void)world; (void)selected; (void)uiState; (void)overlay;
   return;
 #else
   if (world.players.empty()) return;
-  const auto& p = world.players[0];
   uiState.notifications.erase(std::remove_if(uiState.notifications.begin(), uiState.notifications.end(),
     [&](const HudNotification& n) { return world.tick >= n.expireTick; }), uiState.notifications.end());
 
   ImGuiViewport* vp = ImGui::GetMainViewport();
+  const ImVec4 accent = theme::civ_accent(world, 0);
+  const float uiScale = ImGui::GetIO().FontGlobalScale > 0.0f ? ImGui::GetIO().FontGlobalScale : 1.0f;
+  theme::ScopedHudTheme scopedTheme(uiScale, accent);
 
-  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + 8.0f, vp->Pos.y + 8.0f));
-  ImGui::SetNextWindowSize(ImVec2(vp->Size.x - 16.0f, 74.0f));
-  ImGuiWindowFlags barFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
-  ImGui::Begin("RTS Resource Bar", nullptr, barFlags);
-  ImGui::Text("Food %.0f | Wood %.0f | Metal %.0f | Wealth %.0f | Knowledge %.0f | Oil %.0f | Pop %u/%u | Age %s",
-    p.resources[0], p.resources[1], p.resources[2], p.resources[3], p.resources[4], p.resources[5],
-    p.popUsed, p.popCap, age_name(p.age));
-  ImGui::Text("Civ %s | eco %.2f mil %.2f sci %.2f dip %.2f log %.2f strat %.2f", p.civilization.displayName.c_str(), p.civilization.economyBias, p.civilization.militaryBias, p.civilization.scienceBias, p.civilization.diplomacyBias, p.civilization.logisticsBias, p.civilization.strategicBias);
-  ImGui::Text("Steel %.1f | Fuel %.1f | Munitions %.1f | Machine Parts %.1f | Electronics %.1f", p.refinedGoods[0], p.refinedGoods[1], p.refinedGoods[2], p.refinedGoods[3], p.refinedGoods[4]);
-  if (!overlay.empty()) ImGui::TextUnformatted(overlay.c_str());
-  ImGui::End();
+  draw_top_bar(vp, world, overlay);
 
-  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + 8.0f, vp->Pos.y + vp->Size.y - 170.0f));
-  ImGui::SetNextWindowSize(ImVec2(vp->Size.x * 0.58f, 162.0f));
-  ImGui::Begin("Selection", nullptr, barFlags);
-  if (selected.empty()) {
-    ImGui::TextUnformatted("No unit/building selected");
-  } else {
-    uint32_t id = selected.front();
-    bool found = false;
-    for (const auto& u : world.units) {
-      if (u.id != id) continue;
-      found = true;
-      ImGui::Text("Unit #%u", u.id);
-      ImGui::Text("Health: %.0f | Role: %s | Owner: P%u", u.hp, role_name(u.role), u.team);
-      if (u.team < world.players.size()) ImGui::Text("Civilization: %s", world.players[u.team].civilization.displayName.c_str());
-      ImGui::Text("Supply: %s | Cargo: %zu", supply_name(u.supplyState), u.cargo.size());
-      const auto unitInfo = dom::sim::unit_content_presentation(world, u.team, u.type, u.definitionId);
-      ImGui::Text("DefId: %s", u.definitionId.empty()?"(base)":u.definitionId.c_str());
-      ImGui::Text("Resolved: %s | Icon: %s", unitInfo.displayName.c_str(), unitInfo.iconId.c_str());
-      ImGui::Text("Unique content: %s", unitInfo.unique ? "yes" : "no");
-      if (u.team < world.players.size()) {
-        const std::string base = unit_type_name(u.type);
-        if (u.definitionId != base) ImGui::Text("Unique: yes (%s -> %s)", base.c_str(), u.definitionId.c_str());
-      }
-      for (const auto& s : world.guardianSites) {
-        if (u.definitionId != s.guardianId || glm::length(u.pos - s.pos) > 10.0f) continue;
-        ImGui::SeparatorText("Mythic Guardian");
-        ImGui::Text("Guardian type: %s", s.guardianId.c_str());
-        ImGui::Text("Site type: %u", static_cast<unsigned>(s.siteType));
-        ImGui::Text("Discovered: %s | Spawned: %s | Alive: %s", s.discovered ? "yes" : "no", s.spawned ? "yes" : "no", s.alive ? "yes" : "no");
-        const std::string ownerLabel = s.owner == UINT16_MAX ? std::string("none") : (std::string("P") + std::to_string(s.owner));
-        ImGui::Text("Owner: %s", ownerLabel.c_str());
-        break;
-      }
-      break;
-    }
-    if (!found) {
-      for (const auto& b : world.buildings) {
-        if (b.id != id) continue;
-        ImGui::Text("Building #%u", b.id);
-        ImGui::Text("Health: %.0f/%.0f | Owner: P%u", b.hp, b.maxHp, b.team);
-        if (b.team < world.players.size()) ImGui::Text("Civilization: %s", world.players[b.team].civilization.displayName.c_str());
-        ImGui::Text("Queue items: %zu", b.queue.size());
-        if (b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::FactoryHub) {
-          ImGui::SeparatorText("Industrial");
-          ImGui::Text("Recipe: %u", b.factory.recipeIndex);
-          ImGui::Text("State: %s%s", b.factory.active ? "active" : "idle", b.factory.blocked ? " (blocked)" : "");
-          ImGui::Text("Throughput bonus: %.2f", b.factory.throughputBonus);
-          ImGui::Text("Output buffer steel/fuel/munitions: %.1f / %.1f / %.1f", b.factory.outputBuffer[0], b.factory.outputBuffer[1], b.factory.outputBuffer[2]);
-          ImGui::Text("Output buffer machine/electronics: %.1f / %.1f", b.factory.outputBuffer[3], b.factory.outputBuffer[4]);
-        }
-        const auto buildInfo = dom::sim::building_content_presentation(world, b.team, b.type, b.definitionId);
-        ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
-        ImGui::Text("Resolved: %s | Icon: %s", buildInfo.displayName.c_str(), buildInfo.iconId.c_str());
-        ImGui::Text("Portrait: %s", buildInfo.portraitId.empty() ? "ui_portrait_default (fallback)" : buildInfo.portraitId.c_str());
-        ImGui::Text("Variant: %s", dom::sim::building_visual_variant_id(world, b).c_str());
-        ImGui::Text("Unique content: %s", buildInfo.unique ? "yes" : "no");
-        if (b.team < world.players.size()) {
-          const std::string base = building_type_name(b.type);
-          if (b.definitionId != base) ImGui::Text("Unique: yes (%s -> %s)", base.c_str(), b.definitionId.c_str());
-        }
-        if (b.type == dom::sim::BuildingType::Mine) {
-          const int cx = std::clamp((int)b.pos.x, 0, world.width - 1);
-          const int cy = std::clamp((int)b.pos.y, 0, world.height - 1);
-          const int cell = cy * world.width + cx;
-          int rid = 0;
-          if (!world.mountainRegionByCell.empty() && cell >= 0 && cell < (int)world.mountainRegionByCell.size()) rid = world.mountainRegionByCell[(size_t)cell];
-          int activeDeposits = 0;
-          float remaining = 0.0f;
-          for (const auto& d : world.deepDeposits) if ((int)d.regionId == rid && d.active && d.remaining > 0.0f) { ++activeDeposits; remaining += d.remaining; }
-          int links = 0;
-          for (const auto& e : world.undergroundEdges) if ((int)e.regionId == rid && e.active) ++links;
-          ImGui::Text("Mine region: %d | deep deposits: %d", rid, activeDeposits);
-          ImGui::Text("Tunnel links: %d | deep remaining: %.0f", links, remaining);
-          ImGui::Text("Underground throughput: %.1f", world.undergroundYield);
-        }
-        found = true;
-        break;
-      }
-    }
-    if (!found) ImGui::Text("Selection id #%u not visible", id);
-  }
-  ImGui::End();
+  ImGuiWindowFlags panelFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
-  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 290.0f, vp->Pos.y + vp->Size.y - 270.0f));
-  ImGui::SetNextWindowSize(ImVec2(282.0f, 124.0f));
-  ImGui::Begin("Minimap Frame", nullptr, barFlags);
-  ImGui::TextUnformatted("Minimap active in renderer.");
-  ImGui::SliderInt("Zoom indicator", &uiState.minimapZoomLevel, 1, 5);
-  ImGui::TextUnformatted("[M] toggles minimap visibility.");
-  ImGui::End();
-
-  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 270.0f));
-  ImGui::SetNextWindowSize(ImVec2(382.0f, 260.0f));
-  ImGui::Begin("Mission Objectives", nullptr, barFlags);
-  ImGui::Text("%s", world.mission.title.empty() ? "Skirmish Mission" : world.mission.title.c_str());
-  if (!world.mission.subtitle.empty()) ImGui::TextDisabled("%s", world.mission.subtitle.c_str());
-  auto draw_group = [&](const char* label, dom::sim::ObjectiveCategory category) {
-    ImGui::SeparatorText(label);
-    for (const auto& o : world.objectives) {
-      if (o.category != category && !(category == dom::sim::ObjectiveCategory::Primary && o.primary)) continue;
-      if (!o.visible && o.state != dom::sim::ObjectiveState::Completed && o.state != dom::sim::ObjectiveState::Failed) continue;
-      ImGui::BulletText("%s (%s)", o.title.c_str(), objective_state_name(o.state));
-      if (!o.progressText.empty() || o.progressValue > 0.0f) ImGui::TextDisabled("progress: %s %.2f", o.progressText.c_str(), o.progressValue);
-    }
-  };
-  draw_group("Primary", dom::sim::ObjectiveCategory::Primary);
-  draw_group("Secondary", dom::sim::ObjectiveCategory::Secondary);
-  draw_group("Hidden/Revealed", dom::sim::ObjectiveCategory::HiddenOptional);
-  ImGui::SeparatorText("World Crises");
-  ImGui::Text("Active %u | Resolved %u | Triggered %u", world.activeWorldEventCount, world.resolvedWorldEventCount, world.triggeredWorldEventCount);
-  int shown = 0;
-  for (auto it = world.worldEvents.rbegin(); it != world.worldEvents.rend() && shown < 6; ++it, ++shown) {
-    const auto eventInfo = dom::sim::event_content_presentation(it->eventId, it->category);
-    ImGui::BulletText("%s [%s, sev %.2f] (%s)", it->displayName.c_str(), world_event_category_name(it->category), it->severity, world_event_state_name(it->state));
-    ImGui::TextDisabled("icon=%s portrait=%s", eventInfo.iconId.c_str(), eventInfo.portraitId.empty() ? "ui_portrait_default (fallback)" : eventInfo.portraitId.c_str());
-  }
-  ImGui::End();
-
-  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 390.0f, vp->Pos.y + 90.0f));
-  ImGui::SetNextWindowSize(ImVec2(382.0f, 170.0f));
-  ImGui::Begin("Notifications", nullptr, barFlags);
-  if (uiState.notifications.empty()) {
-    ImGui::TextUnformatted("No active notifications");
-  } else {
+  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 420.0f, vp->Pos.y + 110.0f));
+  ImGui::SetNextWindowSize(ImVec2(412.0f, 390.0f));
+  if (ImGui::Begin("Strategic Alerts", nullptr, panelFlags)) {
+    theme::section_header("Alerts");
+    if (world.armageddonActive) ImGui::TextColored(theme::state_color_failure(), "Nuclear Armageddon escalation active");
+    if (world.worldTension >= 0.9f) ImGui::TextColored(theme::state_color_warning(), "World tension threshold nearing critical");
     for (const auto& n : uiState.notifications) ImGui::BulletText("%s", n.text.c_str());
+
+    theme::section_header("Mission Objectives");
+    auto draw_group = [&](const char* label, dom::sim::ObjectiveCategory category) {
+      ImGui::TextUnformatted(label);
+      for (const auto& o : world.objectives) {
+        if (o.category != category && !(category == dom::sim::ObjectiveCategory::Primary && o.primary)) continue;
+        if (!o.visible && o.state != dom::sim::ObjectiveState::Completed && o.state != dom::sim::ObjectiveState::Failed) continue;
+        ImGui::TextColored(objective_color(o.state), "• %s", o.title.c_str());
+        if (!o.progressText.empty() || o.progressValue > 0.0f) ImGui::TextDisabled("  %s %.2f", o.progressText.c_str(), o.progressValue);
+      }
+    };
+    draw_group("Primary", dom::sim::ObjectiveCategory::Primary);
+    draw_group("Secondary", dom::sim::ObjectiveCategory::Secondary);
+    draw_group("Hidden/Revealed", dom::sim::ObjectiveCategory::HiddenOptional);
+
+    theme::section_header("Crisis/Event Feed");
+    int shown = 0;
+    for (auto it = world.worldEvents.rbegin(); it != world.worldEvents.rend() && shown < 5; ++it, ++shown) {
+      ImGui::BulletText("%s [%s] %s", it->displayName.c_str(), world_event_category_name(it->category), world_event_state_name(it->state));
+    }
   }
-  ImGui::SeparatorText("Presentation Resolve Debug");
-  ImGui::Text("Fallback count: %u", world.civContentResolutionFallbacks);
-  ImGui::Text("Civ usage R/C/E/ME: %u / %u / %u / %u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
-  ImGui::Text("Expansion usage RU/US/JP/EU/UK/EG/TA: %u / %u / %u / %u / %u / %u / %u", world.russiaContentUsage, world.usaContentUsage, world.japanContentUsage, world.euContentUsage, world.ukContentUsage, world.egyptContentUsage, world.tartariaContentUsage);
-  ImGui::Text("Armageddon active=%d triggerTick=%u nuclearTotal=%u LMS=%d", world.armageddonActive?1:0, world.armageddonTriggerTick, world.nuclearUseCountTotal, world.lastManStandingModeActive?1:0);
+  ImGui::End();
+
+  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + 8.0f, vp->Pos.y + vp->Size.y - 230.0f));
+  ImGui::SetNextWindowSize(ImVec2(vp->Size.x * 0.65f, 222.0f));
+  if (ImGui::Begin("Command Deck", nullptr, panelFlags)) {
+    draw_selection_summary(world, selected);
+    theme::section_header("Message Log");
+    int shown = 0;
+    for (auto it = world.missionMessages.rbegin(); it != world.missionMessages.rend() && shown < 5; ++it, ++shown) {
+      ImGui::BulletText("[%u] %s: %s", it->tick, it->title.empty() ? it->category.c_str() : it->title.c_str(), it->body.c_str());
+    }
+  }
+  ImGui::End();
+
+  ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x - 320.0f, vp->Pos.y + vp->Size.y - 250.0f));
+  ImGui::SetNextWindowSize(ImVec2(312.0f, 242.0f));
+  if (ImGui::Begin("Minimap", nullptr, panelFlags)) {
+    ImGui::TextUnformatted("[ Strategic Minimap ]");
+    ImGui::Separator();
+    ImGui::TextUnformatted("Minimap active in renderer.");
+    ImGui::SliderInt("Zoom", &uiState.minimapZoomLevel, 1, 5);
+    ImGui::Text("Viewport marker: centered");
+    ImGui::Text("Markers: theaters %zu | crises %u", world.theaterCommands.size(), world.activeWorldEventCount);
+  }
   ImGui::End();
 
   draw_production_menu(world, selected);
