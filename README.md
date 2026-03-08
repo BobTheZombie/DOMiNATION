@@ -111,8 +111,10 @@ Headless deterministic smoke mode (CI/container friendly):
 - Load Game scans `saves/*.json` and re-enters authoritative gameplay state via existing save-load logic.
 
 ## Controls
-- **WASD**: pan camera
-- **Mouse wheel**: zoom
+- **WASD / Arrow keys**: pan camera
+- **Edge scroll**: move mouse near screen edges
+- **Mouse wheel**: strategic zoom (smoothly interpolated)
+- **Middle mouse drag**: pan camera
 - **Left click**: select unit / confirm build placement
 - **Right click**: move selected unit / cancel build placement
 - **G**: toggle GOD Mode (full reveal + high zoom cap)
@@ -120,6 +122,10 @@ Headless deterministic smoke mode (CI/container friendly):
 - **T**: toggle train menu (`1` Worker at City Center, `2` Infantry at Barracks, `Backspace` cancel queue front)
 - **R**: toggle research panel (`1` Age Up); in replay mode restart replay
 - **Esc**: cancel active build placement
+- **F**: focus selected unit/building/group
+- **Home**: focus player capital city
+- **J / K / L / Y**: focus objective / crisis / guardian site / theater target
+- **, / .**: cycle strategic alert sources (strike, denial, guardian)
 - **Ctrl+1..9**: assign control group
 - **1..9**: select control group (double tap focuses camera on group)
 - **M**: toggle minimap visibility

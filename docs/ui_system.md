@@ -29,12 +29,15 @@ The polished HUD is divided into four deterministic presentation regions:
 ## Minimap and selection presentation rules
 - Minimap stays renderer-owned; HUD provides framed context and readable strategic marker summary.
 - Selection card emphasizes identity, owner, health/status, and content marker summary.
+- Minimap interaction supports click-to-center plus drag-to-move viewport for faster map traversal.
+- Viewport rectangle uses higher contrast fill+outline for readability at far strategic zoom.
+- Camera input respects UI-heavy surfaces (scenario editor/asset browser) to avoid accidental panning while editing.
 
 ## Deterministic validation commands
 ```bash
 ./build/rts --headless --smoke --ticks 400 --dump-hash
 ./build/rts --headless --campaign campaigns/test_campaign.json --smoke --ticks 1200 --dump-hash
-./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 600 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 800 --dump-hash
 ./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash
 ./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --dump-hash
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
