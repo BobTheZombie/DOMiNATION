@@ -309,6 +309,307 @@
         "Wall": "african_wall_a",
         "Tower": "african_tower_a"
       }
+    },
+    {
+      "id": "russia",
+      "display_name": "Russia / Continental Winter Industrial",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "russia"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "russia_house_a",
+        "Farm": "russia_farm_a",
+        "Mine": "russia_mine_a",
+        "Market": "russia_market_a",
+        "Barracks": "russia_barracks_a",
+        "CityCenter": "russia_city_center_a",
+        "Port": "russia_port_a",
+        "RadarTower": "russia_radar_tower_a",
+        "Airbase": "russia_airbase_a",
+        "MissileSilo": "russia_missile_silo_a",
+        "FactoryHub": "russia_factory_hub_a",
+        "ElectronicsLab": "russia_electronics_lab_a",
+        "Wonder": "russia_wonder_a"
+      }
+    },
+    {
+      "id": "usa",
+      "display_name": "USA / Global Industrial Modern",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "usa"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "usa_house_a",
+        "Farm": "usa_farm_a",
+        "Mine": "usa_mine_a",
+        "Market": "usa_market_a",
+        "Barracks": "usa_barracks_a",
+        "CityCenter": "usa_city_center_a",
+        "Port": "usa_port_a",
+        "RadarTower": "usa_radar_tower_a",
+        "Airbase": "usa_airbase_a",
+        "MissileSilo": "usa_missile_silo_a",
+        "FactoryHub": "usa_factory_hub_a",
+        "ElectronicsLab": "usa_electronics_lab_a",
+        "Wonder": "usa_wonder_a"
+      }
+    },
+    {
+      "id": "japan",
+      "display_name": "Japan / Maritime Modern",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "japan"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "japan_house_a",
+        "Farm": "japan_farm_a",
+        "Mine": "japan_mine_a",
+        "Market": "japan_market_a",
+        "Barracks": "japan_barracks_a",
+        "CityCenter": "japan_city_center_a",
+        "Port": "japan_port_a",
+        "RadarTower": "japan_radar_tower_a",
+        "Airbase": "japan_airbase_a",
+        "MissileSilo": "japan_missile_silo_a",
+        "FactoryHub": "japan_factory_hub_a",
+        "ElectronicsLab": "japan_electronics_lab_a",
+        "Wonder": "japan_wonder_a"
+      }
+    },
+    {
+      "id": "eu",
+      "display_name": "EU / Integrated High-Tech",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "eu"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "eu_house_a",
+        "Farm": "eu_farm_a",
+        "Mine": "eu_mine_a",
+        "Market": "eu_market_a",
+        "Barracks": "eu_barracks_a",
+        "CityCenter": "eu_city_center_a",
+        "Port": "eu_port_a",
+        "RadarTower": "eu_radar_tower_a",
+        "Airbase": "eu_airbase_a",
+        "MissileSilo": "eu_missile_silo_a",
+        "FactoryHub": "eu_factory_hub_a",
+        "ElectronicsLab": "eu_electronics_lab_a",
+        "Wonder": "eu_wonder_a"
+      }
+    },
+    {
+      "id": "uk",
+      "display_name": "UK / Maritime Radar Command",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "uk"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "uk_house_a",
+        "Farm": "uk_farm_a",
+        "Mine": "uk_mine_a",
+        "Market": "uk_market_a",
+        "Barracks": "uk_barracks_a",
+        "CityCenter": "uk_city_center_a",
+        "Port": "uk_port_a",
+        "RadarTower": "uk_radar_tower_a",
+        "Airbase": "uk_airbase_a",
+        "MissileSilo": "uk_missile_silo_a",
+        "FactoryHub": "uk_factory_hub_a",
+        "ElectronicsLab": "uk_electronics_lab_a",
+        "Wonder": "uk_wonder_a"
+      }
+    },
+    {
+      "id": "egypt",
+      "display_name": "Egypt / River-Desert Fortified",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "egypt"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "egypt_house_a",
+        "Farm": "egypt_farm_a",
+        "Mine": "egypt_mine_a",
+        "Market": "egypt_market_a",
+        "Barracks": "egypt_barracks_a",
+        "CityCenter": "egypt_city_center_a",
+        "Port": "egypt_port_a",
+        "RadarTower": "egypt_radar_tower_a",
+        "Airbase": "egypt_airbase_a",
+        "MissileSilo": "egypt_missile_silo_a",
+        "FactoryHub": "egypt_factory_hub_a",
+        "ElectronicsLab": "egypt_electronics_lab_a",
+        "Wonder": "egypt_wonder_a"
+      }
+    },
+    {
+      "id": "tartaria",
+      "display_name": "Tartaria / Fictional Monumental Lost-Tech",
+      "silhouette_language": "modern_block_modular",
+      "roof_shapes": [
+        "flat",
+        "angled"
+      ],
+      "wall_materials": [
+        "concrete",
+        "steel"
+      ],
+      "accent_colors": [
+        "blue",
+        "gray"
+      ],
+      "banner_motifs": [
+        "tartaria"
+      ],
+      "decorative_props": [
+        "antenna",
+        "yard"
+      ],
+      "biome_preferences": [
+        "temperate_grassland",
+        "plains_steppe"
+      ],
+      "building_family_mappings": {
+        "House": "tartaria_house_a",
+        "Farm": "tartaria_farm_a",
+        "Mine": "tartaria_mine_a",
+        "Market": "tartaria_market_a",
+        "Barracks": "tartaria_barracks_a",
+        "CityCenter": "tartaria_city_center_a",
+        "Port": "tartaria_port_a",
+        "RadarTower": "tartaria_radar_tower_a",
+        "Airbase": "tartaria_airbase_a",
+        "MissileSilo": "tartaria_missile_silo_a",
+        "FactoryHub": "tartaria_factory_hub_a",
+        "ElectronicsLab": "tartaria_electronics_lab_a",
+        "Wonder": "tartaria_wonder_a"
+      }
     }
   ]
 }

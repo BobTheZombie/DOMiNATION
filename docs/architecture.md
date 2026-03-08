@@ -289,3 +289,7 @@ When a civ mapping is absent, the runtime falls back to the family base ID and t
 
 ## Deterministic presentation integration
 Presentation selection is deterministic and data-driven (biomes, civ themes, guardian/site IDs, campaign/event IDs). Missing references resolve to stable fallback IDs and do not alter authoritative simulation behavior.
+
+## Armageddon authoritative state
+
+The world state now includes deterministic Armageddon escalation fields (`armageddonActive`, thresholds, per-player nuclear-use counters, trigger tick, and last-man-standing mode). These fields are serialized, loaded, and hashed as authoritative state.
