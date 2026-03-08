@@ -524,3 +524,22 @@ Deterministic validation commands:
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+## Territory border + ownership readability system
+
+The render layer now derives territory visualization directly from authoritative `territoryOwner`/diplomacy/world-state inputs without mutating simulation authority:
+- civ-distinct border accents with zoom-aware line thickness for mid/far readability,
+- subtle ownership tinting with friendly/allied/neutral/hostile contrast,
+- strategic overlays for contested/frontline/crisis pressure regions,
+- lightweight strategic label hooks (capital/theater/site),
+- minimap coherence for ownership, borders, capitals, and strategic markers.
+
+Deterministic validation commands:
+```bash
+./build/rts --headless --smoke --ticks 400 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 800 --dump-hash
+./build/rts --headless --scenario scenarios/theater_operations_test.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```

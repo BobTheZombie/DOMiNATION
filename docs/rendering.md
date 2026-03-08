@@ -151,3 +151,41 @@ Implementation notes:
 - Armageddon emits a unique world pulse tint + alert-level emphasis
 - denial zones and strategic strike warnings get strategic-scale rings/trails
 - rail/factory state emits throughput/blocked pulses
+
+## Territory rendering system (presentation-only)
+
+Territory rendering is a non-authoritative presentation pass built from simulation-owned territory and diplomacy data.
+
+### Borders
+- Borders are extracted from ownership discontinuities (`territoryOwner` neighbor tests).
+- Colored border accents are derived per owning civ team and relation-aware tinting.
+- Border line width/strength scales by zoom to preserve readability at strategic distances and reduce clutter at tactical zoom.
+
+### Ownership readability
+- Region tinting is subtle and relation-aware (friendly/allied/neutral/hostile).
+- A low-alpha edge glow pass reinforces region separation without changing terrain topology.
+
+### Strategic overlays
+Optional strategic overlays are rendered for:
+- contested territory seams,
+- frontline pressure bands,
+- crisis pressure (active world events),
+- Armageddon/fallout pressure zones.
+
+### Labels and hooks
+Renderer now exposes lightweight label hooks:
+- major capitals,
+- theaters,
+- strategic sites.
+
+Hooks are emitted as deterministic derived metadata for UI/HUD consumers.
+
+### Minimap coherence
+Minimap generation now includes:
+- ownership tint coherence,
+- territory border highlighting,
+- capital emphasis,
+- theater/crisis pressure markers.
+
+### Determinism and authority boundary
+All territory/border/minimap overlays are derived at render time and excluded from simulation authority/save/hash pathways.

@@ -1994,7 +1994,7 @@ int run_app(int argc, char** argv) {
         if (e.key.keysym.sym == SDLK_ESCAPE) dom::sim::cancel_build_placement(world);
 
         glm::vec2 focusPoint{};
-        if (e.key.keysym.sym == SDLK_F && focus_selected_anchor(world, selected, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_f && focus_selected_anchor(world, selected, focusPoint)) camera.center = focusPoint;
         if (e.key.keysym.sym == SDLK_HOME && focus_capital(world, 0, focusPoint)) camera.center = focusPoint;
         if (e.key.keysym.sym == SDLK_j && focus_objective(world, focusPoint)) camera.center = focusPoint;
         if (e.key.keysym.sym == SDLK_k && focus_crisis(world, focusPoint)) camera.center = focusPoint;
