@@ -1,0 +1,60 @@
+{
+  "bloc_templates": [
+    {
+      "bloc_id": "open_trade_compact",
+      "display_name": "Open Trade Compact",
+      "founding_ideology_bias": {"Democratic": 0.8, "TradeOriented": 1.0, "Coalitionist": 0.7},
+      "compatible_ideologies": ["Democratic", "TradeOriented", "Coalitionist", "Technocratic"],
+      "hostile_ideologies": ["Expansionist", "Revolutionary"],
+      "trade_bias": 1.3,
+      "defense_bias": 1.05,
+      "escalation_bias": 0.9,
+      "intel_sharing_bias": 1.15,
+      "min_members": 2,
+      "max_members": 8,
+      "presentation": {"icon": "ui_icon_bloc_trade", "color": [0.2, 0.45, 0.9], "label": "OTC"}
+    },
+    {
+      "bloc_id": "imperial_legion_bloc",
+      "display_name": "Imperial Legion Bloc",
+      "founding_ideology_bias": {"Expansionist": 1.0, "Militarist": 0.9, "Authoritarian": 0.6},
+      "compatible_ideologies": ["Expansionist", "Militarist", "Authoritarian"],
+      "hostile_ideologies": ["Democratic", "Coalitionist"],
+      "trade_bias": 0.9,
+      "defense_bias": 1.2,
+      "escalation_bias": 1.2,
+      "intel_sharing_bias": 0.9,
+      "min_members": 2,
+      "max_members": 6,
+      "presentation": {"icon": "ui_icon_bloc_legion", "color": [0.8, 0.25, 0.25], "label": "ILB"}
+    },
+    {
+      "bloc_id": "development_sphere",
+      "display_name": "Development Sphere",
+      "founding_ideology_bias": {"Technocratic": 1.0, "TradeOriented": 0.5, "Authoritarian": 0.5},
+      "compatible_ideologies": ["Technocratic", "TradeOriented", "Isolationist"],
+      "hostile_ideologies": ["Revolutionary"],
+      "trade_bias": 1.15,
+      "defense_bias": 1.05,
+      "escalation_bias": 0.95,
+      "intel_sharing_bias": 1.0,
+      "min_members": 2,
+      "max_members": 7,
+      "presentation": {"icon": "ui_icon_bloc_development", "color": [0.3, 0.75, 0.45], "label": "DS"}
+    },
+    {
+      "bloc_id": "security_pact",
+      "display_name": "Security Pact",
+      "founding_ideology_bias": {"Coalitionist": 0.7, "Militarist": 0.5, "Democratic": 0.5},
+      "compatible_ideologies": ["Coalitionist", "Militarist", "Democratic", "Technocratic"],
+      "hostile_ideologies": ["Revolutionary", "Expansionist"],
+      "trade_bias": 1.0,
+      "defense_bias": 1.25,
+      "escalation_bias": 1.05,
+      "intel_sharing_bias": 1.2,
+      "min_members": 2,
+      "max_members": 8,
+      "presentation": {"icon": "ui_icon_bloc_security", "color": [0.55, 0.55, 0.85], "label": "SP"}
+    }
+  ]
+}

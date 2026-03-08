@@ -12,16 +12,114 @@
     "diplomacyBias": 0.94,
     "logisticsBias": 1.18,
     "strategicBias": 1.14,
-    "economyModifiers": {"resource_gather": {"Food": 1.02, "Wood": 1.0, "Metal": 1.05, "Wealth": 0.98, "Knowledge": 0.95, "Oil": 1.0}},
-    "logisticsModifiers": {"road_bonus": 1.2, "rail_bonus": 1.04, "supply_bonus": 1.12, "trade_route_bonus": 1.0, "tunnel_extraction_bonus": 1.0},
-    "industryModifiers": {"factory_throughput_bonus": 1.03, "refined_goods": {"steel": 1.05, "fuel": 0.98, "munitions": 1.04, "machine_parts": 1.0, "electronics": 0.96}},
-    "diplomacyDoctrine": {"aggression_bias": 1.2, "alliance_bias": 0.92, "trade_bias": 0.95, "world_tension_response_bias": 1.1, "operation_preference_weights": {"AssaultCity": 1.18, "Encirclement": 1.16, "SecureRoute": 1.12, "StrategicBombing": 0.9}, "doctrine_tags": ["disciplined_fronts", "offensive_operations"]},
-    "aiDoctrineModifiers": {"workerTargetMult": 0.96, "expansionTiming": 0.92, "researchPriority": 0.9, "reconPriority": 0.95, "navalPriority": 0.95, "airPriority": 0.9, "strategicPriority": 1.1},
-    "unitBonuses": {"attackMult": {"Infantry": 1.18, "Siege": 1.05}, "hpMult": {"Infantry": 1.12}, "trainTimeMult": {"Infantry": 0.95}},
-    "buildingBonuses": {"buildTimeMult": {"Barracks": 0.92, "CityCenter": 0.96}, "hpMult": {"Barracks": 1.15, "CityCenter": 1.08}, "trickleMult": {"Market": 0.95}},
-    "uniqueUnits": {"Infantry": "rome_legionary", "Siege": "rome_praetorian_guard", "Worker": "rome_logistics_cohort"},
-    "uniqueBuildings": {"Barracks": "rome_castra", "CityCenter": "rome_forum_centre", "Market": "rome_forum_market"},
-    "missionTags": ["military", "rome"]
+    "economyModifiers": {
+      "resource_gather": {
+        "Food": 1.02,
+        "Wood": 1.0,
+        "Metal": 1.05,
+        "Wealth": 0.98,
+        "Knowledge": 0.95,
+        "Oil": 1.0
+      }
+    },
+    "logisticsModifiers": {
+      "road_bonus": 1.2,
+      "rail_bonus": 1.04,
+      "supply_bonus": 1.12,
+      "trade_route_bonus": 1.0,
+      "tunnel_extraction_bonus": 1.0
+    },
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.03,
+      "refined_goods": {
+        "steel": 1.05,
+        "fuel": 0.98,
+        "munitions": 1.04,
+        "machine_parts": 1.0,
+        "electronics": 0.96
+      }
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 1.2,
+      "alliance_bias": 0.92,
+      "trade_bias": 0.95,
+      "world_tension_response_bias": 1.1,
+      "operation_preference_weights": {
+        "AssaultCity": 1.18,
+        "Encirclement": 1.16,
+        "SecureRoute": 1.12,
+        "StrategicBombing": 0.9
+      },
+      "doctrine_tags": [
+        "disciplined_fronts",
+        "offensive_operations"
+      ]
+    },
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 0.96,
+      "expansionTiming": 0.92,
+      "researchPriority": 0.9,
+      "reconPriority": 0.95,
+      "navalPriority": 0.95,
+      "airPriority": 0.9,
+      "strategicPriority": 1.1
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Infantry": 1.18,
+        "Siege": 1.05
+      },
+      "hpMult": {
+        "Infantry": 1.12
+      },
+      "trainTimeMult": {
+        "Infantry": 0.95
+      }
+    },
+    "buildingBonuses": {
+      "buildTimeMult": {
+        "Barracks": 0.92,
+        "CityCenter": 0.96
+      },
+      "hpMult": {
+        "Barracks": 1.15,
+        "CityCenter": 1.08
+      },
+      "trickleMult": {
+        "Market": 0.95
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "rome_legionary",
+      "Siege": "rome_praetorian_guard",
+      "Worker": "rome_logistics_cohort"
+    },
+    "uniqueBuildings": {
+      "Barracks": "rome_castra",
+      "CityCenter": "rome_forum_centre",
+      "Market": "rome_forum_market"
+    },
+    "missionTags": [
+      "military",
+      "rome"
+    ],
+    "ideology": {
+      "primary": "Expansionist",
+      "secondary": "Militarist",
+      "weights": {
+        "Expansionist": 1.0,
+        "Militarist": 0.9,
+        "Coalitionist": 0.4,
+        "Authoritarian": 0.5
+      },
+      "bloc_affinity_weights": {
+        "imperial_legion_bloc": 1.2,
+        "open_trade_compact": 0.3
+      },
+      "bloc_hostility_weights": {
+        "open_trade_compact": 0.4
+      }
+    }
   },
   {
     "civilization_id": "china",
@@ -36,16 +134,111 @@
     "diplomacyBias": 1.06,
     "logisticsBias": 1.08,
     "strategicBias": 1.02,
-    "economyModifiers": {"resource_gather": {"Food": 1.2, "Wood": 1.05, "Metal": 1.0, "Wealth": 1.02, "Knowledge": 1.18, "Oil": 1.05}},
-    "logisticsModifiers": {"road_bonus": 1.06, "rail_bonus": 1.1, "supply_bonus": 1.05, "trade_route_bonus": 1.04, "tunnel_extraction_bonus": 1.08},
-    "industryModifiers": {"factory_throughput_bonus": 1.14, "refined_goods": {"steel": 1.08, "fuel": 1.06, "munitions": 1.04, "machine_parts": 1.12, "electronics": 1.14}},
-    "diplomacyDoctrine": {"aggression_bias": 0.92, "alliance_bias": 1.08, "trade_bias": 1.08, "world_tension_response_bias": 0.95, "operation_preference_weights": {"SecureRoute": 1.2, "DefendBorder": 1.12, "AssaultCity": 0.95, "Encirclement": 1.05}, "doctrine_tags": ["large_state_development", "sustained_operations"]},
-    "aiDoctrineModifiers": {"workerTargetMult": 1.2, "expansionTiming": 1.02, "researchPriority": 1.24, "reconPriority": 1.1, "navalPriority": 1.0, "airPriority": 1.0, "strategicPriority": 1.02},
-    "unitBonuses": {"attackMult": {"Ranged": 1.06}, "hpMult": {"Worker": 1.05}, "trainTimeMult": {"Worker": 0.9}},
-    "buildingBonuses": {"buildTimeMult": {"Farm": 0.82, "Library": 0.82, "FactoryHub": 0.9}, "trickleMult": {"Farm": 1.18, "Library": 1.2, "Mine": 1.08}},
-    "uniqueUnits": {"Worker": "china_scholar_engineer", "Archer": "china_fire_lancer", "Infantry": "china_imperial_guard"},
-    "uniqueBuildings": {"Library": "china_imperial_academy", "Farm": "china_grand_granary", "FactoryHub": "china_imperial_workshop"},
-    "missionTags": ["science", "economy"]
+    "economyModifiers": {
+      "resource_gather": {
+        "Food": 1.2,
+        "Wood": 1.05,
+        "Metal": 1.0,
+        "Wealth": 1.02,
+        "Knowledge": 1.18,
+        "Oil": 1.05
+      }
+    },
+    "logisticsModifiers": {
+      "road_bonus": 1.06,
+      "rail_bonus": 1.1,
+      "supply_bonus": 1.05,
+      "trade_route_bonus": 1.04,
+      "tunnel_extraction_bonus": 1.08
+    },
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.14,
+      "refined_goods": {
+        "steel": 1.08,
+        "fuel": 1.06,
+        "munitions": 1.04,
+        "machine_parts": 1.12,
+        "electronics": 1.14
+      }
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 0.92,
+      "alliance_bias": 1.08,
+      "trade_bias": 1.08,
+      "world_tension_response_bias": 0.95,
+      "operation_preference_weights": {
+        "SecureRoute": 1.2,
+        "DefendBorder": 1.12,
+        "AssaultCity": 0.95,
+        "Encirclement": 1.05
+      },
+      "doctrine_tags": [
+        "large_state_development",
+        "sustained_operations"
+      ]
+    },
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 1.2,
+      "expansionTiming": 1.02,
+      "researchPriority": 1.24,
+      "reconPriority": 1.1,
+      "navalPriority": 1.0,
+      "airPriority": 1.0,
+      "strategicPriority": 1.02
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Ranged": 1.06
+      },
+      "hpMult": {
+        "Worker": 1.05
+      },
+      "trainTimeMult": {
+        "Worker": 0.9
+      }
+    },
+    "buildingBonuses": {
+      "buildTimeMult": {
+        "Farm": 0.82,
+        "Library": 0.82,
+        "FactoryHub": 0.9
+      },
+      "trickleMult": {
+        "Farm": 1.18,
+        "Library": 1.2,
+        "Mine": 1.08
+      }
+    },
+    "uniqueUnits": {
+      "Worker": "china_scholar_engineer",
+      "Archer": "china_fire_lancer",
+      "Infantry": "china_imperial_guard"
+    },
+    "uniqueBuildings": {
+      "Library": "china_imperial_academy",
+      "Farm": "china_grand_granary",
+      "FactoryHub": "china_imperial_workshop"
+    },
+    "missionTags": [
+      "science",
+      "economy"
+    ],
+    "ideology": {
+      "primary": "Authoritarian",
+      "secondary": "Technocratic",
+      "weights": {
+        "Authoritarian": 0.9,
+        "Technocratic": 1.0,
+        "TradeOriented": 0.6
+      },
+      "bloc_affinity_weights": {
+        "development_sphere": 1.2,
+        "security_pact": 0.6
+      },
+      "bloc_hostility_weights": {
+        "revolutionary_front": 0.4
+      }
+    }
   },
   {
     "civilization_id": "europe",
@@ -60,17 +253,713 @@
     "diplomacyBias": 1.04,
     "logisticsBias": 1.1,
     "strategicBias": 1.08,
-    "uniqueUnits": {"Infantry": "europe_musketeer", "Siege": "europe_field_howitzer", "Worker": "europe_industrial_engineer"},
-    "uniqueBuildings": {"FactoryHub": "europe_integrated_steelworks", "Port": "europe_grand_drydock", "CityCenter": "europe_council_centre"}
+    "uniqueUnits": {
+      "Infantry": "europe_musketeer",
+      "Siege": "europe_field_howitzer",
+      "Worker": "europe_industrial_engineer"
+    },
+    "uniqueBuildings": {
+      "FactoryHub": "europe_integrated_steelworks",
+      "Port": "europe_grand_drydock",
+      "CityCenter": "europe_council_centre"
+    },
+    "ideology": {
+      "primary": "Democratic",
+      "secondary": "Coalitionist",
+      "weights": {
+        "Democratic": 0.9,
+        "Coalitionist": 0.8,
+        "Technocratic": 0.5,
+        "TradeOriented": 0.5
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 1.0,
+        "security_pact": 0.8
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.4
+      }
+    }
   },
-  {"civilization_id": "middle_east", "display_name": "Middle East", "short_description": "Desert trade and cavalry logistics power.", "theme_id": "middle_east", "economyBias": 1.02, "militaryBias": 1.05, "scienceBias": 0.97, "aggression": 1.03, "defense": 1.01, "diplomacyBias": 1.0, "logisticsBias": 1.11, "strategicBias": 0.98, "uniqueUnits": {"Cavalry": "middle_east_camel_raider", "Infantry": "middle_east_mamluk_guard", "Worker": "middle_east_caravan_master"}, "uniqueBuildings": {"Market": "middle_east_caravanserai", "FactoryHub": "middle_east_desert_foundry", "CityCenter": "middle_east_caliphate_centre"}},
-  {"civilization_id": "default", "display_name": "Default", "short_description": "Balanced fallback civilization.", "theme_id": "europe"},
-
-  {"civilization_id": "russia", "display_name": "Russia", "short_description": "Attritional land power with winter resilience and rail depth.", "theme_id": "russia", "campaign_tags": ["winter_front", "total_war"], "economyBias": 1.02, "militaryBias": 1.2, "scienceBias": 0.98, "aggression": 1.1, "defense": 1.18, "diplomacyBias": 0.9, "logisticsBias": 1.2, "strategicBias": 1.15, "logisticsModifiers": {"rail_bonus": 1.22, "supply_bonus": 1.16}, "industryModifiers": {"factory_throughput_bonus": 1.12, "refined_goods": {"steel": 1.15, "munitions": 1.12}}, "diplomacyDoctrine": {"aggression_bias": 1.2, "alliance_bias": 0.88, "trade_bias": 0.9, "world_tension_response_bias": 1.2, "operation_preference_weights": {"Encirclement": 1.2, "DefendBorder": 1.15, "StrategicBombing": 0.9}}, "aiDoctrineModifiers": {"navalPriority": 0.85, "airPriority": 0.95, "strategicPriority": 1.1}, "unitBonuses": {"attackMult": {"Siege": 1.2, "Infantry": 1.08}, "hpMult": {"Infantry": 1.12, "Siege": 1.08}}, "buildingBonuses": {"hpMult": {"CityCenter": 1.12, "Barracks": 1.12}, "trickleMult": {"Mine": 1.08}}, "uniqueUnits": {"Infantry": "russia_guard_infantry", "Siege": "russia_heavy_rocket_artillery"}, "uniqueBuildings": {"Market": "russia_winter_depot", "FactoryHub": "russia_arsenal_complex"}},
-  {"civilization_id": "usa", "display_name": "USA", "short_description": "Industrial superpower with global logistics and late-game air projection.", "theme_id": "usa", "campaign_tags": ["expeditionary", "air_dominance"], "economyBias": 1.2, "militaryBias": 1.1, "scienceBias": 1.12, "aggression": 1.05, "defense": 1.02, "diplomacyBias": 1.03, "logisticsBias": 1.2, "strategicBias": 1.2, "industryModifiers": {"factory_throughput_bonus": 1.2, "refined_goods": {"fuel": 1.15, "machine_parts": 1.12, "electronics": 1.1}}, "logisticsModifiers": {"rail_bonus": 1.1, "trade_route_bonus": 1.2, "supply_bonus": 1.1}, "diplomacyDoctrine": {"aggression_bias": 1.05, "alliance_bias": 1.08, "trade_bias": 1.12, "world_tension_response_bias": 1.1, "operation_preference_weights": {"StrategicBombing": 1.22, "AmphibiousAssault": 1.2, "NavalPatrol": 1.15}}, "aiDoctrineModifiers": {"navalPriority": 1.2, "airPriority": 1.22, "strategicPriority": 1.2}, "unitBonuses": {"attackMult": {"Bomber": 1.14, "StrategicBomber": 1.2, "TransportShip": 1.08}}, "buildingBonuses": {"buildTimeMult": {"Airbase": 0.85, "FactoryHub": 0.9}, "trickleMult": {"Port": 1.12}}, "uniqueUnits": {"Infantry": "usa_marine_expeditionary_force", "StrategicBomber": "usa_strategic_bomber_wing"}, "uniqueBuildings": {"FactoryHub": "usa_industrial_logistics_hub", "Airbase": "usa_advanced_airbase"}},
-  {"civilization_id": "japan", "display_name": "Japan", "short_description": "Disciplined island power with elite maritime precision forces.", "theme_id": "japan", "campaign_tags": ["island_power", "maritime_precision"], "economyBias": 1.02, "militaryBias": 1.08, "scienceBias": 1.05, "aggression": 1.04, "defense": 1.06, "diplomacyBias": 0.98, "logisticsBias": 1.12, "strategicBias": 1.04, "industryModifiers": {"factory_throughput_bonus": 1.06, "refined_goods": {"machine_parts": 1.08, "electronics": 1.08}}, "logisticsModifiers": {"trade_route_bonus": 1.12, "supply_bonus": 1.08}, "diplomacyDoctrine": {"aggression_bias": 1.08, "alliance_bias": 0.95, "trade_bias": 1.02, "world_tension_response_bias": 1.06, "operation_preference_weights": {"NavalPatrol": 1.2, "AmphibiousAssault": 1.15, "CoastalBombard": 1.16}}, "aiDoctrineModifiers": {"navalPriority": 1.22, "airPriority": 1.1, "reconPriority": 1.12}, "unitBonuses": {"attackMult": {"LightWarship": 1.14, "HeavyWarship": 1.14, "Infantry": 1.06}, "costMult": {"HeavyWarship": 1.06}}, "buildingBonuses": {"hpMult": {"Port": 1.12}, "buildTimeMult": {"Port": 0.88, "RadarTower": 0.9}}, "uniqueUnits": {"Infantry": "japan_imperial_marine", "HeavyWarship": "japan_elite_destroyer_group"}, "uniqueBuildings": {"Port": "japan_naval_arsenal", "RadarTower": "japan_maritime_command_port"}},
-  {"civilization_id": "eu", "display_name": "EU", "short_description": "High-tech coalition with integrated logistics, defense, and diplomacy.", "theme_id": "eu", "campaign_tags": ["coalition", "high_tech"], "economyBias": 1.08, "militaryBias": 1.03, "scienceBias": 1.2, "aggression": 0.96, "defense": 1.15, "diplomacyBias": 1.16, "logisticsBias": 1.1, "strategicBias": 1.08, "industryModifiers": {"factory_throughput_bonus": 1.1, "refined_goods": {"electronics": 1.18, "machine_parts": 1.12}}, "diplomacyDoctrine": {"aggression_bias": 0.94, "alliance_bias": 1.2, "trade_bias": 1.15, "world_tension_response_bias": 1.0, "operation_preference_weights": {"DefendBorder": 1.2, "SecureRoute": 1.15, "StrategicBombing": 0.95}}, "aiDoctrineModifiers": {"researchPriority": 1.2, "airPriority": 1.1, "strategicPriority": 1.05}, "unitBonuses": {"attackMult": {"Interceptor": 1.14, "Fighter": 1.1}, "hpMult": {"Interceptor": 1.08}}, "buildingBonuses": {"buildTimeMult": {"AntiMissileDefense": 0.82, "ElectronicsLab": 0.85}, "hpMult": {"AntiMissileDefense": 1.15}}, "uniqueUnits": {"Infantry": "eu_rapid_reaction_brigade", "Interceptor": "eu_advanced_air_defense_wing"}, "uniqueBuildings": {"AntiMissileDefense": "eu_integrated_defense_network", "ElectronicsLab": "eu_advanced_research_complex"}},
-  {"civilization_id": "uk", "display_name": "UK", "short_description": "Maritime trade and intelligence power with strong radar warning and interception.", "theme_id": "uk", "campaign_tags": ["maritime_control", "early_warning"], "economyBias": 1.05, "militaryBias": 1.02, "scienceBias": 1.08, "aggression": 0.98, "defense": 1.08, "diplomacyBias": 1.08, "logisticsBias": 1.14, "strategicBias": 1.1, "industryModifiers": {"factory_throughput_bonus": 1.04, "refined_goods": {"electronics": 1.1, "fuel": 1.08}}, "logisticsModifiers": {"trade_route_bonus": 1.2, "supply_bonus": 1.06}, "diplomacyDoctrine": {"aggression_bias": 0.98, "alliance_bias": 1.15, "trade_bias": 1.18, "world_tension_response_bias": 1.05, "operation_preference_weights": {"NavalBlockade": 1.2, "StrategicBombing": 1.12, "NavalPatrol": 1.2}}, "aiDoctrineModifiers": {"navalPriority": 1.2, "airPriority": 1.15, "reconPriority": 1.1}, "unitBonuses": {"attackMult": {"Interceptor": 1.12, "BombardShip": 1.12}, "hpMult": {"TransportShip": 1.08}}, "buildingBonuses": {"buildTimeMult": {"RadarTower": 0.8, "Port": 0.88}, "trickleMult": {"Port": 1.15}}, "uniqueUnits": {"Infantry": "uk_royal_marine", "Interceptor": "uk_strategic_radar_fighter_wing"}, "uniqueBuildings": {"Port": "uk_admiralty_dockyard", "RadarTower": "uk_radar_command_station"}},
-  {"civilization_id": "egypt", "display_name": "Egypt", "short_description": "River/desert logistics civilization focused on corridor control and fortification.", "theme_id": "egypt", "campaign_tags": ["river_valley", "desert_corridor"], "economyBias": 1.1, "militaryBias": 1.0, "scienceBias": 0.96, "aggression": 0.95, "defense": 1.14, "diplomacyBias": 1.04, "logisticsBias": 1.16, "strategicBias": 1.0, "economyModifiers": {"resource_gather": {"Food": 1.12, "Wealth": 1.08}}, "logisticsModifiers": {"road_bonus": 1.12, "supply_bonus": 1.14, "trade_route_bonus": 1.12}, "diplomacyDoctrine": {"aggression_bias": 0.92, "alliance_bias": 1.05, "trade_bias": 1.14, "world_tension_response_bias": 1.0, "operation_preference_weights": {"DefendBorder": 1.22, "SecureRoute": 1.18, "AssaultCity": 0.9}}, "aiDoctrineModifiers": {"workerTargetMult": 1.1, "navalPriority": 0.9, "strategicPriority": 0.95}, "unitBonuses": {"attackMult": {"Cavalry": 1.12}, "hpMult": {"Infantry": 1.08}}, "buildingBonuses": {"hpMult": {"CityCenter": 1.12, "Barracks": 1.08}, "trickleMult": {"Farm": 1.14, "Market": 1.12}}, "uniqueUnits": {"Cavalry": "egypt_desert_guard", "Worker": "egypt_nile_engineer_corps"}, "uniqueBuildings": {"Market": "egypt_grand_bazaar", "Barracks": "egypt_desert_fortress"}},
-  {"civilization_id": "tartaria", "display_name": "Tartaria (Fictional)", "short_description": "Fictional/alt-history civilization with monumental lost-tech infrastructure synergy.", "theme_id": "tartaria", "campaign_tags": ["fictional_alt_history", "monumental"], "economyBias": 1.06, "militaryBias": 1.1, "scienceBias": 1.18, "aggression": 1.02, "defense": 1.08, "diplomacyBias": 0.94, "logisticsBias": 1.1, "strategicBias": 1.2, "industryModifiers": {"factory_throughput_bonus": 1.1, "refined_goods": {"electronics": 1.15, "machine_parts": 1.14, "munitions": 1.08}}, "logisticsModifiers": {"rail_bonus": 1.12, "tunnel_extraction_bonus": 1.14}, "diplomacyDoctrine": {"aggression_bias": 1.06, "alliance_bias": 0.9, "trade_bias": 1.0, "world_tension_response_bias": 1.12, "operation_preference_weights": {"MissileStrikeCampaign": 1.2, "SecureRoute": 1.1, "Encirclement": 1.1}, "doctrine_tags": ["fictional_alt_history", "monumental_infrastructure", "lost_technology"]}, "aiDoctrineModifiers": {"researchPriority": 1.16, "strategicPriority": 1.2, "reconPriority": 1.08}, "unitBonuses": {"attackMult": {"StrategicMissile": 1.12, "Siege": 1.1}, "hpMult": {"Siege": 1.08, "Infantry": 1.06}}, "buildingBonuses": {"buildTimeMult": {"Wonder": 0.82, "ElectronicsLab": 0.86}, "trickleMult": {"Library": 1.12, "ElectronicsLab": 1.14}}, "uniqueUnits": {"Infantry": "tartaria_sentinel", "Siege": "tartaria_lost_tech_artillery"}, "uniqueBuildings": {"Wonder": "tartaria_spire", "ElectronicsLab": "tartaria_grand_resonance_works"}, "missionTags": ["fictional", "alt_history", "tartaria"]}
+  {
+    "civilization_id": "middle_east",
+    "display_name": "Middle East",
+    "short_description": "Desert trade and cavalry logistics power.",
+    "theme_id": "middle_east",
+    "economyBias": 1.02,
+    "militaryBias": 1.05,
+    "scienceBias": 0.97,
+    "aggression": 1.03,
+    "defense": 1.01,
+    "diplomacyBias": 1.0,
+    "logisticsBias": 1.11,
+    "strategicBias": 0.98,
+    "uniqueUnits": {
+      "Cavalry": "middle_east_camel_raider",
+      "Infantry": "middle_east_mamluk_guard",
+      "Worker": "middle_east_caravan_master"
+    },
+    "uniqueBuildings": {
+      "Market": "middle_east_caravanserai",
+      "FactoryHub": "middle_east_desert_foundry",
+      "CityCenter": "middle_east_caliphate_centre"
+    },
+    "ideology": {
+      "primary": "TradeOriented",
+      "secondary": "Isolationist",
+      "weights": {
+        "TradeOriented": 0.9,
+        "Isolationist": 0.5,
+        "Militarist": 0.4
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 0.9,
+        "development_sphere": 0.6
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.3
+      }
+    }
+  },
+  {
+    "civilization_id": "default",
+    "display_name": "Default",
+    "short_description": "Balanced fallback civilization.",
+    "theme_id": "europe",
+    "ideology": {
+      "primary": "Coalitionist",
+      "secondary": "TradeOriented",
+      "weights": {
+        "Coalitionist": 0.5,
+        "TradeOriented": 0.5
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 0.5
+      },
+      "bloc_hostility_weights": {}
+    }
+  },
+  {
+    "civilization_id": "russia",
+    "display_name": "Russia",
+    "short_description": "Attritional land power with winter resilience and rail depth.",
+    "theme_id": "russia",
+    "campaign_tags": [
+      "winter_front",
+      "total_war"
+    ],
+    "economyBias": 1.02,
+    "militaryBias": 1.2,
+    "scienceBias": 0.98,
+    "aggression": 1.1,
+    "defense": 1.18,
+    "diplomacyBias": 0.9,
+    "logisticsBias": 1.2,
+    "strategicBias": 1.15,
+    "logisticsModifiers": {
+      "rail_bonus": 1.22,
+      "supply_bonus": 1.16
+    },
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.12,
+      "refined_goods": {
+        "steel": 1.15,
+        "munitions": 1.12
+      }
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 1.2,
+      "alliance_bias": 0.88,
+      "trade_bias": 0.9,
+      "world_tension_response_bias": 1.2,
+      "operation_preference_weights": {
+        "Encirclement": 1.2,
+        "DefendBorder": 1.15,
+        "StrategicBombing": 0.9
+      }
+    },
+    "aiDoctrineModifiers": {
+      "navalPriority": 0.85,
+      "airPriority": 0.95,
+      "strategicPriority": 1.1
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Siege": 1.2,
+        "Infantry": 1.08
+      },
+      "hpMult": {
+        "Infantry": 1.12,
+        "Siege": 1.08
+      }
+    },
+    "buildingBonuses": {
+      "hpMult": {
+        "CityCenter": 1.12,
+        "Barracks": 1.12
+      },
+      "trickleMult": {
+        "Mine": 1.08
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "russia_guard_infantry",
+      "Siege": "russia_heavy_rocket_artillery"
+    },
+    "uniqueBuildings": {
+      "Market": "russia_winter_depot",
+      "FactoryHub": "russia_arsenal_complex"
+    },
+    "ideology": {
+      "primary": "Authoritarian",
+      "secondary": "Expansionist",
+      "weights": {
+        "Authoritarian": 1.0,
+        "Expansionist": 0.9,
+        "Militarist": 0.8
+      },
+      "bloc_affinity_weights": {
+        "imperial_legion_bloc": 1.0,
+        "security_pact": 0.4
+      },
+      "bloc_hostility_weights": {
+        "open_trade_compact": 0.7
+      }
+    }
+  },
+  {
+    "civilization_id": "usa",
+    "display_name": "USA",
+    "short_description": "Industrial superpower with global logistics and late-game air projection.",
+    "theme_id": "usa",
+    "campaign_tags": [
+      "expeditionary",
+      "air_dominance"
+    ],
+    "economyBias": 1.2,
+    "militaryBias": 1.1,
+    "scienceBias": 1.12,
+    "aggression": 1.05,
+    "defense": 1.02,
+    "diplomacyBias": 1.03,
+    "logisticsBias": 1.2,
+    "strategicBias": 1.2,
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.2,
+      "refined_goods": {
+        "fuel": 1.15,
+        "machine_parts": 1.12,
+        "electronics": 1.1
+      }
+    },
+    "logisticsModifiers": {
+      "rail_bonus": 1.1,
+      "trade_route_bonus": 1.2,
+      "supply_bonus": 1.1
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 1.05,
+      "alliance_bias": 1.08,
+      "trade_bias": 1.12,
+      "world_tension_response_bias": 1.1,
+      "operation_preference_weights": {
+        "StrategicBombing": 1.22,
+        "AmphibiousAssault": 1.2,
+        "NavalPatrol": 1.15
+      }
+    },
+    "aiDoctrineModifiers": {
+      "navalPriority": 1.2,
+      "airPriority": 1.22,
+      "strategicPriority": 1.2
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Bomber": 1.14,
+        "StrategicBomber": 1.2,
+        "TransportShip": 1.08
+      }
+    },
+    "buildingBonuses": {
+      "buildTimeMult": {
+        "Airbase": 0.85,
+        "FactoryHub": 0.9
+      },
+      "trickleMult": {
+        "Port": 1.12
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "usa_marine_expeditionary_force",
+      "StrategicBomber": "usa_strategic_bomber_wing"
+    },
+    "uniqueBuildings": {
+      "FactoryHub": "usa_industrial_logistics_hub",
+      "Airbase": "usa_advanced_airbase"
+    },
+    "ideology": {
+      "primary": "Democratic",
+      "secondary": "TradeOriented",
+      "weights": {
+        "Democratic": 1.0,
+        "TradeOriented": 0.9,
+        "Militarist": 0.4,
+        "Coalitionist": 0.5
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 1.2,
+        "security_pact": 1.0
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.8
+      }
+    }
+  },
+  {
+    "civilization_id": "japan",
+    "display_name": "Japan",
+    "short_description": "Disciplined island power with elite maritime precision forces.",
+    "theme_id": "japan",
+    "campaign_tags": [
+      "island_power",
+      "maritime_precision"
+    ],
+    "economyBias": 1.02,
+    "militaryBias": 1.08,
+    "scienceBias": 1.05,
+    "aggression": 1.04,
+    "defense": 1.06,
+    "diplomacyBias": 0.98,
+    "logisticsBias": 1.12,
+    "strategicBias": 1.04,
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.06,
+      "refined_goods": {
+        "machine_parts": 1.08,
+        "electronics": 1.08
+      }
+    },
+    "logisticsModifiers": {
+      "trade_route_bonus": 1.12,
+      "supply_bonus": 1.08
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 1.08,
+      "alliance_bias": 0.95,
+      "trade_bias": 1.02,
+      "world_tension_response_bias": 1.06,
+      "operation_preference_weights": {
+        "NavalPatrol": 1.2,
+        "AmphibiousAssault": 1.15,
+        "CoastalBombard": 1.16
+      }
+    },
+    "aiDoctrineModifiers": {
+      "navalPriority": 1.22,
+      "airPriority": 1.1,
+      "reconPriority": 1.12
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "LightWarship": 1.14,
+        "HeavyWarship": 1.14,
+        "Infantry": 1.06
+      },
+      "costMult": {
+        "HeavyWarship": 1.06
+      }
+    },
+    "buildingBonuses": {
+      "hpMult": {
+        "Port": 1.12
+      },
+      "buildTimeMult": {
+        "Port": 0.88,
+        "RadarTower": 0.9
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "japan_imperial_marine",
+      "HeavyWarship": "japan_elite_destroyer_group"
+    },
+    "uniqueBuildings": {
+      "Port": "japan_naval_arsenal",
+      "RadarTower": "japan_maritime_command_port"
+    },
+    "ideology": {
+      "primary": "Technocratic",
+      "secondary": "Coalitionist",
+      "weights": {
+        "Technocratic": 1.0,
+        "Coalitionist": 0.8,
+        "Isolationist": 0.4
+      },
+      "bloc_affinity_weights": {
+        "security_pact": 1.1,
+        "open_trade_compact": 0.8
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.5
+      }
+    }
+  },
+  {
+    "civilization_id": "eu",
+    "display_name": "EU",
+    "short_description": "High-tech coalition with integrated logistics, defense, and diplomacy.",
+    "theme_id": "eu",
+    "campaign_tags": [
+      "coalition",
+      "high_tech"
+    ],
+    "economyBias": 1.08,
+    "militaryBias": 1.03,
+    "scienceBias": 1.2,
+    "aggression": 0.96,
+    "defense": 1.15,
+    "diplomacyBias": 1.16,
+    "logisticsBias": 1.1,
+    "strategicBias": 1.08,
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.1,
+      "refined_goods": {
+        "electronics": 1.18,
+        "machine_parts": 1.12
+      }
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 0.94,
+      "alliance_bias": 1.2,
+      "trade_bias": 1.15,
+      "world_tension_response_bias": 1.0,
+      "operation_preference_weights": {
+        "DefendBorder": 1.2,
+        "SecureRoute": 1.15,
+        "StrategicBombing": 0.95
+      }
+    },
+    "aiDoctrineModifiers": {
+      "researchPriority": 1.2,
+      "airPriority": 1.1,
+      "strategicPriority": 1.05
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Interceptor": 1.14,
+        "Fighter": 1.1
+      },
+      "hpMult": {
+        "Interceptor": 1.08
+      }
+    },
+    "buildingBonuses": {
+      "buildTimeMult": {
+        "AntiMissileDefense": 0.82,
+        "ElectronicsLab": 0.85
+      },
+      "hpMult": {
+        "AntiMissileDefense": 1.15
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "eu_rapid_reaction_brigade",
+      "Interceptor": "eu_advanced_air_defense_wing"
+    },
+    "uniqueBuildings": {
+      "AntiMissileDefense": "eu_integrated_defense_network",
+      "ElectronicsLab": "eu_advanced_research_complex"
+    },
+    "ideology": {
+      "primary": "Democratic",
+      "secondary": "Technocratic",
+      "weights": {
+        "Democratic": 1.0,
+        "Technocratic": 0.9,
+        "Coalitionist": 0.9
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 1.3,
+        "security_pact": 1.0
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.7
+      }
+    }
+  },
+  {
+    "civilization_id": "uk",
+    "display_name": "UK",
+    "short_description": "Maritime trade and intelligence power with strong radar warning and interception.",
+    "theme_id": "uk",
+    "campaign_tags": [
+      "maritime_control",
+      "early_warning"
+    ],
+    "economyBias": 1.05,
+    "militaryBias": 1.02,
+    "scienceBias": 1.08,
+    "aggression": 0.98,
+    "defense": 1.08,
+    "diplomacyBias": 1.08,
+    "logisticsBias": 1.14,
+    "strategicBias": 1.1,
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.04,
+      "refined_goods": {
+        "electronics": 1.1,
+        "fuel": 1.08
+      }
+    },
+    "logisticsModifiers": {
+      "trade_route_bonus": 1.2,
+      "supply_bonus": 1.06
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 0.98,
+      "alliance_bias": 1.15,
+      "trade_bias": 1.18,
+      "world_tension_response_bias": 1.05,
+      "operation_preference_weights": {
+        "NavalBlockade": 1.2,
+        "StrategicBombing": 1.12,
+        "NavalPatrol": 1.2
+      }
+    },
+    "aiDoctrineModifiers": {
+      "navalPriority": 1.2,
+      "airPriority": 1.15,
+      "reconPriority": 1.1
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Interceptor": 1.12,
+        "BombardShip": 1.12
+      },
+      "hpMult": {
+        "TransportShip": 1.08
+      }
+    },
+    "buildingBonuses": {
+      "buildTimeMult": {
+        "RadarTower": 0.8,
+        "Port": 0.88
+      },
+      "trickleMult": {
+        "Port": 1.15
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "uk_royal_marine",
+      "Interceptor": "uk_strategic_radar_fighter_wing"
+    },
+    "uniqueBuildings": {
+      "Port": "uk_admiralty_dockyard",
+      "RadarTower": "uk_radar_command_station"
+    },
+    "ideology": {
+      "primary": "Democratic",
+      "secondary": "TradeOriented",
+      "weights": {
+        "Democratic": 0.9,
+        "TradeOriented": 1.0,
+        "Coalitionist": 0.6,
+        "Technocratic": 0.4
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 1.2,
+        "security_pact": 1.0
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.6
+      }
+    }
+  },
+  {
+    "civilization_id": "egypt",
+    "display_name": "Egypt",
+    "short_description": "River/desert logistics civilization focused on corridor control and fortification.",
+    "theme_id": "egypt",
+    "campaign_tags": [
+      "river_valley",
+      "desert_corridor"
+    ],
+    "economyBias": 1.1,
+    "militaryBias": 1.0,
+    "scienceBias": 0.96,
+    "aggression": 0.95,
+    "defense": 1.14,
+    "diplomacyBias": 1.04,
+    "logisticsBias": 1.16,
+    "strategicBias": 1.0,
+    "economyModifiers": {
+      "resource_gather": {
+        "Food": 1.12,
+        "Wealth": 1.08
+      }
+    },
+    "logisticsModifiers": {
+      "road_bonus": 1.12,
+      "supply_bonus": 1.14,
+      "trade_route_bonus": 1.12
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 0.92,
+      "alliance_bias": 1.05,
+      "trade_bias": 1.14,
+      "world_tension_response_bias": 1.0,
+      "operation_preference_weights": {
+        "DefendBorder": 1.22,
+        "SecureRoute": 1.18,
+        "AssaultCity": 0.9
+      }
+    },
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 1.1,
+      "navalPriority": 0.9,
+      "strategicPriority": 0.95
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "Cavalry": 1.12
+      },
+      "hpMult": {
+        "Infantry": 1.08
+      }
+    },
+    "buildingBonuses": {
+      "hpMult": {
+        "CityCenter": 1.12,
+        "Barracks": 1.08
+      },
+      "trickleMult": {
+        "Farm": 1.14,
+        "Market": 1.12
+      }
+    },
+    "uniqueUnits": {
+      "Cavalry": "egypt_desert_guard",
+      "Worker": "egypt_nile_engineer_corps"
+    },
+    "uniqueBuildings": {
+      "Market": "egypt_grand_bazaar",
+      "Barracks": "egypt_desert_fortress"
+    },
+    "ideology": {
+      "primary": "TradeOriented",
+      "secondary": "Coalitionist",
+      "weights": {
+        "TradeOriented": 0.9,
+        "Coalitionist": 0.6,
+        "Isolationist": 0.4
+      },
+      "bloc_affinity_weights": {
+        "open_trade_compact": 1.0,
+        "development_sphere": 0.8
+      },
+      "bloc_hostility_weights": {
+        "imperial_legion_bloc": 0.3
+      }
+    }
+  },
+  {
+    "civilization_id": "tartaria",
+    "display_name": "Tartaria (Fictional)",
+    "short_description": "Fictional/alt-history civilization with monumental lost-tech infrastructure synergy.",
+    "theme_id": "tartaria",
+    "campaign_tags": [
+      "fictional_alt_history",
+      "monumental"
+    ],
+    "economyBias": 1.06,
+    "militaryBias": 1.1,
+    "scienceBias": 1.18,
+    "aggression": 1.02,
+    "defense": 1.08,
+    "diplomacyBias": 0.94,
+    "logisticsBias": 1.1,
+    "strategicBias": 1.2,
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.1,
+      "refined_goods": {
+        "electronics": 1.15,
+        "machine_parts": 1.14,
+        "munitions": 1.08
+      }
+    },
+    "logisticsModifiers": {
+      "rail_bonus": 1.12,
+      "tunnel_extraction_bonus": 1.14
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 1.06,
+      "alliance_bias": 0.9,
+      "trade_bias": 1.0,
+      "world_tension_response_bias": 1.12,
+      "operation_preference_weights": {
+        "MissileStrikeCampaign": 1.2,
+        "SecureRoute": 1.1,
+        "Encirclement": 1.1
+      },
+      "doctrine_tags": [
+        "fictional_alt_history",
+        "monumental_infrastructure",
+        "lost_technology"
+      ]
+    },
+    "aiDoctrineModifiers": {
+      "researchPriority": 1.16,
+      "strategicPriority": 1.2,
+      "reconPriority": 1.08
+    },
+    "unitBonuses": {
+      "attackMult": {
+        "StrategicMissile": 1.12,
+        "Siege": 1.1
+      },
+      "hpMult": {
+        "Siege": 1.08,
+        "Infantry": 1.06
+      }
+    },
+    "buildingBonuses": {
+      "buildTimeMult": {
+        "Wonder": 0.82,
+        "ElectronicsLab": 0.86
+      },
+      "trickleMult": {
+        "Library": 1.12,
+        "ElectronicsLab": 1.14
+      }
+    },
+    "uniqueUnits": {
+      "Infantry": "tartaria_sentinel",
+      "Siege": "tartaria_lost_tech_artillery"
+    },
+    "uniqueBuildings": {
+      "Wonder": "tartaria_spire",
+      "ElectronicsLab": "tartaria_grand_resonance_works"
+    },
+    "missionTags": [
+      "fictional",
+      "alt_history",
+      "tartaria"
+    ],
+    "ideology": {
+      "primary": "Technocratic",
+      "secondary": "ArcaneInfluenced",
+      "weights": {
+        "Technocratic": 1.0,
+        "ArcaneInfluenced": 0.8,
+        "Revolutionary": 0.3,
+        "Militarist": 0.5
+      },
+      "bloc_affinity_weights": {
+        "development_sphere": 1.0,
+        "imperial_legion_bloc": 0.7
+      },
+      "bloc_hostility_weights": {
+        "open_trade_compact": 0.4
+      }
+    }
+  }
 ]

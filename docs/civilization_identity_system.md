@@ -64,3 +64,6 @@ New civilization packs: Russia, USA, Japan, EU, UK, Egypt, Tartaria.
 Each pack includes data-driven identity coefficients, doctrine weights, and concrete unique content mappings (>=2 units and >=2 buildings per new civilization).
 
 Tartaria is explicitly fictional/alt-history game content and is not presented as a real-world factual civilization claim.
+
+## Ideology and Alliance Blocs
+Dynamic ideology alignment and deterministic alliance bloc behavior are now supported. See `docs/ideology_bloc_system.md` and `scenarios/bloc_test.json` for format and validation commands.

@@ -196,6 +196,42 @@ struct TrainRouteStep { uint32_t edgeId{0}; uint32_t toNode{0}; };
 struct Train { uint32_t id{0}; uint16_t owner{UINT16_MAX}; TrainType type{TrainType::Supply}; TrainState state{TrainState::Inactive}; uint32_t currentNode{0}; uint32_t destinationNode{0}; uint32_t currentEdge{0}; uint32_t routeCursor{0}; float segmentProgress{0.0f}; float speed{0.03f}; float cargo{0.0f}; float capacity{100.0f}; std::string cargoType{"Supply"}; uint32_t lastRouteTick{0}; std::vector<TrainRouteStep> route; };
 struct DiplomacyTreaty { bool tradeAgreement{false}; bool openBorders{false}; bool alliance{false}; bool nonAggression{false}; uint32_t lastChangedTick{0}; };
 struct EspionageOp { uint32_t id{0}; uint16_t actor{0}; uint16_t target{0}; EspionageOpType type{EspionageOpType::ReconCity}; uint32_t startTick{0}; uint32_t durationTicks{0}; EspionageOpState state{EspionageOpState::Active}; int effectStrength{0}; };
+struct IdeologyProfile {
+  std::string primary;
+  std::string secondary;
+  std::vector<std::pair<std::string, float>> ideologyWeights;
+  std::vector<std::pair<std::string, float>> blocAffinityWeights;
+  std::vector<std::pair<std::string, float>> blocHostilityWeights;
+};
+struct AllianceBlocTemplate {
+  std::string blocId;
+  std::string displayName;
+  std::vector<std::pair<std::string, float>> foundingBias;
+  std::vector<std::string> compatibleIdeologies;
+  std::vector<std::string> hostileIdeologies;
+  float tradeBias{1.0f};
+  float defenseBias{1.0f};
+  float escalationBias{1.0f};
+  float intelSharingBias{1.0f};
+  uint8_t minMembers{2};
+  uint8_t maxMembers{8};
+  std::string icon;
+  std::array<float, 3> color{0.7f, 0.7f, 0.7f};
+  std::string label;
+};
+struct AllianceBlocState {
+  std::string blocId;
+  std::vector<uint16_t> members;
+  uint16_t founder{UINT16_MAX};
+  uint16_t leader{UINT16_MAX};
+  StrategicPosture posture{StrategicPosture::Defensive};
+  float threatLevel{0.0f};
+  std::vector<std::string> rivalBlocIds;
+  float tradeState{1.0f};
+  float defenseState{1.0f};
+  float cohesion{1.0f};
+  uint8_t lifecycleState{1}; // 0 inactive, 1 active, 2 disbanded
+};
 struct AirUnit { uint32_t id{0}; uint16_t team{0}; AirUnitClass cls{AirUnitClass::Fighter}; AirMissionState state{AirMissionState::Airborne}; glm::vec2 pos{}; glm::vec2 missionTarget{}; float hp{100.0f}; float speed{6.0f}; uint32_t cooldownTicks{0}; bool missionPerformed{false}; };
 struct DetectorSite { uint32_t id{0}; uint16_t team{0}; DetectorType type{DetectorType::RadarTower}; glm::vec2 pos{}; float radius{12.0f}; bool revealContactOnly{false}; bool active{true}; };
 struct StrategicStrike { uint32_t id{0}; uint16_t team{0}; StrikeType type{StrikeType::TacticalMissile}; glm::vec2 from{}; glm::vec2 target{}; uint32_t prepTicksRemaining{0}; uint32_t travelTicksRemaining{0}; uint32_t cooldownTicks{0}; uint8_t interceptionState{0}; bool launched{false}; bool resolved{false}; StrategicStrikePhase phase{StrategicStrikePhase::Unavailable}; StrategicInterceptionResult interceptionResult{StrategicInterceptionResult::Undetected}; uint16_t targetTeam{UINT16_MAX}; uint16_t launchSystemCount{1}; bool warningIssued{false}; bool retaliationLaunch{false}; bool secondStrikeLaunch{false}; };
@@ -352,6 +388,7 @@ struct CivilizationRuntime {
   std::array<std::string, static_cast<size_t>(UnitType::Count)> uniqueUnitDefs{};
   std::array<std::string, static_cast<size_t>(BuildingType::Count)> uniqueBuildingDefs{};
   std::vector<std::string> missionTags;
+  IdeologyProfile ideology;
 };
 
 struct ContentPresentationInfo {
@@ -494,6 +531,14 @@ struct SimulationStats {
   uint32_t guardianPresentationResolves{0};
   uint32_t campaignPresentationResolves{0};
   uint32_t eventPresentationResolves{0};
+  uint32_t activeBlocCount{0};
+  uint32_t blocMembershipChanges{0};
+  uint32_t blocFormations{0};
+  uint32_t blocDissolutions{0};
+  uint32_t blocRivalries{0};
+  uint32_t ideologyAlignmentShifts{0};
+  uint32_t blocTradeBonusUsage{0};
+  uint32_t blocOperationCoordinationCount{0};
 };
 
 struct ChunkCoord {
@@ -541,6 +586,8 @@ struct World {
   std::vector<IndustrialRecipe> industrialRecipes;
   std::vector<DiplomacyRelation> diplomacy; std::vector<DiplomacyTreaty> treaties; float worldTension{0.0f};
   std::vector<EspionageOp> espionageOps; std::vector<StrategicPosture> strategicPosture;
+  std::vector<AllianceBlocTemplate> blocTemplates;
+  std::vector<AllianceBlocState> allianceBlocs;
   std::vector<AirUnit> airUnits;
   std::vector<DetectorSite> detectors;
   std::vector<StrategicStrike> strategicStrikes;
@@ -626,6 +673,14 @@ struct World {
   float civIndustryOutput{0.0f};
   float civLogisticsBonusUsage{0.0f};
   uint32_t civOperationCount{0};
+  uint32_t activeBlocCount{0};
+  uint32_t blocMembershipChanges{0};
+  uint32_t blocFormations{0};
+  uint32_t blocDissolutions{0};
+  uint32_t blocRivalries{0};
+  uint32_t ideologyAlignmentShifts{0};
+  uint32_t blocTradeBonusUsage{0};
+  uint32_t blocOperationCoordinationCount{0};
   uint32_t activeWorldEventCount{0};
   uint32_t resolvedWorldEventCount{0};
   uint32_t triggeredWorldEventCount{0};

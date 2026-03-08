@@ -32,6 +32,15 @@ const char* op_name(dom::sim::OperationType t) {
 }
 }
 
+int bloc_index_for_player(const dom::sim::World& world, uint16_t player) {
+  for (size_t i = 0; i < world.allianceBlocs.size(); ++i) {
+    const auto& b = world.allianceBlocs[i];
+    if (b.lifecycleState != 1) continue;
+    if (std::find(b.members.begin(), b.members.end(), player) != b.members.end()) return static_cast<int>(i);
+  }
+  return -1;
+}
+
 void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool showOperationsPanel) {
 #ifndef DOM_HAS_IMGUI
   (void)world; (void)showDiplomacyPanel; (void)showOperationsPanel;
@@ -49,6 +58,10 @@ void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool 
         ImGui::Text("doctrine aggr %.2f alliance %.2f trade %.2f tension %.2f",
                     pl.civilization.aggressionBias, pl.civilization.allianceBias, pl.civilization.tradeBias, pl.civilization.worldTensionResponseBias);
         ImGui::Text("theme=%s doctrineTags=%zu missionTags=%zu", pl.civilization.themeId.c_str(), pl.civilization.doctrineTags.size(), pl.civilization.missionTags.size());
+        ImGui::Text("ideology: primary=%s secondary=%s", pl.civilization.ideology.primary.c_str(), pl.civilization.ideology.secondary.c_str());
+        int bi = bloc_index_for_player(world, pl.id);
+        if (bi >= 0) { const auto& b = world.allianceBlocs[(size_t)bi]; ImGui::Text("bloc: %s cohesion=%.2f threat=%.2f", b.blocId.c_str(), b.cohesion, b.threatLevel); }
+        else ImGui::TextUnformatted("bloc: none");
         std::vector<std::string> highlights;
         for (size_t i=0;i<pl.civilization.uniqueUnitDefs.size();++i) if (!pl.civilization.uniqueUnitDefs[i].empty()) highlights.push_back(pl.civilization.uniqueUnitDefs[i]);
         for (size_t i=0;i<pl.civilization.uniqueBuildingDefs.size();++i) if (!pl.civilization.uniqueBuildingDefs[i].empty()) highlights.push_back(pl.civilization.uniqueBuildingDefs[i]);
@@ -59,6 +72,14 @@ void draw_diplomacy_panel(dom::sim::World& world, bool showDiplomacyPanel, bool 
           ImGui::TextWrapped("unique content: %s", joined.c_str());
         }
         if (pl.id < world.strategicDeterrence.size()) { const auto& ds = world.strategicDeterrence[pl.id]; ImGui::Text("deterrence cap=%d stockpile=%u ready=%u prep=%u alert=%u warning=%d retaliation=%d secondStrike=%d", ds.strategicCapabilityEnabled?1:0, ds.strategicStockpile, ds.strategicReadyCount, ds.strategicPreparingCount, ds.strategicAlertLevel, ds.launchWarningActive?1:0, ds.retaliationCapability?1:0, ds.secondStrikeCapability?1:0); }
+      }
+      if (ImGui::CollapsingHeader("Alliance Blocs", ImGuiTreeNodeFlags_DefaultOpen)) {
+        for (const auto& b : world.allianceBlocs) {
+          if (b.lifecycleState != 1) continue;
+          ImGui::SeparatorText(b.blocId.c_str());
+          ImGui::Text("members=%zu cohesion=%.2f threat=%.2f", b.members.size(), b.cohesion, b.threatLevel);
+          if (!b.rivalBlocIds.empty()) ImGui::Text("rival=%s", b.rivalBlocIds.front().c_str());
+        }
       }
       for (size_t i = 1; i < world.players.size(); ++i) {
         auto rel = world.diplomacy[0 * world.players.size() + i];

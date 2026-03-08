@@ -93,6 +93,10 @@ std::vector<GameplayEvent> gGameplayEvents;
 int gWorkerThreads = 1;
 
 int military_strength(const World& w, uint16_t team);
+int bloc_index_of_member(const World& w, uint16_t player);
+const AllianceBlocTemplate* find_template(const World& w, const std::string& id);
+void load_bloc_templates(World& w);
+void update_alliance_blocs(World& w);
 
 GuardianSiteType parse_guardian_site_type(const std::string& v) {
   if (v == "abyssal_trench") return GuardianSiteType::AbyssalTrench;
@@ -991,6 +995,7 @@ struct CivilizationDef {
   std::array<std::string, static_cast<size_t>(UnitType::Count)> uniqueUnitDefs{};
   std::array<std::string, static_cast<size_t>(BuildingType::Count)> uniqueBuildingDefs{};
   std::vector<std::string> missionTags;
+  IdeologyProfile ideology;
 };
 
 std::vector<CivilizationDef> gCivilizations;
@@ -1169,6 +1174,15 @@ void parse_named_multiplier_map(const nlohmann::json& j, TArr& out, TParser pars
   for (auto it = j.begin(); it != j.end(); ++it) out[static_cast<size_t>(parse(it.key()))] = it.value().get<float>();
 }
 
+
+template <typename TVec>
+void parse_weight_pairs(const nlohmann::json& j, TVec& out) {
+  out.clear();
+  if (!j.is_object()) return;
+  for (auto it = j.begin(); it != j.end(); ++it) out.push_back({it.key(), it.value().get<float>()});
+  std::sort(out.begin(), out.end(), [](const auto& a, const auto& b){ return a.first < b.first; });
+}
+
 void load_civilizations_once() {
   if (!gCivilizations.empty()) return;
   gCivilizations.push_back({});
@@ -1252,6 +1266,14 @@ void load_civilizations_once() {
     if (c.contains("uniqueUnits") && c["uniqueUnits"].is_object()) for (auto it=c["uniqueUnits"].begin(); it!=c["uniqueUnits"].end(); ++it) d.uniqueUnitDefs[static_cast<size_t>(parse_unit(it.key()))]=it.value().get<std::string>();
     if (c.contains("uniqueBuildings") && c["uniqueBuildings"].is_object()) for (auto it=c["uniqueBuildings"].begin(); it!=c["uniqueBuildings"].end(); ++it) d.uniqueBuildingDefs[static_cast<size_t>(parse_building(it.key()))]=it.value().get<std::string>();
     if (c.contains("missionTags") && c["missionTags"].is_array()) d.missionTags = c["missionTags"].get<std::vector<std::string>>();
+    if (c.contains("ideology") && c["ideology"].is_object()) {
+      const auto& idj = c["ideology"];
+      d.ideology.primary = idj.value("primary", std::string());
+      d.ideology.secondary = idj.value("secondary", std::string());
+      parse_weight_pairs(idj.value("weights", nlohmann::json::object()), d.ideology.ideologyWeights);
+      parse_weight_pairs(idj.value("bloc_affinity_weights", nlohmann::json::object()), d.ideology.blocAffinityWeights);
+      parse_weight_pairs(idj.value("bloc_hostility_weights", nlohmann::json::object()), d.ideology.blocHostilityWeights);
+    }
     gCivilizations.push_back(d);
   }
   if (gCivilizations.empty()) gCivilizations.push_back({});
@@ -1272,6 +1294,7 @@ CivilizationRuntime civilization_runtime_for_impl(const std::string& id) {
     r.unitAttackMult = c.unitAttackMult; r.unitHpMult = c.unitHpMult; r.unitCostMult = c.unitCostMult; r.unitTrainTimeMult = c.unitTrainTimeMult;
     r.buildingCostMult = c.buildingCostMult; r.buildingBuildTimeMult = c.buildingBuildTimeMult; r.buildingHpMult = c.buildingHpMult; r.buildingTrickleMult = c.buildingTrickleMult;
     r.uniqueUnitDefs = c.uniqueUnitDefs; r.uniqueBuildingDefs = c.uniqueBuildingDefs; r.missionTags = c.missionTags;
+    r.ideology = c.ideology;
     return r;
   }
   CivilizationRuntime d{};
@@ -3483,7 +3506,14 @@ void recompute_trade_routes(World& w) {
       bool contested = (w.territoryOwner[ay * w.width + ax] != a.team) || (w.territoryOwner[by * w.width + bx] != b.team);
       float eff = std::clamp((80.0f / std::max(25.0f, d)) * roadBonus * (contested ? 0.35f : 1.0f), 0.0f, 1.25f);
       bool active = eff > 0.2f;
-      float wealth = active ? eff * 0.08f * w.players[a.team].civilization.tradeRouteBonus : 0.0f;
+      float blocTradeMult = 1.0f;
+      const int blocA = bloc_index_of_member(w, a.team);
+      const int blocB = bloc_index_of_member(w, b.team);
+      if (blocA >= 0 && blocB >= 0 && blocA == blocB) {
+        const auto* tmpl = find_template(w, w.allianceBlocs[(size_t)blocA].blocId);
+        if (tmpl) blocTradeMult = 1.0f + std::max(0.0f, tmpl->tradeBias - 1.0f) * 0.6f;
+      }
+      float wealth = active ? eff * 0.08f * w.players[a.team].civilization.tradeRouteBonus * blocTradeMult : 0.0f;
       w.tradeRoutes.push_back({nextId++, a.team, a.id, b.id, active, eff, wealth, w.tick});
       if (a.team != b.team) w.tradeRoutes.push_back({nextId++, b.team, b.id, a.id, active, eff, wealth, w.tick});
     }
@@ -3497,6 +3527,7 @@ void apply_trade_income(World& w, float dt) {
     const auto& civ = w.players[r.team].civilization;
     const float wealthGain = r.wealthPerTick * dt * 20.0f * civ.resourceGatherMult[ridx(Resource::Wealth)] * civ.tradeBias;
     w.players[r.team].resources[ridx(Resource::Wealth)] += wealthGain;
+    if (wealthGain > r.wealthPerTick * dt * 20.0f * civ.resourceGatherMult[ridx(Resource::Wealth)] * civ.tradeBias + 0.0001f) ++w.blocTradeBonusUsage;
     if (w.players[r.team].civilization.scienceBias > 1.1f) {
       w.players[r.team].resources[ridx(Resource::Knowledge)] += r.wealthPerTick * 0.2f * dt * 20.0f * civ.resourceGatherMult[ridx(Resource::Knowledge)];
     }
@@ -3535,6 +3566,10 @@ void apply_supply_effects(World& w, float dt) {
 }
 
 int military_strength(const World& w, uint16_t team);
+int bloc_index_of_member(const World& w, uint16_t player);
+const AllianceBlocTemplate* find_template(const World& w, const std::string& id);
+void load_bloc_templates(World& w);
+void update_alliance_blocs(World& w);
 
 void update_operations(World& w) {
   if (w.tick % 80 != 0) return;
@@ -3902,6 +3937,182 @@ void update_world_events(World& w) {
     }
     ++w.activeWorldEventCount;
   }
+}
+
+
+
+float ideology_weight(const CivilizationRuntime& civ, const std::string& key) {
+  for (const auto& kv : civ.ideology.ideologyWeights) if (kv.first == key) return kv.second;
+  if (civ.ideology.primary == key) return 1.0f;
+  if (civ.ideology.secondary == key) return 0.7f;
+  return 0.0f;
+}
+
+float bloc_weight_lookup(const std::vector<std::pair<std::string, float>>& weights, const std::string& key) {
+  for (const auto& kv : weights) if (kv.first == key) return kv.second;
+  return 0.0f;
+}
+
+void load_bloc_templates(World& w) {
+  if (!w.blocTemplates.empty()) return;
+  std::ifstream f("content/alliance_blocs.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.contains("bloc_templates") || !j["bloc_templates"].is_array()) return;
+  for (const auto& bt : j["bloc_templates"]) {
+    AllianceBlocTemplate t{};
+    t.blocId = bt.value("bloc_id", std::string());
+    if (t.blocId.empty()) continue;
+    t.displayName = bt.value("display_name", t.blocId);
+    parse_weight_pairs(bt.value("founding_ideology_bias", nlohmann::json::object()), t.foundingBias);
+    if (bt.contains("compatible_ideologies") && bt["compatible_ideologies"].is_array()) t.compatibleIdeologies = bt["compatible_ideologies"].get<std::vector<std::string>>();
+    if (bt.contains("hostile_ideologies") && bt["hostile_ideologies"].is_array()) t.hostileIdeologies = bt["hostile_ideologies"].get<std::vector<std::string>>();
+    t.tradeBias = bt.value("trade_bias", 1.0f);
+    t.defenseBias = bt.value("defense_bias", 1.0f);
+    t.escalationBias = bt.value("escalation_bias", 1.0f);
+    t.intelSharingBias = bt.value("intel_sharing_bias", 1.0f);
+    t.minMembers = bt.value("min_members", static_cast<uint8_t>(2));
+    t.maxMembers = bt.value("max_members", static_cast<uint8_t>(8));
+    if (bt.contains("presentation") && bt["presentation"].is_object()) {
+      const auto& p = bt["presentation"];
+      t.icon = p.value("icon", std::string());
+      t.label = p.value("label", t.displayName);
+      if (p.contains("color") && p["color"].is_array() && p["color"].size() >= 3) t.color = {p["color"][0].get<float>(), p["color"][1].get<float>(), p["color"][2].get<float>()};
+    }
+    w.blocTemplates.push_back(std::move(t));
+  }
+  std::sort(w.blocTemplates.begin(), w.blocTemplates.end(), [](const AllianceBlocTemplate& a, const AllianceBlocTemplate& b){ return a.blocId < b.blocId; });
+}
+
+int bloc_index_of_member(const World& w, uint16_t player) {
+  for (size_t i=0;i<w.allianceBlocs.size();++i) {
+    const auto& b = w.allianceBlocs[i];
+    if (b.lifecycleState != 1) continue;
+    if (std::find(b.members.begin(), b.members.end(), player) != b.members.end()) return static_cast<int>(i);
+  }
+  return -1;
+}
+
+float bloc_affinity_score(const CivilizationRuntime& civ, const AllianceBlocTemplate& t) {
+  float score = bloc_weight_lookup(civ.ideology.blocAffinityWeights, t.blocId) - bloc_weight_lookup(civ.ideology.blocHostilityWeights, t.blocId);
+  for (const auto& kv : t.foundingBias) score += ideology_weight(civ, kv.first) * kv.second;
+  for (const auto& k : t.compatibleIdeologies) score += ideology_weight(civ, k) * 0.6f;
+  for (const auto& k : t.hostileIdeologies) score -= ideology_weight(civ, k) * 0.7f;
+  return score;
+}
+
+const AllianceBlocTemplate* find_template(const World& w, const std::string& id) {
+  for (const auto& t : w.blocTemplates) if (t.blocId == id) return &t;
+  return nullptr;
+}
+
+void update_alliance_blocs(World& w) {
+  load_bloc_templates(w);
+  if (w.tick % 120 != 0 || w.blocTemplates.empty()) return;
+
+  for (auto& b : w.allianceBlocs) {
+    std::sort(b.members.begin(), b.members.end());
+    b.members.erase(std::unique(b.members.begin(), b.members.end()), b.members.end());
+    b.members.erase(std::remove_if(b.members.begin(), b.members.end(), [&](uint16_t p){ return p >= w.players.size() || !w.players[p].alive; }), b.members.end());
+    if (b.members.empty()) { b.lifecycleState = 2; ++w.blocDissolutions; continue; }
+    b.leader = b.members.front();
+    b.threatLevel = 0.0f;
+    for (uint16_t m : b.members) {
+      b.threatLevel += military_strength(w, m) * 0.001f;
+      if (w.armageddonActive) b.cohesion = std::max(0.4f, b.cohesion - 0.05f);
+      else b.cohesion = std::min(1.6f, b.cohesion + 0.02f);
+    }
+    if (b.members.size() < 2) { b.lifecycleState = 2; ++w.blocDissolutions; }
+  }
+
+  for (auto& p : w.players) {
+    if (!p.alive) continue;
+    int bi = bloc_index_of_member(w, p.id);
+    float bestScore = -9999.0f;
+    const AllianceBlocTemplate* best = nullptr;
+    for (const auto& t : w.blocTemplates) {
+      const float score = bloc_affinity_score(p.civilization, t) + p.civilization.allianceBias - (w.armageddonActive ? 0.3f : 0.0f);
+      if (score > bestScore || (std::abs(score - bestScore) < 0.0001f && t.blocId < (best ? best->blocId : std::string("~")))) {
+        bestScore = score;
+        best = &t;
+      }
+    }
+    if (!best || bestScore < 0.35f) {
+      if (bi >= 0 && w.armageddonActive) {
+        auto& b = w.allianceBlocs[(size_t)bi];
+        b.members.erase(std::remove(b.members.begin(), b.members.end(), p.id), b.members.end());
+        ++w.blocMembershipChanges;
+      }
+      continue;
+    }
+
+    if (bi >= 0) {
+      if (w.allianceBlocs[(size_t)bi].blocId != best->blocId && bestScore > 1.2f) {
+        auto& old = w.allianceBlocs[(size_t)bi];
+        old.members.erase(std::remove(old.members.begin(), old.members.end(), p.id), old.members.end());
+        ++w.blocMembershipChanges;
+        bi = -1;
+      } else continue;
+    }
+
+    bool joined = false;
+    for (auto& b : w.allianceBlocs) {
+      if (b.lifecycleState != 1 || b.blocId != best->blocId) continue;
+      const auto* tmpl = find_template(w, b.blocId);
+      if (!tmpl || b.members.size() >= tmpl->maxMembers) continue;
+      b.members.push_back(p.id);
+      std::sort(b.members.begin(), b.members.end());
+      b.leader = b.members.front();
+      ++w.blocMembershipChanges;
+      joined = true;
+      break;
+    }
+    if (!joined) {
+      AllianceBlocState nb{};
+      nb.blocId = best->blocId;
+      nb.members = {p.id};
+      nb.founder = p.id;
+      nb.leader = p.id;
+      nb.posture = w.strategicPosture.empty() ? StrategicPosture::Defensive : w.strategicPosture[p.id];
+      nb.cohesion = 1.0f;
+      nb.lifecycleState = 1;
+      w.allianceBlocs.push_back(std::move(nb));
+      std::sort(w.allianceBlocs.begin(), w.allianceBlocs.end(), [](const AllianceBlocState& a, const AllianceBlocState& b){ return a.blocId < b.blocId; });
+      ++w.blocFormations;
+    }
+  }
+
+  // establish rivalry and diplomacy pressure
+  for (auto& b : w.allianceBlocs) {
+    b.rivalBlocIds.clear();
+    if (b.lifecycleState != 1) continue;
+    const auto* tmpl = find_template(w, b.blocId);
+    if (!tmpl) continue;
+    float worst = -1.0f;
+    std::string rival;
+    for (const auto& other : w.allianceBlocs) {
+      if (other.lifecycleState != 1 || other.blocId == b.blocId || other.members.empty()) continue;
+      float hostility = 0.0f;
+      for (uint16_t m : other.members) for (const auto& h : tmpl->hostileIdeologies) hostility += ideology_weight(w.players[m].civilization, h);
+      hostility += (tmpl->escalationBias - 1.0f) * 2.0f;
+      if (hostility > worst) { worst = hostility; rival = other.blocId; }
+    }
+    if (!rival.empty()) { b.rivalBlocIds.push_back(rival); ++w.blocRivalries; }
+    for (size_t i=1;i<b.members.size();++i) form_alliance(w, b.members[0], b.members[i]);
+  }
+
+  for (const auto& b : w.allianceBlocs) {
+    if (b.lifecycleState != 1 || b.members.empty()) continue;
+    if (!b.rivalBlocIds.empty()) {
+      const auto& rid = b.rivalBlocIds.front();
+      for (const auto& ob : w.allianceBlocs) if (ob.blocId == rid && ob.lifecycleState == 1 && !ob.members.empty()) {
+        if (w.worldTension > 55.0f) declare_war(w, b.members.front(), ob.members.front());
+      }
+    }
+  }
+
+  w.activeBlocCount = 0;
+  for (const auto& b : w.allianceBlocs) if (b.lifecycleState == 1 && b.members.size() >= 2) ++w.activeBlocCount;
 }
 
 void update_ai_diplomacy(World& w) {
@@ -4479,6 +4690,7 @@ void initialize_world(World& w, uint32_t seed) {
   load_guardian_defs(w);
   load_industrial_recipes(w);
   load_world_event_defs(w);
+  load_bloc_templates(w);
   gNav.cache.clear();
   gPendingNavRequests.clear();
   gCompletedNavResults.clear();
@@ -4653,6 +4865,14 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
       ps.teamId = p.value("team", ps.id);
       if (p.contains("color") && p["color"].is_array() && p["color"].size() >= 3) ps.color = {p["color"][0].get<float>(), p["color"][1].get<float>(), p["color"][2].get<float>()};
       ps.civilization = civilization_runtime_for(p.value("civilization", std::string("default")));
+      if (p.contains("ideology") && p["ideology"].is_object()) {
+        const auto& idj = p["ideology"];
+        ps.civilization.ideology.primary = idj.value("primary", ps.civilization.ideology.primary);
+        ps.civilization.ideology.secondary = idj.value("secondary", ps.civilization.ideology.secondary);
+        parse_weight_pairs(idj.value("weights", nlohmann::json::object()), ps.civilization.ideology.ideologyWeights);
+        parse_weight_pairs(idj.value("bloc_affinity_weights", nlohmann::json::object()), ps.civilization.ideology.blocAffinityWeights);
+        parse_weight_pairs(idj.value("bloc_hostility_weights", nlohmann::json::object()), ps.civilization.ideology.blocHostilityWeights);
+      }
       if (p.contains("startingResources")) {
         auto sr = p["startingResources"];
         auto setR = [&](const char* k, Resource r){ if (sr.contains(k)) ps.resources[ridx(r)] = sr[k].get<float>(); };
@@ -4712,6 +4932,43 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
       t.nonAggression = e.value("nonAggression", false);
       t.lastChangedTick = e.value("lastChangedTick", 0u);
       set_treaty(w, a, b, t);
+    }
+  }
+  if (j.contains("blocTemplates") && j["blocTemplates"].is_array()) {
+    w.blocTemplates.clear();
+    for (const auto& bt : j["blocTemplates"]) {
+      AllianceBlocTemplate t{};
+      t.blocId = bt.value("bloc_id", std::string());
+      if (t.blocId.empty()) continue;
+      t.displayName = bt.value("display_name", t.blocId);
+      parse_weight_pairs(bt.value("founding_ideology_bias", nlohmann::json::object()), t.foundingBias);
+      if (bt.contains("compatible_ideologies")) t.compatibleIdeologies = bt["compatible_ideologies"].get<std::vector<std::string>>();
+      if (bt.contains("hostile_ideologies")) t.hostileIdeologies = bt["hostile_ideologies"].get<std::vector<std::string>>();
+      t.tradeBias = bt.value("trade_bias", 1.0f);
+      t.defenseBias = bt.value("defense_bias", 1.0f);
+      t.escalationBias = bt.value("escalation_bias", 1.0f);
+      t.intelSharingBias = bt.value("intel_sharing_bias", 1.0f);
+      t.minMembers = bt.value("min_members", static_cast<uint8_t>(2));
+      t.maxMembers = bt.value("max_members", static_cast<uint8_t>(8));
+      w.blocTemplates.push_back(std::move(t));
+    }
+    std::sort(w.blocTemplates.begin(), w.blocTemplates.end(), [](const AllianceBlocTemplate& a, const AllianceBlocTemplate& b){ return a.blocId < b.blocId; });
+  }
+  if (j.contains("authoredBlocs") && j["authoredBlocs"].is_array()) {
+    w.allianceBlocs.clear();
+    for (const auto& ab : j["authoredBlocs"]) {
+      AllianceBlocState b{};
+      b.blocId = ab.value("bloc_id", std::string());
+      if (ab.contains("members")) b.members = ab["members"].get<std::vector<uint16_t>>();
+      b.founder = ab.value("founder", (uint16_t)UINT16_MAX);
+      b.leader = ab.value("leader", b.founder);
+      b.threatLevel = ab.value("threat_level", 0.0f);
+      b.tradeState = ab.value("trade_state", 1.0f);
+      b.defenseState = ab.value("defense_state", 1.0f);
+      b.cohesion = ab.value("cohesion", 1.0f);
+      b.lifecycleState = ab.value("state", static_cast<uint8_t>(1));
+      if (ab.contains("rival_bloc_ids")) b.rivalBlocIds = ab["rival_bloc_ids"].get<std::vector<std::string>>();
+      w.allianceBlocs.push_back(std::move(b));
     }
   }
   if (j.contains("strategicPosture") && j["strategicPosture"].is_array()) {
@@ -5146,6 +5403,19 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["worldPreset"] = world_preset_name(w.worldPreset);
   j["players"] = nlohmann::json::array();
   for (const auto& p : w.players) j["players"].push_back({{"id",p.id},{"age",(int)p.age},{"resources",p.resources},{"popCap",p.popCap},{"isHuman",p.isHuman},{"isCPU",p.isCPU},{"team",p.teamId},{"civilization",p.civilization.id},{"color",{p.color[0],p.color[1],p.color[2]}},{"startingResources",{{"Food",p.resources[0]},{"Wood",p.resources[1]},{"Metal",p.resources[2]},{"Wealth",p.resources[3]},{"Knowledge",p.resources[4]},{"Oil",p.resources[5]}}},{"refinedGoods",{{"steel",p.refinedGoods[gidx(RefinedGood::Steel)]},{"fuel",p.refinedGoods[gidx(RefinedGood::Fuel)]},{"munitions",p.refinedGoods[gidx(RefinedGood::Munitions)]},{"machine_parts",p.refinedGoods[gidx(RefinedGood::MachineParts)]},{"electronics",p.refinedGoods[gidx(RefinedGood::Electronics)]}}}});
+  for (size_t i = 0; i < w.players.size(); ++i) {
+    const auto& c = w.players[i].civilization;
+    nlohmann::json ideology;
+    ideology["primary"] = c.ideology.primary;
+    ideology["secondary"] = c.ideology.secondary;
+    ideology["weights"] = nlohmann::json::object();
+    ideology["bloc_affinity_weights"] = nlohmann::json::object();
+    ideology["bloc_hostility_weights"] = nlohmann::json::object();
+    for (const auto& kv : c.ideology.ideologyWeights) ideology["weights"][kv.first] = kv.second;
+    for (const auto& kv : c.ideology.blocAffinityWeights) ideology["bloc_affinity_weights"][kv.first] = kv.second;
+    for (const auto& kv : c.ideology.blocHostilityWeights) ideology["bloc_hostility_weights"][kv.first] = kv.second;
+    j["players"][i]["ideology"] = std::move(ideology);
+  }
   j["cities"] = nlohmann::json::array(); for (const auto& c : w.cities) j["cities"].push_back({{"id",c.id},{"team",c.team},{"pos",{c.pos.x,c.pos.y}},{"level",c.level},{"capital",c.capital}});
   j["units"] = nlohmann::json::array(); for (const auto& u : w.units) j["units"].push_back({{"id",u.id},{"team",u.team},{"type",unit_name(u.type)},{"pos",{u.pos.x,u.pos.y}}});
   j["buildings"] = nlohmann::json::array(); for (const auto& b : w.buildings) j["buildings"].push_back({{"id",b.id},{"team",b.team},{"type",building_name(b.type)},{"pos",{b.pos.x,b.pos.y}},{"underConstruction",b.underConstruction},{"buildProgress",b.buildProgress},{"hp",b.hp},{"factory",{{"recipeIndex",b.factory.recipeIndex},{"cycleProgress",b.factory.cycleProgress},{"paused",b.factory.paused},{"blocked",b.factory.blocked},{"active",b.factory.active},{"throughputBonus",b.factory.throughputBonus},{"inputBuffer",b.factory.inputBuffer},{"outputBuffer",b.factory.outputBuffer}}}});
@@ -5221,6 +5491,27 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
       {"effect_payload", e.effectPayload}, {"campaign_tags", e.campaignTags}, {"scripted_hook", e.scriptedHook}
     });
   }
+  j["blocTemplates"] = nlohmann::json::array();
+  for (const auto& t : w.blocTemplates) {
+    nlohmann::json bt;
+    bt["bloc_id"] = t.blocId;
+    bt["display_name"] = t.displayName;
+    bt["founding_ideology_bias"] = nlohmann::json::object();
+    for (const auto& kv : t.foundingBias) bt["founding_ideology_bias"][kv.first] = kv.second;
+    bt["compatible_ideologies"] = t.compatibleIdeologies;
+    bt["hostile_ideologies"] = t.hostileIdeologies;
+    bt["trade_bias"] = t.tradeBias;
+    bt["defense_bias"] = t.defenseBias;
+    bt["escalation_bias"] = t.escalationBias;
+    bt["intel_sharing_bias"] = t.intelSharingBias;
+    bt["min_members"] = t.minMembers;
+    bt["max_members"] = t.maxMembers;
+    j["blocTemplates"].push_back(std::move(bt));
+  }
+  j["authoredBlocs"] = nlohmann::json::array();
+  for (const auto& b : w.allianceBlocs) {
+    j["authoredBlocs"].push_back({{"bloc_id", b.blocId}, {"members", b.members}, {"founder", b.founder}, {"leader", b.leader}, {"threat_level", b.threatLevel}, {"trade_state", b.tradeState}, {"defense_state", b.defenseState}, {"cohesion", b.cohesion}, {"state", b.lifecycleState}, {"rival_bloc_ids", b.rivalBlocIds}});
+  }
   j["areas"] = nlohmann::json::array(); for (const auto& a : w.triggerAreas) j["areas"].push_back({{"id",a.id},{"min",{a.min.x,a.min.y}},{"max",{a.max.x,a.max.y}}});
   j["objectives"] = nlohmann::json::array(); for (const auto& o : w.objectives) j["objectives"].push_back({{"id",o.id},{"objective_id",o.objectiveId},{"title",o.title},{"description",o.description.empty()?o.text:o.description},{"primary",o.primary},{"category",objective_category_name(o.category)},{"state",objective_state_name(o.state)},{"owner",o.owner},{"visible",o.visible},{"progressText",o.progressText},{"progressValue",o.progressValue}});
   j["mission"] = {{"title",w.mission.title},{"subtitle",w.mission.subtitle},{"location",w.mission.locationLabel},{"briefing",w.mission.briefing},{"debrief",w.mission.debrief},{"factionSummary",w.mission.factionSummary},{"carryoverSummary",w.mission.carryoverSummary},{"briefingPortraitId",w.mission.briefingPortraitId},{"debriefPortraitId",w.mission.debriefPortraitId},{"missionImageId",w.mission.missionImageId},{"factionIconId",w.mission.factionIconId},{"scenarioTags",w.mission.scenarioTags},{"objectiveSummary",w.mission.objectiveSummary},{"introMessages",w.mission.introMessages},{"victoryOutcome",w.mission.victoryOutcomeTag},{"defeatOutcome",w.mission.defeatOutcomeTag},{"partialOutcome",w.mission.partialOutcomeTag},{"branchKey",w.mission.branchKey},{"luaScript",w.mission.luaScriptFile},{"luaInline",w.mission.luaScriptInline}};
@@ -5269,6 +5560,7 @@ void on_authoritative_state_loaded(World& w) {
   if (w.deepDeposits.empty() || w.undergroundNodes.empty() || w.undergroundEdges.empty()) rebuild_mountain_deposits(w);
   update_underground_economy(w, 0.0f);
   if (w.strategicDeterrence.size() != w.players.size()) w.strategicDeterrence.assign(w.players.size(), StrategicDeterrenceState{});
+  load_bloc_templates(w);
   w.gameOver = w.match.phase != MatchPhase::Running;
   w.winner = w.match.winner;
 }
@@ -5300,6 +5592,7 @@ void tick_world(World& w, float dt) {
   update_espionage(w);
   update_world_tension(w);
   update_world_events(w);
+  update_alliance_blocs(w);
   update_ai_diplomacy(w);
   update_operations(w);
   rebuild_detector_sites(w);
@@ -5734,6 +6027,14 @@ void tick_world(World& w, float dt) {
   gLastStats.civIndustryOutput = w.civIndustryOutput;
   gLastStats.civLogisticsBonusUsage = w.civLogisticsBonusUsage;
   gLastStats.civOperationCount = w.civOperationCount;
+  gLastStats.activeBlocCount = w.activeBlocCount;
+  gLastStats.blocMembershipChanges = w.blocMembershipChanges;
+  gLastStats.blocFormations = w.blocFormations;
+  gLastStats.blocDissolutions = w.blocDissolutions;
+  gLastStats.blocRivalries = w.blocRivalries;
+  gLastStats.ideologyAlignmentShifts = w.ideologyAlignmentShifts;
+  gLastStats.blocTradeBonusUsage = w.blocTradeBonusUsage;
+  gLastStats.blocOperationCoordinationCount = w.blocOperationCoordinationCount;
   gLastStats.contentFallbackCount = w.civContentResolutionFallbacks;
   gLastStats.civPresentationResolves = w.uniqueUnitsProduced + w.uniqueBuildingsConstructed;
   gLastStats.guardianPresentationResolves = w.guardiansDiscovered + w.guardiansSpawned + static_cast<uint32_t>(w.guardianSites.size());
@@ -6225,6 +6526,26 @@ uint64_t state_hash(const World& w) {
   for (const auto& e : w.railEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.aNode); hash_u32(h, e.bNode); hash_u32(h, e.quality); hash_u32(h, e.bridge?1u:0u); hash_u32(h, e.tunnel?1u:0u); hash_u32(h, e.disrupted?1u:0u); }
   for (const auto& rn : w.railNetworks) { hash_u32(h, rn.id); hash_u32(h, rn.owner); hash_u32(h, rn.nodeCount); hash_u32(h, rn.edgeCount); hash_u32(h, rn.active?1u:0u); }
   for (const auto& t : w.trains) { hash_u32(h,t.id); hash_u32(h,t.owner); hash_u32(h,(uint32_t)t.type); hash_u32(h,(uint32_t)t.state); hash_u32(h,t.currentNode); hash_u32(h,t.destinationNode); hash_u32(h,t.currentEdge); hash_u32(h,t.routeCursor); hash_float(h,t.segmentProgress); hash_float(h,t.speed); hash_float(h,t.cargo); hash_float(h,t.capacity); hash_u32(h,t.lastRouteTick); hash_u32(h,(uint32_t)t.cargoType.size()); for (const auto& rs : t.route) { hash_u32(h, rs.edgeId); hash_u32(h, rs.toNode); } }
+  for (const auto& p : w.players) {
+    hash_u32(h, static_cast<uint32_t>(p.civilization.ideology.primary.size()));
+    hash_u32(h, static_cast<uint32_t>(p.civilization.ideology.secondary.size()));
+    for (const auto& kv : p.civilization.ideology.ideologyWeights) { hash_u32(h, static_cast<uint32_t>(kv.first.size())); hash_float(h, kv.second); }
+    for (const auto& kv : p.civilization.ideology.blocAffinityWeights) { hash_u32(h, static_cast<uint32_t>(kv.first.size())); hash_float(h, kv.second); }
+    for (const auto& kv : p.civilization.ideology.blocHostilityWeights) { hash_u32(h, static_cast<uint32_t>(kv.first.size())); hash_float(h, kv.second); }
+  }
+  for (const auto& b : w.allianceBlocs) {
+    hash_u32(h, static_cast<uint32_t>(b.blocId.size()));
+    for (uint16_t m : b.members) hash_u32(h, m);
+    hash_u32(h, b.founder == UINT16_MAX ? 0xFFFFu : b.founder);
+    hash_u32(h, b.leader == UINT16_MAX ? 0xFFFFu : b.leader);
+    hash_u32(h, static_cast<uint32_t>(b.posture));
+    hash_float(h, b.threatLevel);
+    hash_float(h, b.tradeState);
+    hash_float(h, b.defenseState);
+    hash_float(h, b.cohesion);
+    hash_u32(h, b.lifecycleState);
+    for (const auto& r : b.rivalBlocIds) hash_u32(h, static_cast<uint32_t>(r.size()));
+  }
   hash_float(h, w.worldTension);
   for (const auto& r : w.diplomacy) hash_u32(h, static_cast<uint32_t>(r));
   for (const auto& t : w.treaties) {

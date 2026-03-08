@@ -1,0 +1,15 @@
+{
+  "ideologies": [
+    {"id": "Democratic", "display_name": "Democratic"},
+    {"id": "Authoritarian", "display_name": "Authoritarian"},
+    {"id": "Technocratic", "display_name": "Technocratic"},
+    {"id": "TradeOriented", "display_name": "Trade-Oriented"},
+    {"id": "Expansionist", "display_name": "Expansionist"},
+    {"id": "Isolationist", "display_name": "Isolationist"},
+    {"id": "Militarist", "display_name": "Militarist"},
+    {"id": "Spiritualist", "display_name": "Spiritualist"},
+    {"id": "Coalitionist", "display_name": "Coalitionist"},
+    {"id": "Revolutionary", "display_name": "Revolutionary"},
+    {"id": "ArcaneInfluenced", "display_name": "Arcane Influenced", "fictional": true}
+  ]
+}
