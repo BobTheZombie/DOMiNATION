@@ -24,8 +24,8 @@
 namespace dom::sim {
 void enqueue_mission_message(World& w, const MissionMessageDefinition& def);
 void enqueue_text_message(World& w, const std::string& text, const std::string& category, uint32_t triggerId);
-const char* world_event_category_name(WorldEventCategory c);
 namespace {
+const char* world_event_category_name(WorldEventCategory c);
 float dist(glm::vec2 a, glm::vec2 b) { return glm::length(a - b); }
 
 size_t dip_index(const World& w, uint16_t a, uint16_t b) {
