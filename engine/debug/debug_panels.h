@@ -20,6 +20,7 @@ struct DebugVisualState {
   bool entityPresentationDebug{false};
   bool visualFeedbackEnabled{true};
   bool visualFeedbackOverlayDebug{false};
+  bool strategicVisualization{true};
 };
 
 void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state);

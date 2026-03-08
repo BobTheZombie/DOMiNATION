@@ -37,6 +37,18 @@ struct VisualFeedbackCounters {
   uint64_t feedbackFallbackCount{0};
 };
 
+struct StrategicVisualizationCounters {
+  uint64_t movementPathResolves{0};
+  uint64_t supplyFlowResolves{0};
+  uint64_t railVisualEvents{0};
+  uint64_t frontlineZoneUpdates{0};
+  uint64_t theaterVisualResolves{0};
+  uint64_t visualFallbackCount{0};
+  uint64_t railFlowLines{0};
+  uint64_t trainMarkers{0};
+  uint64_t logisticsVisualEvents{0};
+};
+
 enum class StrategicLabelType : uint8_t {
   Capital,
   Theater,
@@ -74,8 +86,11 @@ const EntityPresentationCounters& entity_presentation_counters();
 void set_visual_feedback_enabled(bool enabled);
 bool visual_feedback_enabled();
 void set_visual_feedback_overlay_debug(bool enabled);
+void set_strategic_visualization_enabled(bool enabled);
+bool strategic_visualization_enabled();
 bool visual_feedback_overlay_debug();
 const VisualFeedbackCounters& visual_feedback_counters();
+const StrategicVisualizationCounters& strategic_visualization_counters();
 double last_draw_ms();
 
 struct EditorPreview {

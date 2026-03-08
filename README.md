@@ -563,3 +563,17 @@ Validation smoke commands:
 - `./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only`
 - `./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only`
 - `./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only`
+
+
+## Strategic movement and logistics visualization
+
+The map now includes a deterministic strategic visualization pass that displays:
+- movement intent paths for active unit orders
+- supply/logistics flow hints from hubs/cities/factories/ports
+- rail traffic emphasis (flow pulses, train markers, active hub glow)
+- frontline pressure zones and theater objective overlays
+
+These are presentation-only overlays derived from authoritative world state and do not modify simulation logic or hash behavior.
+
+Debug panel (`Debug Visualization`) includes a **Strategic Visualization** section with counters:
+`MOVEMENT_PATH_RESOLVES`, `SUPPLY_FLOW_RESOLVES`, `RAIL_VISUAL_EVENTS`, `FRONTLINE_ZONE_UPDATES`, `THEATER_VISUAL_RESOLVES`, `VISUAL_FALLBACK_COUNT`, plus optional rail/logistics detail counters.

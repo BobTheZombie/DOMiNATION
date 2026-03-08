@@ -389,3 +389,16 @@ City/region visuals are part of the renderer-only presentation graph and are non
 - counters: city/capital/region resolve and fallback counters (debug-only observability)
 
 Determinism rule: for identical seed/scenario/commands/ticks/thread count, authoritative state hash is unchanged by this layer because it mutates no simulation state and serializes no transient cache.
+
+
+## Strategic visualization architecture
+
+The strategic movement/logistics layer is implemented entirely in `engine/render/renderer.*` and consumes existing authoritative structures (`units`, `trains`, `railNodes`, `tradeRoutes`, `theaterCommands`, `operationalObjectives`, territory ownership).
+
+Key constraints:
+- presentation-only pass (no simulation mutation, no command generation)
+- deterministic reconstruction from current world snapshot
+- stable animation phase from `(world.tick + stableId)`
+- debug visibility via explicit deterministic counters exported by renderer
+
+This keeps authoritative simulation hashes unchanged while improving strategic readability.

@@ -57,6 +57,7 @@ struct VisualFeedbackState {
 
 VisualFeedbackState gFeedbackState{};
 VisualFeedbackCounters gFeedbackCounters{};
+StrategicVisualizationCounters gStrategicCounters{};
 
 void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<float, 3>& color);
 
@@ -193,6 +194,284 @@ float tick_phase(const dom::sim::World& w, uint32_t stableId, float speed, float
 void draw_pulse_ring(glm::vec2 pos, float baseRadius, float pulseAmp, float thickness, float phase, const std::array<float, 3>& color) {
   float radius = baseRadius + std::sin(phase) * pulseAmp;
   draw_ring(pos, std::max(0.02f, radius), thickness, color);
+}
+
+
+
+glm::vec2 rail_node_pos(const dom::sim::World& w, uint32_t nodeId, bool& found) {
+  found = false;
+  for (const auto& n : w.railNodes) {
+    if (n.id != nodeId) continue;
+    found = true;
+    return {n.tile.x + 0.5f, n.tile.y + 0.5f};
+  }
+  return {};
+}
+
+void draw_arrow_head(glm::vec2 from, glm::vec2 to, float size) {
+  glm::vec2 dir = to - from;
+  float len = glm::length(dir);
+  if (len < 0.0001f) return;
+  glm::vec2 n = dir / len;
+  glm::vec2 side{-n.y, n.x};
+  glm::vec2 tip = to;
+  glm::vec2 back = to - n * size;
+  glBegin(GL_TRIANGLES);
+  glVertex2f(tip.x, tip.y);
+  glVertex2f(back.x + side.x * size * 0.45f, back.y + side.y * size * 0.45f);
+  glVertex2f(back.x - side.x * size * 0.45f, back.y - side.y * size * 0.45f);
+  glEnd();
+}
+
+void draw_unit_movement_paths(const dom::sim::World& w, const Camera& c) {
+  if (c.zoom > 28.0f) return;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  for (const auto& u : w.units) {
+    if (!u.hasMoveOrder) continue;
+    if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+    ++gStrategicCounters.movementPathResolves;
+    glm::vec2 start = u.renderPos;
+    glm::vec2 end = u.target;
+    glm::vec2 delta = end - start;
+    float len = glm::length(delta);
+    if (len < 0.1f) {
+      ++gStrategicCounters.visualFallbackCount;
+      continue;
+    }
+
+    auto glyph = unit_glyph(u);
+    float width = 1.2f;
+    std::array<float,3> col = diplomatic_color(w, u.team);
+    bool dashed = false;
+    bool curved = false;
+    bool railFollow = false;
+    if (glyph == UnitGlyph::Armor) width = 2.6f;
+    else if (glyph == UnitGlyph::Naval) { width = 2.0f; curved = true; col = {0.44f, 0.85f, 1.0f}; }
+    else if (glyph == UnitGlyph::Aircraft) { width = 1.4f; dashed = true; col = {0.95f, 0.95f, 0.95f}; }
+    else if (glyph == UnitGlyph::Rail) { width = 2.0f; railFollow = true; col = {0.98f, 0.9f, 0.42f}; }
+
+    float phase = std::sin(tick_phase(w, u.id, 0.12f)) * 0.2f + 0.2f;
+    glColor4f(col[0], col[1], col[2], 0.45f + phase);
+    glLineWidth(width);
+
+    if (railFollow && u.transportId != 0) {
+      const dom::sim::Train* train = nullptr;
+      for (const auto& t : w.trains) if (t.id == u.transportId) { train = &t; break; }
+      if (train && !train->route.empty()) {
+        bool foundNode = false;
+        glm::vec2 rp = rail_node_pos(w, train->currentNode, foundNode);
+        if (foundNode) {
+          glBegin(GL_LINES);
+          glVertex2f(start.x, start.y);
+          glVertex2f(rp.x, rp.y);
+          glEnd();
+          draw_arrow_head(start, rp, 0.38f);
+        } else {
+          ++gStrategicCounters.visualFallbackCount;
+        }
+      }
+    } else if (curved) {
+      glm::vec2 mid = (start + end) * 0.5f;
+      glm::vec2 perp{-delta.y, delta.x};
+      float plen = glm::length(perp);
+      if (plen > 0.0001f) perp = (perp / plen) * (std::min(4.0f, len * 0.25f));
+      mid += perp;
+      glBegin(GL_LINE_STRIP);
+      for (int i = 0; i <= 12; ++i) {
+        float t = i / 12.0f;
+        glm::vec2 p = (1.0f - t) * (1.0f - t) * start + 2.0f * (1.0f - t) * t * mid + t * t * end;
+        glVertex2f(p.x, p.y);
+      }
+      glEnd();
+      draw_arrow_head(mid, end, 0.42f);
+    } else if (dashed) {
+      glm::vec2 dir = delta / len;
+      float cursor = std::fmod(static_cast<float>((w.tick + u.id) % 20u) / 20.0f * 1.2f, 1.2f);
+      while (cursor < len) {
+        float a = cursor;
+        float b = std::min(len, cursor + 0.8f);
+        glm::vec2 p0 = start + dir * a;
+        glm::vec2 p1 = start + dir * b;
+        glBegin(GL_LINES);
+        glVertex2f(p0.x, p0.y);
+        glVertex2f(p1.x, p1.y);
+        glEnd();
+        cursor += 1.35f;
+      }
+      draw_arrow_head(start, end, 0.34f);
+    } else {
+      glBegin(GL_LINES);
+      glVertex2f(start.x, start.y);
+      glVertex2f(end.x, end.y);
+      glEnd();
+      draw_arrow_head(start, end, glyph == UnitGlyph::Armor ? 0.52f : 0.36f);
+    }
+  }
+  glLineWidth(1.0f);
+  glDisable(GL_BLEND);
+}
+
+void draw_supply_and_logistics_flows(const dom::sim::World& w, const Camera& c) {
+  if (c.zoom > 42.0f) return;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  glLineWidth(1.1f);
+  for (const auto& b : w.buildings) {
+    bool source = b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::Port;
+    if (!source) continue;
+    const dom::sim::Unit* best = nullptr;
+    float bestDist = 99999.0f;
+    for (const auto& u : w.units) {
+      if (u.team != b.team) continue;
+      float d = glm::length(u.pos - b.pos);
+      if (d < bestDist) { bestDist = d; best = &u; }
+    }
+    if (!best) { ++gStrategicCounters.visualFallbackCount; continue; }
+    ++gStrategicCounters.supplyFlowResolves;
+    ++gStrategicCounters.logisticsVisualEvents;
+    float pulse = 0.2f + (std::sin(tick_phase(w, b.id, 0.14f)) * 0.5f + 0.5f) * 0.3f;
+    glColor4f(0.86f, 0.95f, 0.52f, pulse);
+    glBegin(GL_LINES);
+    glVertex2f(b.pos.x, b.pos.y);
+    glVertex2f(best->renderPos.x, best->renderPos.y);
+    glEnd();
+
+    glm::vec2 d = best->renderPos - b.pos;
+    float len = glm::length(d);
+    if (len > 0.001f) {
+      glm::vec2 p = b.pos + d * std::fmod(static_cast<float>((w.tick + b.id) % 100u) / 100.0f, 1.0f);
+      glPointSize(2.5f);
+      glBegin(GL_POINTS);
+      glVertex2f(p.x, p.y);
+      glEnd();
+    }
+  }
+
+  for (const auto& tr : w.tradeRoutes) {
+    if (!tr.active) continue;
+    const dom::sim::City* a = nullptr;
+    const dom::sim::City* b = nullptr;
+    for (const auto& cty : w.cities) {
+      if (cty.id == tr.fromCity) a = &cty;
+      if (cty.id == tr.toCity) b = &cty;
+    }
+    if (!a || !b) { ++gStrategicCounters.visualFallbackCount; continue; }
+    ++gStrategicCounters.supplyFlowResolves;
+    glColor4f(0.52f, 0.9f, 0.95f, 0.26f);
+    glBegin(GL_LINES);
+    glVertex2f(a->pos.x, a->pos.y);
+    glVertex2f(b->pos.x, b->pos.y);
+    glEnd();
+  }
+
+  glDisable(GL_BLEND);
+}
+
+void draw_rail_traffic_visualization(const dom::sim::World& w, const Camera& c) {
+  (void)c;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  for (const auto& e : w.railEdges) {
+    if (e.disrupted) continue;
+    bool af = false;
+    glm::vec2 a = rail_node_pos(w, e.aNode, af);
+    bool bf = false;
+    glm::vec2 b = rail_node_pos(w, e.bNode, bf);
+    if (!af || !bf) { ++gStrategicCounters.visualFallbackCount; continue; }
+    float phase = std::sin(tick_phase(w, e.id, 0.09f));
+    glColor4f(0.95f, 0.88f, 0.38f, 0.12f + (phase * 0.5f + 0.5f) * 0.18f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
+    glVertex2f(a.x, a.y); glVertex2f(b.x, b.y);
+    glEnd();
+    ++gStrategicCounters.railFlowLines;
+  }
+
+  glPointSize(c.zoom > 28.0f ? 2.5f : 3.5f);
+  glBegin(GL_POINTS);
+  for (const auto& t : w.trains) {
+    if (t.state == dom::sim::TrainState::Inactive) continue;
+    bool found = false;
+    glm::vec2 p = rail_node_pos(w, t.currentNode, found);
+    if (!found) { ++gStrategicCounters.visualFallbackCount; continue; }
+    glColor4f(t.type == dom::sim::TrainType::Supply ? 0.45f : 0.95f, t.type == dom::sim::TrainType::Supply ? 0.95f : 0.78f, 0.35f, 0.95f);
+    glVertex2f(p.x, p.y);
+    ++gStrategicCounters.trainMarkers;
+    ++gStrategicCounters.railVisualEvents;
+  }
+  glEnd();
+
+  glPointSize(6.0f);
+  glBegin(GL_POINTS);
+  for (const auto& n : w.railNodes) {
+    if (n.type != dom::sim::RailNodeType::Depot && n.type != dom::sim::RailNodeType::Station) continue;
+    float pulse = 0.2f + (std::sin(tick_phase(w, n.id, 0.08f)) * 0.5f + 0.5f) * 0.25f;
+    glColor4f(1.0f, 0.92f, 0.55f, pulse);
+    glVertex2f(n.tile.x + 0.5f, n.tile.y + 0.5f);
+    ++gStrategicCounters.railVisualEvents;
+  }
+  glEnd();
+  glLineWidth(1.0f);
+  glDisable(GL_BLEND);
+}
+
+void draw_frontline_pressure_and_theater(const dom::sim::World& w, const Camera& c) {
+  (void)c;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  for (int y = 1; y < w.height - 1; y += 2) {
+    for (int x = 1; x < w.width - 1; x += 2) {
+      int i = y * w.width + x;
+      uint16_t owner = w.territoryOwner[i];
+      if (owner == UINT16_MAX || owner == 0) continue;
+      bool frontline = tile_frontline(w, x, y, owner);
+      if (!frontline) continue;
+      ++gStrategicCounters.frontlineZoneUpdates;
+      float pulse = 0.08f + (std::sin(tick_phase(w, static_cast<uint32_t>(i), 0.07f)) * 0.5f + 0.5f) * 0.12f;
+      glColor4f(1.0f, 0.24f, 0.2f, pulse);
+      glBegin(GL_QUADS);
+      glVertex2f((float)x, (float)y);
+      glVertex2f((float)x + 1.0f, (float)y);
+      glVertex2f((float)x + 1.0f, (float)y + 1.0f);
+      glVertex2f((float)x, (float)y + 1.0f);
+      glEnd();
+    }
+  }
+
+  glLineWidth(1.4f);
+  for (const auto& o : w.operationalObjectives) {
+    if (!o.active) continue;
+    ++gStrategicCounters.theaterVisualResolves;
+    glm::vec2 target{(o.targetRegion.x + o.targetRegion.z) * 0.5f, (o.targetRegion.y + o.targetRegion.w) * 0.5f};
+    glm::vec2 origin = target;
+    for (const auto& th : w.theaterCommands) {
+      if (th.theaterId != o.theaterId) continue;
+      origin = {(th.bounds.x + th.bounds.z) * 0.5f, (th.bounds.y + th.bounds.w) * 0.5f};
+      break;
+    }
+    auto tcol = diplomatic_color(w, o.owner);
+    glColor4f(tcol[0], tcol[1], tcol[2], 0.55f);
+    glBegin(GL_LINES);
+    glVertex2f(origin.x, origin.y);
+    glVertex2f(target.x, target.y);
+    glEnd();
+    draw_arrow_head(origin, target, 0.55f);
+    draw_ring(target, 0.85f, 0.07f, {std::min(1.0f, tcol[0] + 0.25f), std::min(1.0f, tcol[1] + 0.25f), std::min(1.0f, tcol[2] + 0.25f)});
+  }
+
+  for (const auto& th : w.theaterCommands) {
+    glm::vec2 p{(th.bounds.x + th.bounds.z) * 0.5f, (th.bounds.y + th.bounds.w) * 0.5f};
+    float heat = std::clamp(th.threatLevel, 0.0f, 1.0f);
+    if (heat <= 0.01f) continue;
+    ++gStrategicCounters.frontlineZoneUpdates;
+    draw_pulse_ring(p, 1.6f + heat, 0.35f, 0.12f, tick_phase(w, th.theaterId, 0.06f), {1.0f, 0.45f + (1.0f-heat)*0.2f, 0.3f});
+  }
+
+  glLineWidth(1.0f);
+  glDisable(GL_BLEND);
 }
 
 void draw_deterministic_feedback(const dom::sim::World& w, const Camera& c, const std::unordered_set<uint32_t>& dragSet) {
@@ -837,6 +1116,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
 
   reset_terrain_presentation_counters();
   gEntityCounters = {};
+  gStrategicCounters = {};
   glBegin(GL_QUADS);
   for (int y = 0; y < w.height - 1; ++y) {
     for (int x = 0; x < w.width - 1; ++x) {
@@ -894,6 +1174,12 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   if (gOverlay.showStrategicOverlays) {
     draw_strategic_region_overlays(w, c);
     if (gOverlay.showLabels) draw_strategic_labels(w, c);
+  }
+  if (gOverlay.showStrategicOverlays) {
+    draw_frontline_pressure_and_theater(w, c);
+    draw_supply_and_logistics_flows(w, c);
+    draw_rail_traffic_visualization(w, c);
+    draw_unit_movement_paths(w, c);
   }
   if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 1.0f, {0.0f, 0.0f, 0.0f}, true);
 
@@ -1410,7 +1696,10 @@ void set_visual_feedback_enabled(bool enabled) { gFeedbackState.enabled = enable
 bool visual_feedback_enabled() { return gFeedbackState.enabled; }
 void set_visual_feedback_overlay_debug(bool enabled) { gFeedbackState.overlayDebug = enabled; }
 bool visual_feedback_overlay_debug() { return gFeedbackState.overlayDebug; }
+void set_strategic_visualization_enabled(bool enabled) { gOverlay.showStrategicOverlays = enabled; }
+bool strategic_visualization_enabled() { return gOverlay.showStrategicOverlays; }
 const VisualFeedbackCounters& visual_feedback_counters() { return gFeedbackCounters; }
+const StrategicVisualizationCounters& strategic_visualization_counters() { return gStrategicCounters; }
 double last_draw_ms() { return gLastDrawMs; }
 
 void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }

@@ -31,6 +31,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Checkbox("entity presentation debug", &state.entityPresentationDebug);
   ImGui::Checkbox("deterministic visual feedback", &state.visualFeedbackEnabled);
   ImGui::Checkbox("visual feedback source overlay", &state.visualFeedbackOverlayDebug);
+  ImGui::Checkbox("strategic visualization layer", &state.strategicVisualization);
   ImGui::Text("Units: %zu | Buildings: %zu | Operations: %zu", world.units.size(), world.buildings.size(), world.operations.size());
   ImGui::Text("Theaters: %zu | Objectives: %zu | ArmyGroups: %zu | NavalTF: %zu | AirWings: %zu",
               world.theaterCommands.size(), world.operationalObjectives.size(), world.armyGroups.size(), world.navalTaskForces.size(), world.airWings.size());
@@ -57,6 +58,20 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)entityCounters.guardianPresentationResolves,
               (unsigned long long)entityCounters.entityPresentationFallbacks,
               (unsigned long long)entityCounters.farLodClusterCount);
+  ImGui::SeparatorText("Strategic Visualization");
+  const auto& strategicCounters = dom::render::strategic_visualization_counters();
+  ImGui::Text("MOVEMENT_PATH_RESOLVES=%llu SUPPLY_FLOW_RESOLVES=%llu RAIL_VISUAL_EVENTS=%llu",
+              (unsigned long long)strategicCounters.movementPathResolves,
+              (unsigned long long)strategicCounters.supplyFlowResolves,
+              (unsigned long long)strategicCounters.railVisualEvents);
+  ImGui::Text("FRONTLINE_ZONE_UPDATES=%llu THEATER_VISUAL_RESOLVES=%llu VISUAL_FALLBACK_COUNT=%llu",
+              (unsigned long long)strategicCounters.frontlineZoneUpdates,
+              (unsigned long long)strategicCounters.theaterVisualResolves,
+              (unsigned long long)strategicCounters.visualFallbackCount);
+  ImGui::Text("RAIL_FLOW_LINES=%llu TRAIN_MARKERS=%llu LOGISTICS_VISUAL_EVENTS=%llu",
+              (unsigned long long)strategicCounters.railFlowLines,
+              (unsigned long long)strategicCounters.trainMarkers,
+              (unsigned long long)strategicCounters.logisticsVisualEvents);
   const auto& feedbackCounters = dom::render::visual_feedback_counters();
   ImGui::Text("COMBAT_EFFECT_SPAWNS=%llu STRATEGIC_EFFECT_SPAWNS=%llu CRISIS_EFFECT_SPAWNS=%llu GUARDIAN_EFFECT_SPAWNS=%llu",
               (unsigned long long)feedbackCounters.combatEffectSpawns,
