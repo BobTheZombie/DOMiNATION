@@ -25,7 +25,7 @@ namespace dom::sim {
 void enqueue_mission_message(World& w, const MissionMessageDefinition& def);
 void enqueue_text_message(World& w, const std::string& text, const std::string& category, uint32_t triggerId);
 namespace {
-const char* world_event_category_name(WorldEventCategory c);
+const char* world_event_category_to_name(WorldEventCategory c);
 float dist(glm::vec2 a, glm::vec2 b) { return glm::length(a - b); }
 
 size_t dip_index(const World& w, uint16_t a, uint16_t b) {
@@ -437,7 +437,7 @@ int lua_trigger_world_event(lua_State* L) {
     e.durationTicks = std::max(1u, d.defaultDuration);
     e.severity = std::max(0.1f, d.baseSeverity);
     e.state = WorldEventState::Active;
-    e.effectPayload = world_event_category_name(e.category);
+    e.effectPayload = world_event_category_to_name(e.category);
     e.campaignTags = d.campaignTags;
     e.scriptedHook = d.scriptedHook;
     gLuaWorld->worldEvents.push_back(std::move(e));
@@ -791,7 +791,7 @@ const char* mission_status_name(MissionStatus s) {
   return "running";
 }
 
-const char* world_event_category_name(WorldEventCategory c) {
+const char* world_event_category_to_name(WorldEventCategory c) {
   switch (c) {
     case WorldEventCategory::Climate: return "climate";
     case WorldEventCategory::Health: return "health";
@@ -3882,7 +3882,7 @@ void update_world_events(World& w) {
       ev.durationTicks = std::max(1u, d.defaultDuration);
       ev.severity = std::max(0.1f, d.baseSeverity + (w.worldTension / 100.0f) * 0.35f);
       ev.state = WorldEventState::Active;
-      ev.effectPayload = world_event_category_name(ev.category);
+      ev.effectPayload = world_event_category_to_name(ev.category);
       ev.campaignTags = d.campaignTags;
       ev.scriptedHook = d.scriptedHook;
       w.worldEvents.push_back(std::move(ev));
@@ -5206,7 +5206,7 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["worldEventDefinitions"] = nlohmann::json::array();
   for (const auto& d : w.worldEventDefinitions) {
     j["worldEventDefinitions"].push_back({
-      {"event_id", d.eventId}, {"display_name", d.displayName}, {"category", world_event_category_name(d.category)},
+      {"event_id", d.eventId}, {"display_name", d.displayName}, {"category", world_event_category_to_name(d.category)},
       {"trigger", world_event_trigger_name(d.triggerType)}, {"scope", world_event_scope_name(d.scope)},
       {"target_player", d.targetPlayer}, {"target_region", d.targetRegion}, {"target_theater", d.targetTheater}, {"target_biome", d.targetBiome},
       {"min_tick", d.minTick}, {"cooldown_ticks", d.cooldownTicks}, {"duration", d.defaultDuration}, {"trigger_threshold", d.triggerThreshold},
@@ -5216,7 +5216,7 @@ bool save_scenario_file(const std::string& path, const World& w, std::string& er
   j["worldEvents"] = nlohmann::json::array();
   for (const auto& e : w.worldEvents) {
     j["worldEvents"].push_back({
-      {"event_id", e.eventId}, {"display_name", e.displayName}, {"category", world_event_category_name(e.category)},
+      {"event_id", e.eventId}, {"display_name", e.displayName}, {"category", world_event_category_to_name(e.category)},
       {"scope", world_event_scope_name(e.scope)}, {"target_player", e.targetPlayer}, {"target_region", e.targetRegion}, {"target_theater", e.targetTheater}, {"target_biome", e.targetBiome},
       {"start_tick", e.startTick}, {"duration", e.durationTicks}, {"severity", e.severity}, {"state", world_event_state_name(e.state)},
       {"effect_payload", e.effectPayload}, {"campaign_tags", e.campaignTags}, {"scripted_hook", e.scriptedHook}
