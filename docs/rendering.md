@@ -79,3 +79,11 @@ This is intentionally minimal and deterministic-authoritative state driven.
 
 ## Visual polish notes
 Terrain/minimap now uses stronger biome palettes plus river/lake and elevation cues for readability. Industrial/rail/strategic layers add lightweight overlays for rails, hubs, detector sites, denial zones, and strike warnings.
+
+## Civilization UI/icon fallback behavior
+
+UI content references are manifest-driven. Missing icon/portrait assets resolve to deterministic defaults:
+- icon fallback: `ui_icon_*_fallback` / generic event icon classes
+- portrait fallback: `ui_portrait_default`
+
+Asset lookup failures remain non-fatal and presentation-only.

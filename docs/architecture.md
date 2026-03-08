@@ -293,3 +293,15 @@ Presentation selection is deterministic and data-driven (biomes, civ themes, gua
 ## Armageddon authoritative state
 
 The world state now includes deterministic Armageddon escalation fields (`armageddonActive`, thresholds, per-player nuclear-use counters, trigger tick, and last-man-standing mode). These fields are serialized, loaded, and hashed as authoritative state.
+
+## Civilization presentation resolution
+
+Civilization presentation assets are resolved as a deterministic, presentation-only path:
+`family -> civ mapping -> theme mapping -> manifest asset ID -> deterministic fallback`.
+
+This path is intentionally separated from simulation authority. Simulation uses canonical unit/building definition IDs; presentation is derived from those IDs and civilization/theme IDs.
+
+Debug/perf counters exposed for validation:
+- `CONTENT_FALLBACK_COUNT`
+- `CIV_PRESENTATION_RESOLVES`
+- `CIV_CONTENT_RESOLUTION_FALLBACKS`

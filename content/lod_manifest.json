@@ -2,6 +2,84 @@
   "schema_version": 1,
   "lod_entries": [
     {
+      "lod_id": "missing_mesh",
+      "asset_id": "missing_mesh",
+      "mesh": "assets_final/fallback/missing_mesh.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_barracks_a_lod0",
+      "asset_id": "rome_barracks_a",
+      "mesh": "export/meshes/rome_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_barracks_a_lod1",
+      "asset_id": "rome_barracks_a",
+      "mesh": "export/meshes/rome_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_city_center_a_lod0",
+      "asset_id": "rome_city_center_a",
+      "mesh": "export/meshes/rome_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_city_center_a_lod1",
+      "asset_id": "rome_city_center_a",
+      "mesh": "export/meshes/rome_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_electronics_lab_a_lod0",
+      "asset_id": "rome_electronics_lab_a",
+      "mesh": "export/meshes/rome_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_electronics_lab_a_lod1",
+      "asset_id": "rome_electronics_lab_a",
+      "mesh": "export/meshes/rome_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_factory_hub_a_lod0",
+      "asset_id": "rome_factory_hub_a",
+      "mesh": "export/meshes/rome_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_factory_hub_a_lod1",
+      "asset_id": "rome_factory_hub_a",
+      "mesh": "export/meshes/rome_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_farm_a_lod0",
+      "asset_id": "rome_farm_a",
+      "mesh": "export/meshes/rome_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_farm_a_lod1",
+      "asset_id": "rome_farm_a",
+      "mesh": "export/meshes/rome_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_granary_a_lod0",
+      "asset_id": "rome_granary_a",
+      "mesh": "export/meshes/rome_granary_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_granary_a_lod1",
+      "asset_id": "rome_granary_a",
+      "mesh": "export/meshes/rome_granary_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
       "lod_id": "rome_house_a_lod0",
       "asset_id": "rome_house_a",
       "mesh": "export/meshes/rome_house_a.glb",
@@ -14,21 +92,3279 @@
       "screen_size": 0.5
     },
     {
-      "lod_id": "neutral_fish_node_a_lod0",
-      "asset_id": "neutral_fish_node_a",
-      "mesh": "export/meshes/neutral_fish_node_a.glb",
+      "lod_id": "rome_lumber_camp_a_lod0",
+      "asset_id": "rome_lumber_camp_a",
+      "mesh": "export/meshes/rome_lumber_camp_a.glb",
       "screen_size": 1.0
     },
     {
-      "lod_id": "missing_mesh",
-      "asset_id": "missing_mesh",
-      "mesh": "assets_final/fallback/missing_mesh.glb",
+      "lod_id": "rome_lumber_camp_a_lod1",
+      "asset_id": "rome_lumber_camp_a",
+      "mesh": "export/meshes/rome_lumber_camp_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_machine_works_a_lod0",
+      "asset_id": "rome_machine_works_a",
+      "mesh": "export/meshes/rome_machine_works_a.glb",
       "screen_size": 1.0
     },
     {
-      "lod_id": "neutral_fish_node_a_lod1",
-      "asset_id": "neutral_fish_node_a",
-      "mesh": "export/meshes/neutral_fish_node_a_lod1.glb",
+      "lod_id": "rome_machine_works_a_lod1",
+      "asset_id": "rome_machine_works_a",
+      "mesh": "export/meshes/rome_machine_works_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_market_a_lod0",
+      "asset_id": "rome_market_a",
+      "mesh": "export/meshes/rome_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_market_a_lod1",
+      "asset_id": "rome_market_a",
+      "mesh": "export/meshes/rome_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_mine_a_lod0",
+      "asset_id": "rome_mine_a",
+      "mesh": "export/meshes/rome_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_mine_a_lod1",
+      "asset_id": "rome_mine_a",
+      "mesh": "export/meshes/rome_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_missile_silo_a_lod0",
+      "asset_id": "rome_missile_silo_a",
+      "mesh": "export/meshes/rome_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_missile_silo_a_lod1",
+      "asset_id": "rome_missile_silo_a",
+      "mesh": "export/meshes/rome_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_munitions_plant_a_lod0",
+      "asset_id": "rome_munitions_plant_a",
+      "mesh": "export/meshes/rome_munitions_plant_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_munitions_plant_a_lod1",
+      "asset_id": "rome_munitions_plant_a",
+      "mesh": "export/meshes/rome_munitions_plant_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_port_a_lod0",
+      "asset_id": "rome_port_a",
+      "mesh": "export/meshes/rome_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_port_a_lod1",
+      "asset_id": "rome_port_a",
+      "mesh": "export/meshes/rome_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_radar_tower_a_lod0",
+      "asset_id": "rome_radar_tower_a",
+      "mesh": "export/meshes/rome_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_radar_tower_a_lod1",
+      "asset_id": "rome_radar_tower_a",
+      "mesh": "export/meshes/rome_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_rail_station_a_lod0",
+      "asset_id": "rome_rail_station_a",
+      "mesh": "export/meshes/rome_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_rail_station_a_lod1",
+      "asset_id": "rome_rail_station_a",
+      "mesh": "export/meshes/rome_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_refinery_a_lod0",
+      "asset_id": "rome_refinery_a",
+      "mesh": "export/meshes/rome_refinery_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_refinery_a_lod1",
+      "asset_id": "rome_refinery_a",
+      "mesh": "export/meshes/rome_refinery_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_siege_workshop_a_lod0",
+      "asset_id": "rome_siege_workshop_a",
+      "mesh": "export/meshes/rome_siege_workshop_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_siege_workshop_a_lod1",
+      "asset_id": "rome_siege_workshop_a",
+      "mesh": "export/meshes/rome_siege_workshop_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_stable_a_lod0",
+      "asset_id": "rome_stable_a",
+      "mesh": "export/meshes/rome_stable_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_stable_a_lod1",
+      "asset_id": "rome_stable_a",
+      "mesh": "export/meshes/rome_stable_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_steel_mill_a_lod0",
+      "asset_id": "rome_steel_mill_a",
+      "mesh": "export/meshes/rome_steel_mill_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_steel_mill_a_lod1",
+      "asset_id": "rome_steel_mill_a",
+      "mesh": "export/meshes/rome_steel_mill_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_tower_a_lod0",
+      "asset_id": "rome_tower_a",
+      "mesh": "export/meshes/rome_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_tower_a_lod1",
+      "asset_id": "rome_tower_a",
+      "mesh": "export/meshes/rome_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_wall_a_lod0",
+      "asset_id": "rome_wall_a",
+      "mesh": "export/meshes/rome_wall_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_wall_a_lod1",
+      "asset_id": "rome_wall_a",
+      "mesh": "export/meshes/rome_wall_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_wonder_a_lod0",
+      "asset_id": "rome_wonder_a",
+      "mesh": "export/meshes/rome_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_wonder_a_lod1",
+      "asset_id": "rome_wonder_a",
+      "mesh": "export/meshes/rome_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_barracks_a_lod0",
+      "asset_id": "china_barracks_a",
+      "mesh": "export/meshes/china_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_barracks_a_lod1",
+      "asset_id": "china_barracks_a",
+      "mesh": "export/meshes/china_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_city_center_a_lod0",
+      "asset_id": "china_city_center_a",
+      "mesh": "export/meshes/china_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_city_center_a_lod1",
+      "asset_id": "china_city_center_a",
+      "mesh": "export/meshes/china_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_electronics_lab_a_lod0",
+      "asset_id": "china_electronics_lab_a",
+      "mesh": "export/meshes/china_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_electronics_lab_a_lod1",
+      "asset_id": "china_electronics_lab_a",
+      "mesh": "export/meshes/china_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_factory_hub_a_lod0",
+      "asset_id": "china_factory_hub_a",
+      "mesh": "export/meshes/china_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_factory_hub_a_lod1",
+      "asset_id": "china_factory_hub_a",
+      "mesh": "export/meshes/china_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_farm_a_lod0",
+      "asset_id": "china_farm_a",
+      "mesh": "export/meshes/china_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_farm_a_lod1",
+      "asset_id": "china_farm_a",
+      "mesh": "export/meshes/china_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_granary_a_lod0",
+      "asset_id": "china_granary_a",
+      "mesh": "export/meshes/china_granary_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_granary_a_lod1",
+      "asset_id": "china_granary_a",
+      "mesh": "export/meshes/china_granary_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_house_a_lod0",
+      "asset_id": "china_house_a",
+      "mesh": "export/meshes/china_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_house_a_lod1",
+      "asset_id": "china_house_a",
+      "mesh": "export/meshes/china_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_lumber_camp_a_lod0",
+      "asset_id": "china_lumber_camp_a",
+      "mesh": "export/meshes/china_lumber_camp_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_lumber_camp_a_lod1",
+      "asset_id": "china_lumber_camp_a",
+      "mesh": "export/meshes/china_lumber_camp_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_machine_works_a_lod0",
+      "asset_id": "china_machine_works_a",
+      "mesh": "export/meshes/china_machine_works_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_machine_works_a_lod1",
+      "asset_id": "china_machine_works_a",
+      "mesh": "export/meshes/china_machine_works_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_market_a_lod0",
+      "asset_id": "china_market_a",
+      "mesh": "export/meshes/china_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_market_a_lod1",
+      "asset_id": "china_market_a",
+      "mesh": "export/meshes/china_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_mine_a_lod0",
+      "asset_id": "china_mine_a",
+      "mesh": "export/meshes/china_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_mine_a_lod1",
+      "asset_id": "china_mine_a",
+      "mesh": "export/meshes/china_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_missile_silo_a_lod0",
+      "asset_id": "china_missile_silo_a",
+      "mesh": "export/meshes/china_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_missile_silo_a_lod1",
+      "asset_id": "china_missile_silo_a",
+      "mesh": "export/meshes/china_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_munitions_plant_a_lod0",
+      "asset_id": "china_munitions_plant_a",
+      "mesh": "export/meshes/china_munitions_plant_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_munitions_plant_a_lod1",
+      "asset_id": "china_munitions_plant_a",
+      "mesh": "export/meshes/china_munitions_plant_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_port_a_lod0",
+      "asset_id": "china_port_a",
+      "mesh": "export/meshes/china_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_port_a_lod1",
+      "asset_id": "china_port_a",
+      "mesh": "export/meshes/china_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_radar_tower_a_lod0",
+      "asset_id": "china_radar_tower_a",
+      "mesh": "export/meshes/china_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_radar_tower_a_lod1",
+      "asset_id": "china_radar_tower_a",
+      "mesh": "export/meshes/china_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_rail_station_a_lod0",
+      "asset_id": "china_rail_station_a",
+      "mesh": "export/meshes/china_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_rail_station_a_lod1",
+      "asset_id": "china_rail_station_a",
+      "mesh": "export/meshes/china_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_refinery_a_lod0",
+      "asset_id": "china_refinery_a",
+      "mesh": "export/meshes/china_refinery_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_refinery_a_lod1",
+      "asset_id": "china_refinery_a",
+      "mesh": "export/meshes/china_refinery_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_siege_workshop_a_lod0",
+      "asset_id": "china_siege_workshop_a",
+      "mesh": "export/meshes/china_siege_workshop_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_siege_workshop_a_lod1",
+      "asset_id": "china_siege_workshop_a",
+      "mesh": "export/meshes/china_siege_workshop_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_stable_a_lod0",
+      "asset_id": "china_stable_a",
+      "mesh": "export/meshes/china_stable_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_stable_a_lod1",
+      "asset_id": "china_stable_a",
+      "mesh": "export/meshes/china_stable_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_steel_mill_a_lod0",
+      "asset_id": "china_steel_mill_a",
+      "mesh": "export/meshes/china_steel_mill_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_steel_mill_a_lod1",
+      "asset_id": "china_steel_mill_a",
+      "mesh": "export/meshes/china_steel_mill_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_tower_a_lod0",
+      "asset_id": "china_tower_a",
+      "mesh": "export/meshes/china_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_tower_a_lod1",
+      "asset_id": "china_tower_a",
+      "mesh": "export/meshes/china_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_wall_a_lod0",
+      "asset_id": "china_wall_a",
+      "mesh": "export/meshes/china_wall_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_wall_a_lod1",
+      "asset_id": "china_wall_a",
+      "mesh": "export/meshes/china_wall_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_wonder_a_lod0",
+      "asset_id": "china_wonder_a",
+      "mesh": "export/meshes/china_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_wonder_a_lod1",
+      "asset_id": "china_wonder_a",
+      "mesh": "export/meshes/china_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_barracks_a_lod0",
+      "asset_id": "europe_barracks_a",
+      "mesh": "export/meshes/europe_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_barracks_a_lod1",
+      "asset_id": "europe_barracks_a",
+      "mesh": "export/meshes/europe_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_city_center_a_lod0",
+      "asset_id": "europe_city_center_a",
+      "mesh": "export/meshes/europe_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_city_center_a_lod1",
+      "asset_id": "europe_city_center_a",
+      "mesh": "export/meshes/europe_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_electronics_lab_a_lod0",
+      "asset_id": "europe_electronics_lab_a",
+      "mesh": "export/meshes/europe_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_electronics_lab_a_lod1",
+      "asset_id": "europe_electronics_lab_a",
+      "mesh": "export/meshes/europe_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_factory_hub_a_lod0",
+      "asset_id": "europe_factory_hub_a",
+      "mesh": "export/meshes/europe_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_factory_hub_a_lod1",
+      "asset_id": "europe_factory_hub_a",
+      "mesh": "export/meshes/europe_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_farm_a_lod0",
+      "asset_id": "europe_farm_a",
+      "mesh": "export/meshes/europe_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_farm_a_lod1",
+      "asset_id": "europe_farm_a",
+      "mesh": "export/meshes/europe_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_granary_a_lod0",
+      "asset_id": "europe_granary_a",
+      "mesh": "export/meshes/europe_granary_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_granary_a_lod1",
+      "asset_id": "europe_granary_a",
+      "mesh": "export/meshes/europe_granary_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_house_a_lod0",
+      "asset_id": "europe_house_a",
+      "mesh": "export/meshes/europe_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_house_a_lod1",
+      "asset_id": "europe_house_a",
+      "mesh": "export/meshes/europe_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_lumber_camp_a_lod0",
+      "asset_id": "europe_lumber_camp_a",
+      "mesh": "export/meshes/europe_lumber_camp_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_lumber_camp_a_lod1",
+      "asset_id": "europe_lumber_camp_a",
+      "mesh": "export/meshes/europe_lumber_camp_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_machine_works_a_lod0",
+      "asset_id": "europe_machine_works_a",
+      "mesh": "export/meshes/europe_machine_works_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_machine_works_a_lod1",
+      "asset_id": "europe_machine_works_a",
+      "mesh": "export/meshes/europe_machine_works_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_market_a_lod0",
+      "asset_id": "europe_market_a",
+      "mesh": "export/meshes/europe_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_market_a_lod1",
+      "asset_id": "europe_market_a",
+      "mesh": "export/meshes/europe_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_mine_a_lod0",
+      "asset_id": "europe_mine_a",
+      "mesh": "export/meshes/europe_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_mine_a_lod1",
+      "asset_id": "europe_mine_a",
+      "mesh": "export/meshes/europe_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_missile_silo_a_lod0",
+      "asset_id": "europe_missile_silo_a",
+      "mesh": "export/meshes/europe_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_missile_silo_a_lod1",
+      "asset_id": "europe_missile_silo_a",
+      "mesh": "export/meshes/europe_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_munitions_plant_a_lod0",
+      "asset_id": "europe_munitions_plant_a",
+      "mesh": "export/meshes/europe_munitions_plant_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_munitions_plant_a_lod1",
+      "asset_id": "europe_munitions_plant_a",
+      "mesh": "export/meshes/europe_munitions_plant_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_port_a_lod0",
+      "asset_id": "europe_port_a",
+      "mesh": "export/meshes/europe_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_port_a_lod1",
+      "asset_id": "europe_port_a",
+      "mesh": "export/meshes/europe_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_radar_tower_a_lod0",
+      "asset_id": "europe_radar_tower_a",
+      "mesh": "export/meshes/europe_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_radar_tower_a_lod1",
+      "asset_id": "europe_radar_tower_a",
+      "mesh": "export/meshes/europe_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_rail_station_a_lod0",
+      "asset_id": "europe_rail_station_a",
+      "mesh": "export/meshes/europe_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_rail_station_a_lod1",
+      "asset_id": "europe_rail_station_a",
+      "mesh": "export/meshes/europe_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_refinery_a_lod0",
+      "asset_id": "europe_refinery_a",
+      "mesh": "export/meshes/europe_refinery_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_refinery_a_lod1",
+      "asset_id": "europe_refinery_a",
+      "mesh": "export/meshes/europe_refinery_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_siege_workshop_a_lod0",
+      "asset_id": "europe_siege_workshop_a",
+      "mesh": "export/meshes/europe_siege_workshop_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_siege_workshop_a_lod1",
+      "asset_id": "europe_siege_workshop_a",
+      "mesh": "export/meshes/europe_siege_workshop_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_stable_a_lod0",
+      "asset_id": "europe_stable_a",
+      "mesh": "export/meshes/europe_stable_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_stable_a_lod1",
+      "asset_id": "europe_stable_a",
+      "mesh": "export/meshes/europe_stable_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_steel_mill_a_lod0",
+      "asset_id": "europe_steel_mill_a",
+      "mesh": "export/meshes/europe_steel_mill_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_steel_mill_a_lod1",
+      "asset_id": "europe_steel_mill_a",
+      "mesh": "export/meshes/europe_steel_mill_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_tower_a_lod0",
+      "asset_id": "europe_tower_a",
+      "mesh": "export/meshes/europe_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_tower_a_lod1",
+      "asset_id": "europe_tower_a",
+      "mesh": "export/meshes/europe_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_wall_a_lod0",
+      "asset_id": "europe_wall_a",
+      "mesh": "export/meshes/europe_wall_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_wall_a_lod1",
+      "asset_id": "europe_wall_a",
+      "mesh": "export/meshes/europe_wall_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_wonder_a_lod0",
+      "asset_id": "europe_wonder_a",
+      "mesh": "export/meshes/europe_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_wonder_a_lod1",
+      "asset_id": "europe_wonder_a",
+      "mesh": "export/meshes/europe_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_barracks_a_lod0",
+      "asset_id": "middleeast_barracks_a",
+      "mesh": "export/meshes/middleeast_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_barracks_a_lod1",
+      "asset_id": "middleeast_barracks_a",
+      "mesh": "export/meshes/middleeast_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_city_center_a_lod0",
+      "asset_id": "middleeast_city_center_a",
+      "mesh": "export/meshes/middleeast_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_city_center_a_lod1",
+      "asset_id": "middleeast_city_center_a",
+      "mesh": "export/meshes/middleeast_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_electronics_lab_a_lod0",
+      "asset_id": "middleeast_electronics_lab_a",
+      "mesh": "export/meshes/middleeast_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_electronics_lab_a_lod1",
+      "asset_id": "middleeast_electronics_lab_a",
+      "mesh": "export/meshes/middleeast_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_factory_hub_a_lod0",
+      "asset_id": "middleeast_factory_hub_a",
+      "mesh": "export/meshes/middleeast_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_factory_hub_a_lod1",
+      "asset_id": "middleeast_factory_hub_a",
+      "mesh": "export/meshes/middleeast_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_farm_a_lod0",
+      "asset_id": "middleeast_farm_a",
+      "mesh": "export/meshes/middleeast_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_farm_a_lod1",
+      "asset_id": "middleeast_farm_a",
+      "mesh": "export/meshes/middleeast_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_granary_a_lod0",
+      "asset_id": "middleeast_granary_a",
+      "mesh": "export/meshes/middleeast_granary_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_granary_a_lod1",
+      "asset_id": "middleeast_granary_a",
+      "mesh": "export/meshes/middleeast_granary_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_house_a_lod0",
+      "asset_id": "middleeast_house_a",
+      "mesh": "export/meshes/middleeast_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_house_a_lod1",
+      "asset_id": "middleeast_house_a",
+      "mesh": "export/meshes/middleeast_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_lumber_camp_a_lod0",
+      "asset_id": "middleeast_lumber_camp_a",
+      "mesh": "export/meshes/middleeast_lumber_camp_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_lumber_camp_a_lod1",
+      "asset_id": "middleeast_lumber_camp_a",
+      "mesh": "export/meshes/middleeast_lumber_camp_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_machine_works_a_lod0",
+      "asset_id": "middleeast_machine_works_a",
+      "mesh": "export/meshes/middleeast_machine_works_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_machine_works_a_lod1",
+      "asset_id": "middleeast_machine_works_a",
+      "mesh": "export/meshes/middleeast_machine_works_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_market_a_lod0",
+      "asset_id": "middleeast_market_a",
+      "mesh": "export/meshes/middleeast_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_market_a_lod1",
+      "asset_id": "middleeast_market_a",
+      "mesh": "export/meshes/middleeast_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_mine_a_lod0",
+      "asset_id": "middleeast_mine_a",
+      "mesh": "export/meshes/middleeast_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_mine_a_lod1",
+      "asset_id": "middleeast_mine_a",
+      "mesh": "export/meshes/middleeast_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_missile_silo_a_lod0",
+      "asset_id": "middleeast_missile_silo_a",
+      "mesh": "export/meshes/middleeast_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_missile_silo_a_lod1",
+      "asset_id": "middleeast_missile_silo_a",
+      "mesh": "export/meshes/middleeast_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_munitions_plant_a_lod0",
+      "asset_id": "middleeast_munitions_plant_a",
+      "mesh": "export/meshes/middleeast_munitions_plant_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_munitions_plant_a_lod1",
+      "asset_id": "middleeast_munitions_plant_a",
+      "mesh": "export/meshes/middleeast_munitions_plant_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_port_a_lod0",
+      "asset_id": "middleeast_port_a",
+      "mesh": "export/meshes/middleeast_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_port_a_lod1",
+      "asset_id": "middleeast_port_a",
+      "mesh": "export/meshes/middleeast_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_radar_tower_a_lod0",
+      "asset_id": "middleeast_radar_tower_a",
+      "mesh": "export/meshes/middleeast_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_radar_tower_a_lod1",
+      "asset_id": "middleeast_radar_tower_a",
+      "mesh": "export/meshes/middleeast_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_rail_station_a_lod0",
+      "asset_id": "middleeast_rail_station_a",
+      "mesh": "export/meshes/middleeast_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_rail_station_a_lod1",
+      "asset_id": "middleeast_rail_station_a",
+      "mesh": "export/meshes/middleeast_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_refinery_a_lod0",
+      "asset_id": "middleeast_refinery_a",
+      "mesh": "export/meshes/middleeast_refinery_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_refinery_a_lod1",
+      "asset_id": "middleeast_refinery_a",
+      "mesh": "export/meshes/middleeast_refinery_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_siege_workshop_a_lod0",
+      "asset_id": "middleeast_siege_workshop_a",
+      "mesh": "export/meshes/middleeast_siege_workshop_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_siege_workshop_a_lod1",
+      "asset_id": "middleeast_siege_workshop_a",
+      "mesh": "export/meshes/middleeast_siege_workshop_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_stable_a_lod0",
+      "asset_id": "middleeast_stable_a",
+      "mesh": "export/meshes/middleeast_stable_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_stable_a_lod1",
+      "asset_id": "middleeast_stable_a",
+      "mesh": "export/meshes/middleeast_stable_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_steel_mill_a_lod0",
+      "asset_id": "middleeast_steel_mill_a",
+      "mesh": "export/meshes/middleeast_steel_mill_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_steel_mill_a_lod1",
+      "asset_id": "middleeast_steel_mill_a",
+      "mesh": "export/meshes/middleeast_steel_mill_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_tower_a_lod0",
+      "asset_id": "middleeast_tower_a",
+      "mesh": "export/meshes/middleeast_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_tower_a_lod1",
+      "asset_id": "middleeast_tower_a",
+      "mesh": "export/meshes/middleeast_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_wall_a_lod0",
+      "asset_id": "middleeast_wall_a",
+      "mesh": "export/meshes/middleeast_wall_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_wall_a_lod1",
+      "asset_id": "middleeast_wall_a",
+      "mesh": "export/meshes/middleeast_wall_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middleeast_wonder_a_lod0",
+      "asset_id": "middleeast_wonder_a",
+      "mesh": "export/meshes/middleeast_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middleeast_wonder_a_lod1",
+      "asset_id": "middleeast_wonder_a",
+      "mesh": "export/meshes/middleeast_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_airbase_a_lod0",
+      "asset_id": "russia_airbase_a",
+      "mesh": "export/meshes/russia_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_airbase_a_lod1",
+      "asset_id": "russia_airbase_a",
+      "mesh": "export/meshes/russia_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_barracks_a_lod0",
+      "asset_id": "russia_barracks_a",
+      "mesh": "export/meshes/russia_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_barracks_a_lod1",
+      "asset_id": "russia_barracks_a",
+      "mesh": "export/meshes/russia_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_city_center_a_lod0",
+      "asset_id": "russia_city_center_a",
+      "mesh": "export/meshes/russia_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_city_center_a_lod1",
+      "asset_id": "russia_city_center_a",
+      "mesh": "export/meshes/russia_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_electronics_lab_a_lod0",
+      "asset_id": "russia_electronics_lab_a",
+      "mesh": "export/meshes/russia_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_electronics_lab_a_lod1",
+      "asset_id": "russia_electronics_lab_a",
+      "mesh": "export/meshes/russia_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_factory_hub_a_lod0",
+      "asset_id": "russia_factory_hub_a",
+      "mesh": "export/meshes/russia_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_factory_hub_a_lod1",
+      "asset_id": "russia_factory_hub_a",
+      "mesh": "export/meshes/russia_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_farm_a_lod0",
+      "asset_id": "russia_farm_a",
+      "mesh": "export/meshes/russia_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_farm_a_lod1",
+      "asset_id": "russia_farm_a",
+      "mesh": "export/meshes/russia_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_house_a_lod0",
+      "asset_id": "russia_house_a",
+      "mesh": "export/meshes/russia_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_house_a_lod1",
+      "asset_id": "russia_house_a",
+      "mesh": "export/meshes/russia_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_market_a_lod0",
+      "asset_id": "russia_market_a",
+      "mesh": "export/meshes/russia_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_market_a_lod1",
+      "asset_id": "russia_market_a",
+      "mesh": "export/meshes/russia_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_mine_a_lod0",
+      "asset_id": "russia_mine_a",
+      "mesh": "export/meshes/russia_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_mine_a_lod1",
+      "asset_id": "russia_mine_a",
+      "mesh": "export/meshes/russia_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_missile_silo_a_lod0",
+      "asset_id": "russia_missile_silo_a",
+      "mesh": "export/meshes/russia_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_missile_silo_a_lod1",
+      "asset_id": "russia_missile_silo_a",
+      "mesh": "export/meshes/russia_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_port_a_lod0",
+      "asset_id": "russia_port_a",
+      "mesh": "export/meshes/russia_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_port_a_lod1",
+      "asset_id": "russia_port_a",
+      "mesh": "export/meshes/russia_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_radar_tower_a_lod0",
+      "asset_id": "russia_radar_tower_a",
+      "mesh": "export/meshes/russia_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_radar_tower_a_lod1",
+      "asset_id": "russia_radar_tower_a",
+      "mesh": "export/meshes/russia_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_rail_station_a_lod0",
+      "asset_id": "russia_rail_station_a",
+      "mesh": "export/meshes/russia_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_rail_station_a_lod1",
+      "asset_id": "russia_rail_station_a",
+      "mesh": "export/meshes/russia_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_tower_a_lod0",
+      "asset_id": "russia_tower_a",
+      "mesh": "export/meshes/russia_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_tower_a_lod1",
+      "asset_id": "russia_tower_a",
+      "mesh": "export/meshes/russia_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_wonder_a_lod0",
+      "asset_id": "russia_wonder_a",
+      "mesh": "export/meshes/russia_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_wonder_a_lod1",
+      "asset_id": "russia_wonder_a",
+      "mesh": "export/meshes/russia_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_airbase_a_lod0",
+      "asset_id": "usa_airbase_a",
+      "mesh": "export/meshes/usa_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_airbase_a_lod1",
+      "asset_id": "usa_airbase_a",
+      "mesh": "export/meshes/usa_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_barracks_a_lod0",
+      "asset_id": "usa_barracks_a",
+      "mesh": "export/meshes/usa_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_barracks_a_lod1",
+      "asset_id": "usa_barracks_a",
+      "mesh": "export/meshes/usa_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_city_center_a_lod0",
+      "asset_id": "usa_city_center_a",
+      "mesh": "export/meshes/usa_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_city_center_a_lod1",
+      "asset_id": "usa_city_center_a",
+      "mesh": "export/meshes/usa_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_electronics_lab_a_lod0",
+      "asset_id": "usa_electronics_lab_a",
+      "mesh": "export/meshes/usa_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_electronics_lab_a_lod1",
+      "asset_id": "usa_electronics_lab_a",
+      "mesh": "export/meshes/usa_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_factory_hub_a_lod0",
+      "asset_id": "usa_factory_hub_a",
+      "mesh": "export/meshes/usa_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_factory_hub_a_lod1",
+      "asset_id": "usa_factory_hub_a",
+      "mesh": "export/meshes/usa_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_farm_a_lod0",
+      "asset_id": "usa_farm_a",
+      "mesh": "export/meshes/usa_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_farm_a_lod1",
+      "asset_id": "usa_farm_a",
+      "mesh": "export/meshes/usa_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_house_a_lod0",
+      "asset_id": "usa_house_a",
+      "mesh": "export/meshes/usa_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_house_a_lod1",
+      "asset_id": "usa_house_a",
+      "mesh": "export/meshes/usa_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_market_a_lod0",
+      "asset_id": "usa_market_a",
+      "mesh": "export/meshes/usa_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_market_a_lod1",
+      "asset_id": "usa_market_a",
+      "mesh": "export/meshes/usa_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_mine_a_lod0",
+      "asset_id": "usa_mine_a",
+      "mesh": "export/meshes/usa_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_mine_a_lod1",
+      "asset_id": "usa_mine_a",
+      "mesh": "export/meshes/usa_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_missile_silo_a_lod0",
+      "asset_id": "usa_missile_silo_a",
+      "mesh": "export/meshes/usa_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_missile_silo_a_lod1",
+      "asset_id": "usa_missile_silo_a",
+      "mesh": "export/meshes/usa_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_port_a_lod0",
+      "asset_id": "usa_port_a",
+      "mesh": "export/meshes/usa_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_port_a_lod1",
+      "asset_id": "usa_port_a",
+      "mesh": "export/meshes/usa_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_radar_tower_a_lod0",
+      "asset_id": "usa_radar_tower_a",
+      "mesh": "export/meshes/usa_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_radar_tower_a_lod1",
+      "asset_id": "usa_radar_tower_a",
+      "mesh": "export/meshes/usa_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_rail_station_a_lod0",
+      "asset_id": "usa_rail_station_a",
+      "mesh": "export/meshes/usa_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_rail_station_a_lod1",
+      "asset_id": "usa_rail_station_a",
+      "mesh": "export/meshes/usa_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_tower_a_lod0",
+      "asset_id": "usa_tower_a",
+      "mesh": "export/meshes/usa_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_tower_a_lod1",
+      "asset_id": "usa_tower_a",
+      "mesh": "export/meshes/usa_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_wonder_a_lod0",
+      "asset_id": "usa_wonder_a",
+      "mesh": "export/meshes/usa_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_wonder_a_lod1",
+      "asset_id": "usa_wonder_a",
+      "mesh": "export/meshes/usa_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_airbase_a_lod0",
+      "asset_id": "japan_airbase_a",
+      "mesh": "export/meshes/japan_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_airbase_a_lod1",
+      "asset_id": "japan_airbase_a",
+      "mesh": "export/meshes/japan_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_barracks_a_lod0",
+      "asset_id": "japan_barracks_a",
+      "mesh": "export/meshes/japan_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_barracks_a_lod1",
+      "asset_id": "japan_barracks_a",
+      "mesh": "export/meshes/japan_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_city_center_a_lod0",
+      "asset_id": "japan_city_center_a",
+      "mesh": "export/meshes/japan_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_city_center_a_lod1",
+      "asset_id": "japan_city_center_a",
+      "mesh": "export/meshes/japan_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_electronics_lab_a_lod0",
+      "asset_id": "japan_electronics_lab_a",
+      "mesh": "export/meshes/japan_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_electronics_lab_a_lod1",
+      "asset_id": "japan_electronics_lab_a",
+      "mesh": "export/meshes/japan_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_factory_hub_a_lod0",
+      "asset_id": "japan_factory_hub_a",
+      "mesh": "export/meshes/japan_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_factory_hub_a_lod1",
+      "asset_id": "japan_factory_hub_a",
+      "mesh": "export/meshes/japan_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_farm_a_lod0",
+      "asset_id": "japan_farm_a",
+      "mesh": "export/meshes/japan_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_farm_a_lod1",
+      "asset_id": "japan_farm_a",
+      "mesh": "export/meshes/japan_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_house_a_lod0",
+      "asset_id": "japan_house_a",
+      "mesh": "export/meshes/japan_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_house_a_lod1",
+      "asset_id": "japan_house_a",
+      "mesh": "export/meshes/japan_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_market_a_lod0",
+      "asset_id": "japan_market_a",
+      "mesh": "export/meshes/japan_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_market_a_lod1",
+      "asset_id": "japan_market_a",
+      "mesh": "export/meshes/japan_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_mine_a_lod0",
+      "asset_id": "japan_mine_a",
+      "mesh": "export/meshes/japan_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_mine_a_lod1",
+      "asset_id": "japan_mine_a",
+      "mesh": "export/meshes/japan_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_missile_silo_a_lod0",
+      "asset_id": "japan_missile_silo_a",
+      "mesh": "export/meshes/japan_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_missile_silo_a_lod1",
+      "asset_id": "japan_missile_silo_a",
+      "mesh": "export/meshes/japan_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_port_a_lod0",
+      "asset_id": "japan_port_a",
+      "mesh": "export/meshes/japan_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_port_a_lod1",
+      "asset_id": "japan_port_a",
+      "mesh": "export/meshes/japan_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_radar_tower_a_lod0",
+      "asset_id": "japan_radar_tower_a",
+      "mesh": "export/meshes/japan_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_radar_tower_a_lod1",
+      "asset_id": "japan_radar_tower_a",
+      "mesh": "export/meshes/japan_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_rail_station_a_lod0",
+      "asset_id": "japan_rail_station_a",
+      "mesh": "export/meshes/japan_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_rail_station_a_lod1",
+      "asset_id": "japan_rail_station_a",
+      "mesh": "export/meshes/japan_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_tower_a_lod0",
+      "asset_id": "japan_tower_a",
+      "mesh": "export/meshes/japan_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_tower_a_lod1",
+      "asset_id": "japan_tower_a",
+      "mesh": "export/meshes/japan_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_wonder_a_lod0",
+      "asset_id": "japan_wonder_a",
+      "mesh": "export/meshes/japan_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_wonder_a_lod1",
+      "asset_id": "japan_wonder_a",
+      "mesh": "export/meshes/japan_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_airbase_a_lod0",
+      "asset_id": "eu_airbase_a",
+      "mesh": "export/meshes/eu_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_airbase_a_lod1",
+      "asset_id": "eu_airbase_a",
+      "mesh": "export/meshes/eu_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_barracks_a_lod0",
+      "asset_id": "eu_barracks_a",
+      "mesh": "export/meshes/eu_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_barracks_a_lod1",
+      "asset_id": "eu_barracks_a",
+      "mesh": "export/meshes/eu_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_city_center_a_lod0",
+      "asset_id": "eu_city_center_a",
+      "mesh": "export/meshes/eu_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_city_center_a_lod1",
+      "asset_id": "eu_city_center_a",
+      "mesh": "export/meshes/eu_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_electronics_lab_a_lod0",
+      "asset_id": "eu_electronics_lab_a",
+      "mesh": "export/meshes/eu_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_electronics_lab_a_lod1",
+      "asset_id": "eu_electronics_lab_a",
+      "mesh": "export/meshes/eu_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_factory_hub_a_lod0",
+      "asset_id": "eu_factory_hub_a",
+      "mesh": "export/meshes/eu_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_factory_hub_a_lod1",
+      "asset_id": "eu_factory_hub_a",
+      "mesh": "export/meshes/eu_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_farm_a_lod0",
+      "asset_id": "eu_farm_a",
+      "mesh": "export/meshes/eu_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_farm_a_lod1",
+      "asset_id": "eu_farm_a",
+      "mesh": "export/meshes/eu_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_house_a_lod0",
+      "asset_id": "eu_house_a",
+      "mesh": "export/meshes/eu_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_house_a_lod1",
+      "asset_id": "eu_house_a",
+      "mesh": "export/meshes/eu_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_market_a_lod0",
+      "asset_id": "eu_market_a",
+      "mesh": "export/meshes/eu_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_market_a_lod1",
+      "asset_id": "eu_market_a",
+      "mesh": "export/meshes/eu_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_mine_a_lod0",
+      "asset_id": "eu_mine_a",
+      "mesh": "export/meshes/eu_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_mine_a_lod1",
+      "asset_id": "eu_mine_a",
+      "mesh": "export/meshes/eu_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_missile_silo_a_lod0",
+      "asset_id": "eu_missile_silo_a",
+      "mesh": "export/meshes/eu_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_missile_silo_a_lod1",
+      "asset_id": "eu_missile_silo_a",
+      "mesh": "export/meshes/eu_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_port_a_lod0",
+      "asset_id": "eu_port_a",
+      "mesh": "export/meshes/eu_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_port_a_lod1",
+      "asset_id": "eu_port_a",
+      "mesh": "export/meshes/eu_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_radar_tower_a_lod0",
+      "asset_id": "eu_radar_tower_a",
+      "mesh": "export/meshes/eu_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_radar_tower_a_lod1",
+      "asset_id": "eu_radar_tower_a",
+      "mesh": "export/meshes/eu_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_rail_station_a_lod0",
+      "asset_id": "eu_rail_station_a",
+      "mesh": "export/meshes/eu_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_rail_station_a_lod1",
+      "asset_id": "eu_rail_station_a",
+      "mesh": "export/meshes/eu_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_tower_a_lod0",
+      "asset_id": "eu_tower_a",
+      "mesh": "export/meshes/eu_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_tower_a_lod1",
+      "asset_id": "eu_tower_a",
+      "mesh": "export/meshes/eu_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_wonder_a_lod0",
+      "asset_id": "eu_wonder_a",
+      "mesh": "export/meshes/eu_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_wonder_a_lod1",
+      "asset_id": "eu_wonder_a",
+      "mesh": "export/meshes/eu_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_airbase_a_lod0",
+      "asset_id": "uk_airbase_a",
+      "mesh": "export/meshes/uk_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_airbase_a_lod1",
+      "asset_id": "uk_airbase_a",
+      "mesh": "export/meshes/uk_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_barracks_a_lod0",
+      "asset_id": "uk_barracks_a",
+      "mesh": "export/meshes/uk_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_barracks_a_lod1",
+      "asset_id": "uk_barracks_a",
+      "mesh": "export/meshes/uk_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_city_center_a_lod0",
+      "asset_id": "uk_city_center_a",
+      "mesh": "export/meshes/uk_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_city_center_a_lod1",
+      "asset_id": "uk_city_center_a",
+      "mesh": "export/meshes/uk_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_electronics_lab_a_lod0",
+      "asset_id": "uk_electronics_lab_a",
+      "mesh": "export/meshes/uk_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_electronics_lab_a_lod1",
+      "asset_id": "uk_electronics_lab_a",
+      "mesh": "export/meshes/uk_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_factory_hub_a_lod0",
+      "asset_id": "uk_factory_hub_a",
+      "mesh": "export/meshes/uk_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_factory_hub_a_lod1",
+      "asset_id": "uk_factory_hub_a",
+      "mesh": "export/meshes/uk_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_farm_a_lod0",
+      "asset_id": "uk_farm_a",
+      "mesh": "export/meshes/uk_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_farm_a_lod1",
+      "asset_id": "uk_farm_a",
+      "mesh": "export/meshes/uk_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_house_a_lod0",
+      "asset_id": "uk_house_a",
+      "mesh": "export/meshes/uk_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_house_a_lod1",
+      "asset_id": "uk_house_a",
+      "mesh": "export/meshes/uk_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_market_a_lod0",
+      "asset_id": "uk_market_a",
+      "mesh": "export/meshes/uk_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_market_a_lod1",
+      "asset_id": "uk_market_a",
+      "mesh": "export/meshes/uk_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_mine_a_lod0",
+      "asset_id": "uk_mine_a",
+      "mesh": "export/meshes/uk_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_mine_a_lod1",
+      "asset_id": "uk_mine_a",
+      "mesh": "export/meshes/uk_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_missile_silo_a_lod0",
+      "asset_id": "uk_missile_silo_a",
+      "mesh": "export/meshes/uk_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_missile_silo_a_lod1",
+      "asset_id": "uk_missile_silo_a",
+      "mesh": "export/meshes/uk_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_port_a_lod0",
+      "asset_id": "uk_port_a",
+      "mesh": "export/meshes/uk_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_port_a_lod1",
+      "asset_id": "uk_port_a",
+      "mesh": "export/meshes/uk_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_radar_tower_a_lod0",
+      "asset_id": "uk_radar_tower_a",
+      "mesh": "export/meshes/uk_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_radar_tower_a_lod1",
+      "asset_id": "uk_radar_tower_a",
+      "mesh": "export/meshes/uk_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_rail_station_a_lod0",
+      "asset_id": "uk_rail_station_a",
+      "mesh": "export/meshes/uk_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_rail_station_a_lod1",
+      "asset_id": "uk_rail_station_a",
+      "mesh": "export/meshes/uk_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_tower_a_lod0",
+      "asset_id": "uk_tower_a",
+      "mesh": "export/meshes/uk_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_tower_a_lod1",
+      "asset_id": "uk_tower_a",
+      "mesh": "export/meshes/uk_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_wonder_a_lod0",
+      "asset_id": "uk_wonder_a",
+      "mesh": "export/meshes/uk_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_wonder_a_lod1",
+      "asset_id": "uk_wonder_a",
+      "mesh": "export/meshes/uk_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_airbase_a_lod0",
+      "asset_id": "egypt_airbase_a",
+      "mesh": "export/meshes/egypt_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_airbase_a_lod1",
+      "asset_id": "egypt_airbase_a",
+      "mesh": "export/meshes/egypt_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_barracks_a_lod0",
+      "asset_id": "egypt_barracks_a",
+      "mesh": "export/meshes/egypt_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_barracks_a_lod1",
+      "asset_id": "egypt_barracks_a",
+      "mesh": "export/meshes/egypt_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_city_center_a_lod0",
+      "asset_id": "egypt_city_center_a",
+      "mesh": "export/meshes/egypt_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_city_center_a_lod1",
+      "asset_id": "egypt_city_center_a",
+      "mesh": "export/meshes/egypt_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_electronics_lab_a_lod0",
+      "asset_id": "egypt_electronics_lab_a",
+      "mesh": "export/meshes/egypt_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_electronics_lab_a_lod1",
+      "asset_id": "egypt_electronics_lab_a",
+      "mesh": "export/meshes/egypt_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_factory_hub_a_lod0",
+      "asset_id": "egypt_factory_hub_a",
+      "mesh": "export/meshes/egypt_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_factory_hub_a_lod1",
+      "asset_id": "egypt_factory_hub_a",
+      "mesh": "export/meshes/egypt_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_farm_a_lod0",
+      "asset_id": "egypt_farm_a",
+      "mesh": "export/meshes/egypt_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_farm_a_lod1",
+      "asset_id": "egypt_farm_a",
+      "mesh": "export/meshes/egypt_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_house_a_lod0",
+      "asset_id": "egypt_house_a",
+      "mesh": "export/meshes/egypt_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_house_a_lod1",
+      "asset_id": "egypt_house_a",
+      "mesh": "export/meshes/egypt_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_market_a_lod0",
+      "asset_id": "egypt_market_a",
+      "mesh": "export/meshes/egypt_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_market_a_lod1",
+      "asset_id": "egypt_market_a",
+      "mesh": "export/meshes/egypt_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_mine_a_lod0",
+      "asset_id": "egypt_mine_a",
+      "mesh": "export/meshes/egypt_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_mine_a_lod1",
+      "asset_id": "egypt_mine_a",
+      "mesh": "export/meshes/egypt_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_missile_silo_a_lod0",
+      "asset_id": "egypt_missile_silo_a",
+      "mesh": "export/meshes/egypt_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_missile_silo_a_lod1",
+      "asset_id": "egypt_missile_silo_a",
+      "mesh": "export/meshes/egypt_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_port_a_lod0",
+      "asset_id": "egypt_port_a",
+      "mesh": "export/meshes/egypt_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_port_a_lod1",
+      "asset_id": "egypt_port_a",
+      "mesh": "export/meshes/egypt_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_radar_tower_a_lod0",
+      "asset_id": "egypt_radar_tower_a",
+      "mesh": "export/meshes/egypt_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_radar_tower_a_lod1",
+      "asset_id": "egypt_radar_tower_a",
+      "mesh": "export/meshes/egypt_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_rail_station_a_lod0",
+      "asset_id": "egypt_rail_station_a",
+      "mesh": "export/meshes/egypt_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_rail_station_a_lod1",
+      "asset_id": "egypt_rail_station_a",
+      "mesh": "export/meshes/egypt_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_tower_a_lod0",
+      "asset_id": "egypt_tower_a",
+      "mesh": "export/meshes/egypt_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_tower_a_lod1",
+      "asset_id": "egypt_tower_a",
+      "mesh": "export/meshes/egypt_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_wonder_a_lod0",
+      "asset_id": "egypt_wonder_a",
+      "mesh": "export/meshes/egypt_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_wonder_a_lod1",
+      "asset_id": "egypt_wonder_a",
+      "mesh": "export/meshes/egypt_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_airbase_a_lod0",
+      "asset_id": "tartaria_airbase_a",
+      "mesh": "export/meshes/tartaria_airbase_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_airbase_a_lod1",
+      "asset_id": "tartaria_airbase_a",
+      "mesh": "export/meshes/tartaria_airbase_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_barracks_a_lod0",
+      "asset_id": "tartaria_barracks_a",
+      "mesh": "export/meshes/tartaria_barracks_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_barracks_a_lod1",
+      "asset_id": "tartaria_barracks_a",
+      "mesh": "export/meshes/tartaria_barracks_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_city_center_a_lod0",
+      "asset_id": "tartaria_city_center_a",
+      "mesh": "export/meshes/tartaria_city_center_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_city_center_a_lod1",
+      "asset_id": "tartaria_city_center_a",
+      "mesh": "export/meshes/tartaria_city_center_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_electronics_lab_a_lod0",
+      "asset_id": "tartaria_electronics_lab_a",
+      "mesh": "export/meshes/tartaria_electronics_lab_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_electronics_lab_a_lod1",
+      "asset_id": "tartaria_electronics_lab_a",
+      "mesh": "export/meshes/tartaria_electronics_lab_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_factory_hub_a_lod0",
+      "asset_id": "tartaria_factory_hub_a",
+      "mesh": "export/meshes/tartaria_factory_hub_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_factory_hub_a_lod1",
+      "asset_id": "tartaria_factory_hub_a",
+      "mesh": "export/meshes/tartaria_factory_hub_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_farm_a_lod0",
+      "asset_id": "tartaria_farm_a",
+      "mesh": "export/meshes/tartaria_farm_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_farm_a_lod1",
+      "asset_id": "tartaria_farm_a",
+      "mesh": "export/meshes/tartaria_farm_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_house_a_lod0",
+      "asset_id": "tartaria_house_a",
+      "mesh": "export/meshes/tartaria_house_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_house_a_lod1",
+      "asset_id": "tartaria_house_a",
+      "mesh": "export/meshes/tartaria_house_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_market_a_lod0",
+      "asset_id": "tartaria_market_a",
+      "mesh": "export/meshes/tartaria_market_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_market_a_lod1",
+      "asset_id": "tartaria_market_a",
+      "mesh": "export/meshes/tartaria_market_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_mine_a_lod0",
+      "asset_id": "tartaria_mine_a",
+      "mesh": "export/meshes/tartaria_mine_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_mine_a_lod1",
+      "asset_id": "tartaria_mine_a",
+      "mesh": "export/meshes/tartaria_mine_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_missile_silo_a_lod0",
+      "asset_id": "tartaria_missile_silo_a",
+      "mesh": "export/meshes/tartaria_missile_silo_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_missile_silo_a_lod1",
+      "asset_id": "tartaria_missile_silo_a",
+      "mesh": "export/meshes/tartaria_missile_silo_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_port_a_lod0",
+      "asset_id": "tartaria_port_a",
+      "mesh": "export/meshes/tartaria_port_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_port_a_lod1",
+      "asset_id": "tartaria_port_a",
+      "mesh": "export/meshes/tartaria_port_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_radar_tower_a_lod0",
+      "asset_id": "tartaria_radar_tower_a",
+      "mesh": "export/meshes/tartaria_radar_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_radar_tower_a_lod1",
+      "asset_id": "tartaria_radar_tower_a",
+      "mesh": "export/meshes/tartaria_radar_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_rail_station_a_lod0",
+      "asset_id": "tartaria_rail_station_a",
+      "mesh": "export/meshes/tartaria_rail_station_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_rail_station_a_lod1",
+      "asset_id": "tartaria_rail_station_a",
+      "mesh": "export/meshes/tartaria_rail_station_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_tower_a_lod0",
+      "asset_id": "tartaria_tower_a",
+      "mesh": "export/meshes/tartaria_tower_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_tower_a_lod1",
+      "asset_id": "tartaria_tower_a",
+      "mesh": "export/meshes/tartaria_tower_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_wonder_a_lod0",
+      "asset_id": "tartaria_wonder_a",
+      "mesh": "export/meshes/tartaria_wonder_a.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_wonder_a_lod1",
+      "asset_id": "tartaria_wonder_a",
+      "mesh": "export/meshes/tartaria_wonder_a_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Archer_lod0",
+      "asset_id": "Archer",
+      "mesh": "export/meshes/Archer.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Archer_lod1",
+      "asset_id": "Archer",
+      "mesh": "export/meshes/Archer_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "BombardShip_lod0",
+      "asset_id": "BombardShip",
+      "mesh": "export/meshes/BombardShip.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "BombardShip_lod1",
+      "asset_id": "BombardShip",
+      "mesh": "export/meshes/BombardShip_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Bomber_lod0",
+      "asset_id": "Bomber",
+      "mesh": "export/meshes/Bomber.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Bomber_lod1",
+      "asset_id": "Bomber",
+      "mesh": "export/meshes/Bomber_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Cavalry_lod0",
+      "asset_id": "Cavalry",
+      "mesh": "export/meshes/Cavalry.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Cavalry_lod1",
+      "asset_id": "Cavalry",
+      "mesh": "export/meshes/Cavalry_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Fighter_lod0",
+      "asset_id": "Fighter",
+      "mesh": "export/meshes/Fighter.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Fighter_lod1",
+      "asset_id": "Fighter",
+      "mesh": "export/meshes/Fighter_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "HeavyWarship_lod0",
+      "asset_id": "HeavyWarship",
+      "mesh": "export/meshes/HeavyWarship.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "HeavyWarship_lod1",
+      "asset_id": "HeavyWarship",
+      "mesh": "export/meshes/HeavyWarship_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Infantry_lod0",
+      "asset_id": "Infantry",
+      "mesh": "export/meshes/Infantry.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Infantry_lod1",
+      "asset_id": "Infantry",
+      "mesh": "export/meshes/Infantry_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Interceptor_lod0",
+      "asset_id": "Interceptor",
+      "mesh": "export/meshes/Interceptor.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Interceptor_lod1",
+      "asset_id": "Interceptor",
+      "mesh": "export/meshes/Interceptor_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "LightWarship_lod0",
+      "asset_id": "LightWarship",
+      "mesh": "export/meshes/LightWarship.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "LightWarship_lod1",
+      "asset_id": "LightWarship",
+      "mesh": "export/meshes/LightWarship_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "ReconDrone_lod0",
+      "asset_id": "ReconDrone",
+      "mesh": "export/meshes/ReconDrone.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "ReconDrone_lod1",
+      "asset_id": "ReconDrone",
+      "mesh": "export/meshes/ReconDrone_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Siege_lod0",
+      "asset_id": "Siege",
+      "mesh": "export/meshes/Siege.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Siege_lod1",
+      "asset_id": "Siege",
+      "mesh": "export/meshes/Siege_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "StrategicBomber_lod0",
+      "asset_id": "StrategicBomber",
+      "mesh": "export/meshes/StrategicBomber.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "StrategicBomber_lod1",
+      "asset_id": "StrategicBomber",
+      "mesh": "export/meshes/StrategicBomber_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "StrategicMissile_lod0",
+      "asset_id": "StrategicMissile",
+      "mesh": "export/meshes/StrategicMissile.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "StrategicMissile_lod1",
+      "asset_id": "StrategicMissile",
+      "mesh": "export/meshes/StrategicMissile_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "StrikeDrone_lod0",
+      "asset_id": "StrikeDrone",
+      "mesh": "export/meshes/StrikeDrone.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "StrikeDrone_lod1",
+      "asset_id": "StrikeDrone",
+      "mesh": "export/meshes/StrikeDrone_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "TacticalMissile_lod0",
+      "asset_id": "TacticalMissile",
+      "mesh": "export/meshes/TacticalMissile.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "TacticalMissile_lod1",
+      "asset_id": "TacticalMissile",
+      "mesh": "export/meshes/TacticalMissile_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "TransportShip_lod0",
+      "asset_id": "TransportShip",
+      "mesh": "export/meshes/TransportShip.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "TransportShip_lod1",
+      "asset_id": "TransportShip",
+      "mesh": "export/meshes/TransportShip_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Worker_lod0",
+      "asset_id": "Worker",
+      "mesh": "export/meshes/Worker.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Worker_lod1",
+      "asset_id": "Worker",
+      "mesh": "export/meshes/Worker_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_fire_lancer_lod0",
+      "asset_id": "china_fire_lancer",
+      "mesh": "export/meshes/china_fire_lancer.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_fire_lancer_lod1",
+      "asset_id": "china_fire_lancer",
+      "mesh": "export/meshes/china_fire_lancer_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_imperial_guard_lod0",
+      "asset_id": "china_imperial_guard",
+      "mesh": "export/meshes/china_imperial_guard.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_imperial_guard_lod1",
+      "asset_id": "china_imperial_guard",
+      "mesh": "export/meshes/china_imperial_guard_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_scholar_engineer_lod0",
+      "asset_id": "china_scholar_engineer",
+      "mesh": "export/meshes/china_scholar_engineer.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_scholar_engineer_lod1",
+      "asset_id": "china_scholar_engineer",
+      "mesh": "export/meshes/china_scholar_engineer_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_desert_guard_lod0",
+      "asset_id": "egypt_desert_guard",
+      "mesh": "export/meshes/egypt_desert_guard.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_desert_guard_lod1",
+      "asset_id": "egypt_desert_guard",
+      "mesh": "export/meshes/egypt_desert_guard_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_nile_engineer_corps_lod0",
+      "asset_id": "egypt_nile_engineer_corps",
+      "mesh": "export/meshes/egypt_nile_engineer_corps.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_nile_engineer_corps_lod1",
+      "asset_id": "egypt_nile_engineer_corps",
+      "mesh": "export/meshes/egypt_nile_engineer_corps_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_advanced_air_defense_wing_lod0",
+      "asset_id": "eu_advanced_air_defense_wing",
+      "mesh": "export/meshes/eu_advanced_air_defense_wing.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_advanced_air_defense_wing_lod1",
+      "asset_id": "eu_advanced_air_defense_wing",
+      "mesh": "export/meshes/eu_advanced_air_defense_wing_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_rapid_reaction_brigade_lod0",
+      "asset_id": "eu_rapid_reaction_brigade",
+      "mesh": "export/meshes/eu_rapid_reaction_brigade.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_rapid_reaction_brigade_lod1",
+      "asset_id": "eu_rapid_reaction_brigade",
+      "mesh": "export/meshes/eu_rapid_reaction_brigade_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_field_howitzer_lod0",
+      "asset_id": "europe_field_howitzer",
+      "mesh": "export/meshes/europe_field_howitzer.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_field_howitzer_lod1",
+      "asset_id": "europe_field_howitzer",
+      "mesh": "export/meshes/europe_field_howitzer_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_industrial_engineer_lod0",
+      "asset_id": "europe_industrial_engineer",
+      "mesh": "export/meshes/europe_industrial_engineer.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_industrial_engineer_lod1",
+      "asset_id": "europe_industrial_engineer",
+      "mesh": "export/meshes/europe_industrial_engineer_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_musketeer_lod0",
+      "asset_id": "europe_musketeer",
+      "mesh": "export/meshes/europe_musketeer.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_musketeer_lod1",
+      "asset_id": "europe_musketeer",
+      "mesh": "export/meshes/europe_musketeer_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_elite_destroyer_group_lod0",
+      "asset_id": "japan_elite_destroyer_group",
+      "mesh": "export/meshes/japan_elite_destroyer_group.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_elite_destroyer_group_lod1",
+      "asset_id": "japan_elite_destroyer_group",
+      "mesh": "export/meshes/japan_elite_destroyer_group_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_imperial_marine_lod0",
+      "asset_id": "japan_imperial_marine",
+      "mesh": "export/meshes/japan_imperial_marine.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_imperial_marine_lod1",
+      "asset_id": "japan_imperial_marine",
+      "mesh": "export/meshes/japan_imperial_marine_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middle_east_camel_raider_lod0",
+      "asset_id": "middle_east_camel_raider",
+      "mesh": "export/meshes/middle_east_camel_raider.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middle_east_camel_raider_lod1",
+      "asset_id": "middle_east_camel_raider",
+      "mesh": "export/meshes/middle_east_camel_raider_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middle_east_caravan_master_lod0",
+      "asset_id": "middle_east_caravan_master",
+      "mesh": "export/meshes/middle_east_caravan_master.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middle_east_caravan_master_lod1",
+      "asset_id": "middle_east_caravan_master",
+      "mesh": "export/meshes/middle_east_caravan_master_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middle_east_mamluk_guard_lod0",
+      "asset_id": "middle_east_mamluk_guard",
+      "mesh": "export/meshes/middle_east_mamluk_guard.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middle_east_mamluk_guard_lod1",
+      "asset_id": "middle_east_mamluk_guard",
+      "mesh": "export/meshes/middle_east_mamluk_guard_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_legionary_lod0",
+      "asset_id": "rome_legionary",
+      "mesh": "export/meshes/rome_legionary.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_legionary_lod1",
+      "asset_id": "rome_legionary",
+      "mesh": "export/meshes/rome_legionary_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_logistics_cohort_lod0",
+      "asset_id": "rome_logistics_cohort",
+      "mesh": "export/meshes/rome_logistics_cohort.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_logistics_cohort_lod1",
+      "asset_id": "rome_logistics_cohort",
+      "mesh": "export/meshes/rome_logistics_cohort_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_praetorian_guard_lod0",
+      "asset_id": "rome_praetorian_guard",
+      "mesh": "export/meshes/rome_praetorian_guard.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_praetorian_guard_lod1",
+      "asset_id": "rome_praetorian_guard",
+      "mesh": "export/meshes/rome_praetorian_guard_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_guard_infantry_lod0",
+      "asset_id": "russia_guard_infantry",
+      "mesh": "export/meshes/russia_guard_infantry.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_guard_infantry_lod1",
+      "asset_id": "russia_guard_infantry",
+      "mesh": "export/meshes/russia_guard_infantry_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_heavy_rocket_artillery_lod0",
+      "asset_id": "russia_heavy_rocket_artillery",
+      "mesh": "export/meshes/russia_heavy_rocket_artillery.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_heavy_rocket_artillery_lod1",
+      "asset_id": "russia_heavy_rocket_artillery",
+      "mesh": "export/meshes/russia_heavy_rocket_artillery_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_lost_tech_artillery_lod0",
+      "asset_id": "tartaria_lost_tech_artillery",
+      "mesh": "export/meshes/tartaria_lost_tech_artillery.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_lost_tech_artillery_lod1",
+      "asset_id": "tartaria_lost_tech_artillery",
+      "mesh": "export/meshes/tartaria_lost_tech_artillery_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_sentinel_lod0",
+      "asset_id": "tartaria_sentinel",
+      "mesh": "export/meshes/tartaria_sentinel.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_sentinel_lod1",
+      "asset_id": "tartaria_sentinel",
+      "mesh": "export/meshes/tartaria_sentinel_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_royal_marine_lod0",
+      "asset_id": "uk_royal_marine",
+      "mesh": "export/meshes/uk_royal_marine.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_royal_marine_lod1",
+      "asset_id": "uk_royal_marine",
+      "mesh": "export/meshes/uk_royal_marine_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_strategic_radar_fighter_wing_lod0",
+      "asset_id": "uk_strategic_radar_fighter_wing",
+      "mesh": "export/meshes/uk_strategic_radar_fighter_wing.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_strategic_radar_fighter_wing_lod1",
+      "asset_id": "uk_strategic_radar_fighter_wing",
+      "mesh": "export/meshes/uk_strategic_radar_fighter_wing_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_marine_expeditionary_force_lod0",
+      "asset_id": "usa_marine_expeditionary_force",
+      "mesh": "export/meshes/usa_marine_expeditionary_force.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_marine_expeditionary_force_lod1",
+      "asset_id": "usa_marine_expeditionary_force",
+      "mesh": "export/meshes/usa_marine_expeditionary_force_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_strategic_bomber_wing_lod0",
+      "asset_id": "usa_strategic_bomber_wing",
+      "mesh": "export/meshes/usa_strategic_bomber_wing.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_strategic_bomber_wing_lod1",
+      "asset_id": "usa_strategic_bomber_wing",
+      "mesh": "export/meshes/usa_strategic_bomber_wing_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Barracks_lod0",
+      "asset_id": "Barracks",
+      "mesh": "export/meshes/Barracks.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Barracks_lod1",
+      "asset_id": "Barracks",
+      "mesh": "export/meshes/Barracks_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "CityCenter_lod0",
+      "asset_id": "CityCenter",
+      "mesh": "export/meshes/CityCenter.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "CityCenter_lod1",
+      "asset_id": "CityCenter",
+      "mesh": "export/meshes/CityCenter_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "ElectronicsLab_lod0",
+      "asset_id": "ElectronicsLab",
+      "mesh": "export/meshes/ElectronicsLab.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "ElectronicsLab_lod1",
+      "asset_id": "ElectronicsLab",
+      "mesh": "export/meshes/ElectronicsLab_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "FactoryHub_lod0",
+      "asset_id": "FactoryHub",
+      "mesh": "export/meshes/FactoryHub.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "FactoryHub_lod1",
+      "asset_id": "FactoryHub",
+      "mesh": "export/meshes/FactoryHub_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Farm_lod0",
+      "asset_id": "Farm",
+      "mesh": "export/meshes/Farm.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Farm_lod1",
+      "asset_id": "Farm",
+      "mesh": "export/meshes/Farm_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "House_lod0",
+      "asset_id": "House",
+      "mesh": "export/meshes/House.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "House_lod1",
+      "asset_id": "House",
+      "mesh": "export/meshes/House_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Library_lod0",
+      "asset_id": "Library",
+      "mesh": "export/meshes/Library.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Library_lod1",
+      "asset_id": "Library",
+      "mesh": "export/meshes/Library_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "MachineWorks_lod0",
+      "asset_id": "MachineWorks",
+      "mesh": "export/meshes/MachineWorks.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "MachineWorks_lod1",
+      "asset_id": "MachineWorks",
+      "mesh": "export/meshes/MachineWorks_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Market_lod0",
+      "asset_id": "Market",
+      "mesh": "export/meshes/Market.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Market_lod1",
+      "asset_id": "Market",
+      "mesh": "export/meshes/Market_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Mine_lod0",
+      "asset_id": "Mine",
+      "mesh": "export/meshes/Mine.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Mine_lod1",
+      "asset_id": "Mine",
+      "mesh": "export/meshes/Mine_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "MunitionsPlant_lod0",
+      "asset_id": "MunitionsPlant",
+      "mesh": "export/meshes/MunitionsPlant.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "MunitionsPlant_lod1",
+      "asset_id": "MunitionsPlant",
+      "mesh": "export/meshes/MunitionsPlant_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Port_lod0",
+      "asset_id": "Port",
+      "mesh": "export/meshes/Port.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Port_lod1",
+      "asset_id": "Port",
+      "mesh": "export/meshes/Port_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "Refinery_lod0",
+      "asset_id": "Refinery",
+      "mesh": "export/meshes/Refinery.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "Refinery_lod1",
+      "asset_id": "Refinery",
+      "mesh": "export/meshes/Refinery_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "SteelMill_lod0",
+      "asset_id": "SteelMill",
+      "mesh": "export/meshes/SteelMill.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "SteelMill_lod1",
+      "asset_id": "SteelMill",
+      "mesh": "export/meshes/SteelMill_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_grand_granary_lod0",
+      "asset_id": "china_grand_granary",
+      "mesh": "export/meshes/china_grand_granary.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_grand_granary_lod1",
+      "asset_id": "china_grand_granary",
+      "mesh": "export/meshes/china_grand_granary_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_imperial_academy_lod0",
+      "asset_id": "china_imperial_academy",
+      "mesh": "export/meshes/china_imperial_academy.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_imperial_academy_lod1",
+      "asset_id": "china_imperial_academy",
+      "mesh": "export/meshes/china_imperial_academy_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "china_imperial_workshop_lod0",
+      "asset_id": "china_imperial_workshop",
+      "mesh": "export/meshes/china_imperial_workshop.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "china_imperial_workshop_lod1",
+      "asset_id": "china_imperial_workshop",
+      "mesh": "export/meshes/china_imperial_workshop_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_desert_fortress_lod0",
+      "asset_id": "egypt_desert_fortress",
+      "mesh": "export/meshes/egypt_desert_fortress.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_desert_fortress_lod1",
+      "asset_id": "egypt_desert_fortress",
+      "mesh": "export/meshes/egypt_desert_fortress_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "egypt_grand_bazaar_lod0",
+      "asset_id": "egypt_grand_bazaar",
+      "mesh": "export/meshes/egypt_grand_bazaar.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "egypt_grand_bazaar_lod1",
+      "asset_id": "egypt_grand_bazaar",
+      "mesh": "export/meshes/egypt_grand_bazaar_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_advanced_research_complex_lod0",
+      "asset_id": "eu_advanced_research_complex",
+      "mesh": "export/meshes/eu_advanced_research_complex.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_advanced_research_complex_lod1",
+      "asset_id": "eu_advanced_research_complex",
+      "mesh": "export/meshes/eu_advanced_research_complex_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "eu_integrated_defense_network_lod0",
+      "asset_id": "eu_integrated_defense_network",
+      "mesh": "export/meshes/eu_integrated_defense_network.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "eu_integrated_defense_network_lod1",
+      "asset_id": "eu_integrated_defense_network",
+      "mesh": "export/meshes/eu_integrated_defense_network_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_council_centre_lod0",
+      "asset_id": "europe_council_centre",
+      "mesh": "export/meshes/europe_council_centre.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_council_centre_lod1",
+      "asset_id": "europe_council_centre",
+      "mesh": "export/meshes/europe_council_centre_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_grand_drydock_lod0",
+      "asset_id": "europe_grand_drydock",
+      "mesh": "export/meshes/europe_grand_drydock.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_grand_drydock_lod1",
+      "asset_id": "europe_grand_drydock",
+      "mesh": "export/meshes/europe_grand_drydock_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "europe_integrated_steelworks_lod0",
+      "asset_id": "europe_integrated_steelworks",
+      "mesh": "export/meshes/europe_integrated_steelworks.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "europe_integrated_steelworks_lod1",
+      "asset_id": "europe_integrated_steelworks",
+      "mesh": "export/meshes/europe_integrated_steelworks_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_maritime_command_port_lod0",
+      "asset_id": "japan_maritime_command_port",
+      "mesh": "export/meshes/japan_maritime_command_port.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_maritime_command_port_lod1",
+      "asset_id": "japan_maritime_command_port",
+      "mesh": "export/meshes/japan_maritime_command_port_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "japan_naval_arsenal_lod0",
+      "asset_id": "japan_naval_arsenal",
+      "mesh": "export/meshes/japan_naval_arsenal.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "japan_naval_arsenal_lod1",
+      "asset_id": "japan_naval_arsenal",
+      "mesh": "export/meshes/japan_naval_arsenal_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middle_east_caliphate_centre_lod0",
+      "asset_id": "middle_east_caliphate_centre",
+      "mesh": "export/meshes/middle_east_caliphate_centre.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middle_east_caliphate_centre_lod1",
+      "asset_id": "middle_east_caliphate_centre",
+      "mesh": "export/meshes/middle_east_caliphate_centre_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middle_east_caravanserai_lod0",
+      "asset_id": "middle_east_caravanserai",
+      "mesh": "export/meshes/middle_east_caravanserai.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middle_east_caravanserai_lod1",
+      "asset_id": "middle_east_caravanserai",
+      "mesh": "export/meshes/middle_east_caravanserai_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "middle_east_desert_foundry_lod0",
+      "asset_id": "middle_east_desert_foundry",
+      "mesh": "export/meshes/middle_east_desert_foundry.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "middle_east_desert_foundry_lod1",
+      "asset_id": "middle_east_desert_foundry",
+      "mesh": "export/meshes/middle_east_desert_foundry_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_castra_lod0",
+      "asset_id": "rome_castra",
+      "mesh": "export/meshes/rome_castra.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_castra_lod1",
+      "asset_id": "rome_castra",
+      "mesh": "export/meshes/rome_castra_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_forum_centre_lod0",
+      "asset_id": "rome_forum_centre",
+      "mesh": "export/meshes/rome_forum_centre.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_forum_centre_lod1",
+      "asset_id": "rome_forum_centre",
+      "mesh": "export/meshes/rome_forum_centre_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "rome_forum_market_lod0",
+      "asset_id": "rome_forum_market",
+      "mesh": "export/meshes/rome_forum_market.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "rome_forum_market_lod1",
+      "asset_id": "rome_forum_market",
+      "mesh": "export/meshes/rome_forum_market_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_arsenal_complex_lod0",
+      "asset_id": "russia_arsenal_complex",
+      "mesh": "export/meshes/russia_arsenal_complex.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_arsenal_complex_lod1",
+      "asset_id": "russia_arsenal_complex",
+      "mesh": "export/meshes/russia_arsenal_complex_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "russia_winter_depot_lod0",
+      "asset_id": "russia_winter_depot",
+      "mesh": "export/meshes/russia_winter_depot.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "russia_winter_depot_lod1",
+      "asset_id": "russia_winter_depot",
+      "mesh": "export/meshes/russia_winter_depot_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_grand_resonance_works_lod0",
+      "asset_id": "tartaria_grand_resonance_works",
+      "mesh": "export/meshes/tartaria_grand_resonance_works.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_grand_resonance_works_lod1",
+      "asset_id": "tartaria_grand_resonance_works",
+      "mesh": "export/meshes/tartaria_grand_resonance_works_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "tartaria_spire_lod0",
+      "asset_id": "tartaria_spire",
+      "mesh": "export/meshes/tartaria_spire.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "tartaria_spire_lod1",
+      "asset_id": "tartaria_spire",
+      "mesh": "export/meshes/tartaria_spire_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_admiralty_dockyard_lod0",
+      "asset_id": "uk_admiralty_dockyard",
+      "mesh": "export/meshes/uk_admiralty_dockyard.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_admiralty_dockyard_lod1",
+      "asset_id": "uk_admiralty_dockyard",
+      "mesh": "export/meshes/uk_admiralty_dockyard_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "uk_radar_command_station_lod0",
+      "asset_id": "uk_radar_command_station",
+      "mesh": "export/meshes/uk_radar_command_station.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "uk_radar_command_station_lod1",
+      "asset_id": "uk_radar_command_station",
+      "mesh": "export/meshes/uk_radar_command_station_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_advanced_airbase_lod0",
+      "asset_id": "usa_advanced_airbase",
+      "mesh": "export/meshes/usa_advanced_airbase.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_advanced_airbase_lod1",
+      "asset_id": "usa_advanced_airbase",
+      "mesh": "export/meshes/usa_advanced_airbase_lod1.glb",
+      "screen_size": 0.5
+    },
+    {
+      "lod_id": "usa_industrial_logistics_hub_lod0",
+      "asset_id": "usa_industrial_logistics_hub",
+      "mesh": "export/meshes/usa_industrial_logistics_hub.glb",
+      "screen_size": 1.0
+    },
+    {
+      "lod_id": "usa_industrial_logistics_hub_lod1",
+      "asset_id": "usa_industrial_logistics_hub",
+      "mesh": "export/meshes/usa_industrial_logistics_hub_lod1.glb",
       "screen_size": 0.5
     }
   ]

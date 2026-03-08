@@ -1,47 +1,1231 @@
 {
   "schemaVersion": 1,
   "seed": 99117,
-  "map": {"width": 128, "height": 128},
+  "map": {
+    "width": 192,
+    "height": 192
+  },
   "players": [
-    {"id": 0, "isHuman": false, "isCPU": true, "civilization": "rome", "team": 0, "color": [0.9, 0.25, 0.25], "startingResources": {"Food": 1200, "Wood": 1200, "Metal": 900, "Wealth": 750, "Knowledge": 450, "Oil": 60}, "popCap": 70},
-    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "china", "team": 1, "color": [0.25, 0.45, 0.95], "startingResources": {"Food": 1200, "Wood": 1200, "Metal": 900, "Wealth": 750, "Knowledge": 450, "Oil": 60}, "popCap": 70},
-    {"id": 2, "isHuman": false, "isCPU": true, "civilization": "europe", "team": 2, "color": [0.2, 0.8, 0.8], "startingResources": {"Food": 1200, "Wood": 1200, "Metal": 900, "Wealth": 750, "Knowledge": 450, "Oil": 60}, "popCap": 70},
-    {"id": 3, "isHuman": false, "isCPU": true, "civilization": "middle_east", "team": 3, "color": [0.9, 0.8, 0.2], "startingResources": {"Food": 1200, "Wood": 1200, "Metal": 900, "Wealth": 750, "Knowledge": 450, "Oil": 60}, "popCap": 70}
+    {
+      "id": 0,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "rome",
+      "team": 0,
+      "color": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 1,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "china",
+      "team": 1,
+      "color": [
+        0.15,
+        0.33,
+        0.47
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 2,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "europe",
+      "team": 2,
+      "color": [
+        0.29,
+        0.65,
+        0.95
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 3,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "middle_east",
+      "team": 3,
+      "color": [
+        0.44,
+        0.98,
+        0.42
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 4,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "russia",
+      "team": 4,
+      "color": [
+        0.58,
+        0.3,
+        0.9
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 5,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "usa",
+      "team": 5,
+      "color": [
+        0.73,
+        0.63,
+        0.37
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 6,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "japan",
+      "team": 6,
+      "color": [
+        0.87,
+        0.95,
+        0.85
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 7,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "eu",
+      "team": 7,
+      "color": [
+        0.02,
+        0.28,
+        0.32
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 8,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "uk",
+      "team": 8,
+      "color": [
+        0.16,
+        0.6,
+        0.8
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 9,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "egypt",
+      "team": 9,
+      "color": [
+        0.31,
+        0.93,
+        0.27
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    },
+    {
+      "id": 10,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "tartaria",
+      "team": 10,
+      "color": [
+        0.45,
+        0.25,
+        0.75
+      ],
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1200,
+        "Metal": 900,
+        "Wealth": 750,
+        "Knowledge": 450,
+        "Oil": 80
+      },
+      "popCap": 70
+    }
   ],
   "placements": {
     "cities": [
-      {"id": 1, "team": 0, "pos": [20, 20], "level": 2, "capital": true},
-      {"id": 2, "team": 1, "pos": [104, 20], "level": 2, "capital": true},
-      {"id": 3, "team": 2, "pos": [20, 104], "level": 2, "capital": true},
-      {"id": 4, "team": 3, "pos": [104, 104], "level": 2, "capital": true}
+      {
+        "id": 1,
+        "team": 0,
+        "pos": [
+          20,
+          20
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 2,
+        "team": 1,
+        "pos": [
+          96,
+          20
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 3,
+        "team": 2,
+        "pos": [
+          172,
+          20
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 4,
+        "team": 3,
+        "pos": [
+          20,
+          96
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 5,
+        "team": 4,
+        "pos": [
+          96,
+          96
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 6,
+        "team": 5,
+        "pos": [
+          172,
+          96
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 7,
+        "team": 6,
+        "pos": [
+          20,
+          172
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 8,
+        "team": 7,
+        "pos": [
+          96,
+          172
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 9,
+        "team": 8,
+        "pos": [
+          172,
+          172
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 10,
+        "team": 9,
+        "pos": [
+          56,
+          136
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 11,
+        "team": 10,
+        "pos": [
+          136,
+          56
+        ],
+        "level": 2,
+        "capital": true
+      }
     ],
     "buildings": [
-      {"id": 10, "team": 0, "type": "CityCenter", "pos": [20, 20], "underConstruction": false, "hp": 2200},
-      {"id": 11, "team": 1, "type": "CityCenter", "pos": [104, 20], "underConstruction": false, "hp": 2200},
-      {"id": 12, "team": 2, "type": "CityCenter", "pos": [20, 104], "underConstruction": false, "hp": 2200},
-      {"id": 13, "team": 3, "type": "CityCenter", "pos": [104, 104], "underConstruction": false, "hp": 2200},
-      {"id": 21, "team": 0, "type": "Barracks", "pos": [24, 20], "underConstruction": false},
-      {"id": 22, "team": 1, "type": "Barracks", "pos": [100, 20], "underConstruction": false},
-      {"id": 23, "team": 2, "type": "Barracks", "pos": [24, 104], "underConstruction": false},
-      {"id": 24, "team": 3, "type": "Barracks", "pos": [100, 104], "underConstruction": false},
-      {"id": 31, "team": 0, "type": "Market", "pos": [18, 24], "underConstruction": false},
-      {"id": 32, "team": 1, "type": "Library", "pos": [106, 24], "underConstruction": false},
-      {"id": 33, "team": 2, "type": "SteelMill", "pos": [18, 100], "underConstruction": false},
-      {"id": 34, "team": 3, "type": "Market", "pos": [106, 100], "underConstruction": false}
+      {
+        "id": 10,
+        "team": 0,
+        "type": "CityCenter",
+        "pos": [
+          20,
+          20
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 11,
+        "team": 0,
+        "type": "Barracks",
+        "pos": [
+          24,
+          20
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 12,
+        "team": 0,
+        "type": "Market",
+        "pos": [
+          17,
+          24
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 13,
+        "team": 0,
+        "type": "FactoryHub",
+        "pos": [
+          23,
+          16
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 14,
+        "team": 0,
+        "type": "Port",
+        "pos": [
+          25,
+          25
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 20,
+        "team": 1,
+        "type": "CityCenter",
+        "pos": [
+          96,
+          20
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 21,
+        "team": 1,
+        "type": "Barracks",
+        "pos": [
+          100,
+          20
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 22,
+        "team": 1,
+        "type": "Market",
+        "pos": [
+          93,
+          24
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 23,
+        "team": 1,
+        "type": "FactoryHub",
+        "pos": [
+          99,
+          16
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 24,
+        "team": 1,
+        "type": "Port",
+        "pos": [
+          101,
+          25
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 30,
+        "team": 2,
+        "type": "CityCenter",
+        "pos": [
+          172,
+          20
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 31,
+        "team": 2,
+        "type": "Barracks",
+        "pos": [
+          176,
+          20
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 32,
+        "team": 2,
+        "type": "Market",
+        "pos": [
+          169,
+          24
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 33,
+        "team": 2,
+        "type": "FactoryHub",
+        "pos": [
+          175,
+          16
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 34,
+        "team": 2,
+        "type": "Port",
+        "pos": [
+          177,
+          25
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 40,
+        "team": 3,
+        "type": "CityCenter",
+        "pos": [
+          20,
+          96
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 41,
+        "team": 3,
+        "type": "Barracks",
+        "pos": [
+          24,
+          96
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 42,
+        "team": 3,
+        "type": "Market",
+        "pos": [
+          17,
+          100
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 43,
+        "team": 3,
+        "type": "FactoryHub",
+        "pos": [
+          23,
+          92
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 44,
+        "team": 3,
+        "type": "Port",
+        "pos": [
+          25,
+          101
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 50,
+        "team": 4,
+        "type": "CityCenter",
+        "pos": [
+          96,
+          96
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 51,
+        "team": 4,
+        "type": "Barracks",
+        "pos": [
+          100,
+          96
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 52,
+        "team": 4,
+        "type": "Market",
+        "pos": [
+          93,
+          100
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 53,
+        "team": 4,
+        "type": "FactoryHub",
+        "pos": [
+          99,
+          92
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 54,
+        "team": 4,
+        "type": "Port",
+        "pos": [
+          101,
+          101
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 60,
+        "team": 5,
+        "type": "CityCenter",
+        "pos": [
+          172,
+          96
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 61,
+        "team": 5,
+        "type": "Barracks",
+        "pos": [
+          176,
+          96
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 62,
+        "team": 5,
+        "type": "Market",
+        "pos": [
+          169,
+          100
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 63,
+        "team": 5,
+        "type": "FactoryHub",
+        "pos": [
+          175,
+          92
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 64,
+        "team": 5,
+        "type": "Port",
+        "pos": [
+          177,
+          101
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 70,
+        "team": 6,
+        "type": "CityCenter",
+        "pos": [
+          20,
+          172
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 71,
+        "team": 6,
+        "type": "Barracks",
+        "pos": [
+          24,
+          172
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 72,
+        "team": 6,
+        "type": "Market",
+        "pos": [
+          17,
+          176
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 73,
+        "team": 6,
+        "type": "FactoryHub",
+        "pos": [
+          23,
+          168
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 74,
+        "team": 6,
+        "type": "Port",
+        "pos": [
+          25,
+          177
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 80,
+        "team": 7,
+        "type": "CityCenter",
+        "pos": [
+          96,
+          172
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 81,
+        "team": 7,
+        "type": "Barracks",
+        "pos": [
+          100,
+          172
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 82,
+        "team": 7,
+        "type": "Market",
+        "pos": [
+          93,
+          176
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 83,
+        "team": 7,
+        "type": "FactoryHub",
+        "pos": [
+          99,
+          168
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 84,
+        "team": 7,
+        "type": "Port",
+        "pos": [
+          101,
+          177
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 90,
+        "team": 8,
+        "type": "CityCenter",
+        "pos": [
+          172,
+          172
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 91,
+        "team": 8,
+        "type": "Barracks",
+        "pos": [
+          176,
+          172
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 92,
+        "team": 8,
+        "type": "Market",
+        "pos": [
+          169,
+          176
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 93,
+        "team": 8,
+        "type": "FactoryHub",
+        "pos": [
+          175,
+          168
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 94,
+        "team": 8,
+        "type": "Port",
+        "pos": [
+          177,
+          177
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 100,
+        "team": 9,
+        "type": "CityCenter",
+        "pos": [
+          56,
+          136
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 101,
+        "team": 9,
+        "type": "Barracks",
+        "pos": [
+          60,
+          136
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 102,
+        "team": 9,
+        "type": "Market",
+        "pos": [
+          53,
+          140
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 103,
+        "team": 9,
+        "type": "FactoryHub",
+        "pos": [
+          59,
+          132
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 104,
+        "team": 9,
+        "type": "Port",
+        "pos": [
+          61,
+          141
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 110,
+        "team": 10,
+        "type": "CityCenter",
+        "pos": [
+          136,
+          56
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 111,
+        "team": 10,
+        "type": "Barracks",
+        "pos": [
+          140,
+          56
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 112,
+        "team": 10,
+        "type": "Market",
+        "pos": [
+          133,
+          60
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 113,
+        "team": 10,
+        "type": "FactoryHub",
+        "pos": [
+          139,
+          52
+        ],
+        "underConstruction": false
+      },
+      {
+        "id": 114,
+        "team": 10,
+        "type": "Port",
+        "pos": [
+          141,
+          61
+        ],
+        "underConstruction": false
+      }
     ],
     "units": [
-      {"id": 1, "team": 0, "type": "Worker", "pos": [21, 22]},
-      {"id": 2, "team": 1, "type": "Worker", "pos": [103, 22]},
-      {"id": 3, "team": 2, "type": "Worker", "pos": [21, 102]},
-      {"id": 4, "team": 3, "type": "Worker", "pos": [103, 102]},
-      {"id": 5, "team": 0, "type": "Infantry", "pos": [24, 24]},
-      {"id": 6, "team": 1, "type": "Archer", "pos": [100, 24]},
-      {"id": 7, "team": 2, "type": "Siege", "pos": [24, 100]},
-      {"id": 8, "team": 3, "type": "Cavalry", "pos": [100, 100]}
+      {
+        "id": 100,
+        "team": 0,
+        "type": "Worker",
+        "pos": [
+          21,
+          21
+        ]
+      },
+      {
+        "id": 101,
+        "team": 0,
+        "type": "Infantry",
+        "pos": [
+          22,
+          22
+        ]
+      },
+      {
+        "id": 102,
+        "team": 0,
+        "type": "Siege",
+        "pos": [
+          23,
+          22
+        ]
+      },
+      {
+        "id": 110,
+        "team": 1,
+        "type": "Worker",
+        "pos": [
+          97,
+          21
+        ]
+      },
+      {
+        "id": 111,
+        "team": 1,
+        "type": "Infantry",
+        "pos": [
+          98,
+          22
+        ]
+      },
+      {
+        "id": 112,
+        "team": 1,
+        "type": "Siege",
+        "pos": [
+          99,
+          22
+        ]
+      },
+      {
+        "id": 120,
+        "team": 2,
+        "type": "Worker",
+        "pos": [
+          173,
+          21
+        ]
+      },
+      {
+        "id": 121,
+        "team": 2,
+        "type": "Infantry",
+        "pos": [
+          174,
+          22
+        ]
+      },
+      {
+        "id": 122,
+        "team": 2,
+        "type": "Siege",
+        "pos": [
+          175,
+          22
+        ]
+      },
+      {
+        "id": 130,
+        "team": 3,
+        "type": "Worker",
+        "pos": [
+          21,
+          97
+        ]
+      },
+      {
+        "id": 131,
+        "team": 3,
+        "type": "Infantry",
+        "pos": [
+          22,
+          98
+        ]
+      },
+      {
+        "id": 132,
+        "team": 3,
+        "type": "Siege",
+        "pos": [
+          23,
+          98
+        ]
+      },
+      {
+        "id": 140,
+        "team": 4,
+        "type": "Worker",
+        "pos": [
+          97,
+          97
+        ]
+      },
+      {
+        "id": 141,
+        "team": 4,
+        "type": "Infantry",
+        "pos": [
+          98,
+          98
+        ]
+      },
+      {
+        "id": 142,
+        "team": 4,
+        "type": "Siege",
+        "pos": [
+          99,
+          98
+        ]
+      },
+      {
+        "id": 150,
+        "team": 5,
+        "type": "Worker",
+        "pos": [
+          173,
+          97
+        ]
+      },
+      {
+        "id": 151,
+        "team": 5,
+        "type": "Infantry",
+        "pos": [
+          174,
+          98
+        ]
+      },
+      {
+        "id": 152,
+        "team": 5,
+        "type": "Siege",
+        "pos": [
+          175,
+          98
+        ]
+      },
+      {
+        "id": 160,
+        "team": 6,
+        "type": "Worker",
+        "pos": [
+          21,
+          173
+        ]
+      },
+      {
+        "id": 161,
+        "team": 6,
+        "type": "Infantry",
+        "pos": [
+          22,
+          174
+        ]
+      },
+      {
+        "id": 162,
+        "team": 6,
+        "type": "Siege",
+        "pos": [
+          23,
+          174
+        ]
+      },
+      {
+        "id": 170,
+        "team": 7,
+        "type": "Worker",
+        "pos": [
+          97,
+          173
+        ]
+      },
+      {
+        "id": 171,
+        "team": 7,
+        "type": "Infantry",
+        "pos": [
+          98,
+          174
+        ]
+      },
+      {
+        "id": 172,
+        "team": 7,
+        "type": "Siege",
+        "pos": [
+          99,
+          174
+        ]
+      },
+      {
+        "id": 180,
+        "team": 8,
+        "type": "Worker",
+        "pos": [
+          173,
+          173
+        ]
+      },
+      {
+        "id": 181,
+        "team": 8,
+        "type": "Infantry",
+        "pos": [
+          174,
+          174
+        ]
+      },
+      {
+        "id": 182,
+        "team": 8,
+        "type": "Siege",
+        "pos": [
+          175,
+          174
+        ]
+      },
+      {
+        "id": 190,
+        "team": 9,
+        "type": "Worker",
+        "pos": [
+          57,
+          137
+        ]
+      },
+      {
+        "id": 191,
+        "team": 9,
+        "type": "Infantry",
+        "pos": [
+          58,
+          138
+        ]
+      },
+      {
+        "id": 192,
+        "team": 9,
+        "type": "Siege",
+        "pos": [
+          59,
+          138
+        ]
+      },
+      {
+        "id": 200,
+        "team": 10,
+        "type": "Worker",
+        "pos": [
+          137,
+          57
+        ]
+      },
+      {
+        "id": 201,
+        "team": 10,
+        "type": "Infantry",
+        "pos": [
+          138,
+          58
+        ]
+      },
+      {
+        "id": 202,
+        "team": 10,
+        "type": "Siege",
+        "pos": [
+          139,
+          58
+        ]
+      }
     ]
   },
   "objectives": [
-    {"id": 1, "objective_id": "civ_content_diverge", "title": "Civilization content divergence", "description": "Exercise unique content production and construction.", "category": "primary", "state": "active", "visible": true}
+    {
+      "id": 1,
+      "objective_id": "civ_content_diverge",
+      "title": "Civilization content divergence",
+      "description": "Exercise unique content production and construction for all civ packs.",
+      "category": "primary",
+      "state": "active",
+      "visible": true
+    }
   ],
-  "rulesOverrides": {"timeLimit": 7200}
+  "rulesOverrides": {
+    "timeLimit": 7200
+  }
 }

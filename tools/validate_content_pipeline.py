@@ -66,9 +66,11 @@ def validate_assets(asset_manifest, atlas_manifest, lod_manifest):
 
 def validate_civ_variants(theme_manifest, asset_manifest):
     asset_ids = {a["asset_id"] for a in asset_manifest.get("assets", [])}
+    required_civ_themes = {'rome', 'china', 'europe', 'middle_east', 'russia', 'usa', 'japan', 'eu', 'uk', 'egypt', 'tartaria'}
     for theme in theme_manifest.get("themes", []):
         mappings = theme.get("building_family_mappings", {})
-        for fam in ('House', 'Farm', 'Market', 'Barracks', 'CityCenter', 'Port', 'Wonder'):
+        required = ('House', 'Farm', 'Market', 'Barracks', 'CityCenter', 'Port', 'FactoryHub', 'RailStation', 'Tower') if theme.get('id') in required_civ_themes else ('House', 'Farm', 'Market', 'Barracks', 'CityCenter', 'Port', 'Wonder')
+        for fam in required:
             assert fam in mappings, f"theme {theme['id']} missing {fam}"
             mapped = mappings[fam]
             if mapped not in asset_ids:
