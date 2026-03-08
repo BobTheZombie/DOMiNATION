@@ -538,6 +538,26 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   }
   j["strategicPosture"] = nlohmann::json::array();
   for (size_t i = 0; i < w.strategicPosture.size(); ++i) j["strategicPosture"].push_back({{"player", (uint16_t)i}, {"posture", dom::sim::posture_name(w.strategicPosture[i])}});
+  j["playerIdeologies"] = nlohmann::json::array();
+  for (const auto& p : w.players) {
+    nlohmann::json e{{"player", p.id}, {"primary", p.civilization.ideology.primary}, {"secondary", p.civilization.ideology.secondary}};
+    e["weights"] = nlohmann::json::object();
+    e["bloc_affinity_weights"] = nlohmann::json::object();
+    e["bloc_hostility_weights"] = nlohmann::json::object();
+    for (const auto& kv : p.civilization.ideology.ideologyWeights) e["weights"][kv.first] = kv.second;
+    for (const auto& kv : p.civilization.ideology.blocAffinityWeights) e["bloc_affinity_weights"][kv.first] = kv.second;
+    for (const auto& kv : p.civilization.ideology.blocHostilityWeights) e["bloc_hostility_weights"][kv.first] = kv.second;
+    j["playerIdeologies"].push_back(std::move(e));
+  }
+  j["blocTemplates"] = nlohmann::json::array();
+  for (const auto& t : w.blocTemplates) {
+    nlohmann::json bt{{"bloc_id", t.blocId}, {"display_name", t.displayName}, {"compatible_ideologies", t.compatibleIdeologies}, {"hostile_ideologies", t.hostileIdeologies}, {"trade_bias", t.tradeBias}, {"defense_bias", t.defenseBias}, {"escalation_bias", t.escalationBias}, {"intel_sharing_bias", t.intelSharingBias}, {"min_members", t.minMembers}, {"max_members", t.maxMembers}};
+    bt["founding_ideology_bias"] = nlohmann::json::object();
+    for (const auto& kv : t.foundingBias) bt["founding_ideology_bias"][kv.first] = kv.second;
+    j["blocTemplates"].push_back(std::move(bt));
+  }
+  j["allianceBlocs"] = nlohmann::json::array();
+  for (const auto& b : w.allianceBlocs) j["allianceBlocs"].push_back({{"blocId", b.blocId}, {"members", b.members}, {"founder", b.founder}, {"leader", b.leader}, {"posture", (int)b.posture}, {"threatLevel", b.threatLevel}, {"rivalBlocIds", b.rivalBlocIds}, {"tradeState", b.tradeState}, {"defenseState", b.defenseState}, {"cohesion", b.cohesion}, {"lifecycleState", b.lifecycleState}});
   j["triggerAreas"] = nlohmann::json::array();
   for (const auto& a : w.triggerAreas) j["triggerAreas"].push_back({{"id", a.id}, {"min", {a.min.x, a.min.y}}, {"max", {a.max.x, a.max.y}}});
   j["objectives"] = nlohmann::json::array();
@@ -685,6 +705,60 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
       t.lastChangedTick = d.value("lastChangedTick", 0u);
       w.treaties[a * w.players.size() + b] = t;
       w.treaties[b * w.players.size() + a] = t;
+    }
+  }
+  if (j.contains("playerIdeologies")) {
+    for (const auto& e : j.at("playerIdeologies")) {
+      const uint16_t id = e.value("player", (uint16_t)0);
+      if (id >= w.players.size()) continue;
+      auto& ide = w.players[id].civilization.ideology;
+      ide.primary = e.value("primary", ide.primary);
+      ide.secondary = e.value("secondary", ide.secondary);
+      ide.ideologyWeights.clear();
+      ide.blocAffinityWeights.clear();
+      ide.blocHostilityWeights.clear();
+      if (e.contains("weights") && e.at("weights").is_object()) for (auto it = e.at("weights").begin(); it != e.at("weights").end(); ++it) ide.ideologyWeights.push_back({it.key(), it.value().get<float>()});
+      if (e.contains("bloc_affinity_weights") && e.at("bloc_affinity_weights").is_object()) for (auto it = e.at("bloc_affinity_weights").begin(); it != e.at("bloc_affinity_weights").end(); ++it) ide.blocAffinityWeights.push_back({it.key(), it.value().get<float>()});
+      if (e.contains("bloc_hostility_weights") && e.at("bloc_hostility_weights").is_object()) for (auto it = e.at("bloc_hostility_weights").begin(); it != e.at("bloc_hostility_weights").end(); ++it) ide.blocHostilityWeights.push_back({it.key(), it.value().get<float>()});
+      std::sort(ide.ideologyWeights.begin(), ide.ideologyWeights.end(), [](const auto& a, const auto& b){ return a.first < b.first; });
+      std::sort(ide.blocAffinityWeights.begin(), ide.blocAffinityWeights.end(), [](const auto& a, const auto& b){ return a.first < b.first; });
+      std::sort(ide.blocHostilityWeights.begin(), ide.blocHostilityWeights.end(), [](const auto& a, const auto& b){ return a.first < b.first; });
+    }
+  }
+  if (j.contains("blocTemplates")) {
+    w.blocTemplates.clear();
+    for (const auto& bt : j.at("blocTemplates")) {
+      dom::sim::AllianceBlocTemplate t{};
+      t.blocId = bt.value("bloc_id", std::string());
+      t.displayName = bt.value("display_name", t.blocId);
+      if (bt.contains("founding_ideology_bias") && bt.at("founding_ideology_bias").is_object()) for (auto it = bt.at("founding_ideology_bias").begin(); it != bt.at("founding_ideology_bias").end(); ++it) t.foundingBias.push_back({it.key(), it.value().get<float>()});
+      if (bt.contains("compatible_ideologies")) t.compatibleIdeologies = bt.at("compatible_ideologies").get<std::vector<std::string>>();
+      if (bt.contains("hostile_ideologies")) t.hostileIdeologies = bt.at("hostile_ideologies").get<std::vector<std::string>>();
+      t.tradeBias = bt.value("trade_bias", 1.0f);
+      t.defenseBias = bt.value("defense_bias", 1.0f);
+      t.escalationBias = bt.value("escalation_bias", 1.0f);
+      t.intelSharingBias = bt.value("intel_sharing_bias", 1.0f);
+      t.minMembers = bt.value("min_members", (uint8_t)2);
+      t.maxMembers = bt.value("max_members", (uint8_t)8);
+      w.blocTemplates.push_back(std::move(t));
+    }
+  }
+  if (j.contains("allianceBlocs")) {
+    w.allianceBlocs.clear();
+    for (const auto& bb : j.at("allianceBlocs")) {
+      dom::sim::AllianceBlocState b{};
+      b.blocId = bb.value("blocId", std::string());
+      if (bb.contains("members")) b.members = bb.at("members").get<std::vector<uint16_t>>();
+      b.founder = bb.value("founder", (uint16_t)UINT16_MAX);
+      b.leader = bb.value("leader", (uint16_t)UINT16_MAX);
+      b.posture = (dom::sim::StrategicPosture)bb.value("posture", 1);
+      b.threatLevel = bb.value("threatLevel", 0.0f);
+      if (bb.contains("rivalBlocIds")) b.rivalBlocIds = bb.at("rivalBlocIds").get<std::vector<std::string>>();
+      b.tradeState = bb.value("tradeState", 1.0f);
+      b.defenseState = bb.value("defenseState", 1.0f);
+      b.cohesion = bb.value("cohesion", 1.0f);
+      b.lifecycleState = bb.value("lifecycleState", (uint8_t)1);
+      w.allianceBlocs.push_back(std::move(b));
     }
   }
   w.strategicPosture.assign(w.players.size(), dom::sim::StrategicPosture::Defensive);
@@ -1188,7 +1262,7 @@ int run_headless(const CliOptions& o) {
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
   std::ofstream perfLog;
-  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,strategic_stockpile_total,strategic_ready_total,strategic_preparing_total,strategic_warnings,strategic_retaliations,second_strike_ready_count,deterrence_posture_changes,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken,factory_count,active_factories,blocked_factories,steel_output,fuel_output,munitions_output,machine_parts_output,electronics_output,industrial_throughput,unique_units_produced,unique_buildings_constructed,civ_doctrine_switches,civ_industry_output,civ_logistics_bonus_usage,civ_operation_count,civ_content_resolution_fallbacks,rome_content_usage,china_content_usage,europe_content_usage,middleeast_content_usage\n"; }
+  if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,strategic_stockpile_total,strategic_ready_total,strategic_preparing_total,strategic_warnings,strategic_retaliations,second_strike_ready_count,deterrence_posture_changes,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken,factory_count,active_factories,blocked_factories,steel_output,fuel_output,munitions_output,machine_parts_output,electronics_output,industrial_throughput,unique_units_produced,unique_buildings_constructed,civ_doctrine_switches,civ_industry_output,civ_logistics_bonus_usage,civ_operation_count,civ_content_resolution_fallbacks,rome_content_usage,china_content_usage,europe_content_usage,middleeast_content_usage,active_bloc_count,bloc_membership_changes,bloc_formations,bloc_dissolutions,bloc_rivalries,ideology_alignment_shifts,bloc_trade_bonus_usage,bloc_operation_coordination_count\n"; }
   while (world.tick < stopTick) {
     double aiMs = 0.0;
     const auto simStart = std::chrono::steady_clock::now();
@@ -1261,7 +1335,7 @@ int run_headless(const CliOptions& o) {
                 << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents
                 << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << " AIR_UNIT_COUNT=" << stats.airUnitCount << " DETECTOR_COUNT=" << stats.detectorCount << " RADAR_REVEALS=" << stats.radarReveals << " STRATEGIC_STRIKES=" << stats.strategicStrikes << " INTERCEPTIONS=" << stats.interceptions << " STRATEGIC_STOCKPILE_TOTAL=" << stats.strategicStockpileTotal << " STRATEGIC_READY_TOTAL=" << stats.strategicReadyTotal << " STRATEGIC_PREPARING_TOTAL=" << stats.strategicPreparingTotal << " STRATEGIC_WARNINGS=" << stats.strategicWarnings << " STRATEGIC_RETALIATIONS=" << stats.strategicRetaliations << " SECOND_STRIKE_READY_COUNT=" << stats.secondStrikeReadyCount << " DETERRENCE_POSTURE_CHANGES=" << stats.deterrencePostureChanges << " ACTIVE_DENIAL_ZONES=" << stats.activeDenialZones << " MOUNTAIN_REGION_COUNT=" << stats.mountainRegionCount << " MOUNTAIN_CHAIN_COUNT=" << stats.mountainChainCount << " RIVER_COUNT=" << stats.riverCount << " LAKE_COUNT=" << stats.lakeCount << " START_CANDIDATE_COUNT=" << stats.startCandidateCount << " MYTHIC_CANDIDATE_COUNT=" << stats.mythicCandidateCount << " SURFACE_DEPOSIT_COUNT=" << stats.surfaceDepositCount << " DEEP_DEPOSIT_COUNT=" << stats.deepDepositCount << " ACTIVE_MINE_SHAFTS=" << stats.activeMineShafts << " ACTIVE_TUNNELS=" << stats.activeTunnels << " UNDERGROUND_DEPOTS=" << stats.undergroundDepots << " UNDERGROUND_YIELD=" << stats.undergroundYield << " GUARDIAN_SITE_COUNT=" << stats.guardianSiteCount << " GUARDIANS_DISCOVERED=" << stats.guardiansDiscovered << " GUARDIANS_SPAWNED=" << stats.guardiansSpawned << " GUARDIANS_JOINED=" << stats.guardiansJoined << " GUARDIANS_KILLED=" << stats.guardiansKilled << " HOSTILE_GUARDIAN_EVENTS=" << stats.hostileGuardianEvents << " ALLIED_GUARDIAN_EVENTS=" << stats.alliedGuardianEvents << " CONTENT_FALLBACK_COUNT=" << stats.contentFallbackCount << " CIV_PRESENTATION_RESOLVES=" << stats.civPresentationResolves << " GUARDIAN_PRESENTATION_RESOLVES=" << stats.guardianPresentationResolves << " CAMPAIGN_PRESENTATION_RESOLVES=" << stats.campaignPresentationResolves << " EVENT_PRESENTATION_RESOLVES=" << stats.eventPresentationResolves
                 << " UNIQUE_UNITS_PRODUCED=" << stats.uniqueUnitsProduced << " UNIQUE_BUILDINGS_CONSTRUCTED=" << stats.uniqueBuildingsConstructed << " CIV_CONTENT_RESOLUTION_FALLBACKS=" << stats.civContentResolutionFallbacks << " ROME_CONTENT_USAGE=" << stats.romeContentUsage << " CHINA_CONTENT_USAGE=" << stats.chinaContentUsage << " EUROPE_CONTENT_USAGE=" << stats.europeContentUsage << " MIDDLEEAST_CONTENT_USAGE=" << stats.middleEastContentUsage << " RUSSIA_CONTENT_USAGE=" << stats.russiaContentUsage << " USA_CONTENT_USAGE=" << stats.usaContentUsage << " JAPAN_CONTENT_USAGE=" << stats.japanContentUsage << " EU_CONTENT_USAGE=" << stats.euContentUsage << " UK_CONTENT_USAGE=" << stats.ukContentUsage << " EGYPT_CONTENT_USAGE=" << stats.egyptContentUsage << " TARTARIA_CONTENT_USAGE=" << stats.tartariaContentUsage << " ARMAGEDDON_ACTIVE=" << stats.armageddonActive << " NUCLEAR_USE_COUNT_TOTAL=" << stats.nuclearUseCountTotal << " ARMAGEDDON_TRIGGER_TICK=" << stats.armageddonTriggerTick << " LAST_MAN_STANDING_MODE_ACTIVE=" << stats.lastManStandingModeActive << " CIV_DOCTRINE_SWITCHES=" << stats.civDoctrineSwitches << " CIV_INDUSTRY_OUTPUT=" << stats.civIndustryOutput << " CIV_LOGISTICS_BONUS_USAGE=" << stats.civLogisticsBonusUsage << " CIV_OPERATION_COUNT=" << stats.civOperationCount << "\n";
-      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.strategicStockpileTotal << "," << stats.strategicReadyTotal << "," << stats.strategicPreparingTotal << "," << stats.strategicWarnings << "," << stats.strategicRetaliations << "," << stats.secondStrikeReadyCount << "," << stats.deterrencePostureChanges << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "," << stats.campaignMissionCount << "," << stats.campaignFlagsSet << "," << stats.campaignResourcesCount << "," << stats.campaignBranchesTaken << "," << stats.factoryCount << "," << stats.activeFactories << "," << stats.blockedFactories << "," << stats.steelOutput << "," << stats.fuelOutput << "," << stats.munitionsOutput << "," << stats.machinePartsOutput << "," << stats.electronicsOutput << "," << stats.industrialThroughput << "," << stats.uniqueUnitsProduced << "," << stats.uniqueBuildingsConstructed << "," << stats.civDoctrineSwitches << "," << stats.civIndustryOutput << "," << stats.civLogisticsBonusUsage << "," << stats.civOperationCount << "," << stats.civContentResolutionFallbacks << "," << stats.romeContentUsage << "," << stats.chinaContentUsage << "," << stats.europeContentUsage << "," << stats.middleEastContentUsage << "\n";
+      if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.strategicStockpileTotal << "," << stats.strategicReadyTotal << "," << stats.strategicPreparingTotal << "," << stats.strategicWarnings << "," << stats.strategicRetaliations << "," << stats.secondStrikeReadyCount << "," << stats.deterrencePostureChanges << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "," << stats.campaignMissionCount << "," << stats.campaignFlagsSet << "," << stats.campaignResourcesCount << "," << stats.campaignBranchesTaken << "," << stats.factoryCount << "," << stats.activeFactories << "," << stats.blockedFactories << "," << stats.steelOutput << "," << stats.fuelOutput << "," << stats.munitionsOutput << "," << stats.machinePartsOutput << "," << stats.electronicsOutput << "," << stats.industrialThroughput << "," << stats.uniqueUnitsProduced << "," << stats.uniqueBuildingsConstructed << "," << stats.civDoctrineSwitches << "," << stats.civIndustryOutput << "," << stats.civLogisticsBonusUsage << "," << stats.civOperationCount << "," << stats.civContentResolutionFallbacks << "," << stats.romeContentUsage << "," << stats.chinaContentUsage << "," << stats.europeContentUsage << "," << stats.middleEastContentUsage << "," << stats.activeBlocCount << "," << stats.blocMembershipChanges << "," << stats.blocFormations << "," << stats.blocDissolutions << "," << stats.blocRivalries << "," << stats.ideologyAlignmentShifts << "," << stats.blocTradeBonusUsage << "," << stats.blocOperationCoordinationCount << "\n";
     }
 
     if (!autosaved && !o.saveFile.empty() && o.autosaveTick >= 0 && world.tick >= (uint32_t)o.autosaveTick) {
@@ -1457,6 +1531,12 @@ int run_headless(const CliOptions& o) {
       const float ecoDiff = std::fabs(a.resources[0] - b.resources[0]) + std::fabs(a.resources[3] - b.resources[3]) + std::fabs(a.resources[4] - b.resources[4]);
       if (ecoDiff < 20.0f) { std::cerr << "Smoke failure: civ economy did not diverge\n"; return 110; }
     }
+  }
+
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("bloc_test") != std::string::npos) {
+    if (world.activeBlocCount < 1) { std::cerr << "Smoke failure: no active bloc formed\n"; return 114; }
+    if (world.blocFormations < 1) { std::cerr << "Smoke failure: bloc formation counter did not increment\n"; return 115; }
+    if (world.blocRivalries < 1 && world.worldTension > 40.0f) { std::cerr << "Smoke failure: no bloc rivalry detected\n"; return 116; }
   }
 
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("armageddon") != std::string::npos) {

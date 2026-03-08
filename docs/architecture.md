@@ -305,3 +305,6 @@ Debug/perf counters exposed for validation:
 - `CONTENT_FALLBACK_COUNT`
 - `CIV_PRESENTATION_RESOLVES`
 - `CIV_CONTENT_RESOLUTION_FALLBACKS`
+
+## Ideology and Alliance Blocs
+Dynamic ideology alignment and deterministic alliance bloc behavior are now supported. See `docs/ideology_bloc_system.md` and `scenarios/bloc_test.json` for format and validation commands.

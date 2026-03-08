@@ -182,3 +182,6 @@ Optional scenario fields:
 - `armageddonActive` / `armageddonTriggerTick` / `lastManStandingModeActive`
 - `nuclearUseCountTotal`
 - `nuclearUseCountByPlayer[]`: `{player, count}`
+
+## Ideology and Alliance Blocs
+Dynamic ideology alignment and deterministic alliance bloc behavior are now supported. See `docs/ideology_bloc_system.md` and `scenarios/bloc_test.json` for format and validation commands.
