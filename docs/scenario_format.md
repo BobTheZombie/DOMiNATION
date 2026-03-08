@@ -163,3 +163,13 @@ Reference scenario: `scenarios/theater_operations_test.json`.
 ### Civilization content-heavy test scenario
 
 `scenarios/civ_content_test.json` is a deterministic smoke setup with Rome/China/Europe/Middle East and pre-placed production structures to force unique content usage early in simulation.
+
+
+### World events / crises additions
+
+- `worldEventDefinitions[]` authored/override definitions with fields:
+  `event_id`, `display_name`, `category`, `trigger`, `scope`, `target_player`, `target_region`, `target_theater`, `target_biome`, `min_tick`, `cooldown_ticks`, `duration`, `trigger_threshold`, `severity`, `campaign_tags[]`, `scripted_hook`.
+- `worldEvents[]` runtime/seeded authoritative instances with fields:
+  `event_id`, `display_name`, `category`, `scope`, `start_tick`, `duration`, `severity`, `state` (`inactive|active|resolved`), `effect_payload`, optional target + campaign/script fields.
+
+Evaluation order is deterministic by `event_id` each activation cadence.

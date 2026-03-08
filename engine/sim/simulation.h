@@ -24,6 +24,10 @@ enum class ObjectiveCategory : uint8_t { Primary, Secondary, HiddenOptional };
 enum class TriggerType : uint8_t { TickReached, UnitDestroyed, BuildingDestroyed, BuildingCompleted, ObjectiveCompleted, ObjectiveFailed, PlayerEliminated, AreaEntered, DiplomacyChanged, WorldTensionReached, StrategicStrikeLaunched, WonderCompleted, CargoLanded };
 enum class TriggerActionType : uint8_t { ActivateObjective, CompleteObjective, FailObjective, ShowMessage, SpawnUnits, SpawnBuildings, GrantResources, ChangeDiplomacy, SetWorldTension, RevealArea, LaunchOperation, EndMatchVictory, EndMatchDefeat, RunLuaHook };
 enum class MissionStatus : uint8_t { InBriefing, Running, Victory, Defeat, PartialVictory };
+enum class WorldEventCategory : uint8_t { Climate, Health, Economic, Political, Industrial, Strategic, Mythic };
+enum class WorldEventScope : uint8_t { Global, Regional, Player, Theater, Biome };
+enum class WorldEventState : uint8_t { Inactive, Active, Resolved };
+enum class WorldEventTriggerType : uint8_t { None, WorldTensionHigh, LowFoodReserve, RailDisruption, PlagueRisk, StrategicEscalation, GuardianPressure, CampaignFlag, AuthoredTick, Scripted };
 
 enum class ReplayCommandType : uint8_t { Move, Attack, AttackMove, PlaceBuilding, QueueTrain, QueueResearch, CancelQueue };
 enum class GameplayEventType : uint8_t {
@@ -229,6 +233,42 @@ struct Trigger { uint32_t id{}; bool once{true}; bool fired{false}; TriggerCondi
 struct ObjectiveLogEntry { uint32_t tick{0}; std::string text; };
 struct MissionMessageDefinition { std::string messageId; std::string title; std::string body; std::string category{"intelligence"}; std::string speaker; std::string faction; std::string portraitId; std::string iconId; std::string imageId; std::string styleTag; int priority{0}; uint32_t durationTicks{600}; bool sticky{false}; };
 struct MissionMessageRuntime { uint64_t sequence{0}; uint32_t tick{0}; std::string messageId; std::string title; std::string body; std::string category{"intelligence"}; std::string speaker; std::string faction; std::string portraitId; std::string iconId; std::string imageId; std::string styleTag; int priority{0}; uint32_t durationTicks{600}; bool sticky{false}; };
+struct WorldEventDefinition {
+  std::string eventId;
+  std::string displayName;
+  WorldEventCategory category{WorldEventCategory::Climate};
+  WorldEventTriggerType triggerType{WorldEventTriggerType::None};
+  WorldEventScope scope{WorldEventScope::Global};
+  uint16_t targetPlayer{UINT16_MAX};
+  int32_t targetRegion{-1};
+  int32_t targetTheater{-1};
+  int32_t targetBiome{-1};
+  uint32_t minTick{0};
+  uint32_t cooldownTicks{1200};
+  uint32_t defaultDuration{1200};
+  float triggerThreshold{0.0f};
+  float baseSeverity{1.0f};
+  bool authored{false};
+  std::vector<std::string> campaignTags;
+  std::string scriptedHook;
+};
+struct WorldEventInstance {
+  std::string eventId;
+  std::string displayName;
+  WorldEventCategory category{WorldEventCategory::Climate};
+  WorldEventScope scope{WorldEventScope::Global};
+  uint16_t targetPlayer{UINT16_MAX};
+  int32_t targetRegion{-1};
+  int32_t targetTheater{-1};
+  int32_t targetBiome{-1};
+  uint32_t startTick{0};
+  uint32_t durationTicks{0};
+  float severity{1.0f};
+  WorldEventState state{WorldEventState::Inactive};
+  std::string effectPayload;
+  std::vector<std::string> campaignTags;
+  std::string scriptedHook;
+};
 struct ObjectiveTransitionDebugEntry { uint32_t tick{0}; uint32_t objectiveId{0}; ObjectiveState from{ObjectiveState::Inactive}; ObjectiveState to{ObjectiveState::Inactive}; uint32_t triggerId{0}; std::string actionType; std::string reason; };
 struct MissionDefinition {
   std::string title;
@@ -418,6 +458,9 @@ struct SimulationStats {
   uint32_t factoryCount{0};
   uint32_t activeFactories{0};
   uint32_t blockedFactories{0};
+  uint32_t activeWorldEvents{0};
+  uint32_t resolvedWorldEvents{0};
+  uint32_t totalWorldEventsTriggered{0};
   float steelOutput{0.0f};
   float fuelOutput{0.0f};
   float munitionsOutput{0.0f};
@@ -497,6 +540,8 @@ struct World {
   std::vector<GuardianSiteInstance> guardianSites;
   std::vector<uint8_t> radarContactByPlayer;
   std::vector<TriggerArea> triggerAreas; std::vector<Objective> objectives; std::vector<Trigger> triggers; std::vector<ObjectiveLogEntry> objectiveLog;
+  std::vector<WorldEventDefinition> worldEventDefinitions;
+  std::vector<WorldEventInstance> worldEvents;
   std::vector<MissionMessageRuntime> missionMessages;
   std::vector<ObjectiveTransitionDebugEntry> objectiveDebugLog;
   uint64_t nextMissionMessageSequence{1};
@@ -551,6 +596,9 @@ struct World {
   float civIndustryOutput{0.0f};
   float civLogisticsBonusUsage{0.0f};
   uint32_t civOperationCount{0};
+  uint32_t activeWorldEventCount{0};
+  uint32_t resolvedWorldEventCount{0};
+  uint32_t triggeredWorldEventCount{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 
