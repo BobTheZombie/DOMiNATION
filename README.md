@@ -464,3 +464,23 @@ Determinism smoke commands for this pass:
 - `./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash`
 - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1600 --dump-hash`
 
+
+
+## UI icon / marker / alert presentation layer
+- Major HUD panels now render deterministic iconography for resources, refined goods, units, buildings, diplomacy, objectives, events, and strategic warnings.
+- Strategic alert banner ordering is deterministic and severity-driven (`info`, `warning`, `critical`, `apocalyptic`).
+- World markers/badges are presentation-only and reconstructed from authoritative state each frame.
+- Deterministic fallback lookup order: exact content mapping -> civ/theme mapping -> category mapping -> stable fallback IDs.
+
+Validation commands:
+```bash
+./build/rts --headless --smoke --ticks 400 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 800 --dump-hash
+./build/rts --headless --campaign campaigns/test_campaign.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1600 --dump-hash
+./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```

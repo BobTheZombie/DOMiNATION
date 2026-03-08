@@ -337,3 +337,9 @@ Primary files:
 ## Entity presentation integration
 
 World entity rendering is presentation-only and reconstructs each frame from authoritative world data (unit/building/city/guardian state plus civ/theme manifests). No transient render caches are serialized; replay/save/load remains simulation-authoritative.
+
+## Icon/marker/alert presentation architecture
+- `engine/ui/ui_icons.*` provides deterministic UI content resolution + fallback counters.
+- `engine/ui/ui_alerts.*` builds ordered strategic alerts from mission message/event state.
+- `engine/render/renderer.cpp` resolves world markers from authoritative entity state only.
+- No transient icon cache is serialized; save/load/replay authority remains unchanged.

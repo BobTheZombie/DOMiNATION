@@ -2,6 +2,8 @@
 #include "engine/ui/ui_theme.h"
 #include "engine/render/terrain_materials.h"
 #include "engine/render/renderer.h"
+#include "engine/ui/ui_icons.h"
+#include "engine/ui/ui_alerts.h"
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -44,6 +46,12 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)entityCounters.guardianPresentationResolves,
               (unsigned long long)entityCounters.entityPresentationFallbacks,
               (unsigned long long)entityCounters.farLodClusterCount);
+  const auto& uiCounters = dom::ui::icons::presentation_counters();
+  ImGui::Text("ICON_RESOLVE_COUNT=%llu MARKER_RESOLVE_COUNT=%llu ALERT_RESOLVE_COUNT=%llu PRESENTATION_FALLBACK_COUNT=%llu",
+              (unsigned long long)uiCounters.iconResolveCount,
+              (unsigned long long)uiCounters.markerResolveCount,
+              (unsigned long long)uiCounters.alertResolveCount,
+              (unsigned long long)uiCounters.presentationFallbackCount);
   ImGui::End();
 
   if (!ImGui::Begin("Perf Graphs")) { ImGui::End(); return; }
@@ -131,6 +139,8 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
     if (ImGui::Begin("Debug · Mission")) {
     ImGui::Text("status=%u briefingShown=%s result=%s", (unsigned)world.missionRuntime.status, world.missionRuntime.briefingShown?"yes":"no", world.missionRuntime.resultTag.c_str());
     ImGui::Text("triggers fired=%u scripted actions=%u", world.missionRuntime.firedTriggerCount, world.missionRuntime.scriptedActionCount);
+    auto alertQueue = dom::ui::alerts::build_alert_queue(world, dom::ui::UiState{});
+    ImGui::Text("alert queue ordering (deterministic)=%zu", alertQueue.size());
     ImGui::Separator();
     ImGui::TextUnformatted("Objectives");
     for (const auto& o : world.objectives) ImGui::BulletText("id=%u %s state=%u visible=%d progress=%.2f %s", o.id, o.title.c_str(), (unsigned)o.state, o.visible?1:0, o.progressValue, o.progressText.c_str());

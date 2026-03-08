@@ -29,3 +29,8 @@ Portrait/icon/image references resolve to deterministic fallback IDs when missin
 - Mission messages are now surfaced in a compact chronological message log region in the command deck.
 - Objective presentation is grouped by primary/secondary/hidden-revealed categories with strong visual state treatment for active/completed/failed.
 - Crisis/event summaries remain deterministic in ordering and are rendered in a dedicated strategic feed.
+
+## Campaign iconography and strategic alerts
+- Briefing/debrief/event surfaces now use deterministic icon + portrait fallback IDs.
+- Alert queue ordering is deterministic by severity then tick/sequence ordering.
+- Objective and mission message categories carry icon IDs with stable fallback behavior.

@@ -134,3 +134,8 @@ Debug counters exposed in the visualization panel:
 - `GUARDIAN_PRESENTATION_RESOLVES`
 - `ENTITY_PRESENTATION_FALLBACKS`
 - `FAR_LOD_CLUSTER_COUNT`
+
+## World marker / badge pass
+- Strategic world markers for capitals, rail/port/factory/radar/missile entities are rendered as deterministic overlays.
+- Selection/low-supply/warning badges are driven from unit/building authoritative state.
+- Marker lookups use stable IDs and fallback IDs without mutating simulation state.

@@ -1,5 +1,6 @@
 #include "engine/ui/research_panel.h"
 #include "engine/ui/ui_theme.h"
+#include "engine/ui/ui_icons.h"
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -17,7 +18,7 @@ void draw_research_panel(dom::sim::World& world) {
   theme::section_header("Age Timeline");
   for (int i = 0; i < 6; ++i) {
     bool done = static_cast<int>(world.players[0].age) >= i;
-    ImGui::TextColored(done ? theme::state_color_success() : theme::state_color_warning(), "• %s", timeline[i]);
+    ImGui::TextColored(done ? theme::state_color_success() : theme::state_color_warning(), "%s %s", icons::glyph_for_icon("ui_icon_research"), timeline[i]);
   }
 
   theme::section_header("Research Tree Snapshot");

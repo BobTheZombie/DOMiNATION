@@ -1,5 +1,6 @@
 #include "engine/ui/production_menu.h"
 #include "engine/ui/ui_theme.h"
+#include "engine/ui/ui_icons.h"
 
 #include <utility>
 #include <string>
@@ -26,7 +27,8 @@ std::string unit_button_label(const dom::sim::World& world, uint16_t team, dom::
     ? world.players[team].civilization.uniqueUnitDefs[(size_t)type]
     : unit_name(type);
   const auto info = dom::sim::unit_content_presentation(world, team, type, defId);
-  return info.displayName + " [" + info.iconId + "]";
+  const auto iconId = icons::resolve_icon_id(world, team, info.iconId, "unit", "ui_icon_unit_generic_fallback");
+  return std::string(icons::glyph_for_icon(iconId)) + " " + info.displayName + " [" + iconId + "]";
 }
 
 uint32_t selected_production_building(const dom::sim::World& world, const std::vector<uint32_t>& selected) {
@@ -88,8 +90,10 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
   for (auto& b : world.buildings) if (b.id == bid) building = &b;
   if (!building) { ImGui::End(); return; }
 
-  ImGui::Text("Building #%u | Queue %zu", building->id, building->queue.size());
   const uint16_t ownerTeam = building->team;
+  const auto bInfo = dom::sim::building_content_presentation(world, ownerTeam, building->type, building->definitionId);
+  const auto bIcon = icons::resolve_icon_id(world, ownerTeam, bInfo.iconId, "building", "ui_icon_building_generic_fallback");
+  ImGui::Text("%s %s Building #%u | Queue %zu", icons::glyph_for_icon(bIcon), bInfo.displayName.c_str(), building->id, building->queue.size());
   theme::section_header("Build Cards");
 
   if (building->type == dom::sim::BuildingType::Barracks) {
