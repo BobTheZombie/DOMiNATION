@@ -1077,6 +1077,13 @@ void increment_civ_content_usage(World& w, uint16_t team) {
   else if (id == "china") ++w.chinaContentUsage;
   else if (id == "europe") ++w.europeContentUsage;
   else if (id == "middle_east") ++w.middleEastContentUsage;
+  else if (id == "russia") ++w.russiaContentUsage;
+  else if (id == "usa") ++w.usaContentUsage;
+  else if (id == "japan") ++w.japanContentUsage;
+  else if (id == "eu") ++w.euContentUsage;
+  else if (id == "uk") ++w.ukContentUsage;
+  else if (id == "egypt") ++w.egyptContentUsage;
+  else if (id == "tartaria") ++w.tartariaContentUsage;
 }
 
 void init_civ_defaults(CivilizationDef& d) {
@@ -2456,6 +2463,10 @@ void update_air_and_strategic_warfare(World& w, float dt) {
         if (attacker.strategicStockpile > 0) --attacker.strategicStockpile;
         if (attacker.strategicReadyCount > 0) --attacker.strategicReadyCount;
         attacker.recentStrategicUseTick = w.tick;
+      }
+      if (s.type == StrikeType::StrategicMissile || s.type == StrikeType::AbstractWMD || s.type == StrikeType::StrategicBomberStrike) {
+        if (s.team < w.nuclearUseCountByPlayer.size()) ++w.nuclearUseCountByPlayer[s.team];
+        ++w.nuclearUseCountTotal;
       }
       if (s.targetTeam < w.strategicDeterrence.size()) {
         w.strategicDeterrence[s.targetTeam].launchWarningActive = true;
@@ -4148,6 +4159,20 @@ void apply_world_defaults(World& w) {
   w.chinaContentUsage = 0;
   w.europeContentUsage = 0;
   w.middleEastContentUsage = 0;
+  w.russiaContentUsage = 0;
+  w.usaContentUsage = 0;
+  w.japanContentUsage = 0;
+  w.euContentUsage = 0;
+  w.ukContentUsage = 0;
+  w.egyptContentUsage = 0;
+  w.tartariaContentUsage = 0;
+  w.armageddonActive = false;
+  w.armageddonTriggerTick = 0;
+  w.lastManStandingModeActive = false;
+  w.armageddonNationsThreshold = 2;
+  w.armageddonUsesPerNationThreshold = 2;
+  w.nuclearUseCountByPlayer.assign(w.players.size(), 0);
+  w.nuclearUseCountTotal = 0;
   w.civDoctrineSwitches = 0;
   w.civIndustryOutput = 0.0f;
   w.civLogisticsBonusUsage = 0.0f;
@@ -4579,6 +4604,20 @@ bool load_scenario_file(World& w, const std::string& path, uint32_t fallbackSeed
     }
   }
   w.worldTension = j.value("worldTension", 0.0f);
+  w.armageddonNationsThreshold = j.value("armageddonNationsThreshold", static_cast<uint16_t>(2));
+  w.armageddonUsesPerNationThreshold = j.value("armageddonUsesPerNationThreshold", static_cast<uint16_t>(2));
+  w.armageddonActive = j.value("armageddonActive", false);
+  w.armageddonTriggerTick = j.value("armageddonTriggerTick", 0u);
+  w.lastManStandingModeActive = j.value("lastManStandingModeActive", false);
+  w.nuclearUseCountTotal = j.value("nuclearUseCountTotal", 0u);
+  w.nuclearUseCountByPlayer.assign(w.players.size(), 0);
+  if (j.contains("nuclearUseCountByPlayer") && j["nuclearUseCountByPlayer"].is_array()) {
+    for (const auto& e : j["nuclearUseCountByPlayer"]) {
+      const uint16_t player = e.value("player", static_cast<uint16_t>(0));
+      if (player >= w.nuclearUseCountByPlayer.size()) continue;
+      w.nuclearUseCountByPlayer[player] = e.value("count", static_cast<uint16_t>(0));
+    }
+  }
   if (j.contains("diplomacyRelations") && j["diplomacyRelations"].is_array()) {
     for (const auto& e : j["diplomacyRelations"]) {
       uint16_t a = e.value("a", (uint16_t)0), b = e.value("b", (uint16_t)0);
@@ -5195,10 +5234,12 @@ void tick_world(World& w, float dt) {
   update_air_and_strategic_warfare(w, dt);
   update_guardian_sites(w);
 
-  for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f * p.civilization.resourceGatherMult[ridx(Resource::Food)];
+  const float armageddonFoodFactor = w.armageddonActive ? 0.75f : 1.0f;
+  const float armageddonIndustryFactor = w.armageddonActive ? 0.85f : 1.0f;
+  for (auto& p : w.players) p.resources[ridx(Resource::Food)] += 0.4f * dt * 20.0f * p.civilization.resourceGatherMult[ridx(Resource::Food)] * armageddonFoodFactor;
   apply_trade_income(w, dt);
   update_underground_economy(w, dt);
-  update_industrial_economy(w, dt);
+  update_industrial_economy(w, dt * armageddonIndustryFactor);
 
   for (auto& b : w.buildings) {
     auto& owner = w.players[b.team];
@@ -5456,7 +5497,30 @@ void tick_world(World& w, float dt) {
     if (wasAlive && !p.alive) { emit_event(w, GameplayEventType::PlayerEliminated, p.id, p.id, 0); w.worldTension = std::min(100.0f, w.worldTension + 6.0f); }
     if (p.alive) { ++alivePlayers; aliveId = p.id; }
   }
-  if (w.config.allowConquest && alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
+  if (!w.armageddonActive) {
+    uint32_t qualifying = 0;
+    for (uint16_t c : w.nuclearUseCountByPlayer) if (c >= w.armageddonUsesPerNationThreshold) ++qualifying;
+    if (qualifying >= w.armageddonNationsThreshold) {
+      w.armageddonActive = true;
+      w.armageddonTriggerTick = w.tick;
+      w.lastManStandingModeActive = true;
+      w.worldTension = 100.0f;
+      w.config.allowScore = false;
+      w.config.allowWonder = false;
+      for (auto& p : w.players) if (p.alive) w.strategicPosture[p.id] = StrategicPosture::TotalWar;
+      MissionMessageDefinition msg{};
+      msg.messageId = std::string("armageddon_") + std::to_string(w.tick);
+      msg.title = "Armageddon Condition";
+      msg.body = "Global strategic exchange threshold crossed. Last civilization standing victory is now active.";
+      msg.category = "strategic";
+      msg.durationTicks = 2400;
+      msg.sticky = true;
+      enqueue_mission_message(w, msg);
+      w.objectiveLog.push_back({w.tick, "Armageddon Condition activated"});
+    }
+  }
+
+  if ((w.config.allowConquest || w.lastManStandingModeActive) && alivePlayers == 1) apply_match_end(w, VictoryCondition::Conquest, aliveId, false);
 
   uint16_t wonderOwner = std::numeric_limits<uint16_t>::max();
   for (const auto& b : w.buildings) if (b.type == BuildingType::Wonder && !b.underConstruction && b.hp > 0.0f) { wonderOwner = b.team; break; }
@@ -5582,6 +5646,17 @@ void tick_world(World& w, float dt) {
   gLastStats.chinaContentUsage = w.chinaContentUsage;
   gLastStats.europeContentUsage = w.europeContentUsage;
   gLastStats.middleEastContentUsage = w.middleEastContentUsage;
+  gLastStats.russiaContentUsage = w.russiaContentUsage;
+  gLastStats.usaContentUsage = w.usaContentUsage;
+  gLastStats.japanContentUsage = w.japanContentUsage;
+  gLastStats.euContentUsage = w.euContentUsage;
+  gLastStats.ukContentUsage = w.ukContentUsage;
+  gLastStats.egyptContentUsage = w.egyptContentUsage;
+  gLastStats.tartariaContentUsage = w.tartariaContentUsage;
+  gLastStats.armageddonActive = w.armageddonActive ? 1u : 0u;
+  gLastStats.nuclearUseCountTotal = w.nuclearUseCountTotal;
+  gLastStats.armageddonTriggerTick = w.armageddonTriggerTick;
+  gLastStats.lastManStandingModeActive = w.lastManStandingModeActive ? 1u : 0u;
   gLastStats.civDoctrineSwitches = w.civDoctrineSwitches;
   gLastStats.civIndustryOutput = w.civIndustryOutput;
   gLastStats.civLogisticsBonusUsage = w.civLogisticsBonusUsage;
@@ -5977,6 +6052,13 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.chinaContentUsage);
   hash_u32(h, w.europeContentUsage);
   hash_u32(h, w.middleEastContentUsage);
+  hash_u32(h, w.russiaContentUsage);
+  hash_u32(h, w.usaContentUsage);
+  hash_u32(h, w.japanContentUsage);
+  hash_u32(h, w.euContentUsage);
+  hash_u32(h, w.ukContentUsage);
+  hash_u32(h, w.egyptContentUsage);
+  hash_u32(h, w.tartariaContentUsage);
   hash_u32(h, w.civDoctrineSwitches);
   hash_u32(h, w.theatersCreatedCount);
   hash_u32(h, w.operationsExecutedCount);
@@ -6112,6 +6194,13 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.strategicWarningEvents); hash_u32(h, w.strategicRetaliationEvents);
   hash_u32(h, w.strategicStockpileTotal); hash_u32(h, w.strategicReadyTotal); hash_u32(h, w.strategicPreparingTotal); hash_u32(h, w.secondStrikeReadyCount);
   hash_u32(h, w.deterrencePostureChangeCount);
+  hash_u32(h, w.armageddonActive ? 1u : 0u);
+  hash_u32(h, w.armageddonTriggerTick);
+  hash_u32(h, w.lastManStandingModeActive ? 1u : 0u);
+  hash_u32(h, w.armageddonNationsThreshold);
+  hash_u32(h, w.armageddonUsesPerNationThreshold);
+  hash_u32(h, w.nuclearUseCountTotal);
+  for (uint16_t c : w.nuclearUseCountByPlayer) hash_u32(h, c);
   hash_u32(h, w.mountainRegionCount); hash_u32(h, w.surfaceDepositCount); hash_u32(h, w.deepDepositCount);
   hash_u32(h, w.activeMineShafts); hash_u32(h, w.activeTunnels); hash_u32(h, w.undergroundDepots); hash_float(h, w.undergroundYield);
   hash_u32(h, w.guardiansDiscovered); hash_u32(h, w.guardiansSpawned); hash_u32(h, w.guardiansJoined); hash_u32(h, w.guardiansKilled);

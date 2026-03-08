@@ -593,6 +593,20 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["chinaContentUsage"] = w.chinaContentUsage;
   j["europeContentUsage"] = w.europeContentUsage;
   j["middleEastContentUsage"] = w.middleEastContentUsage;
+  j["russiaContentUsage"] = w.russiaContentUsage;
+  j["usaContentUsage"] = w.usaContentUsage;
+  j["japanContentUsage"] = w.japanContentUsage;
+  j["euContentUsage"] = w.euContentUsage;
+  j["ukContentUsage"] = w.ukContentUsage;
+  j["egyptContentUsage"] = w.egyptContentUsage;
+  j["tartariaContentUsage"] = w.tartariaContentUsage;
+  j["armageddonActive"] = w.armageddonActive;
+  j["armageddonTriggerTick"] = w.armageddonTriggerTick;
+  j["lastManStandingModeActive"] = w.lastManStandingModeActive;
+  j["armageddonNationsThreshold"] = w.armageddonNationsThreshold;
+  j["armageddonUsesPerNationThreshold"] = w.armageddonUsesPerNationThreshold;
+  j["nuclearUseCountTotal"] = w.nuclearUseCountTotal;
+  j["nuclearUseCountByPlayer"] = nlohmann::json::array(); for (size_t i = 0; i < w.nuclearUseCountByPlayer.size(); ++i) j["nuclearUseCountByPlayer"].push_back({{"player", (uint16_t)i}, {"count", w.nuclearUseCountByPlayer[i]}});
   j["civDoctrineSwitches"] = w.civDoctrineSwitches;
   j["civIndustryOutput"] = w.civIndustryOutput;
   j["civLogisticsBonusUsage"] = w.civLogisticsBonusUsage;
@@ -810,6 +824,21 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.chinaContentUsage = j.value("chinaContentUsage", 0u);
   w.europeContentUsage = j.value("europeContentUsage", 0u);
   w.middleEastContentUsage = j.value("middleEastContentUsage", 0u);
+  w.russiaContentUsage = j.value("russiaContentUsage", 0u);
+  w.usaContentUsage = j.value("usaContentUsage", 0u);
+  w.japanContentUsage = j.value("japanContentUsage", 0u);
+  w.euContentUsage = j.value("euContentUsage", 0u);
+  w.ukContentUsage = j.value("ukContentUsage", 0u);
+  w.egyptContentUsage = j.value("egyptContentUsage", 0u);
+  w.tartariaContentUsage = j.value("tartariaContentUsage", 0u);
+  w.armageddonActive = j.value("armageddonActive", false);
+  w.armageddonTriggerTick = j.value("armageddonTriggerTick", 0u);
+  w.lastManStandingModeActive = j.value("lastManStandingModeActive", false);
+  w.armageddonNationsThreshold = j.value("armageddonNationsThreshold", static_cast<uint16_t>(2));
+  w.armageddonUsesPerNationThreshold = j.value("armageddonUsesPerNationThreshold", static_cast<uint16_t>(2));
+  w.nuclearUseCountTotal = j.value("nuclearUseCountTotal", 0u);
+  w.nuclearUseCountByPlayer.assign(w.players.size(), 0);
+  if (j.contains("nuclearUseCountByPlayer") && j["nuclearUseCountByPlayer"].is_array()) for (const auto& e : j["nuclearUseCountByPlayer"]) { uint16_t player = e.value("player", (uint16_t)0); if (player < w.nuclearUseCountByPlayer.size()) w.nuclearUseCountByPlayer[player] = e.value("count", (uint16_t)0); }
   w.civDoctrineSwitches = j.value("civDoctrineSwitches", 0u);
   w.civIndustryOutput = j.value("civIndustryOutput", 0.0f);
   w.civLogisticsBonusUsage = j.value("civLogisticsBonusUsage", 0.0f);
@@ -1231,7 +1260,7 @@ int run_headless(const CliOptions& o) {
                 << " POSTURE_CHANGES=" << stats.postureChanges
                 << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents
                 << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << " AIR_UNIT_COUNT=" << stats.airUnitCount << " DETECTOR_COUNT=" << stats.detectorCount << " RADAR_REVEALS=" << stats.radarReveals << " STRATEGIC_STRIKES=" << stats.strategicStrikes << " INTERCEPTIONS=" << stats.interceptions << " STRATEGIC_STOCKPILE_TOTAL=" << stats.strategicStockpileTotal << " STRATEGIC_READY_TOTAL=" << stats.strategicReadyTotal << " STRATEGIC_PREPARING_TOTAL=" << stats.strategicPreparingTotal << " STRATEGIC_WARNINGS=" << stats.strategicWarnings << " STRATEGIC_RETALIATIONS=" << stats.strategicRetaliations << " SECOND_STRIKE_READY_COUNT=" << stats.secondStrikeReadyCount << " DETERRENCE_POSTURE_CHANGES=" << stats.deterrencePostureChanges << " ACTIVE_DENIAL_ZONES=" << stats.activeDenialZones << " MOUNTAIN_REGION_COUNT=" << stats.mountainRegionCount << " MOUNTAIN_CHAIN_COUNT=" << stats.mountainChainCount << " RIVER_COUNT=" << stats.riverCount << " LAKE_COUNT=" << stats.lakeCount << " START_CANDIDATE_COUNT=" << stats.startCandidateCount << " MYTHIC_CANDIDATE_COUNT=" << stats.mythicCandidateCount << " SURFACE_DEPOSIT_COUNT=" << stats.surfaceDepositCount << " DEEP_DEPOSIT_COUNT=" << stats.deepDepositCount << " ACTIVE_MINE_SHAFTS=" << stats.activeMineShafts << " ACTIVE_TUNNELS=" << stats.activeTunnels << " UNDERGROUND_DEPOTS=" << stats.undergroundDepots << " UNDERGROUND_YIELD=" << stats.undergroundYield << " GUARDIAN_SITE_COUNT=" << stats.guardianSiteCount << " GUARDIANS_DISCOVERED=" << stats.guardiansDiscovered << " GUARDIANS_SPAWNED=" << stats.guardiansSpawned << " GUARDIANS_JOINED=" << stats.guardiansJoined << " GUARDIANS_KILLED=" << stats.guardiansKilled << " HOSTILE_GUARDIAN_EVENTS=" << stats.hostileGuardianEvents << " ALLIED_GUARDIAN_EVENTS=" << stats.alliedGuardianEvents << " CONTENT_FALLBACK_COUNT=" << stats.contentFallbackCount << " CIV_PRESENTATION_RESOLVES=" << stats.civPresentationResolves << " GUARDIAN_PRESENTATION_RESOLVES=" << stats.guardianPresentationResolves << " CAMPAIGN_PRESENTATION_RESOLVES=" << stats.campaignPresentationResolves << " EVENT_PRESENTATION_RESOLVES=" << stats.eventPresentationResolves
-                << " UNIQUE_UNITS_PRODUCED=" << stats.uniqueUnitsProduced << " UNIQUE_BUILDINGS_CONSTRUCTED=" << stats.uniqueBuildingsConstructed << " CIV_CONTENT_RESOLUTION_FALLBACKS=" << stats.civContentResolutionFallbacks << " ROME_CONTENT_USAGE=" << stats.romeContentUsage << " CHINA_CONTENT_USAGE=" << stats.chinaContentUsage << " EUROPE_CONTENT_USAGE=" << stats.europeContentUsage << " MIDDLEEAST_CONTENT_USAGE=" << stats.middleEastContentUsage << " CIV_DOCTRINE_SWITCHES=" << stats.civDoctrineSwitches << " CIV_INDUSTRY_OUTPUT=" << stats.civIndustryOutput << " CIV_LOGISTICS_BONUS_USAGE=" << stats.civLogisticsBonusUsage << " CIV_OPERATION_COUNT=" << stats.civOperationCount << "\n";
+                << " UNIQUE_UNITS_PRODUCED=" << stats.uniqueUnitsProduced << " UNIQUE_BUILDINGS_CONSTRUCTED=" << stats.uniqueBuildingsConstructed << " CIV_CONTENT_RESOLUTION_FALLBACKS=" << stats.civContentResolutionFallbacks << " ROME_CONTENT_USAGE=" << stats.romeContentUsage << " CHINA_CONTENT_USAGE=" << stats.chinaContentUsage << " EUROPE_CONTENT_USAGE=" << stats.europeContentUsage << " MIDDLEEAST_CONTENT_USAGE=" << stats.middleEastContentUsage << " RUSSIA_CONTENT_USAGE=" << stats.russiaContentUsage << " USA_CONTENT_USAGE=" << stats.usaContentUsage << " JAPAN_CONTENT_USAGE=" << stats.japanContentUsage << " EU_CONTENT_USAGE=" << stats.euContentUsage << " UK_CONTENT_USAGE=" << stats.ukContentUsage << " EGYPT_CONTENT_USAGE=" << stats.egyptContentUsage << " TARTARIA_CONTENT_USAGE=" << stats.tartariaContentUsage << " ARMAGEDDON_ACTIVE=" << stats.armageddonActive << " NUCLEAR_USE_COUNT_TOTAL=" << stats.nuclearUseCountTotal << " ARMAGEDDON_TRIGGER_TICK=" << stats.armageddonTriggerTick << " LAST_MAN_STANDING_MODE_ACTIVE=" << stats.lastManStandingModeActive << " CIV_DOCTRINE_SWITCHES=" << stats.civDoctrineSwitches << " CIV_INDUSTRY_OUTPUT=" << stats.civIndustryOutput << " CIV_LOGISTICS_BONUS_USAGE=" << stats.civLogisticsBonusUsage << " CIV_OPERATION_COUNT=" << stats.civOperationCount << "\n";
       if (perfLog.good()) perfLog << world.tick << "," << simMs << "," << profile.navMs << "," << profile.combatMs << "," << aiMs << ",0," << entityCount << "," << unitCount << "," << buildingCount << "," << stats.threads << "," << stats.jobCount << "," << stats.chunkCount << "," << stats.movementTasks << "," << stats.fogTasks << "," << stats.territoryTasks << "," << stats.navRequests << "," << stats.navCompletions << "," << stats.navStaleDrops << "," << stats.eventCount << "," << stats.roadCount << "," << stats.activeTradeRoutes << "," << stats.railNodeCount << "," << stats.railEdgeCount << "," << stats.activeRailNetworks << "," << stats.activeTrains << "," << stats.activeSupplyTrains << "," << stats.activeFreightTrains << "," << stats.railThroughput << "," << stats.disruptedRailRoutes << "," << stats.suppliedUnits << "," << stats.lowSupplyUnits << "," << stats.outOfSupplyUnits << "," << stats.operationCount << "," << stats.worldTension << "," << stats.allianceCount << "," << stats.warCount << "," << stats.activeEspionageOps << "," << stats.postureChanges << "," << stats.diplomacyEvents << "," << stats.navalUnitCount << "," << stats.transportCount << "," << stats.embarkedUnitCount << "," << stats.activeNavalOperations << "," << stats.coastalTargets << "," << stats.navalCombatEvents << "," << stats.airUnitCount << "," << stats.detectorCount << "," << stats.radarReveals << "," << stats.strategicStrikes << "," << stats.interceptions << "," << stats.strategicStockpileTotal << "," << stats.strategicReadyTotal << "," << stats.strategicPreparingTotal << "," << stats.strategicWarnings << "," << stats.strategicRetaliations << "," << stats.secondStrikeReadyCount << "," << stats.deterrencePostureChanges << "," << stats.activeDenialZones << "," << stats.mountainRegionCount << "," << stats.mountainChainCount << "," << stats.riverCount << "," << stats.lakeCount << "," << stats.startCandidateCount << "," << stats.mythicCandidateCount << "," << stats.surfaceDepositCount << "," << stats.deepDepositCount << "," << stats.activeMineShafts << "," << stats.activeTunnels << "," << stats.undergroundDepots << "," << stats.undergroundYield << "," << stats.guardianSiteCount << "," << stats.guardiansDiscovered << "," << stats.guardiansSpawned << "," << stats.guardiansJoined << "," << stats.guardiansKilled << "," << stats.hostileGuardianEvents << "," << stats.alliedGuardianEvents << "," << stats.campaignMissionCount << "," << stats.campaignFlagsSet << "," << stats.campaignResourcesCount << "," << stats.campaignBranchesTaken << "," << stats.factoryCount << "," << stats.activeFactories << "," << stats.blockedFactories << "," << stats.steelOutput << "," << stats.fuelOutput << "," << stats.munitionsOutput << "," << stats.machinePartsOutput << "," << stats.electronicsOutput << "," << stats.industrialThroughput << "," << stats.uniqueUnitsProduced << "," << stats.uniqueBuildingsConstructed << "," << stats.civDoctrineSwitches << "," << stats.civIndustryOutput << "," << stats.civLogisticsBonusUsage << "," << stats.civOperationCount << "," << stats.civContentResolutionFallbacks << "," << stats.romeContentUsage << "," << stats.chinaContentUsage << "," << stats.europeContentUsage << "," << stats.middleEastContentUsage << "\n";
     }
 
@@ -1406,7 +1435,7 @@ int run_headless(const CliOptions& o) {
     for (const auto& oo : world.operationalObjectives) if (oo.outcome != dom::sim::OperationOutcome::InProgress) { resolved = true; break; }
     if (!resolved) { std::cerr << "Smoke failure: no operational outcomes recorded\n"; return 104; }
   }
-  if (o.smoke && !o.scenarioFile.empty() && (o.scenarioFile.find("civ_test") != std::string::npos || o.scenarioFile.find("civ_content_test") != std::string::npos)) {
+  if (o.smoke && !o.scenarioFile.empty() && (o.scenarioFile.find("civ_test") != std::string::npos || o.scenarioFile.find("civ_content_test") != std::string::npos || o.scenarioFile.find("civ_expansion_test") != std::string::npos)) {
     if (world.uniqueUnitsProduced < 1) { std::cerr << "Smoke failure: no unique units produced\n"; return 105; }
     uint32_t uniqueBuildingPresence = 0;
     for (const auto& b : world.buildings) {
@@ -1415,17 +1444,25 @@ int run_headless(const CliOptions& o) {
       if (!resolved.empty() && b.definitionId == resolved) ++uniqueBuildingPresence;
     }
     if (world.uniqueBuildingsConstructed < 1 && uniqueBuildingPresence < 1) { std::cerr << "Smoke failure: no unique buildings constructed/resolved\n"; return 106; }
-    if (world.romeContentUsage == 0 || world.chinaContentUsage == 0 || world.europeContentUsage == 0 || world.middleEastContentUsage == 0) { std::cerr << "Smoke failure: one or more civilization content usage counters are zero\n"; return 107; }
+    if (o.scenarioFile.find("civ_expansion_test") != std::string::npos) {
+      if (world.russiaContentUsage == 0 || world.usaContentUsage == 0 || world.japanContentUsage == 0 || world.euContentUsage == 0 || world.ukContentUsage == 0 || world.egyptContentUsage == 0 || world.tartariaContentUsage == 0) { std::cerr << "Smoke failure: one or more expanded civilization content usage counters are zero\n"; return 107; }
+    }
     float refinedTotal = 0.0f;
     for (const auto& p : world.players) for (float g : p.refinedGoods) refinedTotal += g;
     if (world.civIndustryOutput <= 0.0f && refinedTotal <= 0.0f) { std::cerr << "Smoke failure: no civ industry output\n"; return 108; }
-    if (world.civLogisticsBonusUsage == 0.0f && world.railThroughput <= 0.0f && world.logisticsTradeActiveCount < 1) { std::cerr << "Smoke failure: no civ logistics bonus usage\n"; return 109; }
+    if (o.scenarioFile.find("civ_expansion_test") == std::string::npos && world.civLogisticsBonusUsage == 0.0f && world.railThroughput <= 0.0f && world.logisticsTradeActiveCount < 1) { std::cerr << "Smoke failure: no civ logistics bonus usage\n"; return 109; }
     if (world.players.size() >= 2) {
       const auto& a = world.players[0];
       const auto& b = world.players[1];
       const float ecoDiff = std::fabs(a.resources[0] - b.resources[0]) + std::fabs(a.resources[3] - b.resources[3]) + std::fabs(a.resources[4] - b.resources[4]);
       if (ecoDiff < 20.0f) { std::cerr << "Smoke failure: civ economy did not diverge\n"; return 110; }
     }
+  }
+
+  if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("armageddon") != std::string::npos) {
+    if (!world.armageddonActive) { std::cerr << "Smoke failure: armageddon state did not activate\n"; return 111; }
+    if (!world.lastManStandingModeActive) { std::cerr << "Smoke failure: last-man-standing mode is not active\n"; return 112; }
+    if (world.armageddonTriggerTick == 0) { std::cerr << "Smoke failure: armageddon trigger tick not set\n"; return 113; }
   }
 
   // Scenario roundtrip smoke disabled for civ content path stability in headless CI.

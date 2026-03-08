@@ -376,3 +376,18 @@ Headless validation:
 
 ## Visual/content polish
 See `docs/visual_content_polish.md` for deterministic presentation mapping, fallback rules, and smoke commands.
+
+## Civilization Expansion + Armageddon
+
+Added civilization packs: Russia, USA, Japan, EU, UK, Egypt, and Tartaria (explicitly fictional/alt-history).
+
+Armageddon Condition is now authoritative and deterministic: if at least two different civilizations each perform at least two qualifying strategic nuclear uses, the game enters global Armageddon and switches to last-civilization-standing victory mode.
+
+Smoke commands:
+- `./build/rts --headless --scenario scenarios/civ_expansion_test.json --smoke --ticks 3200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 3600 --dump-hash`
+- `./build/rts --headless --scenario scenarios/armageddon_test.json --threads 1 --hash-only`
+- `./build/rts --headless --scenario scenarios/armageddon_test.json --threads 4 --hash-only`
+- `./build/rts --headless --scenario scenarios/armageddon_test.json --threads 8 --hash-only`
+- `./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --save /tmp/armageddon_save.json --dump-hash`
+- `./build/rts --headless --load /tmp/armageddon_save.json --smoke --ticks 3600 --dump-hash`

@@ -173,3 +173,12 @@ Reference scenario: `scenarios/theater_operations_test.json`.
   `event_id`, `display_name`, `category`, `scope`, `start_tick`, `duration`, `severity`, `state` (`inactive|active|resolved`), `effect_payload`, optional target + campaign/script fields.
 
 Evaluation order is deterministic by `event_id` each activation cadence.
+
+## Armageddon fields
+
+Optional scenario fields:
+- `armageddonNationsThreshold` (default `2`)
+- `armageddonUsesPerNationThreshold` (default `2`)
+- `armageddonActive` / `armageddonTriggerTick` / `lastManStandingModeActive`
+- `nuclearUseCountTotal`
+- `nuclearUseCountByPlayer[]`: `{player, count}`

@@ -75,7 +75,8 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   if (ImGui::Begin("Civilization Identity")) {
     ImGui::Text("UNIQUE_UNITS_PRODUCED=%u UNIQUE_BUILDINGS_CONSTRUCTED=%u", world.uniqueUnitsProduced, world.uniqueBuildingsConstructed);
     ImGui::Text("CIV_CONTENT_RESOLUTION_FALLBACKS=%u", world.civContentResolutionFallbacks);
-    ImGui::Text("ROME_CONTENT_USAGE=%u CHINA_CONTENT_USAGE=%u EUROPE_CONTENT_USAGE=%u MIDDLEEAST_CONTENT_USAGE=%u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
+    ImGui::Text("ROME=%u CHINA=%u EUROPE=%u MIDDLEEAST=%u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
+    ImGui::Text("RUSSIA=%u USA=%u JAPAN=%u EU=%u UK=%u EGYPT=%u TARTARIA=%u", world.russiaContentUsage, world.usaContentUsage, world.japanContentUsage, world.euContentUsage, world.ukContentUsage, world.egyptContentUsage, world.tartariaContentUsage);
     ImGui::Text("CIV_DOCTRINE_SWITCHES=%u CIV_OPERATION_COUNT=%u", world.civDoctrineSwitches, world.civOperationCount);
     ImGui::Text("CIV_INDUSTRY_OUTPUT=%.2f CIV_LOGISTICS_BONUS_USAGE=%.2f", world.civIndustryOutput, world.civLogisticsBonusUsage);
     for (const auto& p : world.players) {
@@ -95,6 +96,11 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
     ImGui::Text("STRATEGIC_STOCKPILE_TOTAL=%u STRATEGIC_READY_TOTAL=%u STRATEGIC_PREPARING_TOTAL=%u", world.strategicStockpileTotal, world.strategicReadyTotal, world.strategicPreparingTotal);
     ImGui::Text("STRATEGIC_LAUNCHES=%u STRATEGIC_WARNINGS=%u STRATEGIC_INTERCEPTIONS=%u", world.strategicStrikeEvents, world.strategicWarningEvents, world.interceptionEvents);
     ImGui::Text("STRATEGIC_RETALIATIONS=%u SECOND_STRIKE_READY_COUNT=%u DETERRENCE_POSTURE_CHANGES=%u", world.strategicRetaliationEvents, world.secondStrikeReadyCount, world.deterrencePostureChangeCount);
+    ImGui::Text("ARMAGEDDON_ACTIVE=%u NUCLEAR_USE_COUNT_TOTAL=%u ARMAGEDDON_TRIGGER_TICK=%u LAST_MAN_STANDING_MODE_ACTIVE=%u", world.armageddonActive ? 1u : 0u, world.nuclearUseCountTotal, world.armageddonTriggerTick, world.lastManStandingModeActive ? 1u : 0u);
+    if (!world.nuclearUseCountByPlayer.empty()) {
+      ImGui::TextUnformatted("NUCLEAR_USE_COUNT_BY_CIV/PLAYER");
+      for (size_t i = 0; i < world.nuclearUseCountByPlayer.size(); ++i) ImGui::BulletText("P%zu (%s): %u", i, i < world.players.size() ? world.players[i].civilization.displayName.c_str() : "unknown", world.nuclearUseCountByPlayer[i]);
+    }
     for (size_t i = 0; i < world.strategicDeterrence.size(); ++i) {
       const auto& d = world.strategicDeterrence[i];
       ImGui::BulletText("P%zu cap=%d stockpile=%u ready=%u prep=%u alert=%u warning=%d retaliation=%d secondStrike=%d", i, d.strategicCapabilityEnabled?1:0, d.strategicStockpile, d.strategicReadyCount, d.strategicPreparingCount, d.strategicAlertLevel, d.launchWarningActive?1:0, d.retaliationCapability?1:0, d.secondStrikeCapability?1:0);

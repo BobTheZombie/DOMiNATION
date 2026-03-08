@@ -56,3 +56,11 @@ Each civilization pack now contains concrete unique units and buildings wired to
 - Middle East: camel raider / mamluk guard / caravan master; caravanserai + desert foundry.
 
 UI panels surface owning civilization, resolved definition IDs, unique markers, and icon IDs from deterministic civ content data.
+
+## Expanded civilization roster
+
+New civilization packs: Russia, USA, Japan, EU, UK, Egypt, Tartaria.
+
+Each pack includes data-driven identity coefficients, doctrine weights, and concrete unique content mappings (>=2 units and >=2 buildings per new civilization).
+
+Tartaria is explicitly fictional/alt-history game content and is not presented as a real-world factual civilization claim.

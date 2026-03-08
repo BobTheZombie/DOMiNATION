@@ -96,6 +96,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   glm::vec2 rally = base + glm::vec2{10.0f, 8.0f};
 
   const auto& civ = world.players[team].civilization;
+  const bool armageddon = world.armageddonActive;
   uint32_t cc = first_building(world, team, dom::sim::BuildingType::CityCenter);
   const int workerTarget = std::clamp((int)std::round((5.0f * civ.economyBias + 1.5f) * civ.aiWorkerTargetMult), 4, 16);
   if (cc && count_units(world, team, dom::sim::UnitType::Worker) < workerTarget) dom::sim::enqueue_train_unit(world, team, cc, dom::sim::UnitType::Worker);
@@ -253,6 +254,10 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   float tensionFactor = std::clamp(1.0f - world.worldTension / 180.0f, 0.5f, 1.2f);
   const float expansionTiming = std::max(0.7f, civ.aiExpansionTiming);
   int attackThreshold = std::clamp((int)std::round((((gAttackEarly ? 5.0f : 8.0f) * expansionTiming) / std::max(0.7f, civ.aggression)) * tensionFactor), 3, 12);
+  if (armageddon) {
+    const float civStyle = std::max(0.85f, civ.aggression * civ.militaryBias);
+    attackThreshold = std::clamp((int)std::round(attackThreshold / civStyle), 2, 10);
+  }
   if ((int)army.size() < attackThreshold) { ++world.aiDecisionCount; return; }
 
   TeamStrength ours = strength_near(world, team, enemyBase, 30.0f);
@@ -264,8 +269,20 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (op.team == team && op.active) { opType = op.type; opTarget = op.target; break; }
   }
   if (opType == dom::sim::OperationType::DefendBorder || opType == dom::sim::OperationType::SecureRoute) opTarget = rally;
+  if (armageddon) {
+    if (civ.id == "russia") opTarget = rally;
+    else if (civ.id == "usa" || civ.id == "uk") opTarget = enemyBase;
+    else if (civ.id == "japan") opTarget = navalRelevant ? enemyBase : rally;
+    else if (civ.id == "eu") opTarget = (theirs.hp > ours.hp) ? rally : enemyBase;
+    else if (civ.id == "egypt") opTarget = rally;
+    else if (civ.id == "tartaria") opTarget = enemyBase;
+  }
 
-  const int retreatHpThreshold = (int)std::round((gAggressive ? 240.0f : 360.0f) * std::max(0.75f, civ.defense));
+  int retreatHpThreshold = (int)std::round((gAggressive ? 240.0f : 360.0f) * std::max(0.75f, civ.defense));
+  if (armageddon) {
+    if (civ.id == "russia" || civ.id == "egypt") retreatHpThreshold = (int)std::round(retreatHpThreshold * 1.15f);
+    if (civ.id == "usa" || civ.id == "tartaria") retreatHpThreshold = (int)std::round(retreatHpThreshold * 0.9f);
+  }
   int outSupply = 0; for (const auto& u : world.units) if (u.team == team && u.type != dom::sim::UnitType::Worker && u.supplyState == dom::sim::SupplyState::OutOfSupply) ++outSupply;
   const bool shouldRetreat = ours.hp < retreatHpThreshold || (theirs.hp > 0 && ours.hp * 100 < theirs.hp * (gAggressive ? 60 : 80)) || outSupply > (int)army.size() / 3;
 

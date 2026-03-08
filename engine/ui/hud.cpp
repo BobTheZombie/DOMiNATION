@@ -294,6 +294,8 @@ void draw_hud(SDL_Window* window,
   ImGui::SeparatorText("Presentation Resolve Debug");
   ImGui::Text("Fallback count: %u", world.civContentResolutionFallbacks);
   ImGui::Text("Civ usage R/C/E/ME: %u / %u / %u / %u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
+  ImGui::Text("Expansion usage RU/US/JP/EU/UK/EG/TA: %u / %u / %u / %u / %u / %u / %u", world.russiaContentUsage, world.usaContentUsage, world.japanContentUsage, world.euContentUsage, world.ukContentUsage, world.egyptContentUsage, world.tartariaContentUsage);
+  ImGui::Text("Armageddon active=%d triggerTick=%u nuclearTotal=%u LMS=%d", world.armageddonActive?1:0, world.armageddonTriggerTick, world.nuclearUseCountTotal, world.lastManStandingModeActive?1:0);
   ImGui::End();
 
   draw_production_menu(world, selected);
