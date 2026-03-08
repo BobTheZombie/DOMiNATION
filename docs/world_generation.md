@@ -47,3 +47,8 @@ World generation outputs consumed directly by terrain presentation:
 
 No new gameplay water or mountain rules are introduced by renderer integration.
 Presentation caches are transient and reconstructed from authoritative state on load/replay.
+
+
+## Region readability surfacing
+
+World generation outputs continue to drive the same authoritative simulation data, while presentation now surfaces regional economic geography more clearly (industrial/port/rail/mining markers) from existing generated/placed entities only. No new generation mechanics were introduced.

@@ -15,6 +15,13 @@ struct EntityPresentationCounters {
   uint64_t unitPresentationResolves{0};
   uint64_t buildingPresentationResolves{0};
   uint64_t cityPresentationResolves{0};
+  uint64_t capitalPresentationResolves{0};
+  uint64_t regionPresentationResolves{0};
+  uint64_t industrialRegionMarkers{0};
+  uint64_t portRegionMarkers{0};
+  uint64_t railRegionMarkers{0};
+  uint64_t miningRegionMarkers{0};
+  uint64_t cityPresentationFallbacks{0};
   uint64_t guardianPresentationResolves{0};
   uint64_t entityPresentationFallbacks{0};
   uint64_t farLodClusterCount{0};

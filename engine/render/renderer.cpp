@@ -10,6 +10,7 @@
 #include <vector>
 #include <string_view>
 #include <chrono>
+#include <cctype>
 #include "engine/ui/ui_icons.h"
 
 namespace dom::render {
@@ -86,17 +87,43 @@ std::array<float, 3> mix_color(const std::array<float, 3>& a, const std::array<f
   return {a[0] * (1.0f - k) + b[0] * k, a[1] * (1.0f - k) + b[1] * k, a[2] * (1.0f - k) + b[2] * k};
 }
 
+std::string normalized_civ_key(const dom::sim::World& w, uint16_t team) {
+  if (team >= w.players.size()) return "default";
+  std::string k = w.players[team].civilization.id;
+  if (k.empty()) k = w.players[team].civilization.themeId;
+  if (k.empty()) k = "default";
+  std::transform(k.begin(), k.end(), k.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+  return k;
+}
+
 std::array<float, 3> theme_tint_for_team(const dom::sim::World& w, uint16_t team) {
-  if (team >= w.players.size()) return {0.6f, 0.6f, 0.6f};
-  std::string theme = w.players[team].civilization.themeId;
-  if (theme.empty()) theme = w.players[team].civilization.id;
+  std::string theme = normalized_civ_key(w, team);
   if (theme.find("rome") != std::string::npos) return {0.78f, 0.62f, 0.42f};
   if (theme.find("china") != std::string::npos) return {0.56f, 0.44f, 0.32f};
   if (theme.find("russia") != std::string::npos) return {0.62f, 0.62f, 0.68f};
   if (theme.find("japan") != std::string::npos) return {0.84f, 0.72f, 0.74f};
   if (theme.find("middle") != std::string::npos || theme.find("egypt") != std::string::npos) return {0.76f, 0.66f, 0.48f};
   if (theme.find("usa") != std::string::npos || theme.find("uk") != std::string::npos || theme.find("europe") != std::string::npos || theme.find("eu") != std::string::npos) return {0.55f, 0.62f, 0.72f};
+  if (theme.find("tartaria") != std::string::npos) return {0.63f, 0.36f, 0.74f};
   return {0.64f, 0.64f, 0.64f};
+}
+
+enum class CivSettlementShape : uint8_t { Generic, Rome, China, Europe, MiddleEast, Russia, Usa, Japan, Eu, Uk, Egypt, Tartaria };
+
+CivSettlementShape civ_settlement_shape(const dom::sim::World& w, uint16_t team) {
+  std::string k = normalized_civ_key(w, team);
+  if (k.find("rome") != std::string::npos) return CivSettlementShape::Rome;
+  if (k.find("china") != std::string::npos) return CivSettlementShape::China;
+  if (k.find("europe") != std::string::npos) return CivSettlementShape::Europe;
+  if (k.find("middle") != std::string::npos) return CivSettlementShape::MiddleEast;
+  if (k.find("russia") != std::string::npos) return CivSettlementShape::Russia;
+  if (k.find("usa") != std::string::npos) return CivSettlementShape::Usa;
+  if (k == "eu") return CivSettlementShape::Eu;
+  if (k.find("uk") != std::string::npos) return CivSettlementShape::Uk;
+  if (k.find("japan") != std::string::npos) return CivSettlementShape::Japan;
+  if (k.find("egypt") != std::string::npos) return CivSettlementShape::Egypt;
+  if (k.find("tartaria") != std::string::npos) return CivSettlementShape::Tartaria;
+  return CivSettlementShape::Generic;
 }
 
 enum class UnitGlyph : uint8_t { Worker, Infantry, HeavyInfantry, Cavalry, Artillery, Armor, Rail, Naval, Aircraft, Guardian };
@@ -651,7 +678,29 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
     int px = world_to_minimap_px(c.pos.x, static_cast<float>(w.width), res);
     int py = world_to_minimap_px(c.pos.y, static_cast<float>(w.height), res);
     auto rgb = team_rgb(c.team);
-    plot_dot(out, res, px, py, rgb, c.capital ? 2 : 1);
+    int dot = c.capital ? 3 : (c.level >= 4 ? 2 : 1);
+    plot_dot(out, res, px, py, rgb, dot);
+    if (c.capital) {
+      plot_dot(out, res, px, py, {255, 245, 150}, 1);
+    }
+  }
+
+  for (const auto& b : w.buildings) {
+    int px = world_to_minimap_px(b.pos.x, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(b.pos.y, static_cast<float>(w.height), res);
+    if (b.type == dom::sim::BuildingType::Port) plot_dot(out, res, px, py, {80, 188, 240}, 0);
+    if (b.type == dom::sim::BuildingType::Mine) plot_dot(out, res, px, py, {224, 194, 78}, 0);
+    if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery) {
+      plot_dot(out, res, px, py, {206, 132, 78}, 0);
+    }
+  }
+
+  for (const auto& n : w.railNodes) {
+    int px = world_to_minimap_px(n.tile.x + 0.5f, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(n.tile.y + 0.5f, static_cast<float>(w.height), res);
+    if (n.type == dom::sim::RailNodeType::Depot || n.type == dom::sim::RailNodeType::Station) {
+      plot_dot(out, res, px, py, {224, 224, 120}, 0);
+    }
   }
 
   for (int y = 1; y < res - 1; ++y) {
@@ -1107,34 +1156,95 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     if (u.supplyState == dom::sim::SupplyState::OutOfSupply) { (void)dom::ui::icons::resolve_marker_id("warning", u.team); draw_ring(u.renderPos, 0.60f, 0.10f, {0.95f, 0.22f, 0.22f}); }
   }
 
+  struct TeamRegionMarkers { int industrial{0}; int ports{0}; int mines{0}; int rail{0}; };
+  std::vector<TeamRegionMarkers> regionMarkers(w.players.size());
+  for (const auto& b : w.buildings) {
+    if (b.team >= regionMarkers.size()) continue;
+    if (b.type == dom::sim::BuildingType::Port) ++regionMarkers[b.team].ports;
+    if (b.type == dom::sim::BuildingType::Mine) ++regionMarkers[b.team].mines;
+    if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::ElectronicsLab) ++regionMarkers[b.team].industrial;
+  }
+  for (const auto& n : w.railNodes) {
+    if (n.owner >= regionMarkers.size()) continue;
+    if (n.type == dom::sim::RailNodeType::Depot || n.type == dom::sim::RailNodeType::Station) ++regionMarkers[n.owner].rail;
+  }
+
   for (const auto& cty : w.cities) {
     int gx = std::clamp(static_cast<int>(cty.pos.x), 0, w.width - 1);
     int gy = std::clamp(static_cast<int>(cty.pos.y), 0, w.height - 1);
     if (!w.godMode && w.fog[gy * w.width + gx] > 0 && cty.team != 0) continue;
     ++gEntityCounters.cityPresentationResolves;
+    if (cty.capital) ++gEntityCounters.capitalPresentationResolves;
+
+    TeamRegionMarkers markers{};
+    if (cty.team < regionMarkers.size()) markers = regionMarkers[cty.team];
+
     auto rel = diplomatic_color(w, cty.team);
     auto theme = theme_tint_for_team(w, cty.team);
     auto col = mix_color(rel, theme, 0.3f);
-    float core = cty.capital ? 1.25f : (cty.level >= 3 ? 1.05f : 0.82f);
-    if (c.zoom > 80.0f) core *= 0.82f;
+    float core = cty.capital ? 1.28f : (cty.level >= 5 ? 1.16f : (cty.level >= 3 ? 1.0f : 0.76f));
+    if (c.zoom > 80.0f) core *= 0.78f;
+    else if (c.zoom < 20.0f) core *= 1.08f;
+
+    CivSettlementShape shape = civ_settlement_shape(w, cty.team);
+
     glBegin(GL_QUADS);
     glColor3f(col[0], col[1], col[2]);
-    glVertex2f(cty.pos.x - core, cty.pos.y - core * 0.9f);
-    glVertex2f(cty.pos.x + core, cty.pos.y - core * 0.9f);
-    glVertex2f(cty.pos.x + core, cty.pos.y + core * 0.9f);
-    glVertex2f(cty.pos.x - core, cty.pos.y + core * 0.9f);
+    glVertex2f(cty.pos.x - core, cty.pos.y - core * 0.85f);
+    glVertex2f(cty.pos.x + core, cty.pos.y - core * 0.85f);
+    glVertex2f(cty.pos.x + core, cty.pos.y + core * 0.85f);
+    glVertex2f(cty.pos.x - core, cty.pos.y + core * 0.85f);
     glEnd();
+
+    float kx = 0.42f;
+    float ky = 0.58f;
+    if (shape == CivSettlementShape::Rome) { kx = 0.54f; ky = 0.56f; }
+    else if (shape == CivSettlementShape::China) { kx = 0.50f; ky = 0.48f; }
+    else if (shape == CivSettlementShape::Japan) { kx = 0.38f; ky = 0.64f; }
+    else if (shape == CivSettlementShape::Russia) { kx = 0.62f; ky = 0.46f; }
+    else if (shape == CivSettlementShape::Tartaria) { kx = 0.34f; ky = 0.72f; }
+    else if (shape == CivSettlementShape::Egypt || shape == CivSettlementShape::MiddleEast) { kx = 0.48f; ky = 0.64f; }
+    else if (shape == CivSettlementShape::Eu || shape == CivSettlementShape::Uk || shape == CivSettlementShape::Usa) { kx = 0.56f; ky = 0.52f; }
+    else ++gEntityCounters.cityPresentationFallbacks;
 
     glBegin(GL_TRIANGLES);
-    auto lm = cty.capital ? std::array<float,3>{1.0f, 0.96f, 0.65f} : std::array<float,3>{0.9f, 0.9f, 0.9f};
+    auto lm = cty.capital ? std::array<float,3>{1.0f, 0.95f, 0.65f} : std::array<float,3>{0.88f, 0.88f, 0.9f};
     glColor3f(lm[0], lm[1], lm[2]);
-    float h = cty.capital ? 0.95f : 0.7f;
-    glVertex2f(cty.pos.x, cty.pos.y + h);
-    glVertex2f(cty.pos.x - h * 0.55f, cty.pos.y + 0.15f);
-    glVertex2f(cty.pos.x + h * 0.55f, cty.pos.y + 0.15f);
+    float h = cty.capital ? 1.0f : (cty.level >= 4 ? 0.84f : 0.62f);
+    glVertex2f(cty.pos.x, cty.pos.y + h * ky);
+    glVertex2f(cty.pos.x - h * kx, cty.pos.y - h * 0.18f);
+    glVertex2f(cty.pos.x + h * kx, cty.pos.y - h * 0.18f);
     glEnd();
 
-    if (cty.capital || cty.level >= 4) { (void)dom::ui::icons::resolve_marker_id("capital", cty.team); draw_ring(cty.pos, core + 0.42f, 0.09f, {0.95f, 0.88f, 0.3f}); }
+    if (cty.level >= 5 && c.zoom < 70.0f) {
+      glBegin(GL_QUADS);
+      glColor3f(col[0] * 0.86f, col[1] * 0.86f, col[2] * 0.9f);
+      glVertex2f(cty.pos.x - core * 1.5f, cty.pos.y - core * 0.35f);
+      glVertex2f(cty.pos.x - core * 0.85f, cty.pos.y - core * 0.35f);
+      glVertex2f(cty.pos.x - core * 0.85f, cty.pos.y + core * 0.35f);
+      glVertex2f(cty.pos.x - core * 1.5f, cty.pos.y + core * 0.35f);
+      glVertex2f(cty.pos.x + core * 0.85f, cty.pos.y - core * 0.35f);
+      glVertex2f(cty.pos.x + core * 1.5f, cty.pos.y - core * 0.35f);
+      glVertex2f(cty.pos.x + core * 1.5f, cty.pos.y + core * 0.35f);
+      glVertex2f(cty.pos.x + core * 0.85f, cty.pos.y + core * 0.35f);
+      glEnd();
+    }
+
+    if (cty.capital || cty.level >= 4) { (void)dom::ui::icons::resolve_marker_id("capital", cty.team); draw_ring(cty.pos, core + 0.45f, cty.capital ? 0.11f : 0.08f, cty.capital ? std::array<float,3>{0.98f, 0.92f, 0.36f} : std::array<float,3>{0.78f, 0.82f, 0.9f}); }
+
+    auto regionMark = [&](float ox, float oy, const std::array<float, 3>& rc, float s) {
+      glBegin(GL_QUADS);
+      glColor3f(rc[0], rc[1], rc[2]);
+      glVertex2f(cty.pos.x + ox - s, cty.pos.y + oy - s);
+      glVertex2f(cty.pos.x + ox + s, cty.pos.y + oy - s);
+      glVertex2f(cty.pos.x + ox + s, cty.pos.y + oy + s);
+      glVertex2f(cty.pos.x + ox - s, cty.pos.y + oy + s);
+      glEnd();
+    };
+    if (markers.industrial > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.industrialRegionMarkers; regionMark(core * 0.95f, -core * 0.7f, {0.88f, 0.52f, 0.34f}, 0.12f); }
+    if (markers.ports > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.portRegionMarkers; regionMark(core * 0.2f, -core * 1.05f, {0.36f, 0.72f, 0.92f}, 0.11f); }
+    if (markers.rail > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.railRegionMarkers; regionMark(-core * 0.95f, -core * 0.7f, {0.95f, 0.9f, 0.44f}, 0.1f); }
+    if (markers.mines > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.miningRegionMarkers; regionMark(-core * 0.2f, -core * 1.05f, {0.94f, 0.84f, 0.42f}, 0.11f); }
   }
 
   if (gEntityPresentationDebug) {
