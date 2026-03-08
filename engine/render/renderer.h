@@ -3,6 +3,7 @@
 #include "engine/render/terrain_materials.h"
 #include <glm/vec2.hpp>
 #include <vector>
+#include <string>
 
 namespace dom::render {
 struct Camera {
@@ -29,6 +30,19 @@ struct VisualFeedbackCounters {
   uint64_t feedbackFallbackCount{0};
 };
 
+enum class StrategicLabelType : uint8_t {
+  Capital,
+  Theater,
+  StrategicSite,
+};
+
+struct StrategicLabelHook {
+  glm::vec2 pos{};
+  StrategicLabelType type{StrategicLabelType::StrategicSite};
+  uint16_t owner{UINT16_MAX};
+  std::string text;
+};
+
 bool init_renderer();
 void set_resolution(int width, int height);
 void set_render_scale(float scale);
@@ -40,6 +54,7 @@ glm::vec2 screen_to_world(const Camera& camera, int width, int height, glm::vec2
 void toggle_minimap();
 bool minimap_screen_to_world(const dom::sim::World& world, int width, int height, glm::vec2 screen, glm::vec2& outWorld);
 void generate_minimap_image(const dom::sim::World& world, int resolution, std::vector<uint8_t>& outRgb);
+void collect_strategic_label_hooks(const dom::sim::World& world, std::vector<StrategicLabelHook>& outHooks);
 
 void toggle_territory_overlay();
 void toggle_border_overlay();

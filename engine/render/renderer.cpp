@@ -21,6 +21,8 @@ struct OverlayState {
   bool showTerrainMaterialOverlay{false};
   bool showWaterOverlay{false};
   bool showMinimap{true};
+  bool showStrategicOverlays{true};
+  bool showLabels{true};
   GLuint territoryTex{0};
   GLuint borderTex{0};
   GLuint fogTex{0};
@@ -123,6 +125,36 @@ std::array<float, 3> diplomatic_color(const dom::sim::World& w, uint16_t team) {
     if (dom::sim::players_at_war(w, 0, team)) return mix_color(base, {1.0f, 0.2f, 0.2f}, 0.35f);
   }
   return mix_color(base, {0.85f, 0.85f, 0.85f}, 0.2f);
+}
+
+std::array<float, 3> owner_tint_color(const dom::sim::World& w, uint16_t owner) {
+  if (owner == 0) return {0.48f, 0.82f, 0.55f};
+  const uint16_t team = static_cast<uint16_t>(owner - 1);
+  auto dc = diplomatic_color(w, team);
+  if (team < w.players.size()) {
+    if (dom::sim::players_allied(w, 0, team)) return mix_color(dc, {0.45f, 0.95f, 0.72f}, 0.25f);
+    if (dom::sim::players_at_war(w, 0, team)) return mix_color(dc, {1.0f, 0.26f, 0.2f}, 0.38f);
+  }
+  return mix_color(dc, {0.85f, 0.85f, 0.85f}, 0.24f);
+}
+
+bool tile_frontline(const dom::sim::World& w, int x, int y, uint16_t owner) {
+  if (owner == 0) return false;
+  const uint16_t team = static_cast<uint16_t>(owner - 1);
+  const int r = 3;
+  for (const auto& u : w.units) {
+    int ux = static_cast<int>(u.pos.x);
+    int uy = static_cast<int>(u.pos.y);
+    if (std::abs(ux - x) > r || std::abs(uy - y) > r) continue;
+    if (u.team == team) continue;
+    if (dom::sim::players_at_war(w, team, u.team)) return true;
+  }
+  return false;
+}
+
+bool tile_recently_captured(const dom::sim::World& w, int x, int y, uint32_t recentTicks) {
+  (void)w; (void)x; (void)y; (void)recentTicks;
+  return false;
 }
 
 
@@ -367,6 +399,107 @@ void draw_feature_circle(glm::vec2 pos, float radius, const std::array<float, 3>
   glEnd();
 }
 
+
+void draw_territory_readability_overlay(const dom::sim::World& w, const Camera& c) {
+  const int step = c.zoom > 65.0f ? 3 : (c.zoom > 34.0f ? 2 : 1);
+  const float alpha = c.zoom > 70.0f ? 0.28f : (c.zoom > 36.0f ? 0.24f : 0.18f);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBegin(GL_QUADS);
+  for (int y = 0; y < w.height - step; y += step) {
+    for (int x = 0; x < w.width - step; x += step) {
+      size_t i = static_cast<size_t>(y * w.width + x);
+      uint16_t owner = w.territoryOwner[i];
+      if (owner == UINT16_MAX) continue;
+      auto col = owner_tint_color(w, owner);
+      glColor4f(col[0], col[1], col[2], alpha);
+      glVertex2f((float)x, (float)y);
+      glVertex2f((float)(x + step), (float)y);
+      glVertex2f((float)(x + step), (float)(y + step));
+      glVertex2f((float)x, (float)(y + step));
+    }
+  }
+  glEnd();
+  glDisable(GL_BLEND);
+}
+
+void draw_colored_borders(const dom::sim::World& w, const Camera& c) {
+  glLineWidth(c.zoom > 55.0f ? 1.0f : 1.8f);
+  glBegin(GL_LINES);
+  for (int y = 0; y < w.height; ++y) {
+    for (int x = 0; x < w.width; ++x) {
+      int i = y * w.width + x;
+      uint16_t owner = w.territoryOwner[i];
+      if (owner == UINT16_MAX) continue;
+      auto col = owner_tint_color(w, owner);
+      float glow = c.zoom > 60.0f ? 0.84f : 1.0f;
+      glColor3f(std::min(1.0f, col[0] * glow + 0.15f), std::min(1.0f, col[1] * glow + 0.15f), std::min(1.0f, col[2] * glow + 0.15f));
+      if (x + 1 < w.width && w.territoryOwner[i + 1] != owner) {
+        glVertex2f(x + 1.0f, y + 0.02f); glVertex2f(x + 1.0f, y + 0.98f);
+      }
+      if (y + 1 < w.height && w.territoryOwner[i + w.width] != owner) {
+        glVertex2f(x + 0.02f, y + 1.0f); glVertex2f(x + 0.98f, y + 1.0f);
+      }
+    }
+  }
+  glEnd();
+}
+
+void draw_strategic_region_overlays(const dom::sim::World& w, const Camera& c) {
+  (void)c;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBegin(GL_QUADS);
+  for (int y = 1; y < w.height - 1; ++y) {
+    for (int x = 1; x < w.width - 1; ++x) {
+      int i = y * w.width + x;
+      uint16_t owner = w.territoryOwner[i];
+      if (owner == UINT16_MAX) continue;
+      bool contested = (w.territoryOwner[i - 1] != owner) || (w.territoryOwner[i + 1] != owner) || (w.territoryOwner[i - w.width] != owner) || (w.territoryOwner[i + w.width] != owner);
+      bool frontline = tile_frontline(w, x, y, owner);
+      bool recent = tile_recently_captured(w, x, y, 900u);
+      if (!contested && !frontline && !recent && !w.armageddonActive && w.activeWorldEventCount == 0) continue;
+      std::array<float,3> col{0.95f, 0.90f, 0.35f};
+      float alpha = 0.0f;
+      if (contested) { col = {0.96f, 0.78f, 0.26f}; alpha = std::max(alpha, 0.18f); }
+      if (frontline) { col = {1.0f, 0.30f, 0.24f}; alpha = std::max(alpha, 0.23f); }
+      if (recent) { col = {0.98f, 0.94f, 0.55f}; alpha = std::max(alpha, 0.20f); }
+      if (w.activeWorldEventCount > 0) { col = {0.88f, 0.34f, 0.9f}; alpha = std::max(alpha, 0.12f); }
+      if (w.armageddonActive) { col = {0.95f, 0.16f, 0.22f}; alpha = std::max(alpha, 0.16f); }
+      glColor4f(col[0], col[1], col[2], alpha);
+      glVertex2f((float)x, (float)y);
+      glVertex2f((float)x + 1.0f, (float)y);
+      glVertex2f((float)x + 1.0f, (float)y + 1.0f);
+      glVertex2f((float)x, (float)y + 1.0f);
+    }
+  }
+  glEnd();
+  glDisable(GL_BLEND);
+}
+
+void draw_strategic_labels(const dom::sim::World& w, const Camera& c) {
+  if (c.zoom < 18.0f) return;
+  glPointSize(c.zoom > 60.0f ? 4.0f : 6.0f);
+  glBegin(GL_POINTS);
+  for (const auto& cty : w.cities) {
+    if (!cty.capital && cty.level < 4) continue;
+    auto col = cty.capital ? std::array<float,3>{1.0f, 0.95f, 0.35f} : std::array<float,3>{0.86f, 0.86f, 0.9f};
+    glColor3f(col[0], col[1], col[2]);
+    glVertex2f(cty.pos.x, cty.pos.y);
+  }
+  for (const auto& th : w.theaterCommands) {
+    glm::vec2 p{(th.bounds.x + th.bounds.z) * 0.5f, (th.bounds.y + th.bounds.w) * 0.5f};
+    glColor3f(0.6f, 0.9f, 1.0f);
+    glVertex2f(p.x, p.y);
+  }
+  for (const auto& s : w.guardianSites) {
+    if (!s.discovered && !w.godMode) continue;
+    glColor3f(0.9f, 0.45f, 0.95f);
+    glVertex2f(s.pos.x, s.pos.y);
+  }
+  glEnd();
+}
+
 void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) {
   const bool detailed = c.zoom < 26.0f;
   const bool strategic = c.zoom > 70.0f;
@@ -521,11 +654,40 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
     plot_dot(out, res, px, py, rgb, c.capital ? 2 : 1);
   }
 
+  for (int y = 1; y < res - 1; ++y) {
+    for (int x = 1; x < res - 1; ++x) {
+      int gx = std::clamp(static_cast<int>((static_cast<float>(x) / res) * w.width), 0, w.width - 2);
+      int gy = std::clamp(static_cast<int>((static_cast<float>(y) / res) * w.height), 0, w.height - 2);
+      size_t gi = static_cast<size_t>(gy * w.width + gx);
+      uint16_t owner = w.territoryOwner[gi];
+      if (owner == UINT16_MAX) continue;
+      if (w.territoryOwner[gi + 1] != owner || w.territoryOwner[gi + w.width] != owner) {
+        auto col = team_rgb(owner > 0 ? static_cast<uint16_t>(owner - 1) : 0u);
+        plot_dot(out, res, x, y, col, 0);
+      }
+    }
+  }
+
   for (const auto& u : w.units) {
     if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
     int px = world_to_minimap_px(u.pos.x, static_cast<float>(w.width), res);
     int py = world_to_minimap_px(u.pos.y, static_cast<float>(w.height), res);
     plot_dot(out, res, px, py, team_rgb(u.team), 0);
+  }
+
+  for (const auto& th : w.theaterCommands) {
+    glm::vec2 p{(th.bounds.x + th.bounds.z) * 0.5f, (th.bounds.y + th.bounds.w) * 0.5f};
+    int px = world_to_minimap_px(p.x, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(p.y, static_cast<float>(w.height), res);
+    plot_dot(out, res, px, py, {120, 220, 255}, 1);
+  }
+
+  if (w.activeWorldEventCount > 0 || w.armageddonActive) {
+    for (const auto& c : w.cities) {
+      int px = world_to_minimap_px(c.pos.x, static_cast<float>(w.width), res);
+      int py = world_to_minimap_px(c.pos.y, static_cast<float>(w.height), res);
+      plot_dot(out, res, px, py, w.armageddonActive ? std::array<uint8_t,3>{255, 60, 70} : std::array<uint8_t,3>{220, 120, 255}, 0);
+    }
   }
 }
 
@@ -672,8 +834,18 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   }
 
   update_overlay_textures(w);
-  if (gOverlay.showTerritory) draw_textured_overlay(gOverlay.territoryTex, w, 0.20f, {0.55f, 0.55f, 0.95f}, true);
-  if (gOverlay.showBorders) draw_textured_overlay(gOverlay.borderTex, w, 0.45f, {0.98f, 0.95f, 0.5f}, true);
+  if (gOverlay.showTerritory) {
+    draw_textured_overlay(gOverlay.territoryTex, w, 0.08f, {0.62f, 0.62f, 0.74f}, true);
+    draw_territory_readability_overlay(w, c);
+  }
+  if (gOverlay.showBorders) {
+    draw_textured_overlay(gOverlay.borderTex, w, 0.15f, {1.0f, 1.0f, 0.95f}, true);
+    draw_colored_borders(w, c);
+  }
+  if (gOverlay.showStrategicOverlays) {
+    draw_strategic_region_overlays(w, c);
+    if (gOverlay.showLabels) draw_strategic_labels(w, c);
+  }
   if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 1.0f, {0.0f, 0.0f, 0.0f}, true);
 
   draw_forest_and_feature_markers(w, c);
@@ -1082,6 +1254,39 @@ void generate_minimap_image(const dom::sim::World& world, int resolution, std::v
   int res = std::max(32, resolution);
   build_minimap_pixels(world, res, outRgb);
 }
+
+
+void collect_strategic_label_hooks(const dom::sim::World& world, std::vector<StrategicLabelHook>& outHooks) {
+  outHooks.clear();
+  outHooks.reserve(world.cities.size() + world.theaterCommands.size() + world.guardianSites.size());
+  for (const auto& c : world.cities) {
+    if (!c.capital && c.level < 4) continue;
+    StrategicLabelHook h{};
+    h.pos = c.pos;
+    h.owner = c.team;
+    h.type = c.capital ? StrategicLabelType::Capital : StrategicLabelType::StrategicSite;
+    h.text = c.capital ? "Capital" : "Major Region";
+    outHooks.push_back(std::move(h));
+  }
+  for (const auto& t : world.theaterCommands) {
+    StrategicLabelHook h{};
+    h.owner = t.owner;
+    h.type = StrategicLabelType::Theater;
+    h.pos = {(t.bounds.x + t.bounds.z) * 0.5f, (t.bounds.y + t.bounds.w) * 0.5f};
+    h.text = "Theater";
+    outHooks.push_back(std::move(h));
+  }
+  for (const auto& s : world.guardianSites) {
+    if (!s.discovered && !world.godMode) continue;
+    StrategicLabelHook h{};
+    h.owner = s.owner;
+    h.type = StrategicLabelType::StrategicSite;
+    h.pos = s.pos;
+    h.text = "Strategic Site";
+    outHooks.push_back(std::move(h));
+  }
+}
+
 void toggle_minimap() { gOverlay.showMinimap = !gOverlay.showMinimap; }
 void toggle_territory_overlay() { gOverlay.showTerritory = !gOverlay.showTerritory; }
 void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }

@@ -367,3 +367,15 @@ A front-end SDL/ImGui setup shell now wraps entry into simulation runtime:
 - Minimap input supports click-to-center and drag-to-reposition camera with clamped world mapping.
 - Camera focus helpers are player-facing shortcuts for selection, capital, objective, crisis, guardian, strategic alert source cycling, and theater targets.
 - Deterministic assertion policy remains unchanged: headless hashes must remain identical because camera/input work is excluded from authoritative hash/save paths.
+
+### Territory border and strategic map overlays
+
+Territory visualization is implemented as a strict presentation subsystem:
+- input: authoritative world territory owner grid, diplomacy relations, city/theater/event state,
+- output: render-time overlays (ownership tint, civ-colored borders, contested/frontline/crisis overlays, label hooks, minimap markers),
+- authority boundary: no writes to authoritative gameplay state, no participation in authoritative hash, replay, or save payloads.
+
+Determinism constraints:
+- overlay extraction uses stable grid iteration order,
+- all color/marker decisions derive from deterministic world data,
+- minimap refresh remains periodic and deterministic from world state snapshots.
