@@ -62,6 +62,13 @@ Headless deterministic smoke mode (CI/container friendly):
 ./build/rts --headless --smoke --ticks 1200 --seed 1234 --dump-hash
 ```
 
+## Match pacing telemetry
+Headless runs emit deterministic `MATCH_PACING_TELEMETRY` lines that include first-expansion/combat/factory/rail/strategic timestamps, phase transition ticks, throughput/supply pressure, and end-state condition.
+
+See:
+- `docs/match_flow.md`
+- `docs/balance_telemetry.md`
+
 ## CLI flags
 - `--headless` run simulation without SDL window or GL context
 - `--smoke` enable deterministic validation checks and strict failures

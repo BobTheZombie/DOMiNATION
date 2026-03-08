@@ -402,3 +402,10 @@ Key constraints:
 - debug visibility via explicit deterministic counters exported by renderer
 
 This keeps authoritative simulation hashes unchanged while improving strategic readability.
+
+## Match flow and pacing telemetry architecture
+
+- Authoritative simulation computes a deterministic `MatchFlowPhase` each tick.
+- Phase transition state is stored in world state (`matchFlowPhase`, `matchFlowPhaseTick`) and included in authoritative hashing.
+- Headless mode emits pacing telemetry markers to support repeatable balance analysis without renderer/UI coupling.
+- Score pressure includes additional weighting for industrial depth and strategic readiness so non-conquest paths remain connected to military-economic escalation.

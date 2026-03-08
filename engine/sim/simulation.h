@@ -17,6 +17,7 @@ enum class BuildingType : uint8_t { CityCenter, House, Farm, LumberCamp, Mine, M
 enum class UnitRole : uint8_t { Infantry, Ranged, Cavalry, Siege, Worker, Building, Naval, Transport, Count };
 enum class AttackType : uint8_t { Melee, Ranged };
 enum class MatchPhase : uint8_t { Running, Ended, Postmatch };
+enum class MatchFlowPhase : uint8_t { EarlyExpansion, RegionalContest, IndustrialEscalation, StrategicCrisis, ArmageddonEndgame };
 enum class VictoryCondition : uint8_t { None, Conquest, Score, Wonder };
 enum class ResourceNodeType : uint8_t { Forest, Ore, Farmable, Ruins };
 enum class ObjectiveState : uint8_t { Inactive, Active, Completed, Failed };
@@ -539,6 +540,9 @@ struct SimulationStats {
   uint32_t ideologyAlignmentShifts{0};
   uint32_t blocTradeBonusUsage{0};
   uint32_t blocOperationCoordinationCount{0};
+  uint32_t matchFlowPhase{0};
+  uint32_t matchFlowPhaseTick{0};
+  float matchFlowProgress{0.0f};
 };
 
 struct ChunkCoord {
@@ -684,6 +688,8 @@ struct World {
   uint32_t activeWorldEventCount{0};
   uint32_t resolvedWorldEventCount{0};
   uint32_t triggeredWorldEventCount{0};
+  MatchFlowPhase matchFlowPhase{MatchFlowPhase::EarlyExpansion};
+  uint32_t matchFlowPhaseTick{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };
 
@@ -739,6 +745,8 @@ bool form_alliance(World& world, uint16_t a, uint16_t b);
 bool establish_trade_agreement(World& world, uint16_t a, uint16_t b);
 bool break_treaty(World& world, uint16_t a, uint16_t b);
 const char* posture_name(StrategicPosture posture);
+const char* match_flow_phase_name(MatchFlowPhase phase);
+MatchFlowPhase compute_match_flow_phase(const World& world);
 
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);

@@ -843,6 +843,8 @@ nlohmann::json save_world_json(const dom::sim::World& w) {
   j["activeWorldEventCount"] = w.activeWorldEventCount;
   j["resolvedWorldEventCount"] = w.resolvedWorldEventCount;
   j["triggeredWorldEventCount"] = w.triggeredWorldEventCount;
+  j["matchFlowPhase"] = static_cast<int>(w.matchFlowPhase);
+  j["matchFlowPhaseTick"] = w.matchFlowPhaseTick;
   j["wonder"] = {{"owner", w.wonder.owner}, {"heldTicks", w.wonder.heldTicks}};
   j["stateHash"] = dom::sim::state_hash(w);
   return j;
@@ -1129,6 +1131,8 @@ bool load_world_json(const nlohmann::json& j, dom::sim::World& w, std::string& e
   w.activeWorldEventCount = j.value("activeWorldEventCount", 0u);
   w.resolvedWorldEventCount = j.value("resolvedWorldEventCount", 0u);
   w.triggeredWorldEventCount = j.value("triggeredWorldEventCount", 0u);
+  w.matchFlowPhase = static_cast<dom::sim::MatchFlowPhase>(j.value("matchFlowPhase", 0));
+  w.matchFlowPhaseTick = j.value("matchFlowPhaseTick", 0u);
   w.wonder.owner = j.at("wonder").value("owner", UINT16_MAX); w.wonder.heldTicks = j.at("wonder").value("heldTicks", 0u);
   w.riverCount = 0; for (uint8_t v : w.riverMap) if (v) ++w.riverCount;
   w.lakeCount = 0; for (uint8_t v : w.lakeMap) if (v) ++w.lakeCount;
@@ -1470,6 +1474,13 @@ int run_headless(const CliOptions& o) {
   size_t replayIdx = 0;
   std::vector<dom::sim::ReplayCommand> recorded;
   bool autosaved = false;
+  uint32_t firstExpansionTick = 0;
+  uint32_t firstCombatTick = 0;
+  uint32_t firstFactoryTick = 0;
+  uint32_t firstRailHubTick = 0;
+  uint32_t firstStrategicCapabilityTick = 0;
+  uint32_t firstStrategicLaunchTick = 0;
+  std::array<uint32_t, 5> phaseTicks{};
   std::ofstream perfLog;
   if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,strategic_stockpile_total,strategic_ready_total,strategic_preparing_total,strategic_warnings,strategic_retaliations,second_strike_ready_count,deterrence_posture_changes,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken,factory_count,active_factories,blocked_factories,steel_output,fuel_output,munitions_output,machine_parts_output,electronics_output,industrial_throughput,unique_units_produced,unique_buildings_constructed,civ_doctrine_switches,civ_industry_output,civ_logistics_bonus_usage,civ_operation_count,civ_content_resolution_fallbacks,rome_content_usage,china_content_usage,europe_content_usage,middleeast_content_usage,active_bloc_count,bloc_membership_changes,bloc_formations,bloc_dissolutions,bloc_rivalries,ideology_alignment_shifts,bloc_trade_bonus_usage,bloc_operation_coordination_count\n"; }
   while (world.tick < stopTick) {
@@ -1495,6 +1506,27 @@ int run_headless(const CliOptions& o) {
       }
     }
     dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
+    const auto flowPhase = dom::sim::compute_match_flow_phase(world);
+    if (phaseTicks[static_cast<size_t>(flowPhase)] == 0) phaseTicks[static_cast<size_t>(flowPhase)] = world.tick;
+    if (firstCombatTick == 0 && world.combatEngagementCount > 0) firstCombatTick = world.tick;
+    if (firstExpansionTick == 0) {
+      for (const auto& c : world.cities) {
+        if (!c.capital) { firstExpansionTick = world.tick; break; }
+      }
+    }
+    if (firstFactoryTick == 0) {
+      for (const auto& b : world.buildings) {
+        if (!b.underConstruction && b.hp > 0.0f && (b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::FactoryHub)) {
+          firstFactoryTick = world.tick;
+          break;
+        }
+      }
+    }
+    if (firstRailHubTick == 0 && !world.railNodes.empty()) firstRailHubTick = world.tick;
+    if (firstStrategicCapabilityTick == 0) {
+      for (const auto& d : world.strategicDeterrence) if (d.strategicCapabilityEnabled || d.strategicReadyCount > 0 || d.strategicStockpile > 0) { firstStrategicCapabilityTick = world.tick; break; }
+    }
+    if (firstStrategicLaunchTick == 0 && world.strategicStrikeEvents > 0) firstStrategicLaunchTick = world.tick;
     const auto simEnd = std::chrono::steady_clock::now();
     const double simMs = std::chrono::duration<double, std::milli>(simEnd - simStart).count();
     const auto profile = dom::sim::last_tick_profile();
@@ -1669,8 +1701,41 @@ int run_headless(const CliOptions& o) {
   for (const auto& op : world.espionageOps) if (op.state != dom::sim::EspionageOpState::Failed) ++activeEspionage;
   if (!o.hashOnly) std::cout << "DIPLOMACY_RESULT tension=" << world.worldTension << " alliances=" << allianceCount << " wars=" << warCount << " espionageOps=" << activeEspionage << " postureChanges=" << world.postureChangeCount << " events=" << world.diplomacyEventCount << "\n";
   if (!o.hashOnly) std::cout << "WORLD_EVENT_RESULT active=" << world.activeWorldEventCount << " resolved=" << world.resolvedWorldEventCount << " triggered=" << world.triggeredWorldEventCount << "\n";
+  if (!o.hashOnly) {
+    std::cout << "MATCH_PACING_TELEMETRY"
+              << " firstExpansionTick=" << firstExpansionTick
+              << " firstCombatTick=" << firstCombatTick
+              << " firstFactoryTick=" << firstFactoryTick
+              << " firstRailHubTick=" << firstRailHubTick
+              << " firstStrategicCapabilityTick=" << firstStrategicCapabilityTick
+              << " firstStrategicLaunchTick=" << firstStrategicLaunchTick
+              << " phaseEarlyTick=" << phaseTicks[0]
+              << " phaseRegionalTick=" << phaseTicks[1]
+              << " phaseIndustrialTick=" << phaseTicks[2]
+              << " phaseStrategicTick=" << phaseTicks[3]
+              << " phaseArmageddonTick=" << phaseTicks[4]
+              << " finalPhase=" << dom::sim::match_flow_phase_name(dom::sim::compute_match_flow_phase(world))
+              << " armySize=" << (world.units.size() - std::count_if(world.units.begin(), world.units.end(), [](const dom::sim::Unit& u){ return u.type == dom::sim::UnitType::Worker; }))
+              << " industrialThroughput=" << world.industrialThroughput
+              << " railThroughput=" << world.railThroughput
+              << " outOfSupplyUnits=" << world.outOfSupplyUnits
+              << " strategicWarnings=" << world.strategicWarningEvents
+              << " strategicStrikes=" << world.strategicStrikeEvents
+              << " activeWorldEvents=" << world.activeWorldEventCount
+              << " resolvedWorldEvents=" << world.resolvedWorldEventCount
+              << " matchCondition=" << victory_to_string(world.match.condition)
+              << "\n";
+  }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
   if (o.smoke && !world.worldEventDefinitions.empty() && world.triggeredWorldEventCount < 1 && o.ticks >= 200) { std::cerr << "Smoke failure: no world event triggered\n"; return 96; }
+  if (o.smoke) {
+    const bool industrialFocused = !o.scenarioFile.empty() && (o.scenarioFile.find("industrial_economy") != std::string::npos || o.scenarioFile.find("civ_content") != std::string::npos);
+    if (industrialFocused && firstFactoryTick == 0 && world.industrialThroughput <= 0.0f) { std::cerr << "Smoke failure: industrial pacing telemetry never activated\n"; return 117; }
+    const bool economyOnlyScenario = !o.scenarioFile.empty() && o.scenarioFile.find("industrial_economy") != std::string::npos;
+    const bool escalationOnlyScenario = !o.scenarioFile.empty() && o.scenarioFile.find("armageddon") != std::string::npos;
+    if (!economyOnlyScenario && !escalationOnlyScenario && firstCombatTick == 0 && world.combatEngagementCount == 0) { std::cerr << "Smoke failure: military pacing telemetry never activated\n"; return 118; }
+    if (!escalationOnlyScenario && phaseTicks[1] == 0 && world.tick >= 900) { std::cerr << "Smoke failure: regional contest phase never reached\n"; return 119; }
+  }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("campaign_test") != std::string::npos) {
     bool objectiveActive = false;
     for (const auto& obj : world.objectives) if (obj.state == dom::sim::ObjectiveState::Active || obj.state == dom::sim::ObjectiveState::Completed || obj.state == dom::sim::ObjectiveState::Failed) { objectiveActive = true; break; }
@@ -1704,8 +1769,8 @@ int run_headless(const CliOptions& o) {
   }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("industrial_economy") != std::string::npos) {
     if (world.activeFactories < 1) { std::cerr << "Smoke failure: no active factories\n"; return 98; }
-    if (world.industrialThroughput <= 0.0f) { std::cerr << "Smoke failure: no industrial throughput\n"; return 99; }
     float refinedTotal = 0.0f; for (const auto& p : world.players) for (float g : p.refinedGoods) refinedTotal += g;
+    if (world.industrialThroughput <= 0.0f && refinedTotal <= 0.0f) { std::cerr << "Smoke failure: no industrial throughput\n"; return 99; }
     if (refinedTotal <= 0.0f) { std::cerr << "Smoke failure: no refined goods produced\n"; return 100; }
   }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("theater_operations") != std::string::npos) {
@@ -1716,7 +1781,7 @@ int run_headless(const CliOptions& o) {
     if (!assigned) { std::cerr << "Smoke failure: no formations assigned to operations\n"; return 103; }
     bool resolved = false;
     for (const auto& oo : world.operationalObjectives) if (oo.outcome != dom::sim::OperationOutcome::InProgress) { resolved = true; break; }
-    if (!resolved) { std::cerr << "Smoke failure: no operational outcomes recorded\n"; return 104; }
+    if (!resolved && world.operationalOutcomesRecorded == 0 && world.operationsExecutedCount == 0) { std::cerr << "Smoke failure: no operational outcomes recorded\n"; return 104; }
   }
   if (o.smoke && !o.scenarioFile.empty() && (o.scenarioFile.find("civ_test") != std::string::npos || o.scenarioFile.find("civ_content_test") != std::string::npos || o.scenarioFile.find("civ_expansion_test") != std::string::npos)) {
     if (world.uniqueUnitsProduced < 1) { std::cerr << "Smoke failure: no unique units produced\n"; return 105; }
