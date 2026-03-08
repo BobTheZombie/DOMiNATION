@@ -362,3 +362,14 @@ Smoke and thread parity:
 ## Campaign presentation layer
 - Added authored campaign briefing/debrief windows, mission message log, campaign progression summary, and objective transition debug panes (ImGui).
 - Story metadata is data-driven (`portraitId`, `iconId`, `imageId`, style tags) and non-authoritative; deterministic mission/campaign state remains authoritative.
+
+## Civilization content packs
+
+The engine now resolves civilization-specific unit/building packs authoritatively for Rome, China, Europe, and Middle East. Resolved definition IDs are used by production, AI, scenario placement, save/load, and replay.
+
+Headless validation:
+
+```bash
+./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 3200 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 3600 --dump-hash
+```

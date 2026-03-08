@@ -15,6 +15,7 @@
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
+#include <iostream>
 #ifdef DOM_HAS_LUA
 #include <lua.hpp>
 #endif
@@ -848,6 +849,60 @@ struct CivilizationDef {
 std::vector<CivilizationDef> gCivilizations;
 std::array<BiomeDef, static_cast<size_t>(BiomeType::Count)> gBiomes{};
 std::unordered_map<std::string, ThemeDef> gThemes;
+
+struct ContentPresentationDef {
+  std::string displayName;
+  std::string iconId;
+  std::string portraitId;
+};
+
+const std::unordered_map<std::string, ContentPresentationDef> kUnitPresentationByDefId = {
+  {"Worker", {"Worker", "ui_icon_unit_worker", "portrait_worker"}},
+  {"Infantry", {"Infantry", "ui_icon_unit_infantry", "portrait_infantry"}},
+  {"Archer", {"Ranged", "ui_icon_unit_ranged", "portrait_ranged"}},
+  {"Cavalry", {"Cavalry", "ui_icon_unit_cavalry", "portrait_cavalry"}},
+  {"Siege", {"Siege", "ui_icon_unit_siege", "portrait_siege"}},
+  {"rome_legionary", {"Legionary", "ui_icon_rome_legionary", "portrait_rome_legionary"}},
+  {"rome_praetorian_guard", {"Praetorian Guard", "ui_icon_rome_praetorian", "portrait_rome_praetorian"}},
+  {"rome_logistics_cohort", {"Logistics Cohort", "ui_icon_rome_engineer", "portrait_rome_engineer"}},
+  {"china_imperial_guard", {"Imperial Guard", "ui_icon_china_imperial_guard", "portrait_china_imperial_guard"}},
+  {"china_fire_lancer", {"Fire Lancer", "ui_icon_china_fire_lancer", "portrait_china_fire_lancer"}},
+  {"china_scholar_engineer", {"Scholar-Engineer", "ui_icon_china_scholar_engineer", "portrait_china_scholar_engineer"}},
+  {"europe_musketeer", {"Musketeer", "ui_icon_europe_musketeer", "portrait_europe_musketeer"}},
+  {"europe_field_howitzer", {"Field Howitzer", "ui_icon_europe_howitzer", "portrait_europe_howitzer"}},
+  {"europe_industrial_engineer", {"Industrial Engineer", "ui_icon_europe_engineer", "portrait_europe_engineer"}},
+  {"middle_east_camel_raider", {"Camel Raider", "ui_icon_me_camel_raider", "portrait_me_camel_raider"}},
+  {"middle_east_mamluk_guard", {"Mamluk Guard", "ui_icon_me_mamluk_guard", "portrait_me_mamluk_guard"}},
+  {"middle_east_caravan_master", {"Caravan Master", "ui_icon_me_caravan_master", "portrait_me_caravan_master"}},
+};
+
+const std::unordered_map<std::string, ContentPresentationDef> kBuildingPresentationByDefId = {
+  {"CityCenter", {"City Center", "ui_icon_building_city_center", "portrait_city_center"}},
+  {"Barracks", {"Barracks", "ui_icon_building_barracks", "portrait_barracks"}},
+  {"Market", {"Market", "ui_icon_building_market", "portrait_market"}},
+  {"Farm", {"Farm", "ui_icon_building_farm", "portrait_farm"}},
+  {"Library", {"Library", "ui_icon_building_library", "portrait_library"}},
+  {"Mine", {"Mine", "ui_icon_building_mine", "portrait_mine"}},
+  {"SteelMill", {"Steel Mill", "ui_icon_building_steel_mill", "portrait_steel_mill"}},
+  {"Port", {"Port", "ui_icon_building_port", "portrait_port"}},
+  {"rome_castra", {"Roman Castra", "ui_icon_rome_castra", "portrait_rome_castra"}},
+  {"rome_forum_centre", {"Forum Centre", "ui_icon_rome_forum", "portrait_rome_forum"}},
+  {"china_imperial_academy", {"Imperial Academy", "ui_icon_china_academy", "portrait_china_academy"}},
+  {"china_grand_granary", {"Administrative Granary", "ui_icon_china_granary", "portrait_china_granary"}},
+  {"europe_integrated_steelworks", {"Integrated Steelworks", "ui_icon_europe_steelworks", "portrait_europe_steelworks"}},
+  {"europe_grand_drydock", {"Grand Drydock", "ui_icon_europe_drydock", "portrait_europe_drydock"}},
+  {"middle_east_caravanserai", {"Caravanserai", "ui_icon_me_caravanserai", "portrait_me_caravanserai"}},
+  {"middle_east_desert_foundry", {"Desert Foundry", "ui_icon_me_foundry", "portrait_me_foundry"}},
+};
+
+void increment_civ_content_usage(World& w, uint16_t team) {
+  if (team >= w.players.size()) return;
+  const auto& id = w.players[team].civilization.id;
+  if (id == "rome") ++w.romeContentUsage;
+  else if (id == "china") ++w.chinaContentUsage;
+  else if (id == "europe") ++w.europeContentUsage;
+  else if (id == "middle_east") ++w.middleEastContentUsage;
+}
 
 void init_civ_defaults(CivilizationDef& d) {
   d.resourceGatherMult.fill(1.0f);
@@ -2656,8 +2711,9 @@ uint32_t spawn_unit(World& w, uint16_t team, UnitType type, glm::vec2 p) {
   else if (type == UnitType::TacticalMissile || type == UnitType::StrategicMissile) { nu.hp = 30; nu.attack = 40.0f; nu.range = 2.0f; nu.speed = 10.0f; nu.role = UnitRole::Siege; }
   nu.attack *= civ.unitAttackMult[static_cast<size_t>(type)];
   nu.hp *= civ.unitHpMult[static_cast<size_t>(type)];
+  if (team < w.players.size() && w.players[team].civilization.uniqueUnitDefs[static_cast<size_t>(type)].empty()) ++w.civContentResolutionFallbacks;
   nu.definitionId = resolved_unit_definition_id(w, team, type);
-  if (nu.definitionId != std::string(unit_name(type))) ++w.uniqueUnitsProduced;
+  if (nu.definitionId != std::string(unit_name(type))) { ++w.uniqueUnitsProduced; increment_civ_content_usage(w, team); }
   if (!unit_cell_valid(w, nu, cell_of(w, nu.pos))) {
     for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
       int c = y * w.width + x;
@@ -3764,6 +3820,11 @@ void apply_world_defaults(World& w) {
   w.logisticsOperationIssuedCount = 0;
   w.uniqueUnitsProduced = 0;
   w.uniqueBuildingsConstructed = 0;
+  w.civContentResolutionFallbacks = 0;
+  w.romeContentUsage = 0;
+  w.chinaContentUsage = 0;
+  w.europeContentUsage = 0;
+  w.middleEastContentUsage = 0;
   w.civDoctrineSwitches = 0;
   w.civIndustryOutput = 0.0f;
   w.civLogisticsBonusUsage = 0.0f;
@@ -4751,7 +4812,7 @@ void tick_world(World& w, float dt) {
       float workerFactor = has_nearby_builder(w, b.team, b.pos) ? 1.0f : 0.25f;
       const float civBuild = owner.civilization.buildingBuildTimeMult[static_cast<size_t>(b.type)];
       b.buildProgress += dt / std::max(1.0f, b.buildTime * civBuild) * workerFactor;
-      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; if (b.definitionId != std::string(building_name(b.type))) ++w.uniqueBuildingsConstructed; emit_event(w, GameplayEventType::BuildingCompleted, b.team, b.team, b.id); if (b.type == BuildingType::Wonder) emit_event(w, GameplayEventType::WonderStarted, b.team, b.team, b.id); ++w.navVersion; gNav.cache.clear(); }
+      if (b.buildProgress >= 1.0f) { b.underConstruction = false; ++w.completedBuildingsCount; if (b.definitionId != std::string(building_name(b.type))) { ++w.uniqueBuildingsConstructed; increment_civ_content_usage(w, b.team); } emit_event(w, GameplayEventType::BuildingCompleted, b.team, b.team, b.id); if (b.type == BuildingType::Wonder) emit_event(w, GameplayEventType::WonderStarted, b.team, b.team, b.id); ++w.navVersion; gNav.cache.clear(); }
       continue;
     }
 
@@ -5121,6 +5182,11 @@ void tick_world(World& w, float dt) {
   gLastStats.industrialThroughput = w.industrialThroughput;
   gLastStats.uniqueUnitsProduced = w.uniqueUnitsProduced;
   gLastStats.uniqueBuildingsConstructed = w.uniqueBuildingsConstructed;
+  gLastStats.civContentResolutionFallbacks = w.civContentResolutionFallbacks;
+  gLastStats.romeContentUsage = w.romeContentUsage;
+  gLastStats.chinaContentUsage = w.chinaContentUsage;
+  gLastStats.europeContentUsage = w.europeContentUsage;
+  gLastStats.middleEastContentUsage = w.middleEastContentUsage;
   gLastStats.civDoctrineSwitches = w.civDoctrineSwitches;
   gLastStats.civIndustryOutput = w.civIndustryOutput;
   gLastStats.civLogisticsBonusUsage = w.civLogisticsBonusUsage;
@@ -5244,7 +5310,7 @@ bool confirm_build_placement(World& world, uint16_t team) {
   if (!spend(world.players[team].resources, cost)) return false;
   uint32_t id = 1; for (const auto& b : world.buildings) id = std::max(id, b.id + 1);
   const auto& d = gBuildDefs[bidx(world.placementType)];
-  Building nb{}; nb.id=id; nb.team=team; nb.type=world.placementType; nb.pos=world.placementPos; nb.size=d.size; nb.underConstruction=true; nb.buildProgress=0.0f; nb.buildTime=d.buildTime; nb.maxHp=1000.0f * civ.buildingHpMult[static_cast<size_t>(world.placementType)]; nb.hp=nb.maxHp; nb.definitionId = resolved_building_definition_id(world, team, world.placementType);
+  Building nb{}; nb.id=id; nb.team=team; nb.type=world.placementType; nb.pos=world.placementPos; nb.size=d.size; nb.underConstruction=true; nb.buildProgress=0.0f; nb.buildTime=d.buildTime; nb.maxHp=1000.0f * civ.buildingHpMult[static_cast<size_t>(world.placementType)]; nb.hp=nb.maxHp; if (civ.uniqueBuildingDefs[static_cast<size_t>(world.placementType)].empty()) ++world.civContentResolutionFallbacks; nb.definitionId = resolved_building_definition_id(world, team, world.placementType);
   if (world.placementType == BuildingType::SteelMill) nb.factory.recipeIndex = 0;
   else if (world.placementType == BuildingType::Refinery) nb.factory.recipeIndex = 1;
   else if (world.placementType == BuildingType::MunitionsPlant) nb.factory.recipeIndex = 2;
@@ -5312,6 +5378,50 @@ bool cancel_queue_item(World& world, uint16_t team, uint32_t buildingId, size_t 
   it->queue.erase(it->queue.begin() + (long)index);
   ReplayCommand cmd{}; cmd.type = ReplayCommandType::CancelQueue; cmd.tick = world.tick; cmd.team = team; cmd.buildingId = buildingId; cmd.queueIndex = index; gReplayCommands.push_back(cmd);
   return true;
+}
+
+ContentPresentationInfo unit_content_presentation(const World& world, uint16_t team, UnitType type, const std::string& definitionId) {
+  ContentPresentationInfo info{};
+  const std::string baseId = unit_name(type);
+  const std::string resolvedId = definitionId.empty() ? baseId : definitionId;
+  auto it = kUnitPresentationByDefId.find(resolvedId);
+  if (it != kUnitPresentationByDefId.end()) {
+    info.displayName = it->second.displayName;
+    info.iconId = it->second.iconId;
+    info.portraitId = it->second.portraitId;
+  } else {
+    info.displayName = resolvedId;
+    info.iconId = "ui_icon_unit_generic";
+  }
+  info.unique = resolvedId != baseId;
+  if (team < world.players.size()) {
+    const auto& civ = world.players[team].civilization;
+    const auto& mapped = civ.uniqueUnitDefs[static_cast<size_t>(type)];
+    info.unique = info.unique || (!mapped.empty() && mapped == resolvedId);
+  }
+  return info;
+}
+
+ContentPresentationInfo building_content_presentation(const World& world, uint16_t team, BuildingType type, const std::string& definitionId) {
+  ContentPresentationInfo info{};
+  const std::string baseId = building_name(type);
+  const std::string resolvedId = definitionId.empty() ? baseId : definitionId;
+  auto it = kBuildingPresentationByDefId.find(resolvedId);
+  if (it != kBuildingPresentationByDefId.end()) {
+    info.displayName = it->second.displayName;
+    info.iconId = it->second.iconId;
+    info.portraitId = it->second.portraitId;
+  } else {
+    info.displayName = resolvedId;
+    info.iconId = "ui_icon_building_generic";
+  }
+  info.unique = resolvedId != baseId;
+  if (team < world.players.size()) {
+    const auto& civ = world.players[team].civilization;
+    const auto& mapped = civ.uniqueBuildingDefs[static_cast<size_t>(type)];
+    info.unique = info.unique || (!mapped.empty() && mapped == resolvedId);
+  }
+  return info;
 }
 
 const BiomeRuntime& biome_runtime(BiomeType biome) {
@@ -5415,6 +5525,11 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.logisticsOperationIssuedCount);
   hash_u32(h, w.uniqueUnitsProduced);
   hash_u32(h, w.uniqueBuildingsConstructed);
+  hash_u32(h, w.civContentResolutionFallbacks);
+  hash_u32(h, w.romeContentUsage);
+  hash_u32(h, w.chinaContentUsage);
+  hash_u32(h, w.europeContentUsage);
+  hash_u32(h, w.middleEastContentUsage);
   hash_u32(h, w.civDoctrineSwitches);
   hash_u32(h, w.theatersCreatedCount);
   hash_u32(h, w.operationsExecutedCount);

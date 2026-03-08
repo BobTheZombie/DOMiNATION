@@ -74,6 +74,8 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
 
   if (ImGui::Begin("Civilization Identity")) {
     ImGui::Text("UNIQUE_UNITS_PRODUCED=%u UNIQUE_BUILDINGS_CONSTRUCTED=%u", world.uniqueUnitsProduced, world.uniqueBuildingsConstructed);
+    ImGui::Text("CIV_CONTENT_RESOLUTION_FALLBACKS=%u", world.civContentResolutionFallbacks);
+    ImGui::Text("ROME_CONTENT_USAGE=%u CHINA_CONTENT_USAGE=%u EUROPE_CONTENT_USAGE=%u MIDDLEEAST_CONTENT_USAGE=%u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
     ImGui::Text("CIV_DOCTRINE_SWITCHES=%u CIV_OPERATION_COUNT=%u", world.civDoctrineSwitches, world.civOperationCount);
     ImGui::Text("CIV_INDUSTRY_OUTPUT=%.2f CIV_LOGISTICS_BONUS_USAGE=%.2f", world.civIndustryOutput, world.civLogisticsBonusUsage);
     for (const auto& p : world.players) {

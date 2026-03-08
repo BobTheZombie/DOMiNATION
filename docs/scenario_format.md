@@ -159,3 +159,7 @@ Reference scenario: `scenarios/theater_operations_test.json`.
 `mission` now also supports: `subtitle`, `location`, `debrief`, `factionSummary`, `carryoverSummary`, `briefingPortraitId`, `debriefPortraitId`, `missionImageId`, `factionIconId`, `scenarioTags[]`, `objectiveSummary[]`, and `messages[]`.
 
 `messages[]` entry fields: `id`, `title`, `body`, `category`, optional `speaker`, `faction`, `portraitId`, `iconId`, `imageId`, `style`, `priority`, `durationTicks`, `sticky`.
+
+### Civilization content-heavy test scenario
+
+`scenarios/civ_content_test.json` is a deterministic smoke setup with Rome/China/Europe/Middle East and pre-placed production structures to force unique content usage early in simulation.

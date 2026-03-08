@@ -1,6 +1,7 @@
 #include "engine/ui/production_menu.h"
 
 #include <utility>
+#include <string>
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -17,6 +18,15 @@ const char* unit_name(dom::sim::UnitType t) {
     case dom::sim::UnitType::Siege: return "Siege";
     default: return "Special";
   }
+}
+
+
+std::string unit_button_label(const dom::sim::World& world, uint16_t team, dom::sim::UnitType type) {
+  const std::string defId = (team < world.players.size() && !world.players[team].civilization.uniqueUnitDefs[(size_t)type].empty())
+    ? world.players[team].civilization.uniqueUnitDefs[(size_t)type]
+    : unit_name(type);
+  const auto info = dom::sim::unit_content_presentation(world, team, type, defId);
+  return info.displayName + " [" + info.iconId + "]";
 }
 
 uint32_t selected_production_building(const dom::sim::World& world, const std::vector<uint32_t>& selected) {
@@ -70,18 +80,19 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
   }
 
   ImGui::Text("Building #%u", building->id);
+  const uint16_t ownerTeam = building->team;
   ImGui::TextUnformatted("Cost/Build Time: Worker 50/8s, Infantry 60/10s, Ranged 70/12s, Cavalry 90/16s, Siege 110/22s");
 
   if (building->type == dom::sim::BuildingType::Barracks) {
-    if (ImGui::Button("Infantry")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Infantry);
+    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Infantry).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Infantry);
     ImGui::SameLine();
-    if (ImGui::Button("Ranged")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Archer);
+    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Archer).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Archer);
     ImGui::SameLine();
-    if (ImGui::Button("Special")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Siege);
+    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Siege).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Siege);
   } else if (building->type == dom::sim::BuildingType::Port) {
-    if (ImGui::Button("Cavalry")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Cavalry);
+    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Cavalry).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Cavalry);
   } else if (building->type == dom::sim::BuildingType::Mine) {
-    if (ImGui::Button("Siege")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Siege);
+    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Siege).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Siege);
 
   } else if (building->type == dom::sim::BuildingType::SteelMill || building->type == dom::sim::BuildingType::Refinery || building->type == dom::sim::BuildingType::MunitionsPlant || building->type == dom::sim::BuildingType::MachineWorks || building->type == dom::sim::BuildingType::ElectronicsLab || building->type == dom::sim::BuildingType::FactoryHub) {
     ImGui::SeparatorText("Industrial");
@@ -93,7 +104,7 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
     if (ImGui::Button("Machine Parts")) building->factory.recipeIndex = 3;
     ImGui::SameLine(); if (ImGui::Button("Electronics")) building->factory.recipeIndex = 4;
   } else {
-    if (ImGui::Button("Worker")) dom::sim::enqueue_train_unit(world, 0, building->id, dom::sim::UnitType::Worker);
+    if (ImGui::Button(unit_button_label(world, ownerTeam, dom::sim::UnitType::Worker).c_str())) dom::sim::enqueue_train_unit(world, ownerTeam, building->id, dom::sim::UnitType::Worker);
   }
 
   ImGui::SeparatorText("Queue");

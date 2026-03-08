@@ -158,7 +158,10 @@ void draw_hud(SDL_Window* window,
       ImGui::Text("Health: %.0f | Role: %s | Owner: P%u", u.hp, role_name(u.role), u.team);
       if (u.team < world.players.size()) ImGui::Text("Civilization: %s", world.players[u.team].civilization.displayName.c_str());
       ImGui::Text("Supply: %s | Cargo: %zu", supply_name(u.supplyState), u.cargo.size());
+      const auto unitInfo = dom::sim::unit_content_presentation(world, u.team, u.type, u.definitionId);
       ImGui::Text("DefId: %s", u.definitionId.empty()?"(base)":u.definitionId.c_str());
+      ImGui::Text("Resolved: %s | Icon: %s", unitInfo.displayName.c_str(), unitInfo.iconId.c_str());
+      ImGui::Text("Unique content: %s", unitInfo.unique ? "yes" : "no");
       if (u.team < world.players.size()) {
         const std::string base = unit_type_name(u.type);
         if (u.definitionId != base) ImGui::Text("Unique: yes (%s -> %s)", base.c_str(), u.definitionId.c_str());
@@ -190,7 +193,10 @@ void draw_hud(SDL_Window* window,
           ImGui::Text("Output buffer steel/fuel/munitions: %.1f / %.1f / %.1f", b.factory.outputBuffer[0], b.factory.outputBuffer[1], b.factory.outputBuffer[2]);
           ImGui::Text("Output buffer machine/electronics: %.1f / %.1f", b.factory.outputBuffer[3], b.factory.outputBuffer[4]);
         }
+        const auto buildInfo = dom::sim::building_content_presentation(world, b.team, b.type, b.definitionId);
         ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
+        ImGui::Text("Resolved: %s | Icon: %s", buildInfo.displayName.c_str(), buildInfo.iconId.c_str());
+        ImGui::Text("Unique content: %s", buildInfo.unique ? "yes" : "no");
         if (b.team < world.players.size()) {
           const std::string base = building_type_name(b.type);
           if (b.definitionId != base) ImGui::Text("Unique: yes (%s -> %s)", base.c_str(), b.definitionId.c_str());
