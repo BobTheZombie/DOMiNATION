@@ -40,10 +40,19 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Text("TERRAIN_MATERIAL_RESOLVES=%llu WATER_FEATURE_RESOLVES=%llu", (unsigned long long)terrainCounters.terrainMaterialResolves, (unsigned long long)terrainCounters.waterFeatureResolves);
   ImGui::Text("FOREST_CLUSTER_COUNT=%llu MOUNTAIN_FEATURE_COUNT=%llu FALLBACKS=%llu", (unsigned long long)terrainCounters.forestClusterCount, (unsigned long long)terrainCounters.mountainFeatureCount, (unsigned long long)terrainCounters.presentationFallbackCount);
   const auto& entityCounters = dom::render::entity_presentation_counters();
-  ImGui::Text("UNIT_PRESENTATION_RESOLVES=%llu BUILDING_PRESENTATION_RESOLVES=%llu CITY_PRESENTATION_RESOLVES=%llu",
+  ImGui::Text("UNIT_PRESENTATION_RESOLVES=%llu BUILDING_PRESENTATION_RESOLVES=%llu CITY_PRESENTATION_RESOLVES=%llu CAPITAL_PRESENTATION_RESOLVES=%llu",
               (unsigned long long)entityCounters.unitPresentationResolves,
               (unsigned long long)entityCounters.buildingPresentationResolves,
-              (unsigned long long)entityCounters.cityPresentationResolves);
+              (unsigned long long)entityCounters.cityPresentationResolves,
+              (unsigned long long)entityCounters.capitalPresentationResolves);
+  ImGui::Text("REGION_PRESENTATION_RESOLVES=%llu INDUSTRIAL_REGION_MARKERS=%llu PORT_REGION_MARKERS=%llu",
+              (unsigned long long)entityCounters.regionPresentationResolves,
+              (unsigned long long)entityCounters.industrialRegionMarkers,
+              (unsigned long long)entityCounters.portRegionMarkers);
+  ImGui::Text("RAIL_REGION_MARKERS=%llu MINING_REGION_MARKERS=%llu CITY_PRESENTATION_FALLBACKS=%llu",
+              (unsigned long long)entityCounters.railRegionMarkers,
+              (unsigned long long)entityCounters.miningRegionMarkers,
+              (unsigned long long)entityCounters.cityPresentationFallbacks);
   ImGui::Text("GUARDIAN_PRESENTATION_RESOLVES=%llu ENTITY_PRESENTATION_FALLBACKS=%llu FAR_LOD_CLUSTER_COUNT=%llu",
               (unsigned long long)entityCounters.guardianPresentationResolves,
               (unsigned long long)entityCounters.entityPresentationFallbacks,

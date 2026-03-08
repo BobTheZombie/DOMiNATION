@@ -543,3 +543,23 @@ Deterministic validation commands:
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+
+## City and region visual presentation layer
+
+The renderer now adds deterministic city/region world-presence visuals without touching simulation authority:
+- settlement tiers (small settlement, developed city, large city cluster) and stronger capital landmarks
+- region-category markers for industrial, port, rail-hub, and mining-heavy areas inferred from existing building/rail state
+- civilization-themed settlement silhouettes for Rome, China, Europe, Middle East, Russia, USA, Japan, EU, UK, Egypt, and Tartaria with deterministic fallback ordering
+- zoom-aware simplification plus minimap coherence updates so capitals and major nodes remain readable at strategic zoom
+
+Validation smoke commands:
+- `./build/rts --headless --smoke --ticks 400 --dump-hash`
+- `./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 800 --dump-hash`
+- `./build/rts --headless --scenario scenarios/rail_logistics_test.json --smoke --ticks 1600 --dump-hash`
+- `./build/rts --headless --scenario scenarios/industrial_economy_test.json --smoke --ticks 2000 --dump-hash`
+- `./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --dump-hash`
+- `./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only`
+- `./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only`
+- `./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only`

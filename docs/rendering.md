@@ -189,3 +189,23 @@ Minimap generation now includes:
 
 ### Determinism and authority boundary
 All territory/border/minimap overlays are derived at render time and excluded from simulation authority/save/hash pathways.
+
+
+## City / region presentation pass
+
+`engine/render/renderer.*` now renders a deterministic city/region presentation layer derived from existing authoritative world state only.
+
+Rules implemented:
+- Settlement tiers: small settlement, developed city, large city cluster silhouettes.
+- Capital landmarks: capitals receive stronger landmark geometry + ring treatment; level-4+ major centers receive lighter treatment.
+- Region markers from existing state:
+  - industrial hubs via factory-chain buildings
+  - ports via `BuildingType::Port`
+  - rail hubs via `RailNodeType::Station/Depot`
+  - mining regions via `BuildingType::Mine`
+- Civilization-themed settlement silhouette variants: Rome, China, Europe, Middle East, Russia, USA, Japan, EU, UK, Egypt, Tartaria.
+- Deterministic fallback order: civ-specific shape -> theme shape -> generic shape -> default fallback counter increment.
+- Zoom behavior: near/mid keeps silhouette detail; far zoom scales down to preserve readability.
+- Minimap coherence: larger capital dots + deterministic color accents for major region categories.
+
+No city/region render caches are serialized. Presentation reconstructs each frame from authoritative state.

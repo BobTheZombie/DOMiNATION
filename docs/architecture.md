@@ -379,3 +379,13 @@ Determinism constraints:
 - overlay extraction uses stable grid iteration order,
 - all color/marker decisions derive from deterministic world data,
 - minimap refresh remains periodic and deterministic from world state snapshots.
+
+
+## City and region presentation architecture
+
+City/region visuals are part of the renderer-only presentation graph and are non-authoritative:
+- inputs: `World::cities`, building categories, rail node categories, civ/theme IDs, fog/visibility
+- outputs: deterministic settlement/capital silhouettes, region-category marker quads, minimap city/region accents
+- counters: city/capital/region resolve and fallback counters (debug-only observability)
+
+Determinism rule: for identical seed/scenario/commands/ticks/thread count, authoritative state hash is unchanged by this layer because it mutates no simulation state and serializes no transient cache.

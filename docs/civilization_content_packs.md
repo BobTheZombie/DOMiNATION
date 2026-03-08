@@ -73,3 +73,15 @@ Fallbacks are non-fatal and reported through debug counters.
 ## UI emblem/icon fallback chain
 UI presentation resolves in fixed order: exact content icon -> civilization emblem/theme mapping -> category icon -> default fallback icon.
 Debug counters expose `ICON_RESOLVE_COUNT`, `MARKER_RESOLVE_COUNT`, `ALERT_RESOLVE_COUNT`, and `PRESENTATION_FALLBACK_COUNT`.
+
+
+## Settlement presentation theme mapping
+
+Settlement/capital silhouette selection now consumes civilization identity/theme mappings for these packs:
+Rome, China, Europe, Middle East, Russia, USA, Japan, EU, UK, Egypt, Tartaria.
+
+Resolution order for city-region presentation:
+1. explicit civ-specific settlement shape
+2. civ/theme mapped settlement shape
+3. generic settlement shape
+4. default fallback (debug counter only; no crash)
