@@ -343,3 +343,10 @@ World entity rendering is presentation-only and reconstructs each frame from aut
 - `engine/ui/ui_alerts.*` builds ordered strategic alerts from mission message/event state.
 - `engine/render/renderer.cpp` resolves world markers from authoritative entity state only.
 - No transient icon cache is serialized; save/load/replay authority remains unchanged.
+
+
+## Deterministic visual feedback integration
+
+`engine/render/renderer.*` now includes a lightweight deterministic visual feedback pass. It executes after authoritative world/entity rendering and reads only authoritative state already produced by simulation tick processing.
+
+Key rule: feedback state is transient and never serialized. Save/load/replay continue to serialize authoritative simulation state only, and feedback reconstructs from that state on render.

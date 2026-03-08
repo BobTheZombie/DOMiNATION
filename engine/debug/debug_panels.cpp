@@ -29,6 +29,8 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Checkbox("terrain material overlay", &state.terrainMaterialOverlay);
   ImGui::Checkbox("water feature overlay", &state.waterOverlay);
   ImGui::Checkbox("entity presentation debug", &state.entityPresentationDebug);
+  ImGui::Checkbox("deterministic visual feedback", &state.visualFeedbackEnabled);
+  ImGui::Checkbox("visual feedback source overlay", &state.visualFeedbackOverlayDebug);
   ImGui::Text("Units: %zu | Buildings: %zu | Operations: %zu", world.units.size(), world.buildings.size(), world.operations.size());
   ImGui::Text("Theaters: %zu | Objectives: %zu | ArmyGroups: %zu | NavalTF: %zu | AirWings: %zu",
               world.theaterCommands.size(), world.operationalObjectives.size(), world.armyGroups.size(), world.navalTaskForces.size(), world.airWings.size());
@@ -46,6 +48,16 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)entityCounters.guardianPresentationResolves,
               (unsigned long long)entityCounters.entityPresentationFallbacks,
               (unsigned long long)entityCounters.farLodClusterCount);
+  const auto& feedbackCounters = dom::render::visual_feedback_counters();
+  ImGui::Text("COMBAT_EFFECT_SPAWNS=%llu STRATEGIC_EFFECT_SPAWNS=%llu CRISIS_EFFECT_SPAWNS=%llu GUARDIAN_EFFECT_SPAWNS=%llu",
+              (unsigned long long)feedbackCounters.combatEffectSpawns,
+              (unsigned long long)feedbackCounters.strategicEffectSpawns,
+              (unsigned long long)feedbackCounters.crisisEffectSpawns,
+              (unsigned long long)feedbackCounters.guardianEffectSpawns);
+  ImGui::Text("INDUSTRY_ACTIVITY_EFFECTS=%llu SELECTION_FEEDBACK_EVENTS=%llu FEEDBACK_FALLBACK_COUNT=%llu",
+              (unsigned long long)feedbackCounters.industryActivityEffects,
+              (unsigned long long)feedbackCounters.selectionFeedbackEvents,
+              (unsigned long long)feedbackCounters.feedbackFallbackCount);
   const auto& uiCounters = dom::ui::icons::presentation_counters();
   ImGui::Text("ICON_RESOLVE_COUNT=%llu MARKER_RESOLVE_COUNT=%llu ALERT_RESOLVE_COUNT=%llu PRESENTATION_FALLBACK_COUNT=%llu",
               (unsigned long long)uiCounters.iconResolveCount,

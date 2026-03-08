@@ -19,6 +19,16 @@ struct EntityPresentationCounters {
   uint64_t farLodClusterCount{0};
 };
 
+struct VisualFeedbackCounters {
+  uint64_t combatEffectSpawns{0};
+  uint64_t strategicEffectSpawns{0};
+  uint64_t crisisEffectSpawns{0};
+  uint64_t guardianEffectSpawns{0};
+  uint64_t industryActivityEffects{0};
+  uint64_t selectionFeedbackEvents{0};
+  uint64_t feedbackFallbackCount{0};
+};
+
 bool init_renderer();
 void set_resolution(int width, int height);
 void set_render_scale(float scale);
@@ -39,6 +49,11 @@ void toggle_water_overlay();
 void set_entity_presentation_debug(bool enabled);
 bool entity_presentation_debug();
 const EntityPresentationCounters& entity_presentation_counters();
+void set_visual_feedback_enabled(bool enabled);
+bool visual_feedback_enabled();
+void set_visual_feedback_overlay_debug(bool enabled);
+bool visual_feedback_overlay_debug();
+const VisualFeedbackCounters& visual_feedback_counters();
 double last_draw_ms();
 
 struct EditorPreview {

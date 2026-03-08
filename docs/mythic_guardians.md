@@ -54,3 +54,8 @@ Revealed guardian sites now render with strategic-site silhouettes and determini
 ## Guardian marker/readability pass
 - Revealed guardian sites render dedicated world marker categories with deterministic fallback marker IDs.
 - Guardian alerts surface through the strategic alert queue using severity-based styling.
+
+
+## Guardian feedback presentation
+
+Guardian site discovery/spawn states now drive deterministic presentation pulses in renderer. Discovery and awakened guardian states use distinct colors while preserving existing authoritative guardian logic and ordering.

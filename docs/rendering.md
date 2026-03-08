@@ -139,3 +139,15 @@ Debug counters exposed in the visualization panel:
 - Strategic world markers for capitals, rail/port/factory/radar/missile entities are rendered as deterministic overlays.
 - Selection/low-supply/warning badges are driven from unit/building authoritative state.
 - Marker lookups use stable IDs and fallback IDs without mutating simulation state.
+
+
+## Visual feedback pass
+
+Renderer now includes a deterministic feedback pass with category-based overlays for combat, strategic strikes, crises, guardians, industry/logistics activity, and selection/command acknowledgement.
+
+Implementation notes:
+- no RNG; phase variation is derived from `world.tick` + stable IDs
+- stable iteration order comes from authoritative container order
+- Armageddon emits a unique world pulse tint + alert-level emphasis
+- denial zones and strategic strike warnings get strategic-scale rings/trails
+- rail/factory state emits throughput/blocked pulses

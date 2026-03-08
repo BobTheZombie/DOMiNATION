@@ -34,3 +34,8 @@ Portrait/icon/image references resolve to deterministic fallback IDs when missin
 - Briefing/debrief/event surfaces now use deterministic icon + portrait fallback IDs.
 - Alert queue ordering is deterministic by severity then tick/sequence ordering.
 - Objective and mission message categories carry icon IDs with stable fallback behavior.
+
+
+## Deterministic mission/event emphasis
+
+Campaign-aligned objective/crisis/mission messaging now relies on deterministic alert/message ordering and renderer feedback categories without adding authoritative gameplay state. Objective/event emphasis is presentation-only and reconstructable from existing mission/objective/event state.
