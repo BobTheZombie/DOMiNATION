@@ -27,3 +27,6 @@ This document defines concrete civilization content packs and deterministic reso
 - `MIDDLEEAST_CONTENT_USAGE`
 
 These are available in debug and perf output for smoke validation.
+
+## Civilization visual coherence
+Rome, China, Europe, and Middle East theme mappings now include industrial/strategic building families so house/farm/market/barracks/city center/port/factory chains resolve consistently.

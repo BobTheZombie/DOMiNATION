@@ -76,3 +76,6 @@ Renderer draws:
 - debug panel counters for rail nodes/edges/networks/trains/throughput/disruption
 
 This is intentionally minimal and deterministic-authoritative state driven.
+
+## Visual polish notes
+Terrain/minimap now uses stronger biome palettes plus river/lake and elevation cues for readability. Industrial/rail/strategic layers add lightweight overlays for rails, hubs, detector sites, denial zones, and strike warnings.

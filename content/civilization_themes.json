@@ -45,7 +45,16 @@
         "Port": "rome_port_a",
         "Wonder": "rome_wonder_a",
         "Wall": "rome_wall_a",
-        "Tower": "rome_tower_a"
+        "Tower": "rome_tower_a",
+        "SteelMill": "rome_steel_mill_a",
+        "Refinery": "rome_refinery_a",
+        "MunitionsPlant": "rome_munitions_plant_a",
+        "MachineWorks": "rome_machine_works_a",
+        "ElectronicsLab": "rome_electronics_lab_a",
+        "FactoryHub": "rome_factory_hub_a",
+        "RadarTower": "rome_radar_tower_a",
+        "MissileSilo": "rome_missile_silo_a",
+        "RailStation": "rome_rail_station_a"
       }
     },
     {
@@ -92,7 +101,16 @@
         "Port": "china_port_a",
         "Wonder": "china_wonder_a",
         "Wall": "china_wall_a",
-        "Tower": "china_tower_a"
+        "Tower": "china_tower_a",
+        "SteelMill": "china_steel_mill_a",
+        "Refinery": "china_refinery_a",
+        "MunitionsPlant": "china_munitions_plant_a",
+        "MachineWorks": "china_machine_works_a",
+        "ElectronicsLab": "china_electronics_lab_a",
+        "FactoryHub": "china_factory_hub_a",
+        "RadarTower": "china_radar_tower_a",
+        "MissileSilo": "china_missile_silo_a",
+        "RailStation": "china_rail_station_a"
       }
     },
     {
@@ -139,7 +157,16 @@
         "Port": "europe_port_a",
         "Wonder": "europe_wonder_a",
         "Wall": "europe_wall_a",
-        "Tower": "europe_tower_a"
+        "Tower": "europe_tower_a",
+        "SteelMill": "europe_steel_mill_a",
+        "Refinery": "europe_refinery_a",
+        "MunitionsPlant": "europe_munitions_plant_a",
+        "MachineWorks": "europe_machine_works_a",
+        "ElectronicsLab": "europe_electronics_lab_a",
+        "FactoryHub": "europe_factory_hub_a",
+        "RadarTower": "europe_radar_tower_a",
+        "MissileSilo": "europe_missile_silo_a",
+        "RailStation": "europe_rail_station_a"
       }
     },
     {
@@ -186,7 +213,16 @@
         "Port": "middleeast_port_a",
         "Wonder": "middleeast_wonder_a",
         "Wall": "middleeast_wall_a",
-        "Tower": "middleeast_tower_a"
+        "Tower": "middleeast_tower_a",
+        "SteelMill": "middleeast_steel_mill_a",
+        "Refinery": "middleeast_refinery_a",
+        "MunitionsPlant": "middleeast_munitions_plant_a",
+        "MachineWorks": "middleeast_machine_works_a",
+        "ElectronicsLab": "middleeast_electronics_lab_a",
+        "FactoryHub": "middleeast_factory_hub_a",
+        "RadarTower": "middleeast_radar_tower_a",
+        "MissileSilo": "middleeast_missile_silo_a",
+        "RailStation": "middleeast_rail_station_a"
       }
     },
     {

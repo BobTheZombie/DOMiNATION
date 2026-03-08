@@ -373,3 +373,6 @@ Headless validation:
 ./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 3200 --dump-hash
 ./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 3600 --dump-hash
 ```
+
+## Visual/content polish
+See `docs/visual_content_polish.md` for deterministic presentation mapping, fallback rules, and smoke commands.
