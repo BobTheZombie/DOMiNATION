@@ -88,9 +88,20 @@ struct SelectionState {
   std::array<std::vector<uint32_t>, 9> controlGroups;
   std::array<uint32_t, 9> lastTapMs{};
   bool dragging{false};
+  bool minimapDragging{false};
+  bool middleMousePanning{false};
+  glm::vec2 middleMouseLast{};
   glm::vec2 dragStart{};
   glm::vec2 dragCurrent{};
   std::vector<uint32_t> dragHighlight;
+};
+
+struct CameraNavState {
+  float targetZoom{8.0f};
+  float minZoom{4.0f};
+  float maxZoom{35.0f};
+  float edgeScrollPx{14.0f};
+  int alertCycleOffset{0};
 };
 
 struct UiCommandLogEntry {
@@ -349,6 +360,65 @@ void update_drag_highlight(dom::sim::World& world, SelectionState& s, const dom:
   glm::vec2 wa = dom::render::screen_to_world(camera, w, h, s.dragStart);
   glm::vec2 wb = dom::render::screen_to_world(camera, w, h, s.dragCurrent);
   s.dragHighlight = collect_team_units(world, 0, wa, wb);
+}
+
+void clamp_camera_to_world(const dom::sim::World& world, dom::render::Camera& camera, int w, int h) {
+  const float aspect = static_cast<float>(std::max(1, w)) / static_cast<float>(std::max(1, h));
+  const float halfW = camera.zoom * aspect;
+  const float halfH = camera.zoom;
+  camera.center.x = std::clamp(camera.center.x, halfW, std::max(halfW, static_cast<float>(world.width) - halfW));
+  camera.center.y = std::clamp(camera.center.y, halfH, std::max(halfH, static_cast<float>(world.height) - halfH));
+}
+
+bool focus_selected_anchor(const dom::sim::World& world, const std::vector<uint32_t>& selected, glm::vec2& out) {
+  if (selected.empty()) return false;
+  out = group_center(world, selected);
+  return true;
+}
+
+bool focus_capital(const dom::sim::World& world, uint16_t team, glm::vec2& out) {
+  for (const auto& c : world.cities) if (c.team == team && c.capital) { out = c.pos; return true; }
+  return false;
+}
+
+bool focus_objective(const dom::sim::World& world, glm::vec2& out) {
+  for (const auto& tr : world.triggers) {
+    if (tr.condition.areaId == 0) continue;
+    for (const auto& a : world.triggerAreas) if (a.id == tr.condition.areaId) { out = (a.min + a.max) * 0.5f; return true; }
+  }
+  for (const auto& t : world.operationalObjectives) if (t.active) { out = {(t.targetRegion.x + t.targetRegion.z) * 0.5f, (t.targetRegion.y + t.targetRegion.w) * 0.5f}; return true; }
+  return false;
+}
+
+bool focus_crisis(const dom::sim::World& world, glm::vec2& out) {
+  for (const auto& z : world.denialZones) if (z.ticksRemaining > 0) { out = z.pos; return true; }
+  for (const auto& s : world.strategicStrikes) if (!s.resolved) { out = s.target; return true; }
+  return false;
+}
+
+bool focus_guardian(const dom::sim::World& world, glm::vec2& out) {
+  for (const auto& g : world.guardianSites) if (g.alive && (g.discovered || world.godMode)) { out = g.pos; return true; }
+  return false;
+}
+
+bool focus_theater_target(const dom::sim::World& world, glm::vec2& out) {
+  if (!world.operationalObjectives.empty()) {
+    const auto& o = world.operationalObjectives.front();
+    out = {(o.targetRegion.x + o.targetRegion.z) * 0.5f, (o.targetRegion.y + o.targetRegion.w) * 0.5f};
+    return true;
+  }
+  return false;
+}
+
+bool focus_alert_source(const dom::sim::World& world, int offset, glm::vec2& out) {
+  std::vector<glm::vec2> targets;
+  for (const auto& s : world.strategicStrikes) if (!s.resolved) targets.push_back(s.target);
+  for (const auto& z : world.denialZones) if (z.ticksRemaining > 0) targets.push_back(z.pos);
+  for (const auto& g : world.guardianSites) if (g.alive && (g.discovered || world.godMode)) targets.push_back(g.pos);
+  if (targets.empty()) return false;
+  size_t idx = static_cast<size_t>(std::abs(offset) % static_cast<int>(targets.size()));
+  out = targets[idx];
+  return true;
 }
 
 
@@ -1787,6 +1857,9 @@ int run_app(int argc, char** argv) {
     }
   }
   dom::render::Camera camera;
+  CameraNavState cameraNav{};
+  cameraNav.maxZoom = world.godMode ? 160.0f : 70.0f;
+  cameraNav.targetZoom = std::clamp(camera.zoom, cameraNav.minZoom, cameraNav.maxZoom);
   if (opts.flowVisualize) std::cout << "flow visualization requested (debug overlay path not wired in this slice)\n";
   std::vector<uint32_t> selected;
   SelectionState sel;
@@ -1882,7 +1955,7 @@ int run_app(int argc, char** argv) {
         if (editorMode && e.key.keysym.sym == SDLK_TAB) editorTool = (editorTool + 1) % 6;
         if (editorMode && e.key.keysym.sym == SDLK_o) editorOwner = (uint16_t)((editorOwner + 1) % std::max<size_t>(1, world.players.size()));
         SDL_Keymod mod = SDL_GetModState();
-        if (e.key.keysym.sym == SDLK_g) dom::sim::toggle_god_mode(world);
+        if (e.key.keysym.sym == SDLK_g) { dom::sim::toggle_god_mode(world); cameraNav.maxZoom = world.godMode ? 160.0f : 70.0f; cameraNav.targetZoom = std::clamp(cameraNav.targetZoom, cameraNav.minZoom, cameraNav.maxZoom); }
         if (replayMode) {
           if (e.key.keysym.sym == SDLK_SPACE) replayPaused = !replayPaused;
           if (e.key.keysym.sym == SDLK_EQUALS || e.key.keysym.sym == SDLK_PLUS) replaySpeed = std::min(16.0f, replaySpeed * 2.0f);
@@ -1919,6 +1992,22 @@ int run_app(int argc, char** argv) {
         if (e.key.keysym.sym == SDLK_t) { world.uiTrainMenu = !world.uiTrainMenu; world.uiBuildMenu = false; world.uiResearchMenu = false; }
         if (!replayMode && e.key.keysym.sym == SDLK_r) { world.uiResearchMenu = !world.uiResearchMenu; world.uiBuildMenu = false; world.uiTrainMenu = false; }
         if (e.key.keysym.sym == SDLK_ESCAPE) dom::sim::cancel_build_placement(world);
+
+        glm::vec2 focusPoint{};
+        if (e.key.keysym.sym == SDLK_F && focus_selected_anchor(world, selected, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_HOME && focus_capital(world, 0, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_j && focus_objective(world, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_k && focus_crisis(world, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_l && focus_guardian(world, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_y && focus_theater_target(world, focusPoint)) camera.center = focusPoint;
+        if (e.key.keysym.sym == SDLK_COMMA) {
+          --cameraNav.alertCycleOffset;
+          if (focus_alert_source(world, cameraNav.alertCycleOffset, focusPoint)) camera.center = focusPoint;
+        }
+        if (e.key.keysym.sym == SDLK_PERIOD) {
+          ++cameraNav.alertCycleOffset;
+          if (focus_alert_source(world, cameraNav.alertCycleOffset, focusPoint)) camera.center = focusPoint;
+        }
 
         auto group_index = [&](SDL_Keycode k) -> int {
           if (k >= SDLK_1 && k <= SDLK_9) return static_cast<int>(k - SDLK_1);
@@ -1957,7 +2046,20 @@ int run_app(int argc, char** argv) {
           }
         }
       }
-      if (e.type == SDL_MOUSEWHEEL) camera.zoom = std::clamp(camera.zoom - e.wheel.y * (world.godMode ? 4.0f : 1.2f), 4.0f, world.godMode ? 160.0f : 35.0f);
+      if (e.type == SDL_MOUSEWHEEL) {
+        const float step = cameraNav.targetZoom > 70.0f ? 7.0f : (cameraNav.targetZoom > 28.0f ? 3.2f : 1.5f);
+        cameraNav.targetZoom = std::clamp(cameraNav.targetZoom - e.wheel.y * step, cameraNav.minZoom, cameraNav.maxZoom);
+      }
+
+      if (e.type == SDL_MOUSEMOTION && sel.middleMousePanning) {
+        int w, h; SDL_GetWindowSize(window, &w, &h);
+        glm::vec2 cur{(float)e.motion.x, (float)e.motion.y};
+        glm::vec2 prevScreen = sel.middleMouseLast;
+        glm::vec2 worldNow = dom::render::screen_to_world(camera, w, h, cur);
+        glm::vec2 worldPrev = dom::render::screen_to_world(camera, w, h, prevScreen);
+        camera.center += (worldPrev - worldNow);
+        sel.middleMouseLast = cur;
+      }
 
       if (e.type == SDL_MOUSEMOTION && world.placementActive) {
         int w, h; SDL_GetWindowSize(window, &w, &h);
@@ -1968,6 +2070,16 @@ int run_app(int argc, char** argv) {
         sel.dragCurrent = {(float)e.motion.x, (float)e.motion.y};
         int w, h; SDL_GetWindowSize(window, &w, &h);
         update_drag_highlight(world, sel, camera, w, h);
+      }
+      if (e.type == SDL_MOUSEMOTION && sel.minimapDragging) {
+        int w, h; SDL_GetWindowSize(window, &w, &h);
+        glm::vec2 worldPos{};
+        if (dom::render::minimap_screen_to_world(world, w, h, {(float)e.motion.x, (float)e.motion.y}, worldPos)) camera.center = worldPos;
+      }
+
+      if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_MIDDLE) {
+        sel.middleMousePanning = true;
+        sel.middleMouseLast = {(float)e.button.x, (float)e.button.y};
       }
 
       if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
@@ -1990,6 +2102,7 @@ int run_app(int argc, char** argv) {
           glm::vec2 worldPos{};
           if (dom::render::minimap_screen_to_world(world, w, h, screen, worldPos)) {
             camera.center = worldPos;
+            sel.minimapDragging = true;
           } else {
             sel.dragging = true;
             sel.dragStart = screen;
@@ -1998,6 +2111,8 @@ int run_app(int argc, char** argv) {
           }
         }
       }
+      if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_MIDDLE) sel.middleMousePanning = false;
+      if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT) sel.minimapDragging = false;
       if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT && sel.dragging && !world.placementActive) {
         int w, h; SDL_GetWindowSize(window, &w, &h);
         sel.dragging = false;
@@ -2034,11 +2149,32 @@ int run_app(int argc, char** argv) {
     }
 
     const Uint8* keys = SDL_GetKeyboardState(nullptr);
-    float pan = frameDt * camera.zoom * 1.2f;
-    if (keys[SDL_SCANCODE_W]) camera.center.y += pan;
-    if (keys[SDL_SCANCODE_S]) camera.center.y -= pan;
-    if (keys[SDL_SCANCODE_A]) camera.center.x -= pan;
-    if (keys[SDL_SCANCODE_D]) camera.center.x += pan;
+    int w, h; SDL_GetWindowSize(window, &w, &h);
+    const bool uiBlockingCamera = uiState.showScenarioEditor || assetBrowser.visible();
+    float pan = frameDt * camera.zoom * 1.25f;
+    if (!uiBlockingCamera) {
+      if (keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP]) camera.center.y += pan;
+      if (keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN]) camera.center.y -= pan;
+      if (keys[SDL_SCANCODE_A] || keys[SDL_SCANCODE_LEFT]) camera.center.x -= pan;
+      if (keys[SDL_SCANCODE_D] || keys[SDL_SCANCODE_RIGHT]) camera.center.x += pan;
+
+      int mx = 0, my = 0;
+      Uint32 mouseButtons = SDL_GetMouseState(&mx, &my);
+      const float edgePan = frameDt * camera.zoom * 1.45f;
+      const int edge = std::max(6, (int)std::round(cameraNav.edgeScrollPx));
+      const bool edgeAllowed = (mouseButtons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) == 0;
+      if (edgeAllowed && mx <= edge) camera.center.x -= edgePan;
+      if (edgeAllowed && mx >= w - edge) camera.center.x += edgePan;
+      if (edgeAllowed && my <= edge) camera.center.y += edgePan;
+      if (edgeAllowed && my >= h - edge) camera.center.y -= edgePan;
+    }
+
+    cameraNav.maxZoom = world.godMode ? 160.0f : 70.0f;
+    cameraNav.targetZoom = std::clamp(cameraNav.targetZoom, cameraNav.minZoom, cameraNav.maxZoom);
+    const float zoomAlpha = std::clamp(frameDt * 9.0f, 0.0f, 1.0f);
+    camera.zoom += (cameraNav.targetZoom - camera.zoom) * zoomAlpha;
+    camera.zoom = std::clamp(camera.zoom, cameraNav.minZoom, cameraNav.maxZoom);
+    clamp_camera_to_world(world, camera, w, h);
 
     while (!frontend.active && accum >= dom::core::kSimDeltaSeconds) {
       if (replayMode) {
@@ -2072,7 +2208,6 @@ int run_app(int argc, char** argv) {
       }
     }
 
-    int w, h; SDL_GetWindowSize(window, &w, &h);
 #ifdef DOM_HAS_IMGUI
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();

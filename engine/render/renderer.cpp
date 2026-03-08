@@ -601,9 +601,11 @@ bool minimap_screen_to_world(const dom::sim::World& world, int width, int height
   int y0 = height - size - pad;
   if (!gOverlay.showMinimap) return false;
   if (screen.x < x0 || screen.y < y0 || screen.x > x0 + size || screen.y > y0 + size) return false;
-  float nx = (screen.x - x0) / static_cast<float>(size);
-  float ny = (screen.y - y0) / static_cast<float>(size);
-  outWorld = {nx * world.width, (1.0f - ny) * world.height};
+  float nx = std::clamp((screen.x - x0) / static_cast<float>(size), 0.0f, 1.0f);
+  float ny = std::clamp((screen.y - y0) / static_cast<float>(size), 0.0f, 1.0f);
+  const float wx = std::clamp(nx * world.width, 0.0f, static_cast<float>(world.width));
+  const float wy = std::clamp((1.0f - ny) * world.height, 0.0f, static_cast<float>(world.height));
+  outWorld = {wx, wy};
   return true;
 }
 
@@ -1047,10 +1049,19 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     float vx1 = x0 + worldX1 * size;
     float vy0 = y0 + (1.0f - worldY1) * size;
     float vy1 = y0 + (1.0f - worldY0) * size;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(0.98f, 0.95f, 0.65f, 0.14f);
+    glBegin(GL_QUADS);
+    glVertex2f(vx0, vy0); glVertex2f(vx1, vy0); glVertex2f(vx1, vy1); glVertex2f(vx0, vy1);
+    glEnd();
+    glLineWidth(2.0f);
     glColor3f(1.0f, 1.0f, 0.8f);
     glBegin(GL_LINE_LOOP);
     glVertex2f(vx0, vy0); glVertex2f(vx1, vy0); glVertex2f(vx1, vy1); glVertex2f(vx0, vy1);
     glEnd();
+    glLineWidth(1.0f);
+    glDisable(GL_BLEND);
 
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
