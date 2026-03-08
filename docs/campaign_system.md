@@ -50,3 +50,8 @@ Campaign runtime save uses `--save` with a campaign run. It stores mission progr
 - Mission briefing/debrief presentation reads mission/campaign metadata and carryover state each mission.
 - Campaign progression panel surfaces current result, rewards/flags, pending branch, and carryover deltas.
 - Save/load preserves authoritative campaign progression and message ordering state used by mission presentation logs.
+
+
+## Front-end campaign entry
+Campaign files are also discoverable from the interactive front-end campaign browser, which displays campaign metadata and launches the first mission through the same deterministic campaign/scenario load path used by CLI `--campaign`.
+

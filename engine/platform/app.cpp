@@ -29,6 +29,7 @@
 #include <mutex>
 #include <deque>
 #include <sstream>
+#include <optional>
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -104,6 +105,144 @@ struct UiNotification {
   uint32_t tick{0};
   std::string text;
 };
+
+struct ContentEntry {
+  std::string path;
+  std::string title;
+  std::string description;
+  std::string civilization;
+  std::string worldPreset;
+  std::string difficulty;
+  std::string briefing;
+};
+
+struct SaveEntry {
+  std::string path;
+  std::string name;
+  std::string scenario;
+  std::string campaign;
+  std::string civilization;
+  std::string worldPreset;
+  uint32_t tick{0};
+};
+
+struct FrontendState {
+  enum class Screen { MainMenu, Skirmish, Scenario, Campaign, LoadGame, Options };
+  Screen screen{Screen::MainMenu};
+  bool active{true};
+  uint32_t seed{1337};
+  int mapW{128};
+  int mapH{128};
+  int players{2};
+  int aiSlots{1};
+  int armageddonNationsThreshold{2};
+  int armageddonUsesThreshold{2};
+  bool enableWorldEvents{true};
+  bool enableGuardians{true};
+  bool allowConquest{true};
+  bool allowScore{true};
+  bool allowWonder{true};
+  bool aiAggressive{false};
+  int selectedScenario{0};
+  int selectedCampaign{0};
+  int selectedSave{0};
+  int selectedWorldPreset{0};
+  int selectedHumanCiv{0};
+  int selectedAiCiv{0};
+  std::string validation;
+  std::string launchStatus;
+};
+
+std::vector<std::string> read_civilization_ids() {
+  std::vector<std::string> ids{"default"};
+  std::ifstream in("content/civilizations.json");
+  if (!in.good()) return ids;
+  nlohmann::json j; in >> j;
+  if (!j.is_array()) return ids;
+  ids.clear();
+  for (const auto& c : j) {
+    const std::string id = c.value("civilization_id", c.value("id", std::string("")));
+    if (!id.empty()) ids.push_back(id);
+  }
+  if (ids.empty()) ids.push_back("default");
+  return ids;
+}
+
+template<typename T>
+void clamp_selection(int& idx, const std::vector<T>& items) {
+  if (items.empty()) { idx = 0; return; }
+  idx = std::clamp(idx, 0, static_cast<int>(items.size()) - 1);
+}
+
+std::vector<ContentEntry> read_scenario_entries() {
+  std::vector<ContentEntry> out;
+  namespace fs = std::filesystem;
+  if (!fs::exists("scenarios")) return out;
+  for (const auto& e : fs::directory_iterator("scenarios")) {
+    if (e.path().extension() != ".json") continue;
+    ContentEntry c{}; c.path = e.path().string(); c.title = e.path().stem().string();
+    std::ifstream in(c.path);
+    if (in.good()) {
+      nlohmann::json j; in >> j;
+      c.title = j.value("title", c.title);
+      c.description = j.value("description", std::string(""));
+      c.briefing = j.value("briefing", std::string(""));
+      c.worldPreset = j.value("worldPreset", j.value("world_preset", std::string("")));
+      c.difficulty = j.value("difficulty", std::string(""));
+      if (j.contains("players") && j["players"].is_array() && !j["players"].empty()) c.civilization = j["players"][0].value("civilization", std::string(""));
+      if (c.briefing.empty() && j.contains("mission") && j["mission"].is_object()) c.briefing = j["mission"].value("briefing", std::string(""));
+    }
+    out.push_back(std::move(c));
+  }
+  std::sort(out.begin(), out.end(), [](const auto& a, const auto& b){ return a.path < b.path; });
+  return out;
+}
+
+std::vector<ContentEntry> read_campaign_entries() {
+  std::vector<ContentEntry> out;
+  namespace fs = std::filesystem;
+  if (!fs::exists("campaigns")) return out;
+  for (const auto& e : fs::directory_iterator("campaigns")) {
+    if (e.path().extension() != ".json") continue;
+    ContentEntry c{}; c.path = e.path().string(); c.title = e.path().stem().string();
+    std::ifstream in(c.path);
+    if (in.good()) {
+      nlohmann::json j; in >> j;
+      c.title = j.value("display_name", c.title);
+      c.description = j.value("description", std::string(""));
+      if (j.contains("starting_state")) c.civilization = j["starting_state"].value("player_civilization", std::string(""));
+      if (j.contains("missions") && j["missions"].is_array() && !j["missions"].empty()) {
+        c.briefing = j["missions"][0].value("briefing", std::string(""));
+        c.difficulty = j["missions"][0].value("difficulty", std::string(""));
+      }
+    }
+    out.push_back(std::move(c));
+  }
+  std::sort(out.begin(), out.end(), [](const auto& a, const auto& b){ return a.path < b.path; });
+  return out;
+}
+
+std::vector<SaveEntry> read_save_entries() {
+  std::vector<SaveEntry> out;
+  namespace fs = std::filesystem;
+  if (!fs::exists("saves")) fs::create_directory("saves");
+  for (const auto& e : fs::directory_iterator("saves")) {
+    if (e.path().extension() != ".json") continue;
+    SaveEntry s{}; s.path = e.path().string(); s.name = e.path().stem().string();
+    std::ifstream in(s.path);
+    if (in.good()) {
+      nlohmann::json j; in >> j;
+      s.tick = j.value("tick", 0u);
+      s.scenario = j.value("scenarioFile", std::string(""));
+      if (j.contains("campaign") && j["campaign"].is_object()) s.campaign = j["campaign"].value("campaignId", std::string(""));
+      if (j.contains("players") && j["players"].is_array() && !j["players"].empty()) s.civilization = j["players"][0].value("civilization", std::string(""));
+      if (j.contains("worldPreset")) s.worldPreset = std::to_string(j.value("worldPreset", 0));
+    }
+    out.push_back(std::move(s));
+  }
+  std::sort(out.begin(), out.end(), [](const auto& a, const auto& b){ return a.path > b.path; });
+  return out;
+}
 
 const char* relation_name(dom::sim::DiplomacyRelation r) {
   if (r == dom::sim::DiplomacyRelation::Allied) return "Allied";
@@ -1587,12 +1726,30 @@ int run_app(int argc, char** argv) {
   dom::sim::set_nav_debug(opts.navDebug);
   dom::ai::set_attack_early(opts.aiAttackEarly);
   dom::sim::World world;
+  FrontendState frontend{};
+  const bool startInFrontend = opts.scenarioFile.empty() && opts.campaignFile.empty() && opts.loadFile.empty();
+  frontend.active = startInFrontend;
+  frontend.seed = opts.seed;
+  frontend.mapW = opts.mapW;
+  frontend.mapH = opts.mapH;
+  frontend.aiAggressive = opts.aiAggressive;
+  const std::vector<std::string> worldPresetOptions{"pangaea", "continents", "archipelago", "inland_sea", "mountain_world"};
+  for (size_t i = 0; i < worldPresetOptions.size(); ++i) if (worldPresetOptions[i] == opts.worldPreset) frontend.selectedWorldPreset = static_cast<int>(i);
+  auto civIds = read_civilization_ids();
+  auto scenarioEntries = read_scenario_entries();
+  auto campaignEntries = read_campaign_entries();
+  auto saveEntries = read_save_entries();
   std::vector<dom::sim::ReplayCommand> replayCommands;
   bool replayMode = false;
   bool replayPaused = false;
   float replaySpeed = std::max(0.1f, opts.replaySpeed);
   size_t replayIdx = 0;
-  if (!opts.campaignFile.empty()) {
+  if (startInFrontend) {
+    world.width = frontend.mapW;
+    world.height = frontend.mapH;
+    dom::sim::set_world_preset(world, dom::sim::parse_world_preset(worldPresetOptions[frontend.selectedWorldPreset]));
+    dom::sim::initialize_world(world, frontend.seed);
+  } else if (!opts.campaignFile.empty()) {
     CampaignDefinition def{}; std::string err;
     if (parse_campaign_file(opts.campaignFile, def, err) && !def.missions.empty()) {
       if (!dom::sim::load_scenario_file(world, def.missions.front().scenarioFile, opts.seed, err)) { std::cerr << "Failed to load campaign mission scenario: " << err << "\n"; world.width = opts.mapW; world.height = opts.mapH; dom::sim::initialize_world(world, opts.seed); }
@@ -1709,6 +1866,10 @@ int run_app(int argc, char** argv) {
       if (e.type == SDL_QUIT) running = false;
       if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
         dom::render::set_resolution(e.window.data1, e.window.data2);
+      }
+      if (frontend.active) {
+        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) frontend.screen = FrontendState::Screen::MainMenu;
+        continue;
       }
       if (e.type == SDL_KEYDOWN) {
         if (e.key.keysym.sym == SDLK_F1) uiState.showHudDebug = !uiState.showHudDebug;
@@ -1879,7 +2040,7 @@ int run_app(int argc, char** argv) {
     if (keys[SDL_SCANCODE_A]) camera.center.x -= pan;
     if (keys[SDL_SCANCODE_D]) camera.center.x += pan;
 
-    while (accum >= dom::core::kSimDeltaSeconds) {
+    while (!frontend.active && accum >= dom::core::kSimDeltaSeconds) {
       if (replayMode) {
         if (!replayPaused) {
           while (replayIdx < replayCommands.size() && replayCommands[replayIdx].tick == world.tick) { apply_replay_command(world, replayCommands[replayIdx]); ++replayIdx; }
@@ -1944,13 +2105,177 @@ int run_app(int argc, char** argv) {
       const auto stats = dom::sim::last_simulation_stats();
       std::cout << "PERF tick=" << world.tick << " SIM_TICK_TIME=" << lastSimMs << " NAV_TIME=" << p.navMs << " COMBAT_TIME=" << p.combatMs << " AI_TIME=" << lastAiMs << " RENDER_TIME=" << dom::render::last_draw_ms() << " ENTITY_COUNT=" << (world.units.size()+world.buildings.size()) << " UNIT_COUNT=" << world.units.size() << " BUILDING_COUNT=" << world.buildings.size() << " THREADS=" << stats.threads << " JOB_COUNT=" << stats.jobCount << " CHUNK_COUNT=" << stats.chunkCount << " MOVEMENT_TASKS=" << stats.movementTasks << " FOG_TASKS=" << stats.fogTasks << " TERRITORY_TASKS=" << stats.territoryTasks << " NAV_REQUESTS=" << stats.navRequests << " NAV_COMPLETIONS=" << stats.navCompletions << " NAV_STALE_DROPS=" << stats.navStaleDrops << " EVENT_COUNT=" << stats.eventCount << " ROAD_COUNT=" << stats.roadCount << " ACTIVE_TRADE_ROUTES=" << stats.activeTradeRoutes << " RAIL_NODE_COUNT=" << stats.railNodeCount << " RAIL_EDGE_COUNT=" << stats.railEdgeCount << " ACTIVE_RAIL_NETWORKS=" << stats.activeRailNetworks << " ACTIVE_TRAINS=" << stats.activeTrains << " ACTIVE_SUPPLY_TRAINS=" << stats.activeSupplyTrains << " ACTIVE_FREIGHT_TRAINS=" << stats.activeFreightTrains << " RAIL_THROUGHPUT=" << stats.railThroughput << " DISRUPTED_RAIL_ROUTES=" << stats.disruptedRailRoutes << " SUPPLIED_UNITS=" << stats.suppliedUnits << " LOW_SUPPLY_UNITS=" << stats.lowSupplyUnits << " OUT_OF_SUPPLY_UNITS=" << stats.outOfSupplyUnits << " OPERATION_COUNT=" << stats.operationCount << " WORLD_TENSION=" << stats.worldTension << " ALLIANCE_COUNT=" << stats.allianceCount << " WAR_COUNT=" << stats.warCount << " ACTIVE_ESPIONAGE_OPS=" << stats.activeEspionageOps << " POSTURE_CHANGES=" << stats.postureChanges << " DIPLOMACY_EVENTS=" << stats.diplomacyEvents << " NAVAL_UNIT_COUNT=" << stats.navalUnitCount << " TRANSPORT_COUNT=" << stats.transportCount << " EMBARKED_UNIT_COUNT=" << stats.embarkedUnitCount << " ACTIVE_NAVAL_OPERATIONS=" << stats.activeNavalOperations << " COASTAL_TARGETS=" << stats.coastalTargets << " NAVAL_COMBAT_EVENTS=" << stats.navalCombatEvents << " AIR_UNIT_COUNT=" << stats.airUnitCount << " DETECTOR_COUNT=" << stats.detectorCount << " RADAR_REVEALS=" << stats.radarReveals << " STRATEGIC_STRIKES=" << stats.strategicStrikes << " INTERCEPTIONS=" << stats.interceptions << " STRATEGIC_STOCKPILE_TOTAL=" << stats.strategicStockpileTotal << " STRATEGIC_READY_TOTAL=" << stats.strategicReadyTotal << " STRATEGIC_PREPARING_TOTAL=" << stats.strategicPreparingTotal << " STRATEGIC_WARNINGS=" << stats.strategicWarnings << " STRATEGIC_RETALIATIONS=" << stats.strategicRetaliations << " SECOND_STRIKE_READY_COUNT=" << stats.secondStrikeReadyCount << " DETERRENCE_POSTURE_CHANGES=" << stats.deterrencePostureChanges << " ACTIVE_DENIAL_ZONES=" << stats.activeDenialZones << " MOUNTAIN_REGION_COUNT=" << stats.mountainRegionCount << " SURFACE_DEPOSIT_COUNT=" << stats.surfaceDepositCount << " DEEP_DEPOSIT_COUNT=" << stats.deepDepositCount << " ACTIVE_MINE_SHAFTS=" << stats.activeMineShafts << " ACTIVE_TUNNELS=" << stats.activeTunnels << " UNDERGROUND_DEPOTS=" << stats.undergroundDepots << " UNDERGROUND_YIELD=" << stats.undergroundYield << " GUARDIAN_SITE_COUNT=" << stats.guardianSiteCount << " GUARDIANS_DISCOVERED=" << stats.guardiansDiscovered << " GUARDIANS_SPAWNED=" << stats.guardiansSpawned << " GUARDIANS_JOINED=" << stats.guardiansJoined << " GUARDIANS_KILLED=" << stats.guardiansKilled << " HOSTILE_GUARDIAN_EVENTS=" << stats.hostileGuardianEvents << " ALLIED_GUARDIAN_EVENTS=" << stats.alliedGuardianEvents << " CONTENT_FALLBACK_COUNT=" << stats.contentFallbackCount << " CIV_PRESENTATION_RESOLVES=" << stats.civPresentationResolves << " GUARDIAN_PRESENTATION_RESOLVES=" << stats.guardianPresentationResolves << " CAMPAIGN_PRESENTATION_RESOLVES=" << stats.campaignPresentationResolves << " EVENT_PRESENTATION_RESOLVES=" << stats.eventPresentationResolves << "\n";
     }
-    dom::ui::push_gameplay_notifications(world, uiState);
-    dom::ui::draw_hud(window, world, selected, uiState, replayOverlay);
-    if (uiState.showScenarioEditor) dom::editor::draw_scenario_editor(world, camera.center, scenarioEditorState);
-    if (uiState.showHudDebug || uiState.showDebugPanels) dom::debug::draw_debug_panels(world, debugVisualState);
-    dom::debug::sync_debug_visuals(debugVisualState);
+    if (!frontend.active) {
+      dom::ui::push_gameplay_notifications(world, uiState);
+      dom::ui::draw_hud(window, world, selected, uiState, replayOverlay);
+      if (uiState.showScenarioEditor) dom::editor::draw_scenario_editor(world, camera.center, scenarioEditorState);
+      if (uiState.showHudDebug || uiState.showDebugPanels) dom::debug::draw_debug_panels(world, debugVisualState);
+      dom::debug::sync_debug_visuals(debugVisualState);
+    }
 #ifdef DOM_HAS_IMGUI
-    if (showHudPanels) {
+    if (frontend.active) {
+      clamp_selection(frontend.selectedScenario, scenarioEntries);
+      clamp_selection(frontend.selectedCampaign, campaignEntries);
+      clamp_selection(frontend.selectedSave, saveEntries);
+      clamp_selection(frontend.selectedHumanCiv, civIds);
+      clamp_selection(frontend.selectedAiCiv, civIds);
+      frontend.validation.clear();
+      if (frontend.players < 2) frontend.validation = "At least 2 player slots are required.";
+      if (frontend.aiSlots < 1) frontend.validation = "At least 1 AI slot is required.";
+      if (frontend.players < frontend.aiSlots + 1) frontend.validation = "AI slots exceed available player slots.";
+      if (!frontend.allowConquest && !frontend.allowScore && !frontend.allowWonder) frontend.validation = "Select at least one victory condition.";
+      if (frontend.mapW < 16 || frontend.mapH < 16) frontend.validation = "Map size must be >= 16x16.";
+
+      ImGui::SetNextWindowPos(ImVec2(0, 0));
+      ImGui::SetNextWindowSize(ImVec2((float)w, (float)h));
+      ImGui::Begin("DOMiNATION Frontend", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+      ImGui::Text("DOMiNATION RTS");
+      ImGui::Separator();
+      if (frontend.screen == FrontendState::Screen::MainMenu) {
+        if (ImGui::Button("Skirmish", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Skirmish;
+        if (ImGui::Button("Scenario", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Scenario;
+        if (ImGui::Button("Campaign", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Campaign;
+        if (ImGui::Button("Load Game", ImVec2(220, 0))) { saveEntries = read_save_entries(); frontend.screen = FrontendState::Screen::LoadGame; }
+        if (ImGui::Button("Options", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Options;
+        if (ImGui::Button("Quit", ImVec2(220, 0))) running = false;
+      } else if (frontend.screen == FrontendState::Screen::Skirmish) {
+        ImGui::Columns(2, nullptr, true);
+        ImGui::Text("Player Slots");
+        ImGui::SliderInt("Total Players", &frontend.players, 2, 8);
+        ImGui::SliderInt("AI Slots", &frontend.aiSlots, 1, 7);
+        const char* humanCiv = civIds[frontend.selectedHumanCiv].c_str();
+        if (ImGui::BeginCombo("Human Civilization", humanCiv)) { for (int i = 0; i < (int)civIds.size(); ++i) { bool sel = i == frontend.selectedHumanCiv; if (ImGui::Selectable(civIds[i].c_str(), sel)) frontend.selectedHumanCiv = i; } ImGui::EndCombo(); }
+        const char* aiCiv = civIds[frontend.selectedAiCiv].c_str();
+        if (ImGui::BeginCombo("AI Civilization", aiCiv)) { for (int i = 0; i < (int)civIds.size(); ++i) { bool sel = i == frontend.selectedAiCiv; if (ImGui::Selectable(civIds[i].c_str(), sel)) frontend.selectedAiCiv = i; } ImGui::EndCombo(); }
+        ImGui::NextColumn();
+        ImGui::Text("World & Victory");
+        const char* wp = worldPresetOptions[frontend.selectedWorldPreset].c_str();
+        if (ImGui::BeginCombo("World Preset", wp)) { for (int i = 0; i < (int)worldPresetOptions.size(); ++i) { bool sel = i == frontend.selectedWorldPreset; if (ImGui::Selectable(worldPresetOptions[i].c_str(), sel)) frontend.selectedWorldPreset = i; } ImGui::EndCombo(); }
+        ImGui::InputScalar("Seed", ImGuiDataType_U32, &frontend.seed);
+        ImGui::InputInt("Map Width", &frontend.mapW);
+        ImGui::InputInt("Map Height", &frontend.mapH);
+        ImGui::SliderInt("Armageddon Nations", &frontend.armageddonNationsThreshold, 1, 8);
+        ImGui::SliderInt("Armageddon Uses/Nation", &frontend.armageddonUsesThreshold, 1, 6);
+        ImGui::Checkbox("World Events Enabled", &frontend.enableWorldEvents);
+        ImGui::Checkbox("Mythic Guardians Enabled", &frontend.enableGuardians);
+        ImGui::Checkbox("AI Aggressive", &frontend.aiAggressive);
+        ImGui::Checkbox("Conquest", &frontend.allowConquest); ImGui::SameLine();
+        ImGui::Checkbox("Score", &frontend.allowScore); ImGui::SameLine();
+        ImGui::Checkbox("Wonder", &frontend.allowWonder);
+        ImGui::Columns(1);
+        ImGui::SeparatorText("Launch Summary");
+        ImGui::Text("Players: %d (%d human / %d AI)", frontend.players, 1, frontend.aiSlots);
+        ImGui::Text("Human Civ: %s | AI Civ: %s", civIds[frontend.selectedHumanCiv].c_str(), civIds[frontend.selectedAiCiv].c_str());
+        ImGui::Text("Preset: %s | Map: %dx%d | Seed: %u", worldPresetOptions[frontend.selectedWorldPreset].c_str(), frontend.mapW, frontend.mapH, frontend.seed);
+        if (!frontend.validation.empty()) ImGui::TextColored(ImVec4(1, 0.45f, 0.35f, 1), "%s", frontend.validation.c_str());
+        if (ImGui::Button("Launch Skirmish", ImVec2(220, 0)) && frontend.validation.empty()) {
+          world = {};
+          world.width = frontend.mapW;
+          world.height = frontend.mapH;
+          dom::sim::set_world_preset(world, dom::sim::parse_world_preset(worldPresetOptions[frontend.selectedWorldPreset]));
+          dom::sim::initialize_world(world, frontend.seed);
+          dom::ai::set_aggressive(frontend.aiAggressive);
+          world.config.allowConquest = frontend.allowConquest;
+          world.config.allowScore = frontend.allowScore;
+          world.config.allowWonder = frontend.allowWonder;
+          world.armageddonNationsThreshold = static_cast<uint16_t>(frontend.armageddonNationsThreshold);
+          world.armageddonUsesPerNationThreshold = static_cast<uint16_t>(frontend.armageddonUsesThreshold);
+          if (!frontend.enableWorldEvents) { world.worldEventDefinitions.clear(); world.worldEvents.clear(); }
+          if (!frontend.enableGuardians) { world.guardianDefinitions.clear(); world.guardianSites.clear(); }
+          if (!world.players.empty()) world.players[0].civilization = dom::sim::civilization_runtime_for(civIds[frontend.selectedHumanCiv]);
+          for (size_t i = 1; i < world.players.size(); ++i) world.players[i].civilization = dom::sim::civilization_runtime_for(civIds[frontend.selectedAiCiv]);
+          dom::sim::on_authoritative_state_loaded(world);
+          frontend.active = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Back", ImVec2(120, 0))) frontend.screen = FrontendState::Screen::MainMenu;
+      } else if (frontend.screen == FrontendState::Screen::Scenario) {
+        ImGui::BeginChild("scenario_list", ImVec2(420, 0), true);
+        for (int i = 0; i < (int)scenarioEntries.size(); ++i) {
+          if (ImGui::Selectable(scenarioEntries[i].title.c_str(), i == frontend.selectedScenario)) frontend.selectedScenario = i;
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        ImGui::BeginChild("scenario_meta", ImVec2(0, 0), true);
+        if (!scenarioEntries.empty()) {
+          const auto& s = scenarioEntries[frontend.selectedScenario];
+          ImGui::Text("%s", s.title.c_str()); ImGui::Separator();
+          ImGui::TextWrapped("%s", s.description.empty() ? "No description." : s.description.c_str());
+          ImGui::Text("Civ: %s", s.civilization.empty() ? "default" : s.civilization.c_str());
+          ImGui::Text("World: %s", s.worldPreset.empty() ? "(authored/default)" : s.worldPreset.c_str());
+          ImGui::Text("Difficulty: %s", s.difficulty.empty() ? "(none)" : s.difficulty.c_str());
+          ImGui::TextWrapped("Briefing: %s", s.briefing.empty() ? "N/A" : s.briefing.c_str());
+          if (ImGui::Button("Launch Scenario") && !s.path.empty()) { std::string err; if (dom::sim::load_scenario_file(world, s.path, opts.seed, err)) { dom::sim::on_authoritative_state_loaded(world); frontend.active = false; } else frontend.launchStatus = err; }
+        } else ImGui::TextDisabled("No scenarios found.");
+        if (!frontend.launchStatus.empty()) ImGui::TextColored(ImVec4(1, 0.45f, 0.35f, 1), "%s", frontend.launchStatus.c_str());
+        if (ImGui::Button("Back", ImVec2(120, 0))) frontend.screen = FrontendState::Screen::MainMenu;
+        ImGui::EndChild();
+      } else if (frontend.screen == FrontendState::Screen::Campaign) {
+        ImGui::BeginChild("campaign_list", ImVec2(420, 0), true);
+        for (int i = 0; i < (int)campaignEntries.size(); ++i) {
+          if (ImGui::Selectable(campaignEntries[i].title.c_str(), i == frontend.selectedCampaign)) frontend.selectedCampaign = i;
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        ImGui::BeginChild("campaign_meta", ImVec2(0, 0), true);
+        if (!campaignEntries.empty()) {
+          const auto& c = campaignEntries[frontend.selectedCampaign];
+          ImGui::Text("%s", c.title.c_str()); ImGui::Separator();
+          ImGui::TextWrapped("%s", c.description.empty() ? "No description." : c.description.c_str());
+          ImGui::Text("Faction/Civ: %s", c.civilization.empty() ? "default" : c.civilization.c_str());
+          ImGui::Text("Difficulty Tags: %s", c.difficulty.empty() ? "(none)" : c.difficulty.c_str());
+          ImGui::TextWrapped("Briefing: %s", c.briefing.empty() ? "N/A" : c.briefing.c_str());
+          if (ImGui::Button("Launch Campaign") && !c.path.empty()) {
+            CampaignDefinition def{}; std::string err;
+            if (parse_campaign_file(c.path, def, err) && !def.missions.empty() && dom::sim::load_scenario_file(world, def.missions.front().scenarioFile, opts.seed, err)) {
+              world.campaign = def.startState;
+              dom::sim::on_authoritative_state_loaded(world);
+              frontend.active = false;
+            } else frontend.launchStatus = err.empty() ? "Failed to launch campaign" : err;
+          }
+        } else ImGui::TextDisabled("No campaigns found.");
+        if (!frontend.launchStatus.empty()) ImGui::TextColored(ImVec4(1, 0.45f, 0.35f, 1), "%s", frontend.launchStatus.c_str());
+        if (ImGui::Button("Back", ImVec2(120, 0))) frontend.screen = FrontendState::Screen::MainMenu;
+        ImGui::EndChild();
+      } else if (frontend.screen == FrontendState::Screen::LoadGame) {
+        if (ImGui::Button("Refresh Saves")) saveEntries = read_save_entries();
+        ImGui::Separator();
+        for (int i = 0; i < (int)saveEntries.size(); ++i) {
+          const auto& s = saveEntries[i];
+          std::string label = s.name + "  (tick " + std::to_string(s.tick) + ")";
+          if (ImGui::Selectable(label.c_str(), i == frontend.selectedSave)) frontend.selectedSave = i;
+        }
+        if (!saveEntries.empty()) {
+          const auto& s = saveEntries[frontend.selectedSave];
+          ImGui::SeparatorText("Save Metadata");
+          ImGui::Text("Path: %s", s.path.c_str());
+          ImGui::Text("Scenario: %s", s.scenario.empty() ? "(none)" : s.scenario.c_str());
+          ImGui::Text("Campaign: %s", s.campaign.empty() ? "(none)" : s.campaign.c_str());
+          ImGui::Text("Civ: %s", s.civilization.empty() ? "default" : s.civilization.c_str());
+          if (ImGui::Button("Load Save")) {
+            std::ifstream in(s.path);
+            if (in.good()) {
+              nlohmann::json inSave; in >> inSave; std::string err;
+              if (load_world_json(inSave, world, err)) { dom::sim::on_authoritative_state_loaded(world); frontend.active = false; }
+              else frontend.launchStatus = err;
+            }
+          }
+        } else ImGui::TextDisabled("No saves found in ./saves.");
+        if (!frontend.launchStatus.empty()) ImGui::TextColored(ImVec4(1, 0.45f, 0.35f, 1), "%s", frontend.launchStatus.c_str());
+        if (ImGui::Button("Back", ImVec2(120, 0))) frontend.screen = FrontendState::Screen::MainMenu;
+      } else if (frontend.screen == FrontendState::Screen::Options) {
+        ImGui::Text("Lightweight Options");
+        ImGui::SliderFloat("UI Scale", &opts.uiScale, 0.5f, 3.0f);
+        ImGui::SliderFloat("Render Scale", &opts.renderScale, 0.5f, 1.0f);
+        dom::render::set_ui_scale(opts.uiScale);
+        dom::render::set_render_scale(opts.renderScale);
+        ImGui::TextDisabled("Debug panels are still available in-match (F1/F9/F10). ");
+        if (ImGui::Button("Back", ImVec2(120, 0))) frontend.screen = FrontendState::Screen::MainMenu;
+      }
+      ImGui::End();
+    }
+
+    if (!frontend.active && showHudPanels) {
       if (showProductionPanel) {
         ImGui::Begin("Production [F2]", &showProductionPanel);
         uint32_t bid = selected_building();

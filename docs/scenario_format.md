@@ -185,3 +185,15 @@ Optional scenario fields:
 
 ## Ideology and Alliance Blocs
 Dynamic ideology alignment and deterministic alliance bloc behavior are now supported. See `docs/ideology_bloc_system.md` and `scenarios/bloc_test.json` for format and validation commands.
+
+
+## Front-end browser metadata
+The scenario front-end browser reads optional metadata keys (with fallbacks):
+- `title`
+- `description`
+- `briefing` (or `mission.briefing`)
+- `worldPreset` / `world_preset`
+- `difficulty`
+- first `players[].civilization` as civ/faction hint
+
+Missing metadata is allowed and never blocks deterministic launch.

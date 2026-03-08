@@ -350,3 +350,12 @@ World entity rendering is presentation-only and reconstructs each frame from aut
 `engine/render/renderer.*` now includes a lightweight deterministic visual feedback pass. It executes after authoritative world/entity rendering and reads only authoritative state already produced by simulation tick processing.
 
 Key rule: feedback state is transient and never serialized. Save/load/replay continue to serialize authoritative simulation state only, and feedback reconstructs from that state on render.
+
+
+## Game setup flow shell
+A front-end SDL/ImGui setup shell now wraps entry into simulation runtime:
+- menu/navigation state is presentation-only
+- selected setup values map onto existing authoritative `World` and `MatchConfig` fields
+- scenario/campaign/load entry uses existing load/initialize flow
+- deterministic behavior is unchanged for identical setup selections and command streams
+
