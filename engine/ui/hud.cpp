@@ -218,6 +218,8 @@ void draw_hud(SDL_Window* window,
         const auto buildInfo = dom::sim::building_content_presentation(world, b.team, b.type, b.definitionId);
         ImGui::Text("DefId: %s", b.definitionId.empty()?"(base)":b.definitionId.c_str());
         ImGui::Text("Resolved: %s | Icon: %s", buildInfo.displayName.c_str(), buildInfo.iconId.c_str());
+        ImGui::Text("Portrait: %s", buildInfo.portraitId.empty() ? "ui_portrait_default (fallback)" : buildInfo.portraitId.c_str());
+        ImGui::Text("Variant: %s", dom::sim::building_visual_variant_id(world, b).c_str());
         ImGui::Text("Unique content: %s", buildInfo.unique ? "yes" : "no");
         if (b.team < world.players.size()) {
           const std::string base = building_type_name(b.type);
@@ -275,7 +277,9 @@ void draw_hud(SDL_Window* window,
   ImGui::Text("Active %u | Resolved %u | Triggered %u", world.activeWorldEventCount, world.resolvedWorldEventCount, world.triggeredWorldEventCount);
   int shown = 0;
   for (auto it = world.worldEvents.rbegin(); it != world.worldEvents.rend() && shown < 6; ++it, ++shown) {
+    const auto eventInfo = dom::sim::event_content_presentation(it->eventId, it->category);
     ImGui::BulletText("%s [%s, sev %.2f] (%s)", it->displayName.c_str(), world_event_category_name(it->category), it->severity, world_event_state_name(it->state));
+    ImGui::TextDisabled("icon=%s portrait=%s", eventInfo.iconId.c_str(), eventInfo.portraitId.empty() ? "ui_portrait_default (fallback)" : eventInfo.portraitId.c_str());
   }
   ImGui::End();
 
@@ -287,6 +291,9 @@ void draw_hud(SDL_Window* window,
   } else {
     for (const auto& n : uiState.notifications) ImGui::BulletText("%s", n.text.c_str());
   }
+  ImGui::SeparatorText("Presentation Resolve Debug");
+  ImGui::Text("Fallback count: %u", world.civContentResolutionFallbacks);
+  ImGui::Text("Civ usage R/C/E/ME: %u / %u / %u / %u", world.romeContentUsage, world.chinaContentUsage, world.europeContentUsage, world.middleEastContentUsage);
   ImGui::End();
 
   draw_production_menu(world, selected);

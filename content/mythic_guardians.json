@@ -17,7 +17,18 @@
       "rarity_permille": 10,
       "min_spacing_cells": 36,
       "discovery_radius": 5.5,
-      "unit": {"hp": 4200.0, "attack": 105.0, "range": 1.8, "speed": 1.75}
+      "unit": {
+        "hp": 4200.0,
+        "attack": 105.0,
+        "range": 1.8,
+        "speed": 1.75
+      },
+      "presentation": {
+        "icon_id": "ui_icon_guardian_snow_yeti",
+        "portrait_id": "portrait_guardian_snow_yeti",
+        "site_icon_id": "ui_icon_site_yeti_lair",
+        "site_label_id": "label_site_yeti_lair"
+      }
     },
     {
       "guardian_id": "kraken",
@@ -36,7 +47,18 @@
       "rarity_permille": 4,
       "min_spacing_cells": 48,
       "discovery_radius": 6.0,
-      "unit": {"hp": 5000.0, "attack": 125.0, "range": 2.4, "speed": 1.35}
+      "unit": {
+        "hp": 5000.0,
+        "attack": 125.0,
+        "range": 2.4,
+        "speed": 1.35
+      },
+      "presentation": {
+        "icon_id": "ui_icon_guardian_kraken",
+        "portrait_id": "portrait_guardian_kraken",
+        "site_icon_id": "ui_icon_site_abyssal_trench",
+        "site_label_id": "label_site_abyssal_trench"
+      }
     },
     {
       "guardian_id": "sandworm",
@@ -55,7 +77,18 @@
       "rarity_permille": 6,
       "min_spacing_cells": 30,
       "discovery_radius": 4.5,
-      "unit": {"hp": 3900.0, "attack": 110.0, "range": 1.5, "speed": 2.3}
+      "unit": {
+        "hp": 3900.0,
+        "attack": 110.0,
+        "range": 1.5,
+        "speed": 2.3
+      },
+      "presentation": {
+        "icon_id": "ui_icon_guardian_sandworm",
+        "portrait_id": "portrait_guardian_sandworm",
+        "site_icon_id": "ui_icon_site_dune_nest",
+        "site_label_id": "label_site_dune_nest"
+      }
     },
     {
       "guardian_id": "forest_spirit",
@@ -74,7 +107,18 @@
       "rarity_permille": 5,
       "min_spacing_cells": 28,
       "discovery_radius": 5.0,
-      "unit": {"hp": 3200.0, "attack": 72.0, "range": 5.5, "speed": 1.95}
+      "unit": {
+        "hp": 3200.0,
+        "attack": 72.0,
+        "range": 5.5,
+        "speed": 1.95
+      },
+      "presentation": {
+        "icon_id": "ui_icon_guardian_forest_spirit",
+        "portrait_id": "portrait_guardian_forest_spirit",
+        "site_icon_id": "ui_icon_site_sacred_grove",
+        "site_label_id": "label_site_sacred_grove"
+      }
     }
   ]
 }

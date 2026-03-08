@@ -478,6 +478,11 @@ struct SimulationStats {
   float civIndustryOutput{0.0f};
   float civLogisticsBonusUsage{0.0f};
   uint32_t civOperationCount{0};
+  uint32_t contentFallbackCount{0};
+  uint32_t civPresentationResolves{0};
+  uint32_t guardianPresentationResolves{0};
+  uint32_t campaignPresentationResolves{0};
+  uint32_t eventPresentationResolves{0};
 };
 
 struct ChunkCoord {
@@ -637,6 +642,8 @@ BiomeType biome_at(const World& world, int cellIndex);
 std::string building_visual_variant_id(const World& world, const Building& building);
 ContentPresentationInfo unit_content_presentation(const World& world, uint16_t team, UnitType type, const std::string& definitionId);
 ContentPresentationInfo building_content_presentation(const World& world, uint16_t team, BuildingType type, const std::string& definitionId);
+ContentPresentationInfo guardian_content_presentation(const std::string& guardianId, GuardianSiteType siteType);
+ContentPresentationInfo event_content_presentation(const std::string& eventId, WorldEventCategory category);
 bool valid_mine_shaft_placement(const World& world, glm::ivec2 tile);
 bool deep_deposit_available(const World& world, uint32_t depositId, uint16_t team);
 

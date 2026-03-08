@@ -42,3 +42,6 @@ See: `scenarios/mythic_guardians_test.json`, `scenarios/mythic_guardians_multi_t
 - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --threads 8 --hash-only`
 - `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1200 --save /tmp/guardian_save.json --dump-hash`
 - `./build/rts --headless --load /tmp/guardian_save.json --smoke --ticks 2400 --dump-hash`
+
+## Presentation references
+Guardians may now include deterministic presentation IDs (`icon_id`, `portrait_id`, `site_icon_id`, `site_label_id`) in content. Runtime resolves by guardian ID first, then site type, then stable fallback IDs.

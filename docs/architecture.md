@@ -286,3 +286,6 @@ The simulation now includes an authoritative industrial economy subsystem with r
 Gameplay content resolution follows: **family enum -> civilization mapping -> authoritative definition id**.
 Resolved IDs are written to unit/building state (`definitionId`), serialized in save/load, and included in deterministic state hash paths.
 When a civ mapping is absent, the runtime falls back to the family base ID and tracks `CIV_CONTENT_RESOLUTION_FALLBACKS`.
+
+## Deterministic presentation integration
+Presentation selection is deterministic and data-driven (biomes, civ themes, guardian/site IDs, campaign/event IDs). Missing references resolve to stable fallback IDs and do not alter authoritative simulation behavior.

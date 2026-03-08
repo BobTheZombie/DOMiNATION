@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "seed": 2468,
+  "map": {"width": 128, "height": 128},
+  "players": [
+    {"id": 0, "isHuman": false, "isCPU": true, "civilization": "rome", "team": 0, "color": [0.9, 0.25, 0.25]},
+    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "china", "team": 1, "color": [0.25, 0.45, 0.95]}
+  ],
+  "worldEventDefinitions": [
+    {"event_id": "guardian_awakening", "display_name": "Guardian Awakening", "category": "mythic", "trigger": "authored_tick", "scope": "biome", "target_biome": 10, "min_tick": 80, "cooldown_ticks": 600, "duration": 500, "severity": 1.4, "authored": true},
+    {"event_id": "industrial_accident", "display_name": "Industrial Accident", "category": "industrial", "trigger": "authored_tick", "scope": "player", "target_player": 0, "min_tick": 120, "cooldown_ticks": 500, "duration": 420, "severity": 1.1, "authored": true},
+    {"event_id": "strategic_near_miss", "display_name": "Strategic Near Miss", "category": "strategic", "trigger": "authored_tick", "scope": "global", "min_tick": 200, "cooldown_ticks": 700, "duration": 600, "severity": 1.2, "authored": true}
+  ],
+  "rulesOverrides": {"timeLimit": 7200}
+}

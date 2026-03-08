@@ -201,14 +201,19 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       float r = 0.14f + 0.18f * f;
       float g = 0.28f + 0.45f * f;
       float b = 0.16f + 0.08f * (h + 1.0f);
-      if (tc == dom::sim::TerrainClass::ShallowWater) { r = 0.16f; g = 0.38f; b = 0.68f; }
-      else if (tc == dom::sim::TerrainClass::DeepWater) { r = 0.08f; g = 0.24f; b = 0.55f; }
+      if (tc == dom::sim::TerrainClass::ShallowWater) { r = 0.20f; g = 0.48f; b = 0.78f; }
+      else if (tc == dom::sim::TerrainClass::DeepWater) { r = 0.05f; g = 0.16f; b = 0.44f; }
       else {
         auto biome = dom::sim::biome_at(w, gi);
         auto br = dom::sim::biome_runtime(biome);
-        r = std::clamp(br.palette[0] * (0.82f + 0.18f * f), 0.0f, 1.0f);
-        g = std::clamp(br.palette[1] * (0.82f + 0.18f * f), 0.0f, 1.0f);
-        b = std::clamp(br.palette[2] * (0.85f + 0.15f * (h + 1.0f)), 0.0f, 1.0f);
+        float fertMul = 0.78f + 0.3f * f;
+        r = std::clamp(br.palette[0] * fertMul, 0.0f, 1.0f);
+        g = std::clamp(br.palette[1] * fertMul, 0.0f, 1.0f);
+        b = std::clamp(br.palette[2] * (0.8f + 0.25f * (h + 1.0f)), 0.0f, 1.0f);
+        if (!w.riverMap.empty() && w.riverMap[gi] > 0) { r = 0.15f; g = 0.44f; b = 0.80f; }
+        if (!w.lakeMap.empty() && w.lakeMap[gi] > 0) { r = 0.12f; g = 0.36f; b = 0.70f; }
+        if (h > 0.62f) { r = std::clamp(r * 0.72f + 0.16f, 0.0f, 1.0f); g = std::clamp(g * 0.72f + 0.16f, 0.0f, 1.0f); b = std::clamp(b * 0.72f + 0.16f, 0.0f, 1.0f); }
+        if (h > 0.82f) { r = std::clamp(r * 0.55f + 0.42f, 0.0f, 1.0f); g = std::clamp(g * 0.55f + 0.44f, 0.0f, 1.0f); b = std::clamp(b * 0.55f + 0.46f, 0.0f, 1.0f); }
       }
 
       uint16_t owner = w.territoryOwner[gi];
@@ -351,14 +356,20 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       float h = w.heightmap[i];
       float f = w.fertility[i];
       auto tc = static_cast<dom::sim::TerrainClass>(w.terrainClass.empty() ? 0 : w.terrainClass[i]);
-      if (tc == dom::sim::TerrainClass::ShallowWater) glColor3f(0.18f, 0.40f, 0.72f);
-      else if (tc == dom::sim::TerrainClass::DeepWater) glColor3f(0.10f, 0.26f, 0.58f);
+      if (tc == dom::sim::TerrainClass::ShallowWater) glColor3f(0.20f, 0.46f, 0.78f);
+      else if (tc == dom::sim::TerrainClass::DeepWater) glColor3f(0.06f, 0.18f, 0.48f);
       else {
         auto biome = dom::sim::biome_at(w, static_cast<int>(i));
         auto br = dom::sim::biome_runtime(biome);
-        float r = std::clamp(br.palette[0] * (0.8f + 0.2f * f), 0.0f, 1.0f);
-        float g = std::clamp(br.palette[1] * (0.8f + 0.2f * f), 0.0f, 1.0f);
-        float b = std::clamp(br.palette[2] * (0.8f + 0.2f * (h + 1.0f)), 0.0f, 1.0f);
+        float fertMul = 0.76f + 0.32f * f;
+        float r = std::clamp(br.palette[0] * fertMul, 0.0f, 1.0f);
+        float g = std::clamp(br.palette[1] * fertMul, 0.0f, 1.0f);
+        float b = std::clamp(br.palette[2] * (0.78f + 0.3f * (h + 1.0f)), 0.0f, 1.0f);
+        if (!w.riverMap.empty() && w.riverMap[i] > 0) { r = 0.18f; g = 0.48f; b = 0.84f; }
+        if (!w.lakeMap.empty() && w.lakeMap[i] > 0) { r = 0.14f; g = 0.40f; b = 0.75f; }
+        if (f > 0.72f && h > 0.0f) { r = std::clamp(r * 0.9f + 0.05f, 0.0f, 1.0f); g = std::clamp(g * 1.05f, 0.0f, 1.0f); }
+        if (h > 0.60f) { r = std::clamp(r * 0.7f + 0.15f, 0.0f, 1.0f); g = std::clamp(g * 0.7f + 0.15f, 0.0f, 1.0f); b = std::clamp(b * 0.7f + 0.15f, 0.0f, 1.0f); }
+        if (h > 0.82f) { r = std::clamp(r * 0.5f + 0.45f, 0.0f, 1.0f); g = std::clamp(g * 0.5f + 0.45f, 0.0f, 1.0f); b = std::clamp(b * 0.5f + 0.46f, 0.0f, 1.0f); }
         glColor3f(r, g, b);
       }
       glVertex2f(x, y); glVertex2f(x + 1, y); glVertex2f(x + 1, y + 1); glVertex2f(x, y + 1);
@@ -383,7 +394,30 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   }
   glEnd();
 
+  glLineWidth(c.zoom > 30.0f ? 1.2f : 2.6f);
+  glBegin(GL_LINES);
+  for (const auto& e : w.railEdges) {
+    glm::vec2 a{0.0f}, b{0.0f};
+    for (const auto& n : w.railNodes) {
+      if (n.id == e.aNode) a = {n.tile.x + 0.5f, n.tile.y + 0.5f};
+      if (n.id == e.bNode) b = {n.tile.x + 0.5f, n.tile.y + 0.5f};
+    }
+    if (e.disrupted) glColor3f(0.92f, 0.28f, 0.22f);
+    else if (e.bridge) glColor3f(0.86f, 0.86f, 0.52f);
+    else glColor3f(0.74f, 0.74f, 0.78f);
+    glVertex2f(a.x, a.y); glVertex2f(b.x, b.y);
+  }
+  glEnd();
 
+  glPointSize(c.zoom > 40.0f ? 4.0f : 6.0f);
+  glBegin(GL_POINTS);
+  for (const auto& n : w.railNodes) {
+    if (!n.active) glColor3f(0.4f, 0.4f, 0.4f);
+    else if (n.type == dom::sim::RailNodeType::Station || n.type == dom::sim::RailNodeType::Depot) glColor3f(0.97f, 0.92f, 0.42f);
+    else glColor3f(0.78f, 0.78f, 0.84f);
+    glVertex2f(n.tile.x + 0.5f, n.tile.y + 0.5f);
+  }
+  glEnd();
 
   glBegin(GL_POINTS);
   glPointSize(c.zoom > 30.0f ? 3.0f : 5.0f);
@@ -442,6 +476,36 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glVertex2f(b.pos.x + sx, b.pos.y - sy);
     glVertex2f(b.pos.x + sx, b.pos.y + sy);
     glVertex2f(b.pos.x - sx, b.pos.y + sy);
+  }
+  glEnd();
+
+  glPointSize(c.zoom > 30.0f ? 2.0f : 3.0f);
+  glBegin(GL_POINTS);
+  for (const auto& d : w.detectors) {
+    if (!d.active) continue;
+    glColor3f(0.35f, 0.95f, 0.95f);
+    glVertex2f(d.pos.x, d.pos.y);
+  }
+  glEnd();
+
+  glLineWidth(1.0f);
+  for (const auto& dz : w.denialZones) {
+    const int seg = 24;
+    glColor3f(0.95f, 0.25f, 0.25f);
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < seg; ++i) {
+      float a = 6.2831853f * (float)i / (float)seg;
+      glVertex2f(dz.pos.x + std::cos(a) * dz.radius, dz.pos.y + std::sin(a) * dz.radius);
+    }
+    glEnd();
+  }
+
+  glPointSize(c.zoom > 35.0f ? 3.0f : 5.0f);
+  glBegin(GL_POINTS);
+  for (const auto& ss : w.strategicStrikes) {
+    if (ss.resolved) continue;
+    glColor3f(ss.warningIssued ? 1.0f : 0.8f, ss.warningIssued ? 0.2f : 0.5f, 0.2f);
+    glVertex2f(ss.target.x, ss.target.y);
   }
   glEnd();
 

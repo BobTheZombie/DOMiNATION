@@ -21,6 +21,8 @@
 #endif
 
 namespace dom::sim {
+void enqueue_mission_message(World& w, const MissionMessageDefinition& def);
+void enqueue_text_message(World& w, const std::string& text, const std::string& category, uint32_t triggerId);
 namespace {
 float dist(glm::vec2 a, glm::vec2 b) { return glm::length(a - b); }
 
@@ -126,6 +128,18 @@ GuardianJoinMode parse_guardian_join_mode(const std::string& v) {
   if (v == "remain_neutral") return GuardianJoinMode::RemainNeutral;
   if (v == "never_join") return GuardianJoinMode::NeverJoin;
   return GuardianJoinMode::DiscovererControl;
+}
+
+
+std::string guardian_site_type_id(GuardianSiteType t) {
+  switch (t) {
+    case GuardianSiteType::YetiLair: return "yeti_lair";
+    case GuardianSiteType::AbyssalTrench: return "abyssal_trench";
+    case GuardianSiteType::DuneNest: return "dune_nest";
+    case GuardianSiteType::SacredGrove: return "sacred_grove";
+    case GuardianSiteType::FrozenCavern: return "frozen_cavern";
+  }
+  return "yeti_lair";
 }
 
 const char* guardian_spawn_mode_name(GuardianSpawnMode m) { return m == GuardianSpawnMode::ScenarioStart ? "scenario_start" : "on_discovery"; }
@@ -588,9 +602,6 @@ void update_guardian_sites(World& w);
 uint32_t spawn_guardian_unit(World& w, GuardianSiteInstance& site, const GuardianDefinition& def);
 void load_world_event_defs(World& w);
 void update_world_events(World& w);
-void enqueue_mission_message(World& w, const MissionMessageDefinition& def);
-void enqueue_text_message(World& w, const std::string& text, const std::string& category, uint32_t triggerId);
-
 float unit_vision_radius(const Unit& u);
 float building_vision_radius(BuildingType type);
 float unit_detection_radius(const Unit& u);
@@ -1013,22 +1024,51 @@ const std::unordered_map<std::string, ContentPresentationDef> kUnitPresentationB
 
 const std::unordered_map<std::string, ContentPresentationDef> kBuildingPresentationByDefId = {
   {"CityCenter", {"City Center", "ui_icon_building_city_center", "portrait_city_center"}},
+  {"House", {"House", "ui_icon_building_house", "portrait_house"}},
   {"Barracks", {"Barracks", "ui_icon_building_barracks", "portrait_barracks"}},
   {"Market", {"Market", "ui_icon_building_market", "portrait_market"}},
   {"Farm", {"Farm", "ui_icon_building_farm", "portrait_farm"}},
   {"Library", {"Library", "ui_icon_building_library", "portrait_library"}},
   {"Mine", {"Mine", "ui_icon_building_mine", "portrait_mine"}},
-  {"SteelMill", {"Steel Mill", "ui_icon_building_steel_mill", "portrait_steel_mill"}},
   {"Port", {"Port", "ui_icon_building_port", "portrait_port"}},
+  {"FactoryHub", {"Factory Hub", "ui_icon_building_factory_hub", "portrait_factory_hub"}},
+  {"SteelMill", {"Steel Mill", "ui_icon_building_steel_mill", "portrait_steel_mill"}},
+  {"Refinery", {"Refinery", "ui_icon_building_refinery", "portrait_refinery"}},
+  {"MunitionsPlant", {"Munitions Plant", "ui_icon_building_munitions_plant", "portrait_munitions_plant"}},
+  {"MachineWorks", {"Machine Works", "ui_icon_building_machine_works", "portrait_machine_works"}},
+  {"ElectronicsLab", {"Electronics Lab", "ui_icon_building_electronics_lab", "portrait_electronics_lab"}},
   {"rome_castra", {"Roman Castra", "ui_icon_rome_castra", "portrait_rome_castra"}},
   {"rome_forum_centre", {"Forum Centre", "ui_icon_rome_forum", "portrait_rome_forum"}},
+  {"rome_forum_market", {"Forum Market", "ui_icon_rome_forum_market", "portrait_rome_forum_market"}},
   {"china_imperial_academy", {"Imperial Academy", "ui_icon_china_academy", "portrait_china_academy"}},
   {"china_grand_granary", {"Administrative Granary", "ui_icon_china_granary", "portrait_china_granary"}},
+  {"china_imperial_workshop", {"Imperial Workshop", "ui_icon_china_workshop", "portrait_china_workshop"}},
   {"europe_integrated_steelworks", {"Integrated Steelworks", "ui_icon_europe_steelworks", "portrait_europe_steelworks"}},
   {"europe_grand_drydock", {"Grand Drydock", "ui_icon_europe_drydock", "portrait_europe_drydock"}},
+  {"europe_fortress_barracks", {"Fortress Barracks", "ui_icon_europe_fortress_barracks", "portrait_europe_fortress_barracks"}},
   {"middle_east_caravanserai", {"Caravanserai", "ui_icon_me_caravanserai", "portrait_me_caravanserai"}},
   {"middle_east_desert_foundry", {"Desert Foundry", "ui_icon_me_foundry", "portrait_me_foundry"}},
+  {"middle_east_desert_fortress", {"Desert Fortress", "ui_icon_me_desert_fortress", "portrait_me_desert_fortress"}},
 };
+
+const std::unordered_map<std::string, ContentPresentationDef> kGuardianPresentationById = {
+  {"snow_yeti", {"Snow Yeti", "ui_icon_guardian_snow_yeti", "portrait_guardian_snow_yeti"}},
+  {"kraken", {"Kraken", "ui_icon_guardian_kraken", "portrait_guardian_kraken"}},
+  {"sandworm", {"Sandworm", "ui_icon_guardian_sandworm", "portrait_guardian_sandworm"}},
+  {"forest_spirit", {"Forest Spirit", "ui_icon_guardian_forest_spirit", "portrait_guardian_forest_spirit"}},
+  {"yeti_lair", {"Snow Yeti Lair", "ui_icon_site_yeti_lair", "portrait_site_yeti_lair"}},
+  {"abyssal_trench", {"Kraken Trench", "ui_icon_site_abyssal_trench", "portrait_site_abyssal_trench"}},
+  {"dune_nest", {"Sandworm Nest", "ui_icon_site_dune_nest", "portrait_site_dune_nest"}},
+  {"sacred_grove", {"Sacred Grove", "ui_icon_site_sacred_grove", "portrait_site_sacred_grove"}},
+};
+
+const std::unordered_map<std::string, ContentPresentationDef> kEventPresentationById = {
+  {"guardian_awakening", {"Guardian Awakening", "ui_icon_event_guardian", "portrait_event_guardian"}},
+  {"rail_network_breakdown", {"Rail Network Breakdown", "ui_icon_event_rail", "portrait_event_rail"}},
+  {"strategic_near_miss", {"Strategic Near Miss", "ui_icon_warning_strategic", "portrait_event_strategic"}},
+  {"industrial_accident", {"Industrial Accident", "ui_icon_event_industrial", "portrait_event_industrial"}},
+};
+
 
 void increment_civ_content_usage(World& w, uint16_t team) {
   if (team >= w.players.size()) return;
@@ -5546,6 +5586,11 @@ void tick_world(World& w, float dt) {
   gLastStats.civIndustryOutput = w.civIndustryOutput;
   gLastStats.civLogisticsBonusUsage = w.civLogisticsBonusUsage;
   gLastStats.civOperationCount = w.civOperationCount;
+  gLastStats.contentFallbackCount = w.civContentResolutionFallbacks;
+  gLastStats.civPresentationResolves = w.uniqueUnitsProduced + w.uniqueBuildingsConstructed;
+  gLastStats.guardianPresentationResolves = w.guardiansDiscovered + w.guardiansSpawned + static_cast<uint32_t>(w.guardianSites.size());
+  gLastStats.campaignPresentationResolves = static_cast<uint32_t>(w.missionMessages.size()) + (w.mission.briefingPortraitId.empty() ? 0u : 1u) + (w.mission.debriefPortraitId.empty() ? 0u : 1u);
+  gLastStats.eventPresentationResolves = static_cast<uint32_t>(w.worldEvents.size()) + w.triggeredWorldEventCount;
   gLastStats.activeWorldEvents = w.activeWorldEventCount;
   gLastStats.resolvedWorldEvents = w.resolvedWorldEventCount;
   gLastStats.totalWorldEventsTriggered = w.triggeredWorldEventCount;
@@ -5749,7 +5794,8 @@ ContentPresentationInfo unit_content_presentation(const World& world, uint16_t t
     info.portraitId = it->second.portraitId;
   } else {
     info.displayName = resolvedId;
-    info.iconId = "ui_icon_unit_generic";
+    info.iconId = "ui_icon_unit_generic_fallback";
+    info.portraitId = "ui_portrait_default";
   }
   info.unique = resolvedId != baseId;
   if (team < world.players.size()) {
@@ -5771,7 +5817,8 @@ ContentPresentationInfo building_content_presentation(const World& world, uint16
     info.portraitId = it->second.portraitId;
   } else {
     info.displayName = resolvedId;
-    info.iconId = "ui_icon_building_generic";
+    info.iconId = "ui_icon_building_generic_fallback";
+    info.portraitId = "ui_portrait_default";
   }
   info.unique = resolvedId != baseId;
   if (team < world.players.size()) {
@@ -5781,6 +5828,48 @@ ContentPresentationInfo building_content_presentation(const World& world, uint16
   }
   return info;
 }
+
+ContentPresentationInfo guardian_content_presentation(const std::string& guardianId, GuardianSiteType siteType) {
+  ContentPresentationInfo info{};
+  auto it = kGuardianPresentationById.find(guardianId);
+  if (it != kGuardianPresentationById.end()) {
+    info.displayName = it->second.displayName;
+    info.iconId = it->second.iconId;
+    info.portraitId = it->second.portraitId;
+    return info;
+  }
+  const std::string siteId = guardian_site_type_id(siteType);
+  auto sit = kGuardianPresentationById.find(siteId);
+  if (sit != kGuardianPresentationById.end()) {
+    info.displayName = sit->second.displayName;
+    info.iconId = sit->second.iconId;
+    info.portraitId = sit->second.portraitId;
+    return info;
+  }
+  info.displayName = guardianId.empty() ? "Unknown Guardian" : guardianId;
+  info.iconId = "ui_icon_guardian_fallback";
+  info.portraitId = "ui_portrait_default";
+  return info;
+}
+
+ContentPresentationInfo event_content_presentation(const std::string& eventId, WorldEventCategory category) {
+  ContentPresentationInfo info{};
+  auto it = kEventPresentationById.find(eventId);
+  if (it != kEventPresentationById.end()) {
+    info.displayName = it->second.displayName;
+    info.iconId = it->second.iconId;
+    info.portraitId = it->second.portraitId;
+    return info;
+  }
+  info.displayName = eventId.empty() ? "world_event" : eventId;
+  info.portraitId = "ui_portrait_default";
+  info.iconId = category == WorldEventCategory::Strategic ? "ui_icon_warning_strategic" :
+                category == WorldEventCategory::Industrial ? "ui_icon_event_industrial" :
+                category == WorldEventCategory::Mythic ? "ui_icon_event_guardian" :
+                "ui_icon_event";
+  return info;
+}
+
 
 const BiomeRuntime& biome_runtime(BiomeType biome) {
   load_biomes_once();

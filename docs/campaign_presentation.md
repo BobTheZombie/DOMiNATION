@@ -21,3 +21,6 @@ This document describes the lightweight authored campaign/story presentation sta
 - `./build/rts --headless --campaign campaigns/test_campaign.json --threads 8 --hash-only`
 - `./build/rts --headless --campaign campaigns/test_campaign.json --smoke --ticks 1200 --save /tmp/campaign_state.json --dump-hash`
 - `./build/rts --headless --load /tmp/campaign_state.json --smoke --dump-hash`
+
+## Fallback behavior
+Portrait/icon/image references resolve to deterministic fallback IDs when missing (`ui_portrait_default` and scoped icon fallbacks). Debug HUD surfaces resolved IDs for authored validation.
