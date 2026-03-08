@@ -30,3 +30,25 @@ These are available in debug and perf output for smoke validation.
 
 ## Civilization visual coherence
 Rome, China, Europe, and Middle East theme mappings now include industrial/strategic building families so house/farm/market/barracks/city center/port/factory chains resolve consistently.
+
+## Complete civilization visual/content pack
+
+All gameplay civilizations now have complete presentation coverage:
+- architecture family variants (house, farm, market, barracks, city center, port, factory hub, rail station, defensive tower)
+- unit presentation mappings including unique civilization units
+- civilization UI pack assets (civ icons, emblems, diplomacy portraits, campaign portraits)
+- deterministic fallbacks (`default_<family>`, generic icon, default portrait)
+
+Covered civilizations:
+`rome`, `china`, `europe`, `middle_east`, `russia`, `usa`, `japan`, `eu`, `uk`, `egypt`, `tartaria`.
+
+## Deterministic lookup order
+
+For building visual resolution:
+1. gameplay family
+2. civilization ID theme mapping
+3. civilization runtime `themeId` mapping
+4. synthesized `civId_family`
+5. deterministic fallback `default_family`
+
+The lookup is content-only and does not alter authoritative gameplay state.

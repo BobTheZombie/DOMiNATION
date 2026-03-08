@@ -391,3 +391,21 @@ Smoke commands:
 - `./build/rts --headless --scenario scenarios/armageddon_test.json --threads 8 --hash-only`
 - `./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --save /tmp/armageddon_save.json --dump-hash`
 - `./build/rts --headless --load /tmp/armageddon_save.json --smoke --ticks 3600 --dump-hash`
+
+## Civilization visual/content pack smoke
+
+Deterministic validation commands:
+
+```bash
+./build/rts --headless --smoke --ticks 400 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 600 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```
+
+Expected checks:
+- deterministic civ asset resolution
+- deterministic fallback behavior
+- no asset lookup crash
+- parity of final authoritative hash across thread counts

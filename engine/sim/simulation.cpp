@@ -10,6 +10,7 @@
 #include <limits>
 #include <chrono>
 #include <unordered_map>
+#include <unordered_set>
 #include <thread>
 #include <atomic>
 #include <glm/geometric.hpp>
@@ -995,6 +996,7 @@ struct CivilizationDef {
 std::vector<CivilizationDef> gCivilizations;
 std::array<BiomeDef, static_cast<size_t>(BiomeType::Count)> gBiomes{};
 std::unordered_map<std::string, ThemeDef> gThemes;
+std::unordered_set<std::string> gAssetIds;
 
 struct ContentPresentationDef {
   std::string displayName;
@@ -1020,6 +1022,20 @@ const std::unordered_map<std::string, ContentPresentationDef> kUnitPresentationB
   {"middle_east_camel_raider", {"Camel Raider", "ui_icon_me_camel_raider", "portrait_me_camel_raider"}},
   {"middle_east_mamluk_guard", {"Mamluk Guard", "ui_icon_me_mamluk_guard", "portrait_me_mamluk_guard"}},
   {"middle_east_caravan_master", {"Caravan Master", "ui_icon_me_caravan_master", "portrait_me_caravan_master"}},
+  {"russia_guard_infantry", {"Guard Infantry", "ui_icon_russia_guard_infantry", "portrait_russia_guard_infantry"}},
+  {"russia_heavy_rocket_artillery", {"Heavy Rocket Artillery", "ui_icon_russia_heavy_rocket_artillery", "portrait_russia_heavy_rocket_artillery"}},
+  {"usa_marine_expeditionary_force", {"Marine Expeditionary Force", "ui_icon_usa_marine_expeditionary", "portrait_usa_marine_expeditionary"}},
+  {"usa_strategic_bomber_wing", {"Strategic Bomber Wing", "ui_icon_usa_strategic_bomber", "portrait_usa_strategic_bomber"}},
+  {"japan_imperial_marine", {"Imperial Marine", "ui_icon_japan_imperial_marine", "portrait_japan_imperial_marine"}},
+  {"japan_elite_destroyer_group", {"Elite Destroyer Group", "ui_icon_japan_destroyer_group", "portrait_japan_destroyer_group"}},
+  {"eu_rapid_reaction_brigade", {"Rapid Reaction Brigade", "ui_icon_eu_rapid_reaction", "portrait_eu_rapid_reaction"}},
+  {"eu_advanced_air_defense_wing", {"Advanced Air Defense Wing", "ui_icon_eu_air_defense", "portrait_eu_air_defense"}},
+  {"uk_royal_marine", {"Royal Marine", "ui_icon_uk_royal_marine", "portrait_uk_royal_marine"}},
+  {"uk_strategic_radar_fighter_wing", {"Strategic Radar Fighter Wing", "ui_icon_uk_radar_wing", "portrait_uk_radar_wing"}},
+  {"egypt_desert_guard", {"Desert Guard", "ui_icon_egypt_desert_guard", "portrait_egypt_desert_guard"}},
+  {"egypt_nile_engineer_corps", {"Nile Engineer Corps", "ui_icon_egypt_nile_engineer", "portrait_egypt_nile_engineer"}},
+  {"tartaria_sentinel", {"Tartarian Sentinel", "ui_icon_tartaria_sentinel", "portrait_tartaria_sentinel"}},
+  {"tartaria_lost_tech_artillery", {"Lost-Tech Artillery", "ui_icon_tartaria_lost_tech_artillery", "portrait_tartaria_lost_tech_artillery"}},
 };
 
 const std::unordered_map<std::string, ContentPresentationDef> kBuildingPresentationByDefId = {
@@ -1046,9 +1062,25 @@ const std::unordered_map<std::string, ContentPresentationDef> kBuildingPresentat
   {"europe_integrated_steelworks", {"Integrated Steelworks", "ui_icon_europe_steelworks", "portrait_europe_steelworks"}},
   {"europe_grand_drydock", {"Grand Drydock", "ui_icon_europe_drydock", "portrait_europe_drydock"}},
   {"europe_fortress_barracks", {"Fortress Barracks", "ui_icon_europe_fortress_barracks", "portrait_europe_fortress_barracks"}},
+  {"europe_council_centre", {"Council Centre", "ui_icon_europe_council_centre", "portrait_europe_council_centre"}},
+  {"middle_east_caliphate_centre", {"Caliphate Centre", "ui_icon_me_caliphate_centre", "portrait_me_caliphate_centre"}},
   {"middle_east_caravanserai", {"Caravanserai", "ui_icon_me_caravanserai", "portrait_me_caravanserai"}},
   {"middle_east_desert_foundry", {"Desert Foundry", "ui_icon_me_foundry", "portrait_me_foundry"}},
   {"middle_east_desert_fortress", {"Desert Fortress", "ui_icon_me_desert_fortress", "portrait_me_desert_fortress"}},
+  {"russia_winter_depot", {"Winter Depot", "ui_icon_russia_winter_depot", "portrait_russia_winter_depot"}},
+  {"russia_arsenal_complex", {"Arsenal Complex", "ui_icon_russia_arsenal_complex", "portrait_russia_arsenal_complex"}},
+  {"usa_advanced_airbase", {"Advanced Airbase", "ui_icon_usa_advanced_airbase", "portrait_usa_advanced_airbase"}},
+  {"usa_industrial_logistics_hub", {"Industrial Logistics Hub", "ui_icon_usa_logistics_hub", "portrait_usa_logistics_hub"}},
+  {"japan_naval_arsenal", {"Naval Arsenal", "ui_icon_japan_naval_arsenal", "portrait_japan_naval_arsenal"}},
+  {"japan_maritime_command_port", {"Maritime Command Port", "ui_icon_japan_command_port", "portrait_japan_command_port"}},
+  {"eu_integrated_defense_network", {"Integrated Defense Network", "ui_icon_eu_defense_network", "portrait_eu_defense_network"}},
+  {"eu_advanced_research_complex", {"Advanced Research Complex", "ui_icon_eu_research_complex", "portrait_eu_research_complex"}},
+  {"uk_admiralty_dockyard", {"Admiralty Dockyard", "ui_icon_uk_admiralty_dockyard", "portrait_uk_admiralty_dockyard"}},
+  {"uk_radar_command_station", {"Radar Command Station", "ui_icon_uk_radar_station", "portrait_uk_radar_station"}},
+  {"egypt_grand_bazaar", {"Grand Bazaar", "ui_icon_egypt_grand_bazaar", "portrait_egypt_grand_bazaar"}},
+  {"egypt_desert_fortress", {"Desert Fortress", "ui_icon_egypt_desert_fortress", "portrait_egypt_desert_fortress"}},
+  {"tartaria_spire", {"Tartarian Spire", "ui_icon_tartaria_spire", "portrait_tartaria_spire"}},
+  {"tartaria_grand_resonance_works", {"Grand Resonance Works", "ui_icon_tartaria_resonance_works", "portrait_tartaria_resonance_works"}},
 };
 
 const std::unordered_map<std::string, ContentPresentationDef> kGuardianPresentationById = {
@@ -1284,6 +1316,47 @@ void load_civilization_themes_once() {
     }
     gThemes[theme.id] = std::move(theme);
   }
+}
+
+void load_asset_manifest_ids_once() {
+  if (!gAssetIds.empty()) return;
+  std::ifstream f("content/asset_manifest.json");
+  if (!f.good()) return;
+  nlohmann::json j; f >> j;
+  if (!j.contains("assets") || !j["assets"].is_array()) return;
+  for (const auto& a : j["assets"]) {
+    const std::string assetId = a.value("asset_id", std::string{});
+    if (!assetId.empty()) gAssetIds.insert(assetId);
+  }
+}
+
+std::string resolve_civ_asset_variant_id(const std::string& civId, const std::string& themeId, const std::string& family) {
+  load_civilization_themes_once();
+  load_asset_manifest_ids_once();
+
+  auto resolve_from_theme = [&](const std::string& theme) -> std::string {
+    auto it = gThemes.find(theme);
+    if (it == gThemes.end()) return {};
+    auto fit = it->second.familyToVariant.find(family);
+    if (fit == it->second.familyToVariant.end()) return {};
+    return fit->second;
+  };
+
+  const std::string civMapped = resolve_from_theme(civId);
+  if (!civMapped.empty() && gAssetIds.count(civMapped) != 0) return civMapped;
+
+  const std::string themeMapped = resolve_from_theme(themeId);
+  if (!themeMapped.empty() && gAssetIds.count(themeMapped) != 0) return themeMapped;
+
+  const std::string synthesized = civId + "_" + family;
+  if (gAssetIds.count(synthesized) != 0) return synthesized;
+
+  const std::string fallback = "default_" + family;
+  if (gAssetIds.count(fallback) != 0) return fallback;
+
+  if (!civMapped.empty()) return civMapped;
+  if (!themeMapped.empty()) return themeMapped;
+  return fallback;
 }
 
 void hash_u32(uint64_t& h, uint32_t v) { h ^= static_cast<uint64_t>(v); h *= kFNVPrime; }
@@ -5964,15 +6037,10 @@ BiomeType biome_at(const World& world, int cellIndex) {
 }
 
 std::string building_visual_variant_id(const World& world, const Building& building) {
-  load_civilization_themes_once();
-  if (building.team >= world.players.size()) return std::string("default_") + building_family_name(building.type);
-  const std::string& civId = world.players[building.team].civilization.id;
-  auto it = gThemes.find(civId);
-  if (it == gThemes.end()) return std::string(civId) + "_" + building_family_name(building.type);
   const char* family = building_family_name(building.type);
-  auto fit = it->second.familyToVariant.find(family);
-  if (fit == it->second.familyToVariant.end()) return std::string(civId) + "_" + family;
-  return fit->second;
+  if (building.team >= world.players.size()) return std::string("default_") + family;
+  const auto& civ = world.players[building.team].civilization;
+  return resolve_civ_asset_variant_id(civ.id, civ.themeId, family);
 }
 
 uint64_t map_setup_hash(const World& w) {

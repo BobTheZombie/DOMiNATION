@@ -350,7 +350,9 @@
         "MissileSilo": "russia_missile_silo_a",
         "FactoryHub": "russia_factory_hub_a",
         "ElectronicsLab": "russia_electronics_lab_a",
-        "Wonder": "russia_wonder_a"
+        "Wonder": "russia_wonder_a",
+        "RailStation": "russia_rail_station_a",
+        "Tower": "russia_tower_a"
       }
     },
     {
@@ -393,7 +395,9 @@
         "MissileSilo": "usa_missile_silo_a",
         "FactoryHub": "usa_factory_hub_a",
         "ElectronicsLab": "usa_electronics_lab_a",
-        "Wonder": "usa_wonder_a"
+        "Wonder": "usa_wonder_a",
+        "RailStation": "usa_rail_station_a",
+        "Tower": "usa_tower_a"
       }
     },
     {
@@ -436,7 +440,9 @@
         "MissileSilo": "japan_missile_silo_a",
         "FactoryHub": "japan_factory_hub_a",
         "ElectronicsLab": "japan_electronics_lab_a",
-        "Wonder": "japan_wonder_a"
+        "Wonder": "japan_wonder_a",
+        "RailStation": "japan_rail_station_a",
+        "Tower": "japan_tower_a"
       }
     },
     {
@@ -479,7 +485,9 @@
         "MissileSilo": "eu_missile_silo_a",
         "FactoryHub": "eu_factory_hub_a",
         "ElectronicsLab": "eu_electronics_lab_a",
-        "Wonder": "eu_wonder_a"
+        "Wonder": "eu_wonder_a",
+        "RailStation": "eu_rail_station_a",
+        "Tower": "eu_tower_a"
       }
     },
     {
@@ -522,7 +530,9 @@
         "MissileSilo": "uk_missile_silo_a",
         "FactoryHub": "uk_factory_hub_a",
         "ElectronicsLab": "uk_electronics_lab_a",
-        "Wonder": "uk_wonder_a"
+        "Wonder": "uk_wonder_a",
+        "RailStation": "uk_rail_station_a",
+        "Tower": "uk_tower_a"
       }
     },
     {
@@ -565,7 +575,9 @@
         "MissileSilo": "egypt_missile_silo_a",
         "FactoryHub": "egypt_factory_hub_a",
         "ElectronicsLab": "egypt_electronics_lab_a",
-        "Wonder": "egypt_wonder_a"
+        "Wonder": "egypt_wonder_a",
+        "RailStation": "egypt_rail_station_a",
+        "Tower": "egypt_tower_a"
       }
     },
     {
@@ -608,7 +620,9 @@
         "MissileSilo": "tartaria_missile_silo_a",
         "FactoryHub": "tartaria_factory_hub_a",
         "ElectronicsLab": "tartaria_electronics_lab_a",
-        "Wonder": "tartaria_wonder_a"
+        "Wonder": "tartaria_wonder_a",
+        "RailStation": "tartaria_rail_station_a",
+        "Tower": "tartaria_tower_a"
       }
     }
   ]

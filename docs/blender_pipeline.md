@@ -9,3 +9,14 @@ This is the only supported art/content pipeline. Legacy generated sprite/icon co
 - Export via `export_selected_assets.py` to `export/meshes/*.glb` and metadata JSON.
 - Optional: `render_preview_icons.py` and `render_billboard_sheet.py`.
 - Validate naming + required variants with `validate_asset_conventions.py`.
+
+## Civilization pack integration
+
+`content/asset_manifest.json` and `content/lod_manifest.json` now include civilization-scoped asset IDs for architecture packs, unit visual packs, and UI icon/portrait assets.
+
+Naming convention used by the pack:
+- buildings: `<civ>_<family>_a`
+- units: `<civ>_<role_or_unique_name>`
+- UI: `ui_icon_civ_<civ>`, `ui_emblem_<civ>`, `portrait_diplomacy_<civ>`, `portrait_campaign_<civ>`
+
+Blender exporters should continue emitting deterministic IDs and file paths so generated manifests remain stable across runs.
