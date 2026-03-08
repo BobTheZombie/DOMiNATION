@@ -4,8 +4,15 @@
     "display_name": "Rome",
     "short_description": "Disciplined infantry empire with elite roads and offensive theater posture.",
     "theme_id": "rome",
-    "era_flavor_tags": ["ancient", "classical", "imperial"],
-    "campaign_tags": ["legions", "expansion"],
+    "era_flavor_tags": [
+      "ancient",
+      "classical",
+      "imperial"
+    ],
+    "campaign_tags": [
+      "legions",
+      "expansion"
+    ],
     "economyBias": 0.98,
     "militaryBias": 1.2,
     "scienceBias": 0.92,
@@ -15,7 +22,14 @@
     "logisticsBias": 1.18,
     "strategicBias": 1.14,
     "economyModifiers": {
-      "resource_gather": {"Food": 1.02, "Wood": 1.0, "Metal": 1.05, "Wealth": 0.98, "Knowledge": 0.95, "Oil": 1.0}
+      "resource_gather": {
+        "Food": 1.02,
+        "Wood": 1.0,
+        "Metal": 1.05,
+        "Wealth": 0.98,
+        "Knowledge": 0.95,
+        "Oil": 1.0
+      }
     },
     "logisticsModifiers": {
       "road_bonus": 1.2,
@@ -26,39 +40,96 @@
     },
     "industryModifiers": {
       "factory_throughput_bonus": 1.03,
-      "refined_goods": {"steel": 1.05, "fuel": 0.98, "munitions": 1.04, "machine_parts": 1.0, "electronics": 0.96}
+      "refined_goods": {
+        "steel": 1.05,
+        "fuel": 0.98,
+        "munitions": 1.04,
+        "machine_parts": 1.0,
+        "electronics": 0.96
+      }
     },
     "diplomacyDoctrine": {
       "aggression_bias": 1.2,
       "alliance_bias": 0.92,
       "trade_bias": 0.95,
       "world_tension_response_bias": 1.1,
-      "operation_preference_weights": {"AssaultCity": 1.18, "Encirclement": 1.16, "SecureRoute": 1.12, "StrategicBombing": 0.9},
-      "doctrine_tags": ["disciplined_fronts", "offensive_operations"]
+      "operation_preference_weights": {
+        "AssaultCity": 1.18,
+        "Encirclement": 1.16,
+        "SecureRoute": 1.12,
+        "StrategicBombing": 0.9
+      },
+      "doctrine_tags": [
+        "disciplined_fronts",
+        "offensive_operations"
+      ]
     },
-    "aiDoctrineModifiers": {"workerTargetMult": 0.96, "expansionTiming": 0.92, "researchPriority": 0.9, "reconPriority": 0.95, "navalPriority": 0.95, "airPriority": 0.9, "strategicPriority": 1.1},
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 0.96,
+      "expansionTiming": 0.92,
+      "researchPriority": 0.9,
+      "reconPriority": 0.95,
+      "navalPriority": 0.95,
+      "airPriority": 0.9,
+      "strategicPriority": 1.1
+    },
     "unitBonuses": {
-      "attackMult": {"Infantry": 1.18, "Siege": 1.05},
-      "hpMult": {"Infantry": 1.12},
-      "costMult": {"Infantry": 1.0},
-      "trainTimeMult": {"Infantry": 0.95}
+      "attackMult": {
+        "Infantry": 1.18,
+        "Siege": 1.05
+      },
+      "hpMult": {
+        "Infantry": 1.12
+      },
+      "costMult": {
+        "Infantry": 1.0
+      },
+      "trainTimeMult": {
+        "Infantry": 0.95
+      }
     },
     "buildingBonuses": {
-      "buildTimeMult": {"Barracks": 0.92, "CityCenter": 0.96},
-      "hpMult": {"Barracks": 1.15, "CityCenter": 1.08},
-      "trickleMult": {"Market": 0.95}
+      "buildTimeMult": {
+        "Barracks": 0.92,
+        "CityCenter": 0.96
+      },
+      "hpMult": {
+        "Barracks": 1.15,
+        "CityCenter": 1.08
+      },
+      "trickleMult": {
+        "Market": 0.95
+      }
     },
-    "uniqueUnits": {"Infantry": "rome_legionary", "Siege": "rome_scorpio"},
-    "uniqueBuildings": {"Barracks": "rome_castra", "CityCenter": "rome_forum_centre"},
-    "missionTags": ["military", "rome"]
+    "uniqueUnits": {
+      "Infantry": "rome_legionary",
+      "Siege": "rome_praetorian_guard",
+      "Worker": "rome_logistics_cohort"
+    },
+    "uniqueBuildings": {
+      "Barracks": "rome_castra",
+      "CityCenter": "rome_forum_centre",
+      "Market": "rome_forum_market"
+    },
+    "missionTags": [
+      "military",
+      "rome"
+    ]
   },
   {
     "civilization_id": "china",
     "display_name": "China",
     "short_description": "High-scale agrarian and scholarly state with steady industrial expansion.",
     "theme_id": "china",
-    "era_flavor_tags": ["dynastic", "bureaucratic", "industrializing"],
-    "campaign_tags": ["development", "scholarship"],
+    "era_flavor_tags": [
+      "dynastic",
+      "bureaucratic",
+      "industrializing"
+    ],
+    "campaign_tags": [
+      "development",
+      "scholarship"
+    ],
     "economyBias": 1.2,
     "militaryBias": 0.96,
     "scienceBias": 1.24,
@@ -68,7 +139,14 @@
     "logisticsBias": 1.08,
     "strategicBias": 1.02,
     "economyModifiers": {
-      "resource_gather": {"Food": 1.2, "Wood": 1.05, "Metal": 1.0, "Wealth": 1.02, "Knowledge": 1.18, "Oil": 1.05}
+      "resource_gather": {
+        "Food": 1.2,
+        "Wood": 1.05,
+        "Metal": 1.0,
+        "Wealth": 1.02,
+        "Knowledge": 1.18,
+        "Oil": 1.05
+      }
     },
     "logisticsModifiers": {
       "road_bonus": 1.06,
@@ -79,37 +157,91 @@
     },
     "industryModifiers": {
       "factory_throughput_bonus": 1.14,
-      "refined_goods": {"steel": 1.08, "fuel": 1.06, "munitions": 1.04, "machine_parts": 1.12, "electronics": 1.14}
+      "refined_goods": {
+        "steel": 1.08,
+        "fuel": 1.06,
+        "munitions": 1.04,
+        "machine_parts": 1.12,
+        "electronics": 1.14
+      }
     },
     "diplomacyDoctrine": {
       "aggression_bias": 0.92,
       "alliance_bias": 1.08,
       "trade_bias": 1.08,
       "world_tension_response_bias": 0.95,
-      "operation_preference_weights": {"SecureRoute": 1.2, "DefendBorder": 1.12, "AssaultCity": 0.95, "Encirclement": 1.05},
-      "doctrine_tags": ["large_state_development", "sustained_operations"]
+      "operation_preference_weights": {
+        "SecureRoute": 1.2,
+        "DefendBorder": 1.12,
+        "AssaultCity": 0.95,
+        "Encirclement": 1.05
+      },
+      "doctrine_tags": [
+        "large_state_development",
+        "sustained_operations"
+      ]
     },
-    "aiDoctrineModifiers": {"workerTargetMult": 1.2, "expansionTiming": 1.02, "researchPriority": 1.24, "reconPriority": 1.1, "navalPriority": 1.0, "airPriority": 1.0, "strategicPriority": 1.02},
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 1.2,
+      "expansionTiming": 1.02,
+      "researchPriority": 1.24,
+      "reconPriority": 1.1,
+      "navalPriority": 1.0,
+      "airPriority": 1.0,
+      "strategicPriority": 1.02
+    },
     "unitBonuses": {
-      "attackMult": {"Ranged": 1.06},
-      "hpMult": {"Worker": 1.05},
-      "trainTimeMult": {"Worker": 0.9}
+      "attackMult": {
+        "Ranged": 1.06
+      },
+      "hpMult": {
+        "Worker": 1.05
+      },
+      "trainTimeMult": {
+        "Worker": 0.9
+      }
     },
     "buildingBonuses": {
-      "buildTimeMult": {"Farm": 0.82, "Library": 0.82, "FactoryHub": 0.9},
-      "trickleMult": {"Farm": 1.18, "Library": 1.2, "Mine": 1.08}
+      "buildTimeMult": {
+        "Farm": 0.82,
+        "Library": 0.82,
+        "FactoryHub": 0.9
+      },
+      "trickleMult": {
+        "Farm": 1.18,
+        "Library": 1.2,
+        "Mine": 1.08
+      }
     },
-    "uniqueUnits": {"Worker": "china_engineer_corps", "Archer": "china_repeating_crossbow"},
-    "uniqueBuildings": {"Library": "china_imperial_academy", "Farm": "china_grand_granary"},
-    "missionTags": ["science", "economy"]
+    "uniqueUnits": {
+      "Worker": "china_scholar_engineer",
+      "Archer": "china_fire_lancer",
+      "Infantry": "china_imperial_guard"
+    },
+    "uniqueBuildings": {
+      "Library": "china_imperial_academy",
+      "Farm": "china_grand_granary",
+      "FactoryHub": "china_imperial_workshop"
+    },
+    "missionTags": [
+      "science",
+      "economy"
+    ]
   },
   {
     "civilization_id": "europe",
     "display_name": "Europe",
     "short_description": "Combined-arms industrial bloc with naval projection and rail-fed firepower.",
     "theme_id": "europe",
-    "era_flavor_tags": ["renaissance", "industrial", "modern"],
-    "campaign_tags": ["combined_arms", "projection"],
+    "era_flavor_tags": [
+      "renaissance",
+      "industrial",
+      "modern"
+    ],
+    "campaign_tags": [
+      "combined_arms",
+      "projection"
+    ],
     "economyBias": 1.06,
     "militaryBias": 1.08,
     "scienceBias": 1.02,
@@ -119,7 +251,14 @@
     "logisticsBias": 1.1,
     "strategicBias": 1.08,
     "economyModifiers": {
-      "resource_gather": {"Food": 0.98, "Wood": 1.0, "Metal": 1.08, "Wealth": 1.05, "Knowledge": 1.05, "Oil": 1.1}
+      "resource_gather": {
+        "Food": 0.98,
+        "Wood": 1.0,
+        "Metal": 1.08,
+        "Wealth": 1.05,
+        "Knowledge": 1.05,
+        "Oil": 1.1
+      }
     },
     "logisticsModifiers": {
       "road_bonus": 1.04,
@@ -130,38 +269,97 @@
     },
     "industryModifiers": {
       "factory_throughput_bonus": 1.16,
-      "refined_goods": {"steel": 1.12, "fuel": 1.1, "munitions": 1.12, "machine_parts": 1.08, "electronics": 1.06}
+      "refined_goods": {
+        "steel": 1.12,
+        "fuel": 1.1,
+        "munitions": 1.12,
+        "machine_parts": 1.08,
+        "electronics": 1.06
+      }
     },
     "diplomacyDoctrine": {
       "aggression_bias": 1.0,
       "alliance_bias": 1.06,
       "trade_bias": 1.04,
       "world_tension_response_bias": 1.02,
-      "operation_preference_weights": {"NavalBlockade": 1.18, "StrategicBombing": 1.12, "DefendBorder": 1.08, "SecureRoute": 1.08},
-      "doctrine_tags": ["combined_arms", "industrial_warfare", "naval_projection"]
+      "operation_preference_weights": {
+        "NavalBlockade": 1.18,
+        "StrategicBombing": 1.12,
+        "DefendBorder": 1.08,
+        "SecureRoute": 1.08
+      },
+      "doctrine_tags": [
+        "combined_arms",
+        "industrial_warfare",
+        "naval_projection"
+      ]
     },
-    "aiDoctrineModifiers": {"workerTargetMult": 1.04, "expansionTiming": 1.0, "researchPriority": 1.02, "reconPriority": 1.08, "navalPriority": 1.14, "airPriority": 1.1, "strategicPriority": 1.1},
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 1.04,
+      "expansionTiming": 1.0,
+      "researchPriority": 1.02,
+      "reconPriority": 1.08,
+      "navalPriority": 1.14,
+      "airPriority": 1.1,
+      "strategicPriority": 1.1
+    },
     "unitBonuses": {
-      "attackMult": {"Siege": 1.12, "LightWarship": 1.08, "HeavyWarship": 1.08},
-      "hpMult": {"Siege": 1.05},
-      "trainTimeMult": {"Siege": 0.94}
+      "attackMult": {
+        "Siege": 1.12,
+        "LightWarship": 1.08,
+        "HeavyWarship": 1.08
+      },
+      "hpMult": {
+        "Siege": 1.05
+      },
+      "trainTimeMult": {
+        "Siege": 0.94
+      }
     },
     "buildingBonuses": {
-      "buildTimeMult": {"SteelMill": 0.9, "FactoryHub": 0.9, "Port": 0.92},
-      "hpMult": {"Barracks": 1.1},
-      "trickleMult": {"Mine": 1.08}
+      "buildTimeMult": {
+        "SteelMill": 0.9,
+        "FactoryHub": 0.9,
+        "Port": 0.92
+      },
+      "hpMult": {
+        "Barracks": 1.1
+      },
+      "trickleMult": {
+        "Mine": 1.08
+      }
     },
-    "uniqueUnits": {"Siege": "europe_field_howitzer", "HeavyWarship": "europe_ironclad_dreadnought"},
-    "uniqueBuildings": {"SteelMill": "europe_integrated_steelworks", "Port": "europe_grand_drydock"},
-    "missionTags": ["defensive", "industry", "naval"]
+    "uniqueUnits": {
+      "Siege": "europe_field_howitzer",
+      "HeavyWarship": "europe_ironclad_dreadnought",
+      "Infantry": "europe_musketeer",
+      "Worker": "europe_industrial_engineer"
+    },
+    "uniqueBuildings": {
+      "SteelMill": "europe_integrated_steelworks",
+      "Port": "europe_grand_drydock",
+      "Barracks": "europe_fortress_barracks"
+    },
+    "missionTags": [
+      "defensive",
+      "industry",
+      "naval"
+    ]
   },
   {
     "civilization_id": "middle_east",
     "display_name": "Middle East",
     "short_description": "Trade-corridor specialists with cavalry mobility and desert supply resilience.",
     "theme_id": "middle_east",
-    "era_flavor_tags": ["caravan", "caliphate", "desert_empire"],
-    "campaign_tags": ["trade", "mobility"],
+    "era_flavor_tags": [
+      "caravan",
+      "caliphate",
+      "desert_empire"
+    ],
+    "campaign_tags": [
+      "trade",
+      "mobility"
+    ],
     "economyBias": 1.16,
     "militaryBias": 1.0,
     "scienceBias": 1.0,
@@ -171,7 +369,14 @@
     "logisticsBias": 1.22,
     "strategicBias": 1.08,
     "economyModifiers": {
-      "resource_gather": {"Food": 1.02, "Wood": 0.95, "Metal": 1.04, "Wealth": 1.2, "Knowledge": 1.0, "Oil": 1.1}
+      "resource_gather": {
+        "Food": 1.02,
+        "Wood": 0.95,
+        "Metal": 1.04,
+        "Wealth": 1.2,
+        "Knowledge": 1.0,
+        "Oil": 1.1
+      }
     },
     "logisticsModifiers": {
       "road_bonus": 1.14,
@@ -182,30 +387,79 @@
     },
     "industryModifiers": {
       "factory_throughput_bonus": 1.06,
-      "refined_goods": {"steel": 1.0, "fuel": 1.12, "munitions": 1.04, "machine_parts": 1.0, "electronics": 0.98}
+      "refined_goods": {
+        "steel": 1.0,
+        "fuel": 1.12,
+        "munitions": 1.04,
+        "machine_parts": 1.0,
+        "electronics": 0.98
+      }
     },
     "diplomacyDoctrine": {
       "aggression_bias": 1.06,
       "alliance_bias": 1.02,
       "trade_bias": 1.18,
       "world_tension_response_bias": 1.04,
-      "operation_preference_weights": {"SecureRoute": 1.24, "RaidEconomy": 1.14, "Encirclement": 1.1, "AssaultCity": 1.02},
-      "doctrine_tags": ["corridor_control", "mobile_warfare", "desert_logistics"]
+      "operation_preference_weights": {
+        "SecureRoute": 1.24,
+        "RaidEconomy": 1.14,
+        "Encirclement": 1.1,
+        "AssaultCity": 1.02
+      },
+      "doctrine_tags": [
+        "corridor_control",
+        "mobile_warfare",
+        "desert_logistics"
+      ]
     },
-    "aiDoctrineModifiers": {"workerTargetMult": 1.12, "expansionTiming": 0.98, "researchPriority": 1.0, "reconPriority": 1.08, "navalPriority": 1.04, "airPriority": 1.0, "strategicPriority": 1.08},
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 1.12,
+      "expansionTiming": 0.98,
+      "researchPriority": 1.0,
+      "reconPriority": 1.08,
+      "navalPriority": 1.04,
+      "airPriority": 1.0,
+      "strategicPriority": 1.08
+    },
     "unitBonuses": {
-      "attackMult": {"Cavalry": 1.16},
-      "hpMult": {"Cavalry": 1.08},
-      "trainTimeMult": {"Cavalry": 0.9}
+      "attackMult": {
+        "Cavalry": 1.16
+      },
+      "hpMult": {
+        "Cavalry": 1.08
+      },
+      "trainTimeMult": {
+        "Cavalry": 0.9
+      }
     },
     "buildingBonuses": {
-      "costMult": {"Market": 0.84},
-      "buildTimeMult": {"Market": 0.9, "Mine": 0.95},
-      "trickleMult": {"Market": 1.28, "Mine": 1.1}
+      "costMult": {
+        "Market": 0.84
+      },
+      "buildTimeMult": {
+        "Market": 0.9,
+        "Mine": 0.95
+      },
+      "trickleMult": {
+        "Market": 1.28,
+        "Mine": 1.1
+      }
     },
-    "uniqueUnits": {"Cavalry": "middle_east_cataphract_raider", "Worker": "middle_east_caravan_master"},
-    "uniqueBuildings": {"Market": "middle_east_caravanserai", "Mine": "middle_east_desert_foundry"},
-    "missionTags": ["trade", "logistics", "mobility"]
+    "uniqueUnits": {
+      "Cavalry": "middle_east_camel_raider",
+      "Worker": "middle_east_caravan_master",
+      "Infantry": "middle_east_mamluk_guard"
+    },
+    "uniqueBuildings": {
+      "Market": "middle_east_caravanserai",
+      "Mine": "middle_east_desert_foundry",
+      "Barracks": "middle_east_desert_fortress"
+    },
+    "missionTags": [
+      "trade",
+      "logistics",
+      "mobility"
+    ]
   },
   {
     "civilization_id": "default",
@@ -222,10 +476,53 @@
     "diplomacyBias": 1.0,
     "logisticsBias": 1.0,
     "strategicBias": 1.0,
-    "economyModifiers": {"resource_gather": {"Food": 1.0, "Wood": 1.0, "Metal": 1.0, "Wealth": 1.0, "Knowledge": 1.0, "Oil": 1.0}},
-    "logisticsModifiers": {"road_bonus": 1.0, "rail_bonus": 1.0, "supply_bonus": 1.0, "trade_route_bonus": 1.0, "tunnel_extraction_bonus": 1.0},
-    "industryModifiers": {"factory_throughput_bonus": 1.0, "refined_goods": {"steel": 1.0, "fuel": 1.0, "munitions": 1.0, "machine_parts": 1.0, "electronics": 1.0}},
-    "diplomacyDoctrine": {"aggression_bias": 1.0, "alliance_bias": 1.0, "trade_bias": 1.0, "world_tension_response_bias": 1.0, "operation_preference_weights": {"RallyAndPush": 1.0}, "doctrine_tags": []},
-    "aiDoctrineModifiers": {"workerTargetMult": 1.0, "expansionTiming": 1.0, "researchPriority": 1.0, "reconPriority": 1.0, "navalPriority": 1.0, "airPriority": 1.0, "strategicPriority": 1.0}
+    "economyModifiers": {
+      "resource_gather": {
+        "Food": 1.0,
+        "Wood": 1.0,
+        "Metal": 1.0,
+        "Wealth": 1.0,
+        "Knowledge": 1.0,
+        "Oil": 1.0
+      }
+    },
+    "logisticsModifiers": {
+      "road_bonus": 1.0,
+      "rail_bonus": 1.0,
+      "supply_bonus": 1.0,
+      "trade_route_bonus": 1.0,
+      "tunnel_extraction_bonus": 1.0
+    },
+    "industryModifiers": {
+      "factory_throughput_bonus": 1.0,
+      "refined_goods": {
+        "steel": 1.0,
+        "fuel": 1.0,
+        "munitions": 1.0,
+        "machine_parts": 1.0,
+        "electronics": 1.0
+      }
+    },
+    "diplomacyDoctrine": {
+      "aggression_bias": 1.0,
+      "alliance_bias": 1.0,
+      "trade_bias": 1.0,
+      "world_tension_response_bias": 1.0,
+      "operation_preference_weights": {
+        "RallyAndPush": 1.0
+      },
+      "doctrine_tags": []
+    },
+    "aiDoctrineModifiers": {
+      "workerTargetMult": 1.0,
+      "expansionTiming": 1.0,
+      "researchPriority": 1.0,
+      "reconPriority": 1.0,
+      "navalPriority": 1.0,
+      "airPriority": 1.0,
+      "strategicPriority": 1.0
+    },
+    "uniqueUnits": {},
+    "uniqueBuildings": {}
   }
 ]

@@ -46,3 +46,13 @@ Use `scenarios/civ_test.json` with:
 - `./build/rts --headless --scenario scenarios/civ_test.json --threads 8 --hash-only`
 - `./build/rts --headless --scenario scenarios/civ_test.json --smoke --ticks 1500 --save /tmp/civ_save.json --dump-hash`
 - `./build/rts --headless --load /tmp/civ_save.json --smoke --ticks 3000 --dump-hash`
+
+### Concrete content packs
+
+Each civilization pack now contains concrete unique units and buildings wired to authoritative production:
+- Rome: legionary / praetorian guard / logistics cohort; castra + forum center.
+- China: imperial guard / fire lancer / scholar-engineer; imperial academy + grand granary.
+- Europe: musketeer / field howitzer / industrial engineer; integrated steelworks + grand drydock.
+- Middle East: camel raider / mamluk guard / caravan master; caravanserai + desert foundry.
+
+UI panels surface owning civilization, resolved definition IDs, unique markers, and icon IDs from deterministic civ content data.

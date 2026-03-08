@@ -280,3 +280,9 @@ The simulation now includes an authoritative industrial economy subsystem with r
 ## Campaign/story presentation determinism
 - Authoritative simulation state keeps mission status, objective state transitions, trigger execution, message ordering sequence, and campaign carryover.
 - Presentation-only metadata (portrait/icon/image/style IDs) is consumed by UI and never mutates sim outside existing trigger/Lua command paths.
+
+### Civilization content resolution
+
+Gameplay content resolution follows: **family enum -> civilization mapping -> authoritative definition id**.
+Resolved IDs are written to unit/building state (`definitionId`), serialized in save/load, and included in deterministic state hash paths.
+When a civ mapping is absent, the runtime falls back to the family base ID and tracks `CIV_CONTENT_RESOLUTION_FALLBACKS`.

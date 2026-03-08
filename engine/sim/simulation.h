@@ -314,6 +314,13 @@ struct CivilizationRuntime {
   std::vector<std::string> missionTags;
 };
 
+struct ContentPresentationInfo {
+  std::string displayName;
+  std::string iconId;
+  std::string portraitId;
+  bool unique{false};
+};
+
 struct BiomeRuntime {
   std::string id;
   std::string displayName;
@@ -419,6 +426,11 @@ struct SimulationStats {
   float industrialThroughput{0.0f};
   uint32_t uniqueUnitsProduced{0};
   uint32_t uniqueBuildingsConstructed{0};
+  uint32_t civContentResolutionFallbacks{0};
+  uint32_t romeContentUsage{0};
+  uint32_t chinaContentUsage{0};
+  uint32_t europeContentUsage{0};
+  uint32_t middleEastContentUsage{0};
   uint32_t civDoctrineSwitches{0};
   float civIndustryOutput{0.0f};
   float civLogisticsBonusUsage{0.0f};
@@ -530,6 +542,11 @@ struct World {
   std::array<float, static_cast<size_t>(RefinedGood::Count)> refinedOutputByTick{};
   uint32_t uniqueUnitsProduced{0};
   uint32_t uniqueBuildingsConstructed{0};
+  uint32_t civContentResolutionFallbacks{0};
+  uint32_t romeContentUsage{0};
+  uint32_t chinaContentUsage{0};
+  uint32_t europeContentUsage{0};
+  uint32_t middleEastContentUsage{0};
   uint32_t civDoctrineSwitches{0};
   float civIndustryOutput{0.0f};
   float civLogisticsBonusUsage{0.0f};
@@ -570,6 +587,8 @@ void cancel_build_placement(World& world);
 const BiomeRuntime& biome_runtime(BiomeType biome);
 BiomeType biome_at(const World& world, int cellIndex);
 std::string building_visual_variant_id(const World& world, const Building& building);
+ContentPresentationInfo unit_content_presentation(const World& world, uint16_t team, UnitType type, const std::string& definitionId);
+ContentPresentationInfo building_content_presentation(const World& world, uint16_t team, BuildingType type, const std::string& definitionId);
 bool valid_mine_shaft_placement(const World& world, glm::ivec2 tile);
 bool deep_deposit_available(const World& world, uint32_t depositId, uint16_t team);
 
