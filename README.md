@@ -103,6 +103,13 @@ Headless deterministic smoke mode (CI/container friendly):
 ./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --threads 8 --hash-only
 ```
 
+
+## Front-end game setup shell
+- Launching `./build/rts` now starts in a title/menu shell with **Skirmish**, **Scenario**, **Campaign**, **Load Game**, **Options**, and **Quit**.
+- Skirmish setup exposes deterministic gameplay inputs (seed/map/preset/civ/victory/Armageddon thresholds plus authored world-events/guardian toggles) and validates invalid combinations before launch.
+- Scenario and campaign browsers read existing JSON metadata and launch through the same authoritative runtime path as CLI flags.
+- Load Game scans `saves/*.json` and re-enters authoritative gameplay state via existing save-load logic.
+
 ## Controls
 - **WASD**: pan camera
 - **Mouse wheel**: zoom

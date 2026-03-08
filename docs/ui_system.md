@@ -46,3 +46,13 @@ The polished HUD is divided into four deterministic presentation regions:
 ## Visual feedback debug controls
 
 Debug Visualization panel now includes toggles for deterministic visual feedback enable/disable and a source overlay debug frame. Counters are displayed per category to validate coverage and fallback behavior.
+
+
+## Front-end shell integration
+The runtime now includes a player-facing title/setup shell before gameplay starts.
+
+- Main menu: Skirmish, Scenario, Campaign, Load Game, Options, Quit
+- Setup cards emphasize player slots, civ selection, world settings, victory settings, and launch summary validation
+- Scenario/campaign/save browsers surface metadata from authored files with deterministic fallbacks
+- Debug panels remain available after match entry and are visually separated from player setup flow
+
