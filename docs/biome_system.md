@@ -15,3 +15,25 @@ Biome assignment now consumes deterministic climate fields:
 Rain-shadow is approximated by sampling upwind higher terrain and reducing local moisture. This produces regional dry zones near mountain leeward sides and improves desert/steppe transitions.
 
 Hydrology feeds biome richness through rivers/lakes, and mountain elevation gates `mountains` / `snow_mountains` selection.
+
+## Biome-to-material presentation mapping
+
+Biome data remains authoritative in simulation; renderer-only mapping resolves deterministic material IDs:
+- TemperateGrassland -> Grassland
+- Steppe -> Steppe
+- Forest -> ForestGround (+ canopy clusters)
+- Desert -> Desert
+- Mediterranean -> Mediterranean
+- Jungle -> Jungle (+ canopy clusters)
+- Tundra -> Tundra
+- Arctic -> Snow
+- Coast -> Littoral
+- Wetlands -> Wetlands
+- Mountain -> Mountain
+- SnowMountain -> SnowMountain
+
+Hydrology overrides biome material for presentation only:
+- riverMap cell -> River
+- lakeMap cell -> Lake
+- TerrainClass::ShallowWater -> ShallowOcean
+- TerrainClass::DeepWater -> DeepOcean

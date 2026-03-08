@@ -64,6 +64,7 @@ add_executable(rts
   engine/core/time.cpp
   engine/platform/app.cpp
   engine/render/renderer.cpp
+  engine/render/terrain_materials.cpp
   engine/sim/simulation.cpp
   engine/assets/asset_manager.cpp
   engine/assets/asset_registry.cpp

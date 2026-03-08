@@ -34,3 +34,16 @@ Gameplay-relevant maps (land/water, elevation, biome, rivers/lakes, resources, s
 ./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --threads 4 --hash-only
 ./build/rts --headless --smoke --ticks 200 --seed 1234 --world-preset continents --threads 8 --hash-only
 ```
+
+## Terrain presentation integration notes
+
+World generation outputs consumed directly by terrain presentation:
+- biome map
+- terrain class (land/shallow/deep)
+- riverMap and lakeMap
+- heightmap and fertility
+- deep deposit placement
+- guardian site placement/discovery state
+
+No new gameplay water or mountain rules are introduced by renderer integration.
+Presentation caches are transient and reconstructed from authoritative state on load/replay.

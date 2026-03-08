@@ -15,6 +15,8 @@ struct OverlayState {
   bool showTerritory{true};
   bool showBorders{true};
   bool showFog{true};
+  bool showTerrainMaterialOverlay{false};
+  bool showWaterOverlay{false};
   bool showMinimap{true};
   GLuint territoryTex{0};
   GLuint borderTex{0};
@@ -162,6 +164,99 @@ void draw_textured_overlay(GLuint tex, const dom::sim::World& w, float alpha, co
   glDisable(GL_BLEND);
 }
 
+
+void draw_feature_circle(glm::vec2 pos, float radius, const std::array<float, 3>& color) {
+  glColor3f(color[0], color[1], color[2]);
+  glBegin(GL_TRIANGLE_FAN);
+  glVertex2f(pos.x, pos.y);
+  for (int i = 0; i <= 16; ++i) {
+    float a = static_cast<float>(i) * 0.39269908f;
+    glVertex2f(pos.x + std::cos(a) * radius, pos.y + std::sin(a) * radius);
+  }
+  glEnd();
+}
+
+void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) {
+  const bool detailed = c.zoom < 26.0f;
+  const bool strategic = c.zoom > 70.0f;
+  uint64_t forestCount = 0;
+  if (detailed) {
+    glBegin(GL_TRIANGLES);
+    for (int y = 0; y < w.height - 1; ++y) {
+      for (int x = 0; x < w.width - 1; ++x) {
+        int i = y * w.width + x;
+        auto sample = resolve_terrain_visual(w, i);
+        if (!sample.hasForestCanopy || sample.isWater) continue;
+        ++forestCount;
+        float jitter = ((x * 73856093u) ^ (y * 19349663u)) & 1023u;
+        float ox = (jitter / 1023.0f - 0.5f) * 0.28f;
+        float oy = (((jitter * 37.0f) / 1023.0f) - 0.5f) * 0.28f;
+        float cx = x + 0.5f + ox;
+        float cy = y + 0.56f + oy;
+        float s = 0.18f + (jitter / 1023.0f) * 0.08f;
+        glColor3f(0.10f, 0.33f, 0.14f);
+        glVertex2f(cx, cy + s);
+        glVertex2f(cx - s, cy - s);
+        glVertex2f(cx + s, cy - s);
+      }
+    }
+    glEnd();
+  } else {
+    glBegin(GL_POINTS);
+    glPointSize(strategic ? 2.5f : 3.5f);
+    for (int y = 0; y < w.height; y += strategic ? 4 : 2) {
+      for (int x = 0; x < w.width; x += strategic ? 4 : 2) {
+        int i = y * w.width + x;
+        auto sample = resolve_terrain_visual(w, i);
+        if (!sample.hasForestCanopy || sample.isWater) continue;
+        ++forestCount;
+        glColor3f(0.14f, 0.36f, 0.18f);
+        glVertex2f(x + 0.5f, y + 0.5f);
+      }
+    }
+    glEnd();
+  }
+  add_forest_cluster_counter(forestCount);
+
+  for (const auto& rn : w.resourceNodes) {
+    if (!w.godMode) {
+      int gx = std::clamp(static_cast<int>(rn.pos.x), 0, w.width - 1);
+      int gy = std::clamp(static_cast<int>(rn.pos.y), 0, w.height - 1);
+      if (w.fog[static_cast<size_t>(gy * w.width + gx)] > 0) continue;
+    }
+    std::array<float, 3> col{0.85f, 0.8f, 0.35f};
+    if (rn.type == dom::sim::ResourceNodeType::Forest) col = {0.14f, 0.45f, 0.20f};
+    else if (rn.type == dom::sim::ResourceNodeType::Ore) col = {0.78f, 0.78f, 0.84f};
+    else if (rn.type == dom::sim::ResourceNodeType::Farmable) col = {0.85f, 0.72f, 0.34f};
+    else if (rn.type == dom::sim::ResourceNodeType::Ruins) col = {0.66f, 0.56f, 0.66f};
+    draw_feature_circle(rn.pos, strategic ? 0.16f : 0.24f, col);
+  }
+
+  for (const auto& dd : w.deepDeposits) {
+    if (!dd.active) continue;
+    int x = dd.cell % w.width;
+    int y = dd.cell / w.width;
+    glm::vec2 p{x + 0.5f, y + 0.5f};
+    if (strategic) draw_feature_circle(p, 0.2f, {0.96f, 0.92f, 0.45f});
+    else {
+      glColor3f(0.96f, 0.92f, 0.45f);
+      glBegin(GL_QUADS);
+      glVertex2f(p.x - 0.22f, p.y - 0.22f);
+      glVertex2f(p.x + 0.22f, p.y - 0.22f);
+      glVertex2f(p.x + 0.22f, p.y + 0.22f);
+      glVertex2f(p.x - 0.22f, p.y + 0.22f);
+      glEnd();
+    }
+  }
+
+  for (const auto& s : w.guardianSites) {
+    if (!s.discovered && !w.godMode) continue;
+    std::array<float, 3> col{0.77f, 0.22f, 0.82f};
+    if (s.spawned && s.alive) col = {0.92f, 0.42f, 0.26f};
+    draw_feature_circle(s.pos, strategic ? 0.26f : 0.34f, col);
+  }
+}
+
 struct ClusterBin {
   glm::vec2 center{};
   int count{0};
@@ -195,26 +290,10 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       int gx = std::clamp(static_cast<int>((static_cast<float>(x) / res) * w.width), 0, w.width - 1);
       int gy = std::clamp(static_cast<int>((static_cast<float>(y) / res) * w.height), 0, w.height - 1);
       size_t gi = static_cast<size_t>(gy * w.width + gx);
-      float h = w.heightmap[gi];
-      float f = w.fertility[gi];
-      auto tc = static_cast<dom::sim::TerrainClass>(w.terrainClass.empty() ? 0 : w.terrainClass[gi]);
-      float r = 0.14f + 0.18f * f;
-      float g = 0.28f + 0.45f * f;
-      float b = 0.16f + 0.08f * (h + 1.0f);
-      if (tc == dom::sim::TerrainClass::ShallowWater) { r = 0.20f; g = 0.48f; b = 0.78f; }
-      else if (tc == dom::sim::TerrainClass::DeepWater) { r = 0.05f; g = 0.16f; b = 0.44f; }
-      else {
-        auto biome = dom::sim::biome_at(w, gi);
-        auto br = dom::sim::biome_runtime(biome);
-        float fertMul = 0.78f + 0.3f * f;
-        r = std::clamp(br.palette[0] * fertMul, 0.0f, 1.0f);
-        g = std::clamp(br.palette[1] * fertMul, 0.0f, 1.0f);
-        b = std::clamp(br.palette[2] * (0.8f + 0.25f * (h + 1.0f)), 0.0f, 1.0f);
-        if (!w.riverMap.empty() && w.riverMap[gi] > 0) { r = 0.15f; g = 0.44f; b = 0.80f; }
-        if (!w.lakeMap.empty() && w.lakeMap[gi] > 0) { r = 0.12f; g = 0.36f; b = 0.70f; }
-        if (h > 0.62f) { r = std::clamp(r * 0.72f + 0.16f, 0.0f, 1.0f); g = std::clamp(g * 0.72f + 0.16f, 0.0f, 1.0f); b = std::clamp(b * 0.72f + 0.16f, 0.0f, 1.0f); }
-        if (h > 0.82f) { r = std::clamp(r * 0.55f + 0.42f, 0.0f, 1.0f); g = std::clamp(g * 0.55f + 0.44f, 0.0f, 1.0f); b = std::clamp(b * 0.55f + 0.46f, 0.0f, 1.0f); }
-      }
+      auto sample = resolve_terrain_visual(w, static_cast<int>(gi));
+      float r = sample.color.r;
+      float g = sample.color.g;
+      float b = sample.color.b;
 
       uint16_t owner = w.territoryOwner[gi];
       if (owner > 0) {
@@ -349,39 +428,58 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
+  reset_terrain_presentation_counters();
   glBegin(GL_QUADS);
   for (int y = 0; y < w.height - 1; ++y) {
     for (int x = 0; x < w.width - 1; ++x) {
       size_t i = y * w.width + x;
-      float h = w.heightmap[i];
-      float f = w.fertility[i];
-      auto tc = static_cast<dom::sim::TerrainClass>(w.terrainClass.empty() ? 0 : w.terrainClass[i]);
-      if (tc == dom::sim::TerrainClass::ShallowWater) glColor3f(0.20f, 0.46f, 0.78f);
-      else if (tc == dom::sim::TerrainClass::DeepWater) glColor3f(0.06f, 0.18f, 0.48f);
-      else {
-        auto biome = dom::sim::biome_at(w, static_cast<int>(i));
-        auto br = dom::sim::biome_runtime(biome);
-        float fertMul = 0.76f + 0.32f * f;
-        float r = std::clamp(br.palette[0] * fertMul, 0.0f, 1.0f);
-        float g = std::clamp(br.palette[1] * fertMul, 0.0f, 1.0f);
-        float b = std::clamp(br.palette[2] * (0.78f + 0.3f * (h + 1.0f)), 0.0f, 1.0f);
-        if (!w.riverMap.empty() && w.riverMap[i] > 0) { r = 0.18f; g = 0.48f; b = 0.84f; }
-        if (!w.lakeMap.empty() && w.lakeMap[i] > 0) { r = 0.14f; g = 0.40f; b = 0.75f; }
-        if (f > 0.72f && h > 0.0f) { r = std::clamp(r * 0.9f + 0.05f, 0.0f, 1.0f); g = std::clamp(g * 1.05f, 0.0f, 1.0f); }
-        if (h > 0.60f) { r = std::clamp(r * 0.7f + 0.15f, 0.0f, 1.0f); g = std::clamp(g * 0.7f + 0.15f, 0.0f, 1.0f); b = std::clamp(b * 0.7f + 0.15f, 0.0f, 1.0f); }
-        if (h > 0.82f) { r = std::clamp(r * 0.5f + 0.45f, 0.0f, 1.0f); g = std::clamp(g * 0.5f + 0.45f, 0.0f, 1.0f); b = std::clamp(b * 0.5f + 0.46f, 0.0f, 1.0f); }
-        glColor3f(r, g, b);
-      }
+      auto sample = resolve_terrain_visual(w, static_cast<int>(i));
+      glColor3f(sample.color.r, sample.color.g, sample.color.b);
       glVertex2f(x, y); glVertex2f(x + 1, y); glVertex2f(x + 1, y + 1); glVertex2f(x, y + 1);
     }
   }
   glEnd();
+
+  glBegin(GL_LINES);
+  for (int y = 1; y < w.height - 1; ++y) {
+    for (int x = 1; x < w.width - 1; ++x) {
+      size_t i = y * w.width + x;
+      auto sample = resolve_terrain_visual(w, static_cast<int>(i));
+      if (!sample.hasCliff) continue;
+      float slope = terrain_slope_hint(w, static_cast<int>(i));
+      float len = 0.18f + slope * 0.24f;
+      glColor3f(0.22f, 0.20f, 0.18f);
+      glVertex2f(x + 0.5f - len, y + 0.5f - len);
+      glVertex2f(x + 0.5f + len, y + 0.5f + len);
+    }
+  }
+  glEnd();
+
+  if (gOverlay.showTerrainMaterialOverlay || gOverlay.showWaterOverlay) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBegin(GL_QUADS);
+    for (int y = 0; y < w.height - 1; ++y) {
+      for (int x = 0; x < w.width - 1; ++x) {
+        size_t i = y * w.width + x;
+        auto sample = resolve_terrain_visual(w, static_cast<int>(i));
+        if (gOverlay.showWaterOverlay && !sample.isWater) continue;
+        if (gOverlay.showTerrainMaterialOverlay && !gOverlay.showWaterOverlay && sample.isWater) continue;
+        glm::vec3 oc = gOverlay.showWaterOverlay ? glm::vec3(0.24f, 0.72f, 1.0f) : sample.accent;
+        glColor4f(oc.r, oc.g, oc.b, 0.20f);
+        glVertex2f(x, y); glVertex2f(x + 1, y); glVertex2f(x + 1, y + 1); glVertex2f(x, y + 1);
+      }
+    }
+    glEnd();
+    glDisable(GL_BLEND);
+  }
 
   update_overlay_textures(w);
   if (gOverlay.showTerritory) draw_textured_overlay(gOverlay.territoryTex, w, 0.20f, {0.55f, 0.55f, 0.95f}, true);
   if (gOverlay.showBorders) draw_textured_overlay(gOverlay.borderTex, w, 0.45f, {0.98f, 0.95f, 0.5f}, true);
   if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 1.0f, {0.0f, 0.0f, 0.0f}, true);
 
+  draw_forest_and_feature_markers(w, c);
 
   glLineWidth(c.zoom > 30.0f ? 1.0f : 2.0f);
   glBegin(GL_LINES);
@@ -719,6 +817,8 @@ void toggle_minimap() { gOverlay.showMinimap = !gOverlay.showMinimap; }
 void toggle_territory_overlay() { gOverlay.showTerritory = !gOverlay.showTerritory; }
 void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }
 void toggle_fog_overlay() { gOverlay.showFog = !gOverlay.showFog; }
+void toggle_terrain_material_overlay() { gOverlay.showTerrainMaterialOverlay = !gOverlay.showTerrainMaterialOverlay; }
+void toggle_water_overlay() { gOverlay.showWaterOverlay = !gOverlay.showWaterOverlay; }
 double last_draw_ms() { return gLastDrawMs; }
 
 void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }
