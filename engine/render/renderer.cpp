@@ -47,6 +47,16 @@ OverlayState gOverlay;
 double gLastDrawMs = 0.0;
 EditorPreview gEditorPreview{};
 
+struct VisualFeedbackState {
+  bool enabled{true};
+  bool overlayDebug{false};
+};
+
+VisualFeedbackState gFeedbackState{};
+VisualFeedbackCounters gFeedbackCounters{};
+
+void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<float, 3>& color);
+
 std::array<std::array<float, 3>, 4> kTeamColors{{
     {0.0f, 0.0f, 0.0f},
     {0.90f, 0.25f, 0.25f},
@@ -113,6 +123,134 @@ std::array<float, 3> diplomatic_color(const dom::sim::World& w, uint16_t team) {
     if (dom::sim::players_at_war(w, 0, team)) return mix_color(base, {1.0f, 0.2f, 0.2f}, 0.35f);
   }
   return mix_color(base, {0.85f, 0.85f, 0.85f}, 0.2f);
+}
+
+
+float tick_phase(const dom::sim::World& w, uint32_t stableId, float speed, float offset = 0.0f) {
+  float t = static_cast<float>((w.tick + stableId) % 4096u);
+  return std::fmod(t * speed + offset, 6.2831853f);
+}
+
+void draw_pulse_ring(glm::vec2 pos, float baseRadius, float pulseAmp, float thickness, float phase, const std::array<float, 3>& color) {
+  float radius = baseRadius + std::sin(phase) * pulseAmp;
+  draw_ring(pos, std::max(0.02f, radius), thickness, color);
+}
+
+void draw_deterministic_feedback(const dom::sim::World& w, const Camera& c, const std::unordered_set<uint32_t>& dragSet) {
+  if (!gFeedbackState.enabled) return;
+
+  for (const auto& u : w.units) {
+    if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+    const bool combatActive = u.targetUnit != 0 || u.attackCooldownTicks > 0;
+    if (combatActive) {
+      ++gFeedbackCounters.combatEffectSpawns;
+      uint32_t sid = u.id * 17u + static_cast<uint32_t>(u.type) * 131u;
+      float phase = tick_phase(w, sid, 0.18f);
+      float spark = 0.45f + std::sin(phase) * 0.2f;
+      auto ccol = unit_color(u);
+      glColor4f(std::min(1.0f, ccol[0] + spark), std::min(1.0f, ccol[1] + spark), std::min(1.0f, ccol[2] + spark), 0.58f);
+      glBegin(GL_LINES);
+      glVertex2f(u.renderPos.x, u.renderPos.y);
+      glm::vec2 aim = u.target;
+      if (u.targetUnit != 0) {
+        for (const auto& enemy : w.units) if (enemy.id == u.targetUnit) { aim = enemy.renderPos; break; }
+      }
+      glVertex2f(u.renderPos.x + (aim.x - u.renderPos.x) * 0.45f, u.renderPos.y + (aim.y - u.renderPos.y) * 0.45f);
+      glEnd();
+      draw_pulse_ring(u.renderPos, 0.30f, 0.05f, 0.08f, phase, {1.0f, 0.82f, 0.34f});
+    }
+
+    if (u.selected) {
+      ++gFeedbackCounters.selectionFeedbackEvents;
+      float sphase = tick_phase(w, u.id * 43u, 0.12f, 1.2f);
+      draw_pulse_ring(u.renderPos, 0.88f, 0.08f, 0.11f, sphase, {1.0f, 0.97f, 0.38f});
+    } else if (dragSet.contains(u.id)) {
+      ++gFeedbackCounters.selectionFeedbackEvents;
+      draw_pulse_ring(u.renderPos, 0.74f, 0.04f, 0.08f, tick_phase(w, u.id * 11u, 0.08f), {0.82f, 0.82f, 0.82f});
+    }
+  }
+
+  for (const auto& b : w.buildings) {
+    if (b.factory.active || b.factory.blocked) {
+      ++gFeedbackCounters.industryActivityEffects;
+      float phase = tick_phase(w, b.id * 29u, 0.09f);
+      auto col = b.factory.blocked ? std::array<float,3>{0.95f, 0.34f, 0.24f} : std::array<float,3>{0.98f, 0.84f, 0.32f};
+      draw_pulse_ring(b.pos, 0.95f, 0.06f, 0.08f, phase, col);
+      if (b.factory.active) {
+        glColor4f(0.95f, 0.95f, 0.75f, 0.35f);
+        glBegin(GL_POINTS);
+        glVertex2f(b.pos.x, b.pos.y + 0.75f + std::sin(phase) * 0.15f);
+        glEnd();
+      }
+    }
+  }
+
+  for (const auto& t : w.trains) {
+    if (t.state == dom::sim::TrainState::Inactive || t.route.empty()) continue;
+    auto it = std::find_if(w.railNodes.begin(), w.railNodes.end(), [&](const dom::sim::RailNode& n){ return n.id == t.currentNode; });
+    if (it == w.railNodes.end()) { ++gFeedbackCounters.feedbackFallbackCount; continue; }
+    ++gFeedbackCounters.industryActivityEffects;
+    float phase = tick_phase(w, t.id * 7u, 0.15f);
+    glm::vec2 tp{it->tile.x + 0.5f, it->tile.y + 0.5f};
+    draw_pulse_ring(tp, 0.34f, 0.05f, 0.07f, phase, {0.75f, 0.95f, 1.0f});
+  }
+
+  for (const auto& ss : w.strategicStrikes) {
+    if (ss.resolved) continue;
+    ++gFeedbackCounters.strategicEffectSpawns;
+    float phase = tick_phase(w, ss.id * 101u + static_cast<uint32_t>(ss.team), 0.06f);
+    draw_pulse_ring(ss.target, 1.1f, 0.22f, 0.12f, phase, ss.warningIssued ? std::array<float,3>{1.0f, 0.3f, 0.3f} : std::array<float,3>{1.0f, 0.62f, 0.22f});
+    glColor4f(1.0f, 0.35f, 0.28f, 0.45f);
+    glBegin(GL_LINES);
+    glVertex2f(ss.from.x, ss.from.y);
+    glVertex2f(ss.target.x, ss.target.y);
+    glEnd();
+  }
+
+  for (const auto& dz : w.denialZones) {
+    ++gFeedbackCounters.strategicEffectSpawns;
+    float phase = tick_phase(w, dz.id * 13u, 0.05f);
+    draw_pulse_ring(dz.pos, dz.radius + 0.18f, 0.16f, 0.08f, phase, {0.95f, 0.30f, 0.34f});
+  }
+
+  for (const auto& ev : w.worldEvents) {
+    if (ev.state == dom::sim::WorldEventState::Inactive) continue;
+    ++gFeedbackCounters.crisisEffectSpawns;
+  }
+
+  for (const auto& s : w.guardianSites) {
+    if (!s.discovered && !w.godMode) continue;
+    ++gFeedbackCounters.guardianEffectSpawns;
+    float phase = tick_phase(w, s.instanceId * 19u, 0.08f);
+    auto col = (s.spawned && s.alive) ? std::array<float,3>{0.96f, 0.45f, 0.30f} : std::array<float,3>{0.76f, 0.30f, 0.92f};
+    draw_pulse_ring(s.pos, 0.44f, 0.08f, 0.09f, phase, col);
+  }
+
+  if (w.armageddonActive) {
+    ++gFeedbackCounters.strategicEffectSpawns;
+    float phase = tick_phase(w, 77u, 0.03f);
+    float pulse = 0.15f + (std::sin(phase) * 0.5f + 0.5f) * 0.15f;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(0.95f, 0.15f, 0.25f, pulse);
+    glBegin(GL_QUADS);
+    glVertex2f(0.0f, 0.0f);
+    glVertex2f(static_cast<float>(w.width), 0.0f);
+    glVertex2f(static_cast<float>(w.width), static_cast<float>(w.height));
+    glVertex2f(0.0f, static_cast<float>(w.height));
+    glEnd();
+    glDisable(GL_BLEND);
+  }
+
+  if (gFeedbackState.overlayDebug) {
+    glColor3f(0.28f, 0.95f, 0.95f);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(2.0f, 6.1f);
+    glVertex2f(10.2f, 6.1f);
+    glVertex2f(10.2f, 10.6f);
+    glVertex2f(2.0f, 10.6f);
+    glEnd();
+  }
 }
 
 
@@ -855,6 +993,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glDisable(GL_BLEND);
   }
 
+  draw_deterministic_feedback(w, c, dragSet);
+
   if (gOverlay.showMinimap) {
     ensure_minimap_texture();
     if ((gOverlay.minimapFrameCounter++ % 8) == 0) {
@@ -940,6 +1080,11 @@ void toggle_water_overlay() { gOverlay.showWaterOverlay = !gOverlay.showWaterOve
 void set_entity_presentation_debug(bool enabled) { gEntityPresentationDebug = enabled; }
 bool entity_presentation_debug() { return gEntityPresentationDebug; }
 const EntityPresentationCounters& entity_presentation_counters() { return gEntityCounters; }
+void set_visual_feedback_enabled(bool enabled) { gFeedbackState.enabled = enabled; }
+bool visual_feedback_enabled() { return gFeedbackState.enabled; }
+void set_visual_feedback_overlay_debug(bool enabled) { gFeedbackState.overlayDebug = enabled; }
+bool visual_feedback_overlay_debug() { return gFeedbackState.overlayDebug; }
+const VisualFeedbackCounters& visual_feedback_counters() { return gFeedbackCounters; }
 double last_draw_ms() { return gLastDrawMs; }
 
 void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }

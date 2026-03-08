@@ -484,3 +484,30 @@ Validation commands:
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+
+## Deterministic visual feedback layer
+
+First-pass visual feedback is now rendered as a deterministic presentation layer driven from authoritative simulation state/events only (combat targets/cooldowns, strategic strikes + denial zones, world events, guardian site state, rail/factory status, and selection state).
+
+Debug overlays expose:
+- `COMBAT_EFFECT_SPAWNS`
+- `STRATEGIC_EFFECT_SPAWNS`
+- `CRISIS_EFFECT_SPAWNS`
+- `GUARDIAN_EFFECT_SPAWNS`
+- `INDUSTRY_ACTIVITY_EFFECTS`
+- `SELECTION_FEEDBACK_EVENTS`
+- `FEEDBACK_FALLBACK_COUNT`
+
+Deterministic validation commands:
+```bash
+./build/rts --headless --smoke --ticks 400 --dump-hash
+./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 1800 --dump-hash
+./build/rts --headless --scenario scenarios/theater_operations_test.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1600 --dump-hash
+./build/rts --headless --campaign campaigns/test_campaign.json --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```

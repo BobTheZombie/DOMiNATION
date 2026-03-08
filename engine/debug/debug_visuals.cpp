@@ -9,6 +9,8 @@ void sync_debug_visuals(const DebugVisualState& state) {
   static bool lastTerrainMat = false;
   static bool lastWater = false;
   static bool lastEntityPresentation = false;
+  static bool lastVisualFeedback = true;
+  static bool lastFeedbackOverlay = false;
   if (state.territoryControl != lastTerritory) {
     dom::render::toggle_territory_overlay();
     lastTerritory = state.territoryControl;
@@ -32,6 +34,14 @@ void sync_debug_visuals(const DebugVisualState& state) {
   if (state.entityPresentationDebug != lastEntityPresentation) {
     dom::render::set_entity_presentation_debug(state.entityPresentationDebug);
     lastEntityPresentation = state.entityPresentationDebug;
+  }
+  if (state.visualFeedbackEnabled != lastVisualFeedback) {
+    dom::render::set_visual_feedback_enabled(state.visualFeedbackEnabled);
+    lastVisualFeedback = state.visualFeedbackEnabled;
+  }
+  if (state.visualFeedbackOverlayDebug != lastFeedbackOverlay) {
+    dom::render::set_visual_feedback_overlay_debug(state.visualFeedbackOverlayDebug);
+    lastFeedbackOverlay = state.visualFeedbackOverlayDebug;
   }
 }
 } // namespace dom::debug

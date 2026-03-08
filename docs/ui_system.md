@@ -41,3 +41,8 @@ The polished HUD is divided into four deterministic presentation regions:
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+
+## Visual feedback debug controls
+
+Debug Visualization panel now includes toggles for deterministic visual feedback enable/disable and a source overlay debug frame. Counters are displayed per category to validate coverage and fallback behavior.
