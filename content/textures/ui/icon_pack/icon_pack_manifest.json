@@ -1,0 +1,1326 @@
+{
+  "core_resources": {
+    "food": [
+      "content/textures/ui/icon_pack/core_resources/16x16/food.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/food.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/food.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/food.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/food.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/food.png"
+    ],
+    "wood": [
+      "content/textures/ui/icon_pack/core_resources/16x16/wood.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/wood.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/wood.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/wood.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/wood.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/wood.png"
+    ],
+    "metal": [
+      "content/textures/ui/icon_pack/core_resources/16x16/metal.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/metal.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/metal.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/metal.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/metal.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/metal.png"
+    ],
+    "wealth": [
+      "content/textures/ui/icon_pack/core_resources/16x16/wealth.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/wealth.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/wealth.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/wealth.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/wealth.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/wealth.png"
+    ],
+    "knowledge": [
+      "content/textures/ui/icon_pack/core_resources/16x16/knowledge.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/knowledge.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/knowledge.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/knowledge.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/knowledge.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/knowledge.png"
+    ],
+    "oil": [
+      "content/textures/ui/icon_pack/core_resources/16x16/oil.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/oil.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/oil.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/oil.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/oil.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/oil.png"
+    ],
+    "population": [
+      "content/textures/ui/icon_pack/core_resources/16x16/population.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/population.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/population.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/population.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/population.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/population.png"
+    ],
+    "influence": [
+      "content/textures/ui/icon_pack/core_resources/16x16/influence.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/influence.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/influence.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/influence.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/influence.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/influence.png"
+    ],
+    "stability": [
+      "content/textures/ui/icon_pack/core_resources/16x16/stability.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/stability.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/stability.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/stability.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/stability.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/stability.png"
+    ],
+    "world_tension": [
+      "content/textures/ui/icon_pack/core_resources/16x16/world_tension.png",
+      "content/textures/ui/icon_pack/core_resources/24x24/world_tension.png",
+      "content/textures/ui/icon_pack/core_resources/32x32/world_tension.png",
+      "content/textures/ui/icon_pack/core_resources/48x48/world_tension.png",
+      "content/textures/ui/icon_pack/core_resources/64x64/world_tension.png",
+      "content/textures/ui/icon_pack/core_resources/128x128/world_tension.png"
+    ]
+  },
+  "industrial_goods": {
+    "steel": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/steel.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/steel.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/steel.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/steel.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/steel.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/steel.png"
+    ],
+    "fuel": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/fuel.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/fuel.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/fuel.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/fuel.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/fuel.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/fuel.png"
+    ],
+    "munitions": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/munitions.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/munitions.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/munitions.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/munitions.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/munitions.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/munitions.png"
+    ],
+    "machine_parts": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/machine_parts.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/machine_parts.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/machine_parts.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/machine_parts.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/machine_parts.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/machine_parts.png"
+    ],
+    "electronics": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/electronics.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/electronics.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/electronics.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/electronics.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/electronics.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/electronics.png"
+    ],
+    "concrete": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/concrete.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/concrete.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/concrete.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/concrete.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/concrete.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/concrete.png"
+    ],
+    "chemicals": [
+      "content/textures/ui/icon_pack/industrial_goods/16x16/chemicals.png",
+      "content/textures/ui/icon_pack/industrial_goods/24x24/chemicals.png",
+      "content/textures/ui/icon_pack/industrial_goods/32x32/chemicals.png",
+      "content/textures/ui/icon_pack/industrial_goods/48x48/chemicals.png",
+      "content/textures/ui/icon_pack/industrial_goods/64x64/chemicals.png",
+      "content/textures/ui/icon_pack/industrial_goods/128x128/chemicals.png"
+    ]
+  },
+  "building_families": {
+    "house": [
+      "content/textures/ui/icon_pack/building_families/16x16/house.png",
+      "content/textures/ui/icon_pack/building_families/24x24/house.png",
+      "content/textures/ui/icon_pack/building_families/32x32/house.png",
+      "content/textures/ui/icon_pack/building_families/48x48/house.png",
+      "content/textures/ui/icon_pack/building_families/64x64/house.png",
+      "content/textures/ui/icon_pack/building_families/128x128/house.png"
+    ],
+    "farm": [
+      "content/textures/ui/icon_pack/building_families/16x16/farm.png",
+      "content/textures/ui/icon_pack/building_families/24x24/farm.png",
+      "content/textures/ui/icon_pack/building_families/32x32/farm.png",
+      "content/textures/ui/icon_pack/building_families/48x48/farm.png",
+      "content/textures/ui/icon_pack/building_families/64x64/farm.png",
+      "content/textures/ui/icon_pack/building_families/128x128/farm.png"
+    ],
+    "market": [
+      "content/textures/ui/icon_pack/building_families/16x16/market.png",
+      "content/textures/ui/icon_pack/building_families/24x24/market.png",
+      "content/textures/ui/icon_pack/building_families/32x32/market.png",
+      "content/textures/ui/icon_pack/building_families/48x48/market.png",
+      "content/textures/ui/icon_pack/building_families/64x64/market.png",
+      "content/textures/ui/icon_pack/building_families/128x128/market.png"
+    ],
+    "barracks": [
+      "content/textures/ui/icon_pack/building_families/16x16/barracks.png",
+      "content/textures/ui/icon_pack/building_families/24x24/barracks.png",
+      "content/textures/ui/icon_pack/building_families/32x32/barracks.png",
+      "content/textures/ui/icon_pack/building_families/48x48/barracks.png",
+      "content/textures/ui/icon_pack/building_families/64x64/barracks.png",
+      "content/textures/ui/icon_pack/building_families/128x128/barracks.png"
+    ],
+    "city_center": [
+      "content/textures/ui/icon_pack/building_families/16x16/city_center.png",
+      "content/textures/ui/icon_pack/building_families/24x24/city_center.png",
+      "content/textures/ui/icon_pack/building_families/32x32/city_center.png",
+      "content/textures/ui/icon_pack/building_families/48x48/city_center.png",
+      "content/textures/ui/icon_pack/building_families/64x64/city_center.png",
+      "content/textures/ui/icon_pack/building_families/128x128/city_center.png"
+    ],
+    "capital": [
+      "content/textures/ui/icon_pack/building_families/16x16/capital.png",
+      "content/textures/ui/icon_pack/building_families/24x24/capital.png",
+      "content/textures/ui/icon_pack/building_families/32x32/capital.png",
+      "content/textures/ui/icon_pack/building_families/48x48/capital.png",
+      "content/textures/ui/icon_pack/building_families/64x64/capital.png",
+      "content/textures/ui/icon_pack/building_families/128x128/capital.png"
+    ],
+    "port": [
+      "content/textures/ui/icon_pack/building_families/16x16/port.png",
+      "content/textures/ui/icon_pack/building_families/24x24/port.png",
+      "content/textures/ui/icon_pack/building_families/32x32/port.png",
+      "content/textures/ui/icon_pack/building_families/48x48/port.png",
+      "content/textures/ui/icon_pack/building_families/64x64/port.png",
+      "content/textures/ui/icon_pack/building_families/128x128/port.png"
+    ],
+    "dockyard": [
+      "content/textures/ui/icon_pack/building_families/16x16/dockyard.png",
+      "content/textures/ui/icon_pack/building_families/24x24/dockyard.png",
+      "content/textures/ui/icon_pack/building_families/32x32/dockyard.png",
+      "content/textures/ui/icon_pack/building_families/48x48/dockyard.png",
+      "content/textures/ui/icon_pack/building_families/64x64/dockyard.png",
+      "content/textures/ui/icon_pack/building_families/128x128/dockyard.png"
+    ],
+    "factory": [
+      "content/textures/ui/icon_pack/building_families/16x16/factory.png",
+      "content/textures/ui/icon_pack/building_families/24x24/factory.png",
+      "content/textures/ui/icon_pack/building_families/32x32/factory.png",
+      "content/textures/ui/icon_pack/building_families/48x48/factory.png",
+      "content/textures/ui/icon_pack/building_families/64x64/factory.png",
+      "content/textures/ui/icon_pack/building_families/128x128/factory.png"
+    ],
+    "steel_mill": [
+      "content/textures/ui/icon_pack/building_families/16x16/steel_mill.png",
+      "content/textures/ui/icon_pack/building_families/24x24/steel_mill.png",
+      "content/textures/ui/icon_pack/building_families/32x32/steel_mill.png",
+      "content/textures/ui/icon_pack/building_families/48x48/steel_mill.png",
+      "content/textures/ui/icon_pack/building_families/64x64/steel_mill.png",
+      "content/textures/ui/icon_pack/building_families/128x128/steel_mill.png"
+    ],
+    "refinery": [
+      "content/textures/ui/icon_pack/building_families/16x16/refinery.png",
+      "content/textures/ui/icon_pack/building_families/24x24/refinery.png",
+      "content/textures/ui/icon_pack/building_families/32x32/refinery.png",
+      "content/textures/ui/icon_pack/building_families/48x48/refinery.png",
+      "content/textures/ui/icon_pack/building_families/64x64/refinery.png",
+      "content/textures/ui/icon_pack/building_families/128x128/refinery.png"
+    ],
+    "munitions_plant": [
+      "content/textures/ui/icon_pack/building_families/16x16/munitions_plant.png",
+      "content/textures/ui/icon_pack/building_families/24x24/munitions_plant.png",
+      "content/textures/ui/icon_pack/building_families/32x32/munitions_plant.png",
+      "content/textures/ui/icon_pack/building_families/48x48/munitions_plant.png",
+      "content/textures/ui/icon_pack/building_families/64x64/munitions_plant.png",
+      "content/textures/ui/icon_pack/building_families/128x128/munitions_plant.png"
+    ],
+    "machine_works": [
+      "content/textures/ui/icon_pack/building_families/16x16/machine_works.png",
+      "content/textures/ui/icon_pack/building_families/24x24/machine_works.png",
+      "content/textures/ui/icon_pack/building_families/32x32/machine_works.png",
+      "content/textures/ui/icon_pack/building_families/48x48/machine_works.png",
+      "content/textures/ui/icon_pack/building_families/64x64/machine_works.png",
+      "content/textures/ui/icon_pack/building_families/128x128/machine_works.png"
+    ],
+    "electronics_lab": [
+      "content/textures/ui/icon_pack/building_families/16x16/electronics_lab.png",
+      "content/textures/ui/icon_pack/building_families/24x24/electronics_lab.png",
+      "content/textures/ui/icon_pack/building_families/32x32/electronics_lab.png",
+      "content/textures/ui/icon_pack/building_families/48x48/electronics_lab.png",
+      "content/textures/ui/icon_pack/building_families/64x64/electronics_lab.png",
+      "content/textures/ui/icon_pack/building_families/128x128/electronics_lab.png"
+    ],
+    "rail_station": [
+      "content/textures/ui/icon_pack/building_families/16x16/rail_station.png",
+      "content/textures/ui/icon_pack/building_families/24x24/rail_station.png",
+      "content/textures/ui/icon_pack/building_families/32x32/rail_station.png",
+      "content/textures/ui/icon_pack/building_families/48x48/rail_station.png",
+      "content/textures/ui/icon_pack/building_families/64x64/rail_station.png",
+      "content/textures/ui/icon_pack/building_families/128x128/rail_station.png"
+    ],
+    "rail_hub": [
+      "content/textures/ui/icon_pack/building_families/16x16/rail_hub.png",
+      "content/textures/ui/icon_pack/building_families/24x24/rail_hub.png",
+      "content/textures/ui/icon_pack/building_families/32x32/rail_hub.png",
+      "content/textures/ui/icon_pack/building_families/48x48/rail_hub.png",
+      "content/textures/ui/icon_pack/building_families/64x64/rail_hub.png",
+      "content/textures/ui/icon_pack/building_families/128x128/rail_hub.png"
+    ],
+    "warehouse": [
+      "content/textures/ui/icon_pack/building_families/16x16/warehouse.png",
+      "content/textures/ui/icon_pack/building_families/24x24/warehouse.png",
+      "content/textures/ui/icon_pack/building_families/32x32/warehouse.png",
+      "content/textures/ui/icon_pack/building_families/48x48/warehouse.png",
+      "content/textures/ui/icon_pack/building_families/64x64/warehouse.png",
+      "content/textures/ui/icon_pack/building_families/128x128/warehouse.png"
+    ],
+    "supply_depot": [
+      "content/textures/ui/icon_pack/building_families/16x16/supply_depot.png",
+      "content/textures/ui/icon_pack/building_families/24x24/supply_depot.png",
+      "content/textures/ui/icon_pack/building_families/32x32/supply_depot.png",
+      "content/textures/ui/icon_pack/building_families/48x48/supply_depot.png",
+      "content/textures/ui/icon_pack/building_families/64x64/supply_depot.png",
+      "content/textures/ui/icon_pack/building_families/128x128/supply_depot.png"
+    ],
+    "radar_station": [
+      "content/textures/ui/icon_pack/building_families/16x16/radar_station.png",
+      "content/textures/ui/icon_pack/building_families/24x24/radar_station.png",
+      "content/textures/ui/icon_pack/building_families/32x32/radar_station.png",
+      "content/textures/ui/icon_pack/building_families/48x48/radar_station.png",
+      "content/textures/ui/icon_pack/building_families/64x64/radar_station.png",
+      "content/textures/ui/icon_pack/building_families/128x128/radar_station.png"
+    ],
+    "missile_silo": [
+      "content/textures/ui/icon_pack/building_families/16x16/missile_silo.png",
+      "content/textures/ui/icon_pack/building_families/24x24/missile_silo.png",
+      "content/textures/ui/icon_pack/building_families/32x32/missile_silo.png",
+      "content/textures/ui/icon_pack/building_families/48x48/missile_silo.png",
+      "content/textures/ui/icon_pack/building_families/64x64/missile_silo.png",
+      "content/textures/ui/icon_pack/building_families/128x128/missile_silo.png"
+    ],
+    "fortress": [
+      "content/textures/ui/icon_pack/building_families/16x16/fortress.png",
+      "content/textures/ui/icon_pack/building_families/24x24/fortress.png",
+      "content/textures/ui/icon_pack/building_families/32x32/fortress.png",
+      "content/textures/ui/icon_pack/building_families/48x48/fortress.png",
+      "content/textures/ui/icon_pack/building_families/64x64/fortress.png",
+      "content/textures/ui/icon_pack/building_families/128x128/fortress.png"
+    ],
+    "tower": [
+      "content/textures/ui/icon_pack/building_families/16x16/tower.png",
+      "content/textures/ui/icon_pack/building_families/24x24/tower.png",
+      "content/textures/ui/icon_pack/building_families/32x32/tower.png",
+      "content/textures/ui/icon_pack/building_families/48x48/tower.png",
+      "content/textures/ui/icon_pack/building_families/64x64/tower.png",
+      "content/textures/ui/icon_pack/building_families/128x128/tower.png"
+    ],
+    "wall": [
+      "content/textures/ui/icon_pack/building_families/16x16/wall.png",
+      "content/textures/ui/icon_pack/building_families/24x24/wall.png",
+      "content/textures/ui/icon_pack/building_families/32x32/wall.png",
+      "content/textures/ui/icon_pack/building_families/48x48/wall.png",
+      "content/textures/ui/icon_pack/building_families/64x64/wall.png",
+      "content/textures/ui/icon_pack/building_families/128x128/wall.png"
+    ],
+    "mine": [
+      "content/textures/ui/icon_pack/building_families/16x16/mine.png",
+      "content/textures/ui/icon_pack/building_families/24x24/mine.png",
+      "content/textures/ui/icon_pack/building_families/32x32/mine.png",
+      "content/textures/ui/icon_pack/building_families/48x48/mine.png",
+      "content/textures/ui/icon_pack/building_families/64x64/mine.png",
+      "content/textures/ui/icon_pack/building_families/128x128/mine.png"
+    ],
+    "deep_mine": [
+      "content/textures/ui/icon_pack/building_families/16x16/deep_mine.png",
+      "content/textures/ui/icon_pack/building_families/24x24/deep_mine.png",
+      "content/textures/ui/icon_pack/building_families/32x32/deep_mine.png",
+      "content/textures/ui/icon_pack/building_families/48x48/deep_mine.png",
+      "content/textures/ui/icon_pack/building_families/64x64/deep_mine.png",
+      "content/textures/ui/icon_pack/building_families/128x128/deep_mine.png"
+    ],
+    "tunnel_entrance": [
+      "content/textures/ui/icon_pack/building_families/16x16/tunnel_entrance.png",
+      "content/textures/ui/icon_pack/building_families/24x24/tunnel_entrance.png",
+      "content/textures/ui/icon_pack/building_families/32x32/tunnel_entrance.png",
+      "content/textures/ui/icon_pack/building_families/48x48/tunnel_entrance.png",
+      "content/textures/ui/icon_pack/building_families/64x64/tunnel_entrance.png",
+      "content/textures/ui/icon_pack/building_families/128x128/tunnel_entrance.png"
+    ],
+    "underground_depot": [
+      "content/textures/ui/icon_pack/building_families/16x16/underground_depot.png",
+      "content/textures/ui/icon_pack/building_families/24x24/underground_depot.png",
+      "content/textures/ui/icon_pack/building_families/32x32/underground_depot.png",
+      "content/textures/ui/icon_pack/building_families/48x48/underground_depot.png",
+      "content/textures/ui/icon_pack/building_families/64x64/underground_depot.png",
+      "content/textures/ui/icon_pack/building_families/128x128/underground_depot.png"
+    ],
+    "wonder": [
+      "content/textures/ui/icon_pack/building_families/16x16/wonder.png",
+      "content/textures/ui/icon_pack/building_families/24x24/wonder.png",
+      "content/textures/ui/icon_pack/building_families/32x32/wonder.png",
+      "content/textures/ui/icon_pack/building_families/48x48/wonder.png",
+      "content/textures/ui/icon_pack/building_families/64x64/wonder.png",
+      "content/textures/ui/icon_pack/building_families/128x128/wonder.png"
+    ]
+  },
+  "unit_families": {
+    "worker": [
+      "content/textures/ui/icon_pack/unit_families/16x16/worker.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/worker.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/worker.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/worker.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/worker.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/worker.png"
+    ],
+    "engineer": [
+      "content/textures/ui/icon_pack/unit_families/16x16/engineer.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/engineer.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/engineer.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/engineer.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/engineer.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/engineer.png"
+    ],
+    "scout": [
+      "content/textures/ui/icon_pack/unit_families/16x16/scout.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/scout.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/scout.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/scout.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/scout.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/scout.png"
+    ],
+    "infantry": [
+      "content/textures/ui/icon_pack/unit_families/16x16/infantry.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/infantry.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/infantry.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/infantry.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/infantry.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/infantry.png"
+    ],
+    "heavy_infantry": [
+      "content/textures/ui/icon_pack/unit_families/16x16/heavy_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/heavy_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/heavy_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/heavy_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/heavy_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/heavy_infantry.png"
+    ],
+    "ranged_infantry": [
+      "content/textures/ui/icon_pack/unit_families/16x16/ranged_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/ranged_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/ranged_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/ranged_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/ranged_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/ranged_infantry.png"
+    ],
+    "cavalry": [
+      "content/textures/ui/icon_pack/unit_families/16x16/cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/cavalry.png"
+    ],
+    "camel_cavalry": [
+      "content/textures/ui/icon_pack/unit_families/16x16/camel_cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/camel_cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/camel_cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/camel_cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/camel_cavalry.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/camel_cavalry.png"
+    ],
+    "artillery": [
+      "content/textures/ui/icon_pack/unit_families/16x16/artillery.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/artillery.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/artillery.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/artillery.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/artillery.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/artillery.png"
+    ],
+    "siege_unit": [
+      "content/textures/ui/icon_pack/unit_families/16x16/siege_unit.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/siege_unit.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/siege_unit.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/siege_unit.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/siege_unit.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/siege_unit.png"
+    ],
+    "tank": [
+      "content/textures/ui/icon_pack/unit_families/16x16/tank.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/tank.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/tank.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/tank.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/tank.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/tank.png"
+    ],
+    "heavy_tank": [
+      "content/textures/ui/icon_pack/unit_families/16x16/heavy_tank.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/heavy_tank.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/heavy_tank.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/heavy_tank.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/heavy_tank.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/heavy_tank.png"
+    ],
+    "railgun_unit": [
+      "content/textures/ui/icon_pack/unit_families/16x16/railgun_unit.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/railgun_unit.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/railgun_unit.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/railgun_unit.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/railgun_unit.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/railgun_unit.png"
+    ],
+    "mechanized_infantry": [
+      "content/textures/ui/icon_pack/unit_families/16x16/mechanized_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/mechanized_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/mechanized_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/mechanized_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/mechanized_infantry.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/mechanized_infantry.png"
+    ],
+    "anti_air": [
+      "content/textures/ui/icon_pack/unit_families/16x16/anti_air.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/anti_air.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/anti_air.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/anti_air.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/anti_air.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/anti_air.png"
+    ],
+    "truck": [
+      "content/textures/ui/icon_pack/unit_families/16x16/truck.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/truck.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/truck.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/truck.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/truck.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/truck.png"
+    ],
+    "train": [
+      "content/textures/ui/icon_pack/unit_families/16x16/train.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/train.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/train.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/train.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/train.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/train.png"
+    ],
+    "supply_train": [
+      "content/textures/ui/icon_pack/unit_families/16x16/supply_train.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/supply_train.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/supply_train.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/supply_train.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/supply_train.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/supply_train.png"
+    ],
+    "freight_train": [
+      "content/textures/ui/icon_pack/unit_families/16x16/freight_train.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/freight_train.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/freight_train.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/freight_train.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/freight_train.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/freight_train.png"
+    ],
+    "naval_transport": [
+      "content/textures/ui/icon_pack/unit_families/16x16/naval_transport.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/naval_transport.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/naval_transport.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/naval_transport.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/naval_transport.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/naval_transport.png"
+    ],
+    "destroyer": [
+      "content/textures/ui/icon_pack/unit_families/16x16/destroyer.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/destroyer.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/destroyer.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/destroyer.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/destroyer.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/destroyer.png"
+    ],
+    "cruiser": [
+      "content/textures/ui/icon_pack/unit_families/16x16/cruiser.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/cruiser.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/cruiser.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/cruiser.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/cruiser.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/cruiser.png"
+    ],
+    "battleship": [
+      "content/textures/ui/icon_pack/unit_families/16x16/battleship.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/battleship.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/battleship.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/battleship.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/battleship.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/battleship.png"
+    ],
+    "carrier": [
+      "content/textures/ui/icon_pack/unit_families/16x16/carrier.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/carrier.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/carrier.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/carrier.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/carrier.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/carrier.png"
+    ],
+    "submarine": [
+      "content/textures/ui/icon_pack/unit_families/16x16/submarine.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/submarine.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/submarine.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/submarine.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/submarine.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/submarine.png"
+    ],
+    "recon_drone": [
+      "content/textures/ui/icon_pack/unit_families/16x16/recon_drone.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/recon_drone.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/recon_drone.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/recon_drone.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/recon_drone.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/recon_drone.png"
+    ],
+    "strike_drone": [
+      "content/textures/ui/icon_pack/unit_families/16x16/strike_drone.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/strike_drone.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/strike_drone.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/strike_drone.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/strike_drone.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/strike_drone.png"
+    ],
+    "fighter": [
+      "content/textures/ui/icon_pack/unit_families/16x16/fighter.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/fighter.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/fighter.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/fighter.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/fighter.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/fighter.png"
+    ],
+    "interceptor": [
+      "content/textures/ui/icon_pack/unit_families/16x16/interceptor.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/interceptor.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/interceptor.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/interceptor.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/interceptor.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/interceptor.png"
+    ],
+    "bomber": [
+      "content/textures/ui/icon_pack/unit_families/16x16/bomber.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/bomber.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/bomber.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/bomber.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/bomber.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/bomber.png"
+    ],
+    "strategic_bomber": [
+      "content/textures/ui/icon_pack/unit_families/16x16/strategic_bomber.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/strategic_bomber.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/strategic_bomber.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/strategic_bomber.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/strategic_bomber.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/strategic_bomber.png"
+    ],
+    "missile_unit": [
+      "content/textures/ui/icon_pack/unit_families/16x16/missile_unit.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/missile_unit.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/missile_unit.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/missile_unit.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/missile_unit.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/missile_unit.png"
+    ],
+    "special_forces": [
+      "content/textures/ui/icon_pack/unit_families/16x16/special_forces.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/special_forces.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/special_forces.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/special_forces.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/special_forces.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/special_forces.png"
+    ],
+    "guardian_unit": [
+      "content/textures/ui/icon_pack/unit_families/16x16/guardian_unit.png",
+      "content/textures/ui/icon_pack/unit_families/24x24/guardian_unit.png",
+      "content/textures/ui/icon_pack/unit_families/32x32/guardian_unit.png",
+      "content/textures/ui/icon_pack/unit_families/48x48/guardian_unit.png",
+      "content/textures/ui/icon_pack/unit_families/64x64/guardian_unit.png",
+      "content/textures/ui/icon_pack/unit_families/128x128/guardian_unit.png"
+    ]
+  },
+  "civilization_emblems": {
+    "rome": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/rome.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/rome.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/rome.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/rome.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/rome.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/rome.png"
+    ],
+    "china": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/china.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/china.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/china.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/china.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/china.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/china.png"
+    ],
+    "europe": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/europe.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/europe.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/europe.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/europe.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/europe.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/europe.png"
+    ],
+    "middle_east": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/middle_east.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/middle_east.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/middle_east.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/middle_east.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/middle_east.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/middle_east.png"
+    ],
+    "russia": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/russia.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/russia.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/russia.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/russia.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/russia.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/russia.png"
+    ],
+    "usa": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/usa.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/usa.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/usa.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/usa.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/usa.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/usa.png"
+    ],
+    "japan": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/japan.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/japan.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/japan.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/japan.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/japan.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/japan.png"
+    ],
+    "eu": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/eu.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/eu.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/eu.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/eu.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/eu.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/eu.png"
+    ],
+    "uk": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/uk.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/uk.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/uk.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/uk.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/uk.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/uk.png"
+    ],
+    "egypt": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/egypt.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/egypt.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/egypt.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/egypt.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/egypt.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/egypt.png"
+    ],
+    "tartaria": [
+      "content/textures/ui/icon_pack/civilization_emblems/16x16/tartaria.png",
+      "content/textures/ui/icon_pack/civilization_emblems/24x24/tartaria.png",
+      "content/textures/ui/icon_pack/civilization_emblems/32x32/tartaria.png",
+      "content/textures/ui/icon_pack/civilization_emblems/48x48/tartaria.png",
+      "content/textures/ui/icon_pack/civilization_emblems/64x64/tartaria.png",
+      "content/textures/ui/icon_pack/civilization_emblems/128x128/tartaria.png"
+    ]
+  },
+  "strategic_diplomacy": {
+    "war": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/war.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/war.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/war.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/war.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/war.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/war.png"
+    ],
+    "alliance": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/alliance.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/alliance.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/alliance.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/alliance.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/alliance.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/alliance.png"
+    ],
+    "trade_agreement": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/trade_agreement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/trade_agreement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/trade_agreement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/trade_agreement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/trade_agreement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/trade_agreement.png"
+    ],
+    "ceasefire": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/ceasefire.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/ceasefire.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/ceasefire.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/ceasefire.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/ceasefire.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/ceasefire.png"
+    ],
+    "embargo": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/embargo.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/embargo.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/embargo.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/embargo.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/embargo.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/embargo.png"
+    ],
+    "bloc_membership": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/bloc_membership.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/bloc_membership.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/bloc_membership.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/bloc_membership.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/bloc_membership.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/bloc_membership.png"
+    ],
+    "rivalry": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/rivalry.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/rivalry.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/rivalry.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/rivalry.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/rivalry.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/rivalry.png"
+    ],
+    "neutrality": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/neutrality.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/neutrality.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/neutrality.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/neutrality.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/neutrality.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/neutrality.png"
+    ],
+    "influence_expansion": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/influence_expansion.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/influence_expansion.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/influence_expansion.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/influence_expansion.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/influence_expansion.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/influence_expansion.png"
+    ],
+    "theater_operation": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/theater_operation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/theater_operation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/theater_operation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/theater_operation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/theater_operation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/theater_operation.png"
+    ],
+    "offensive": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/offensive.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/offensive.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/offensive.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/offensive.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/offensive.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/offensive.png"
+    ],
+    "defensive_line": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/defensive_line.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/defensive_line.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/defensive_line.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/defensive_line.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/defensive_line.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/defensive_line.png"
+    ],
+    "encirclement": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/encirclement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/encirclement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/encirclement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/encirclement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/encirclement.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/encirclement.png"
+    ],
+    "blockade": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/blockade.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/blockade.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/blockade.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/blockade.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/blockade.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/blockade.png"
+    ],
+    "bombing_campaign": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/bombing_campaign.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/bombing_campaign.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/bombing_campaign.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/bombing_campaign.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/bombing_campaign.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/bombing_campaign.png"
+    ],
+    "strategic_warning": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/strategic_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/strategic_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/strategic_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/strategic_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/strategic_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/strategic_warning.png"
+    ],
+    "armageddon": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/armageddon.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/armageddon.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/armageddon.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/armageddon.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/armageddon.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/armageddon.png"
+    ],
+    "nuclear_launch": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/nuclear_launch.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/nuclear_launch.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/nuclear_launch.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/nuclear_launch.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/nuclear_launch.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/nuclear_launch.png"
+    ],
+    "missile_intercept": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/missile_intercept.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/missile_intercept.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/missile_intercept.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/missile_intercept.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/missile_intercept.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/missile_intercept.png"
+    ],
+    "second_strike": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/second_strike.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/second_strike.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/second_strike.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/second_strike.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/second_strike.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/second_strike.png"
+    ],
+    "launch_on_warning": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/launch_on_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/launch_on_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/launch_on_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/launch_on_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/launch_on_warning.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/launch_on_warning.png"
+    ],
+    "no_first_use": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/no_first_use.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/no_first_use.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/no_first_use.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/no_first_use.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/no_first_use.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/no_first_use.png"
+    ],
+    "massive_retaliation": [
+      "content/textures/ui/icon_pack/strategic_diplomacy/16x16/massive_retaliation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/24x24/massive_retaliation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/32x32/massive_retaliation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/48x48/massive_retaliation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/64x64/massive_retaliation.png",
+      "content/textures/ui/icon_pack/strategic_diplomacy/128x128/massive_retaliation.png"
+    ]
+  },
+  "campaign_objectives": {
+    "primary_objective": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/primary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/primary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/primary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/primary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/primary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/primary_objective.png"
+    ],
+    "secondary_objective": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/secondary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/secondary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/secondary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/secondary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/secondary_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/secondary_objective.png"
+    ],
+    "hidden_objective": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/hidden_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/hidden_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/hidden_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/hidden_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/hidden_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/hidden_objective.png"
+    ],
+    "completed_objective": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/completed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/completed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/completed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/completed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/completed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/completed_objective.png"
+    ],
+    "failed_objective": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/failed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/failed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/failed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/failed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/failed_objective.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/failed_objective.png"
+    ],
+    "briefing": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/briefing.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/briefing.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/briefing.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/briefing.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/briefing.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/briefing.png"
+    ],
+    "debrief": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/debrief.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/debrief.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/debrief.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/debrief.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/debrief.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/debrief.png"
+    ],
+    "campaign_reward": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/campaign_reward.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/campaign_reward.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/campaign_reward.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/campaign_reward.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/campaign_reward.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/campaign_reward.png"
+    ],
+    "carryover_state": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/carryover_state.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/carryover_state.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/carryover_state.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/carryover_state.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/carryover_state.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/carryover_state.png"
+    ],
+    "mission_branch": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/mission_branch.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/mission_branch.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/mission_branch.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/mission_branch.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/mission_branch.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/mission_branch.png"
+    ],
+    "victory": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/victory.png"
+    ],
+    "defeat": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/defeat.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/defeat.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/defeat.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/defeat.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/defeat.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/defeat.png"
+    ],
+    "partial_victory": [
+      "content/textures/ui/icon_pack/campaign_objectives/16x16/partial_victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/24x24/partial_victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/32x32/partial_victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/48x48/partial_victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/64x64/partial_victory.png",
+      "content/textures/ui/icon_pack/campaign_objectives/128x128/partial_victory.png"
+    ]
+  },
+  "world_event_crisis": {
+    "drought": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/drought.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/drought.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/drought.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/drought.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/drought.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/drought.png"
+    ],
+    "famine": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/famine.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/famine.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/famine.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/famine.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/famine.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/famine.png"
+    ],
+    "plague": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/plague.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/plague.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/plague.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/plague.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/plague.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/plague.png"
+    ],
+    "industrial_strike": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/industrial_strike.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/industrial_strike.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/industrial_strike.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/industrial_strike.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/industrial_strike.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/industrial_strike.png"
+    ],
+    "market_crash": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/market_crash.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/market_crash.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/market_crash.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/market_crash.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/market_crash.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/market_crash.png"
+    ],
+    "rebellion": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/rebellion.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/rebellion.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/rebellion.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/rebellion.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/rebellion.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/rebellion.png"
+    ],
+    "fuel_crisis": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/fuel_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/fuel_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/fuel_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/fuel_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/fuel_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/fuel_crisis.png"
+    ],
+    "severe_winter": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/severe_winter.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/severe_winter.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/severe_winter.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/severe_winter.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/severe_winter.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/severe_winter.png"
+    ],
+    "guardian_awakening": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/guardian_awakening.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/guardian_awakening.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/guardian_awakening.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/guardian_awakening.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/guardian_awakening.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/guardian_awakening.png"
+    ],
+    "strategic_crisis": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/strategic_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/strategic_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/strategic_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/strategic_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/strategic_crisis.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/strategic_crisis.png"
+    ],
+    "fallout_zone": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/fallout_zone.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/fallout_zone.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/fallout_zone.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/fallout_zone.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/fallout_zone.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/fallout_zone.png"
+    ],
+    "global_panic": [
+      "content/textures/ui/icon_pack/world_event_crisis/16x16/global_panic.png",
+      "content/textures/ui/icon_pack/world_event_crisis/24x24/global_panic.png",
+      "content/textures/ui/icon_pack/world_event_crisis/32x32/global_panic.png",
+      "content/textures/ui/icon_pack/world_event_crisis/48x48/global_panic.png",
+      "content/textures/ui/icon_pack/world_event_crisis/64x64/global_panic.png",
+      "content/textures/ui/icon_pack/world_event_crisis/128x128/global_panic.png"
+    ]
+  },
+  "mythic_guardians": {
+    "snow_yeti": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/snow_yeti.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/snow_yeti.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/snow_yeti.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/snow_yeti.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/snow_yeti.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/snow_yeti.png"
+    ],
+    "kraken": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/kraken.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/kraken.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/kraken.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/kraken.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/kraken.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/kraken.png"
+    ],
+    "sandworm": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/sandworm.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/sandworm.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/sandworm.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/sandworm.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/sandworm.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/sandworm.png"
+    ],
+    "forest_spirit": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/forest_spirit.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/forest_spirit.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/forest_spirit.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/forest_spirit.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/forest_spirit.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/forest_spirit.png"
+    ],
+    "yeti_lair": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/yeti_lair.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/yeti_lair.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/yeti_lair.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/yeti_lair.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/yeti_lair.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/yeti_lair.png"
+    ],
+    "abyssal_trench": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/abyssal_trench.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/abyssal_trench.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/abyssal_trench.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/abyssal_trench.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/abyssal_trench.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/abyssal_trench.png"
+    ],
+    "dune_nest": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/dune_nest.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/dune_nest.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/dune_nest.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/dune_nest.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/dune_nest.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/dune_nest.png"
+    ],
+    "sacred_grove": [
+      "content/textures/ui/icon_pack/mythic_guardians/16x16/sacred_grove.png",
+      "content/textures/ui/icon_pack/mythic_guardians/24x24/sacred_grove.png",
+      "content/textures/ui/icon_pack/mythic_guardians/32x32/sacred_grove.png",
+      "content/textures/ui/icon_pack/mythic_guardians/48x48/sacred_grove.png",
+      "content/textures/ui/icon_pack/mythic_guardians/64x64/sacred_grove.png",
+      "content/textures/ui/icon_pack/mythic_guardians/128x128/sacred_grove.png"
+    ]
+  },
+  "command_control": {
+    "move": [
+      "content/textures/ui/icon_pack/command_control/16x16/move.png",
+      "content/textures/ui/icon_pack/command_control/24x24/move.png",
+      "content/textures/ui/icon_pack/command_control/32x32/move.png",
+      "content/textures/ui/icon_pack/command_control/48x48/move.png",
+      "content/textures/ui/icon_pack/command_control/64x64/move.png",
+      "content/textures/ui/icon_pack/command_control/128x128/move.png"
+    ],
+    "attack": [
+      "content/textures/ui/icon_pack/command_control/16x16/attack.png",
+      "content/textures/ui/icon_pack/command_control/24x24/attack.png",
+      "content/textures/ui/icon_pack/command_control/32x32/attack.png",
+      "content/textures/ui/icon_pack/command_control/48x48/attack.png",
+      "content/textures/ui/icon_pack/command_control/64x64/attack.png",
+      "content/textures/ui/icon_pack/command_control/128x128/attack.png"
+    ],
+    "patrol": [
+      "content/textures/ui/icon_pack/command_control/16x16/patrol.png",
+      "content/textures/ui/icon_pack/command_control/24x24/patrol.png",
+      "content/textures/ui/icon_pack/command_control/32x32/patrol.png",
+      "content/textures/ui/icon_pack/command_control/48x48/patrol.png",
+      "content/textures/ui/icon_pack/command_control/64x64/patrol.png",
+      "content/textures/ui/icon_pack/command_control/128x128/patrol.png"
+    ],
+    "hold_position": [
+      "content/textures/ui/icon_pack/command_control/16x16/hold_position.png",
+      "content/textures/ui/icon_pack/command_control/24x24/hold_position.png",
+      "content/textures/ui/icon_pack/command_control/32x32/hold_position.png",
+      "content/textures/ui/icon_pack/command_control/48x48/hold_position.png",
+      "content/textures/ui/icon_pack/command_control/64x64/hold_position.png",
+      "content/textures/ui/icon_pack/command_control/128x128/hold_position.png"
+    ],
+    "build": [
+      "content/textures/ui/icon_pack/command_control/16x16/build.png",
+      "content/textures/ui/icon_pack/command_control/24x24/build.png",
+      "content/textures/ui/icon_pack/command_control/32x32/build.png",
+      "content/textures/ui/icon_pack/command_control/48x48/build.png",
+      "content/textures/ui/icon_pack/command_control/64x64/build.png",
+      "content/textures/ui/icon_pack/command_control/128x128/build.png"
+    ],
+    "repair": [
+      "content/textures/ui/icon_pack/command_control/16x16/repair.png",
+      "content/textures/ui/icon_pack/command_control/24x24/repair.png",
+      "content/textures/ui/icon_pack/command_control/32x32/repair.png",
+      "content/textures/ui/icon_pack/command_control/48x48/repair.png",
+      "content/textures/ui/icon_pack/command_control/64x64/repair.png",
+      "content/textures/ui/icon_pack/command_control/128x128/repair.png"
+    ],
+    "mine": [
+      "content/textures/ui/icon_pack/command_control/16x16/mine.png",
+      "content/textures/ui/icon_pack/command_control/24x24/mine.png",
+      "content/textures/ui/icon_pack/command_control/32x32/mine.png",
+      "content/textures/ui/icon_pack/command_control/48x48/mine.png",
+      "content/textures/ui/icon_pack/command_control/64x64/mine.png",
+      "content/textures/ui/icon_pack/command_control/128x128/mine.png"
+    ],
+    "deploy_rail": [
+      "content/textures/ui/icon_pack/command_control/16x16/deploy_rail.png",
+      "content/textures/ui/icon_pack/command_control/24x24/deploy_rail.png",
+      "content/textures/ui/icon_pack/command_control/32x32/deploy_rail.png",
+      "content/textures/ui/icon_pack/command_control/48x48/deploy_rail.png",
+      "content/textures/ui/icon_pack/command_control/64x64/deploy_rail.png",
+      "content/textures/ui/icon_pack/command_control/128x128/deploy_rail.png"
+    ],
+    "launch_strike": [
+      "content/textures/ui/icon_pack/command_control/16x16/launch_strike.png",
+      "content/textures/ui/icon_pack/command_control/24x24/launch_strike.png",
+      "content/textures/ui/icon_pack/command_control/32x32/launch_strike.png",
+      "content/textures/ui/icon_pack/command_control/48x48/launch_strike.png",
+      "content/textures/ui/icon_pack/command_control/64x64/launch_strike.png",
+      "content/textures/ui/icon_pack/command_control/128x128/launch_strike.png"
+    ],
+    "intercept": [
+      "content/textures/ui/icon_pack/command_control/16x16/intercept.png",
+      "content/textures/ui/icon_pack/command_control/24x24/intercept.png",
+      "content/textures/ui/icon_pack/command_control/32x32/intercept.png",
+      "content/textures/ui/icon_pack/command_control/48x48/intercept.png",
+      "content/textures/ui/icon_pack/command_control/64x64/intercept.png",
+      "content/textures/ui/icon_pack/command_control/128x128/intercept.png"
+    ],
+    "fortify": [
+      "content/textures/ui/icon_pack/command_control/16x16/fortify.png",
+      "content/textures/ui/icon_pack/command_control/24x24/fortify.png",
+      "content/textures/ui/icon_pack/command_control/32x32/fortify.png",
+      "content/textures/ui/icon_pack/command_control/48x48/fortify.png",
+      "content/textures/ui/icon_pack/command_control/64x64/fortify.png",
+      "content/textures/ui/icon_pack/command_control/128x128/fortify.png"
+    ],
+    "retreat": [
+      "content/textures/ui/icon_pack/command_control/16x16/retreat.png",
+      "content/textures/ui/icon_pack/command_control/24x24/retreat.png",
+      "content/textures/ui/icon_pack/command_control/32x32/retreat.png",
+      "content/textures/ui/icon_pack/command_control/48x48/retreat.png",
+      "content/textures/ui/icon_pack/command_control/64x64/retreat.png",
+      "content/textures/ui/icon_pack/command_control/128x128/retreat.png"
+    ],
+    "resupply": [
+      "content/textures/ui/icon_pack/command_control/16x16/resupply.png",
+      "content/textures/ui/icon_pack/command_control/24x24/resupply.png",
+      "content/textures/ui/icon_pack/command_control/32x32/resupply.png",
+      "content/textures/ui/icon_pack/command_control/48x48/resupply.png",
+      "content/textures/ui/icon_pack/command_control/64x64/resupply.png",
+      "content/textures/ui/icon_pack/command_control/128x128/resupply.png"
+    ],
+    "airlift": [
+      "content/textures/ui/icon_pack/command_control/16x16/airlift.png",
+      "content/textures/ui/icon_pack/command_control/24x24/airlift.png",
+      "content/textures/ui/icon_pack/command_control/32x32/airlift.png",
+      "content/textures/ui/icon_pack/command_control/48x48/airlift.png",
+      "content/textures/ui/icon_pack/command_control/64x64/airlift.png",
+      "content/textures/ui/icon_pack/command_control/128x128/airlift.png"
+    ],
+    "naval_invasion": [
+      "content/textures/ui/icon_pack/command_control/16x16/naval_invasion.png",
+      "content/textures/ui/icon_pack/command_control/24x24/naval_invasion.png",
+      "content/textures/ui/icon_pack/command_control/32x32/naval_invasion.png",
+      "content/textures/ui/icon_pack/command_control/48x48/naval_invasion.png",
+      "content/textures/ui/icon_pack/command_control/64x64/naval_invasion.png",
+      "content/textures/ui/icon_pack/command_control/128x128/naval_invasion.png"
+    ],
+    "tunnel_travel": [
+      "content/textures/ui/icon_pack/command_control/16x16/tunnel_travel.png",
+      "content/textures/ui/icon_pack/command_control/24x24/tunnel_travel.png",
+      "content/textures/ui/icon_pack/command_control/32x32/tunnel_travel.png",
+      "content/textures/ui/icon_pack/command_control/48x48/tunnel_travel.png",
+      "content/textures/ui/icon_pack/command_control/64x64/tunnel_travel.png",
+      "content/textures/ui/icon_pack/command_control/128x128/tunnel_travel.png"
+    ],
+    "guardian_claim": [
+      "content/textures/ui/icon_pack/command_control/16x16/guardian_claim.png",
+      "content/textures/ui/icon_pack/command_control/24x24/guardian_claim.png",
+      "content/textures/ui/icon_pack/command_control/32x32/guardian_claim.png",
+      "content/textures/ui/icon_pack/command_control/48x48/guardian_claim.png",
+      "content/textures/ui/icon_pack/command_control/64x64/guardian_claim.png",
+      "content/textures/ui/icon_pack/command_control/128x128/guardian_claim.png"
+    ]
+  }
+}
