@@ -8,6 +8,7 @@ void sync_debug_visuals(const DebugVisualState& state) {
   static bool lastFog = true;
   static bool lastTerrainMat = false;
   static bool lastWater = false;
+  static bool lastEntityPresentation = false;
   if (state.territoryControl != lastTerritory) {
     dom::render::toggle_territory_overlay();
     lastTerritory = state.territoryControl;
@@ -27,6 +28,10 @@ void sync_debug_visuals(const DebugVisualState& state) {
   if (state.waterOverlay != lastWater) {
     dom::render::toggle_water_overlay();
     lastWater = state.waterOverlay;
+  }
+  if (state.entityPresentationDebug != lastEntityPresentation) {
+    dom::render::set_entity_presentation_debug(state.entityPresentationDebug);
+    lastEntityPresentation = state.entityPresentationDebug;
   }
 }
 } // namespace dom::debug

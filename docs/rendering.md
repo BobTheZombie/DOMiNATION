@@ -121,3 +121,16 @@ Debug integration:
 - terrain material overlay toggle
 - water overlay toggle
 - counters: TERRAIN_MATERIAL_RESOLVES, WATER_FEATURE_RESOLVES, FOREST_CLUSTER_COUNT, MOUNTAIN_FEATURE_COUNT, PRESENTATION_FALLBACK_COUNT
+
+
+## World entities (units/cities/structures/sites)
+
+The first entity pass adds deterministic shape-based world entities with civ/theme tinting and ownership accents across near/mid/far zoom. Far zoom uses cluster bins for armies, while capitals, industrial cities, strategic structures, and revealed guardian sites keep readable silhouettes.
+
+Debug counters exposed in the visualization panel:
+- `UNIT_PRESENTATION_RESOLVES`
+- `BUILDING_PRESENTATION_RESOLVES`
+- `CITY_PRESENTATION_RESOLVES`
+- `GUARDIAN_PRESENTATION_RESOLVES`
+- `ENTITY_PRESENTATION_FALLBACKS`
+- `FAR_LOD_CLUSTER_COUNT`

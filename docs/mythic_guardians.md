@@ -45,3 +45,8 @@ See: `scenarios/mythic_guardians_test.json`, `scenarios/mythic_guardians_multi_t
 
 ## Presentation references
 Guardians may now include deterministic presentation IDs (`icon_id`, `portrait_id`, `site_icon_id`, `site_label_id`) in content. Runtime resolves by guardian ID first, then site type, then stable fallback IDs.
+
+
+## Guardian site map readability
+
+Revealed guardian sites now render with strategic-site silhouettes and deterministic fallback presentation resolution (`guardian_content_presentation`) when explicit themed assets are missing.
