@@ -332,3 +332,8 @@ Primary files:
 - `engine/render/terrain_materials.h`
 - `engine/render/terrain_materials.cpp`
 - `engine/render/renderer.cpp`
+
+
+## Entity presentation integration
+
+World entity rendering is presentation-only and reconstructs each frame from authoritative world data (unit/building/city/guardian state plus civ/theme manifests). No transient render caches are serialized; replay/save/load remains simulation-authoritative.

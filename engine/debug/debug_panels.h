@@ -17,6 +17,7 @@ struct DebugVisualState {
   bool aiState{false};
   bool terrainMaterialOverlay{false};
   bool waterOverlay{false};
+  bool entityPresentationDebug{false};
 };
 
 void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state);

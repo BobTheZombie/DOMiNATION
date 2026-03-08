@@ -6,7 +6,9 @@
 #include <cmath>
 #include <glm/geometric.hpp>
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
+#include <string_view>
 #include <chrono>
 
 namespace dom::render {
@@ -62,6 +64,56 @@ std::array<float,3> unit_color(const dom::sim::Unit& u) {
   if (u.supplyState == dom::sim::SupplyState::OutOfSupply) return {0.95f, 0.2f, 0.2f};
   return tc;
 }
+
+EntityPresentationCounters gEntityCounters{};
+bool gEntityPresentationDebug{false};
+
+std::array<float, 3> mix_color(const std::array<float, 3>& a, const std::array<float, 3>& b, float t) {
+  float k = std::clamp(t, 0.0f, 1.0f);
+  return {a[0] * (1.0f - k) + b[0] * k, a[1] * (1.0f - k) + b[1] * k, a[2] * (1.0f - k) + b[2] * k};
+}
+
+std::array<float, 3> theme_tint_for_team(const dom::sim::World& w, uint16_t team) {
+  if (team >= w.players.size()) return {0.6f, 0.6f, 0.6f};
+  std::string theme = w.players[team].civilization.themeId;
+  if (theme.empty()) theme = w.players[team].civilization.id;
+  if (theme.find("rome") != std::string::npos) return {0.78f, 0.62f, 0.42f};
+  if (theme.find("china") != std::string::npos) return {0.56f, 0.44f, 0.32f};
+  if (theme.find("russia") != std::string::npos) return {0.62f, 0.62f, 0.68f};
+  if (theme.find("japan") != std::string::npos) return {0.84f, 0.72f, 0.74f};
+  if (theme.find("middle") != std::string::npos || theme.find("egypt") != std::string::npos) return {0.76f, 0.66f, 0.48f};
+  if (theme.find("usa") != std::string::npos || theme.find("uk") != std::string::npos || theme.find("europe") != std::string::npos || theme.find("eu") != std::string::npos) return {0.55f, 0.62f, 0.72f};
+  return {0.64f, 0.64f, 0.64f};
+}
+
+enum class UnitGlyph : uint8_t { Worker, Infantry, HeavyInfantry, Cavalry, Artillery, Armor, Rail, Naval, Aircraft, Guardian };
+
+UnitGlyph unit_glyph(const dom::sim::Unit& u) {
+  using UT = dom::sim::UnitType;
+  using UR = dom::sim::UnitRole;
+  if (u.definitionId.find("guardian") != std::string::npos) return UnitGlyph::Guardian;
+  if (u.definitionId.find("tank") != std::string::npos || u.definitionId.find("mech") != std::string::npos) return UnitGlyph::Armor;
+  if (u.definitionId.find("heavy") != std::string::npos || u.definitionId.find("legion") != std::string::npos) return UnitGlyph::HeavyInfantry;
+  if (u.definitionId.find("artillery") != std::string::npos) return UnitGlyph::Artillery;
+  if (u.role == UR::Worker || u.type == UT::Worker) return UnitGlyph::Worker;
+  if (u.role == UR::Naval || u.type == UT::TransportShip || u.type == UT::LightWarship || u.type == UT::HeavyWarship || u.type == UT::BombardShip) return UnitGlyph::Naval;
+  if (u.type == UT::Fighter || u.type == UT::Interceptor || u.type == UT::Bomber || u.type == UT::StrategicBomber || u.type == UT::ReconDrone || u.type == UT::StrikeDrone || u.type == UT::TacticalMissile || u.type == UT::StrategicMissile) return UnitGlyph::Aircraft;
+  if (u.role == UR::Siege || u.type == UT::Siege) return UnitGlyph::Artillery;
+  if (u.role == UR::Cavalry || u.type == UT::Cavalry) return UnitGlyph::Cavalry;
+  if (u.role == UR::Transport) return UnitGlyph::Rail;
+  return UnitGlyph::Infantry;
+}
+
+std::array<float, 3> diplomatic_color(const dom::sim::World& w, uint16_t team) {
+  auto base = kTeamColors[std::min<size_t>(team + 1, 3)];
+  if (team == 0) return {base[0], base[1], base[2]};
+  if (team < w.players.size()) {
+    if (dom::sim::players_allied(w, 0, team)) return mix_color(base, {0.35f, 0.95f, 0.75f}, 0.4f);
+    if (dom::sim::players_at_war(w, 0, team)) return mix_color(base, {1.0f, 0.2f, 0.2f}, 0.35f);
+  }
+  return mix_color(base, {0.85f, 0.85f, 0.85f}, 0.2f);
+}
+
 
 void ensure_overlay_textures(const dom::sim::World& w) {
   if (gOverlay.texW == w.width && gOverlay.texH == w.height && gOverlay.territoryTex != 0) return;
@@ -250,6 +302,9 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
   }
 
   for (const auto& s : w.guardianSites) {
+    ++gEntityCounters.guardianPresentationResolves;
+    auto gPres = dom::sim::guardian_content_presentation(s.guardianId, s.siteType);
+    if (gPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
     if (!s.discovered && !w.godMode) continue;
     std::array<float, 3> col{0.77f, 0.22f, 0.82f};
     if (s.spawned && s.alive) col = {0.92f, 0.42f, 0.26f};
@@ -429,6 +484,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glLoadIdentity();
 
   reset_terrain_presentation_counters();
+  gEntityCounters = {};
   glBegin(GL_QUADS);
   for (int y = 0; y < w.height - 1; ++y) {
     for (int x = 0; x < w.width - 1; ++x) {
@@ -556,24 +612,39 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
 
   glBegin(GL_QUADS);
   for (const auto& b : w.buildings) {
-    float r = 0.6f, g = 0.6f, bl = 0.65f;
-    const std::string visualId = dom::sim::building_visual_variant_id(w, b);
-    const bool warm = visualId.find("rome") != std::string::npos || visualId.find("middleeast") != std::string::npos;
-    const bool east = visualId.find("china") != std::string::npos;
-    if (warm) { r = 0.78f; g = 0.62f; bl = 0.42f; }
-    else if (east) { r = 0.56f; g = 0.45f; bl = 0.34f; }
-    else if (b.team == 0) { r = 0.82f; g = 0.32f; bl = 0.32f; }
-    else if (b.team == 1) { r = 0.28f; g = 0.45f; bl = 0.88f; }
-    if (b.underConstruction) { r *= 0.6f; g *= 0.6f; bl *= 0.6f; }
-    if (b.factory.blocked) { r = 0.85f; g = 0.35f; bl = 0.25f; }
-    else if (b.factory.active) { r = std::min(1.0f, r + 0.12f); g = std::min(1.0f, g + 0.12f); }
-    glColor3f(r, g, bl);
+    ++gEntityCounters.buildingPresentationResolves;
+    auto bPres = dom::sim::building_content_presentation(w, b.team, b.type, b.definitionId);
+    if (bPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
+    auto rel = diplomatic_color(w, b.team);
+    auto theme = theme_tint_for_team(w, b.team);
+    auto base = mix_color(rel, theme, 0.35f);
+    if (b.underConstruction) base = mix_color(base, {0.35f, 0.35f, 0.35f}, 0.45f);
+    if (b.factory.blocked) base = {0.88f, 0.35f, 0.25f};
+    else if (b.factory.active) base = mix_color(base, {0.95f, 0.95f, 0.42f}, 0.2f);
     float sx = b.size.x * 0.5f;
     float sy = b.size.y * 0.5f;
+    const bool military = b.type == dom::sim::BuildingType::Barracks || b.type == dom::sim::BuildingType::AABattery || b.type == dom::sim::BuildingType::AntiMissileDefense || b.type == dom::sim::BuildingType::Airbase || b.type == dom::sim::BuildingType::MissileSilo;
+    const bool logistics = b.type == dom::sim::BuildingType::Port || b.type == dom::sim::BuildingType::Market;
+    const bool industrial = b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::Mine;
+    if (military) { sx *= 1.0f; sy *= 0.8f; }
+    else if (logistics) { sx *= 1.2f; sy *= 0.75f; }
+    else if (industrial) { sx *= 1.1f; sy *= 1.05f; }
+    glColor3f(base[0], base[1], base[2]);
     glVertex2f(b.pos.x - sx, b.pos.y - sy);
     glVertex2f(b.pos.x + sx, b.pos.y - sy);
     glVertex2f(b.pos.x + sx, b.pos.y + sy);
     glVertex2f(b.pos.x - sx, b.pos.y + sy);
+
+    auto accent = mix_color(rel, {1.0f, 1.0f, 1.0f}, 0.2f);
+    if (b.type == dom::sim::BuildingType::MissileSilo) accent = {0.95f, 0.24f, 0.24f};
+    if (b.type == dom::sim::BuildingType::RadarTower || b.type == dom::sim::BuildingType::MobileRadar) accent = {0.35f, 0.95f, 0.95f};
+    glColor3f(accent[0], accent[1], accent[2]);
+    float ax = sx * 0.42f;
+    float ay = sy * 0.42f;
+    glVertex2f(b.pos.x - ax, b.pos.y - ay);
+    glVertex2f(b.pos.x + ax, b.pos.y - ay);
+    glVertex2f(b.pos.x + ax, b.pos.y + ay);
+    glVertex2f(b.pos.x - ax, b.pos.y + ay);
   }
   glEnd();
 
@@ -641,7 +712,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glBegin(GL_QUADS);
     for (const auto& b : bins) {
       if (b.count == 0) continue;
-      auto tc = kTeamColors[std::min<size_t>(b.team + 1, 3)];
+      ++gEntityCounters.farLodClusterCount;
+      auto tc = diplomatic_color(w, b.team);
       glColor3f(tc[0], tc[1], tc[2]);
       float s = 0.9f + std::min(2.0f, b.count / 8.0f);
       glVertex2f(b.center.x - s, b.center.y - s);
@@ -651,75 +723,118 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     }
     glEnd();
   } else {
-    if (c.zoom < nearThreshold) {
-      glBegin(GL_TRIANGLES);
-      for (const auto& u : w.units) {
-        if (!w.godMode) {
-          if (!dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
-        }
-        auto tc = unit_color(u);
-        glColor3f(tc[0], tc[1], tc[2]);
-        float s = 0.35f;
+    for (const auto& u : w.units) {
+      if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+      ++gEntityCounters.unitPresentationResolves;
+      auto uPres = dom::sim::unit_content_presentation(w, u.team, u.type, u.definitionId);
+      if (uPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
+      auto rel = unit_color(u);
+      auto theme = theme_tint_for_team(w, u.team);
+      auto base = mix_color(rel, theme, 0.25f);
+      UnitGlyph glyph = unit_glyph(u);
+      float s = c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f);
+      if (glyph == UnitGlyph::Guardian) s += 0.16f;
+      if (glyph == UnitGlyph::Armor || glyph == UnitGlyph::Naval) s += 0.08f;
+
+      if (glyph == UnitGlyph::Aircraft) {
+        glBegin(GL_TRIANGLES);
+        glColor3f(base[0], base[1], base[2]);
         glVertex2f(u.renderPos.x, u.renderPos.y + s);
-        glVertex2f(u.renderPos.x - s, u.renderPos.y - s);
-        glVertex2f(u.renderPos.x + s, u.renderPos.y - s);
-      }
-      glEnd();
-    } else if (c.zoom < farThreshold) {
-      glBegin(GL_QUADS);
-      for (const auto& u : w.units) {
-        if (!w.godMode) {
-          if (!dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
-        }
-        auto tc = unit_color(u);
-        glColor3f(tc[0], tc[1], tc[2]);
-        float s = 0.42f;
-        glVertex2f(u.renderPos.x - s, u.renderPos.y - s);
-        glVertex2f(u.renderPos.x + s, u.renderPos.y - s);
-        glVertex2f(u.renderPos.x + s, u.renderPos.y + s);
-        glVertex2f(u.renderPos.x - s, u.renderPos.y + s);
-      }
-      glEnd();
-    } else {
-      for (const auto& u : w.units) {
-        if (!w.godMode) {
-          if (!dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
-        }
-        auto tc = kTeamColors[std::min<size_t>(u.team + 1, 3)];
+        glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.7f);
+        glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.7f);
+        glEnd();
+      } else if (glyph == UnitGlyph::Naval) {
+        glBegin(GL_QUADS);
+        glColor3f(base[0], base[1], base[2]);
+        glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.55f);
+        glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.55f);
+        glVertex2f(u.renderPos.x + s * 0.8f, u.renderPos.y + s * 0.55f);
+        glVertex2f(u.renderPos.x - s * 0.8f, u.renderPos.y + s * 0.55f);
+        glEnd();
+      } else if (glyph == UnitGlyph::Artillery || glyph == UnitGlyph::Rail) {
+        glBegin(GL_QUADS);
+        glColor3f(base[0], base[1], base[2]);
+        glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.45f);
+        glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.45f);
+        glVertex2f(u.renderPos.x + s, u.renderPos.y + s * 0.45f);
+        glVertex2f(u.renderPos.x - s, u.renderPos.y + s * 0.45f);
+        glEnd();
+      } else {
         glBegin(GL_TRIANGLE_FAN);
-        glColor3f(tc[0], tc[1], tc[2]);
-        float s = 0.44f;
+        glColor3f(base[0], base[1], base[2]);
         glVertex2f(u.renderPos.x, u.renderPos.y);
         for (int i = 0; i <= 10; ++i) {
           float a = i * 0.62831853f;
-          glVertex2f(u.renderPos.x + std::cos(a) * s, u.renderPos.y + std::sin(a) * s);
+          float rr = s;
+          if (glyph == UnitGlyph::Worker) rr *= 0.8f;
+          if (glyph == UnitGlyph::HeavyInfantry) rr *= 1.12f;
+          if (glyph == UnitGlyph::Cavalry) rr *= (i % 2 == 0 ? 1.05f : 0.82f);
+          glVertex2f(u.renderPos.x + std::cos(a) * rr, u.renderPos.y + std::sin(a) * rr);
         }
         glEnd();
       }
+
+      glBegin(GL_QUADS);
+      auto accent = mix_color(rel, {1.0f, 1.0f, 1.0f}, 0.35f);
+      glColor3f(accent[0], accent[1], accent[2]);
+      float badge = s * 0.3f;
+      glVertex2f(u.renderPos.x - badge, u.renderPos.y - badge);
+      glVertex2f(u.renderPos.x + badge, u.renderPos.y - badge);
+      glVertex2f(u.renderPos.x + badge, u.renderPos.y + badge);
+      glVertex2f(u.renderPos.x - badge, u.renderPos.y + badge);
+      glEnd();
     }
   }
 
   std::unordered_set<uint32_t> dragSet(dragHighlight.begin(), dragHighlight.end());
   for (const auto& u : w.units) {
-    if (u.selected) draw_ring(u.renderPos, 0.7f, 0.14f, {1.0f, 0.95f, 0.25f});
-    else if (dragSet.contains(u.id)) draw_ring(u.renderPos, 0.62f, 0.11f, {0.85f, 0.85f, 0.85f});
+    if (u.selected) draw_ring(u.renderPos, 0.86f, 0.19f, {1.0f, 0.95f, 0.25f});
+    else if (dragSet.contains(u.id)) draw_ring(u.renderPos, 0.70f, 0.13f, {0.85f, 0.85f, 0.85f});
   }
 
-  if (w.godMode) {
+  for (const auto& cty : w.cities) {
+    int gx = std::clamp(static_cast<int>(cty.pos.x), 0, w.width - 1);
+    int gy = std::clamp(static_cast<int>(cty.pos.y), 0, w.height - 1);
+    if (!w.godMode && w.fog[gy * w.width + gx] > 0 && cty.team != 0) continue;
+    ++gEntityCounters.cityPresentationResolves;
+    auto rel = diplomatic_color(w, cty.team);
+    auto theme = theme_tint_for_team(w, cty.team);
+    auto col = mix_color(rel, theme, 0.3f);
+    float core = cty.capital ? 1.25f : (cty.level >= 3 ? 1.05f : 0.82f);
+    if (c.zoom > 80.0f) core *= 0.82f;
     glBegin(GL_QUADS);
-    for (const auto& cty : w.cities) {
-      auto tc = kTeamColors[std::min<size_t>(cty.team + 1, 3)];
-      glColor3f(tc[0], tc[1], tc[2]);
-      float s = cty.capital ? 1.2f : 0.8f;
-      glVertex2f(cty.pos.x - s, cty.pos.y - s);
-      glVertex2f(cty.pos.x + s, cty.pos.y - s);
-      glVertex2f(cty.pos.x + s, cty.pos.y + s);
-      glVertex2f(cty.pos.x - s, cty.pos.y + s);
-    }
+    glColor3f(col[0], col[1], col[2]);
+    glVertex2f(cty.pos.x - core, cty.pos.y - core * 0.9f);
+    glVertex2f(cty.pos.x + core, cty.pos.y - core * 0.9f);
+    glVertex2f(cty.pos.x + core, cty.pos.y + core * 0.9f);
+    glVertex2f(cty.pos.x - core, cty.pos.y + core * 0.9f);
+    glEnd();
+
+    glBegin(GL_TRIANGLES);
+    auto lm = cty.capital ? std::array<float,3>{1.0f, 0.96f, 0.65f} : std::array<float,3>{0.9f, 0.9f, 0.9f};
+    glColor3f(lm[0], lm[1], lm[2]);
+    float h = cty.capital ? 0.95f : 0.7f;
+    glVertex2f(cty.pos.x, cty.pos.y + h);
+    glVertex2f(cty.pos.x - h * 0.55f, cty.pos.y + 0.15f);
+    glVertex2f(cty.pos.x + h * 0.55f, cty.pos.y + 0.15f);
+    glEnd();
+
+    if (cty.capital || cty.level >= 4) draw_ring(cty.pos, core + 0.42f, 0.09f, {0.95f, 0.88f, 0.3f});
+  }
+
+  if (gEntityPresentationDebug) {
+    glLineWidth(1.0f);
+    glColor3f(0.95f, 0.95f, 0.95f);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(1.2f, 1.2f);
+    glVertex2f(7.2f, 1.2f);
+    glVertex2f(7.2f, 5.6f);
+    glVertex2f(1.2f, 5.6f);
     glEnd();
   }
 
   if (gEditorPreview.enabled) {
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     float r = gEditorPreview.r;
@@ -819,6 +934,9 @@ void toggle_border_overlay() { gOverlay.showBorders = !gOverlay.showBorders; }
 void toggle_fog_overlay() { gOverlay.showFog = !gOverlay.showFog; }
 void toggle_terrain_material_overlay() { gOverlay.showTerrainMaterialOverlay = !gOverlay.showTerrainMaterialOverlay; }
 void toggle_water_overlay() { gOverlay.showWaterOverlay = !gOverlay.showWaterOverlay; }
+void set_entity_presentation_debug(bool enabled) { gEntityPresentationDebug = enabled; }
+bool entity_presentation_debug() { return gEntityPresentationDebug; }
+const EntityPresentationCounters& entity_presentation_counters() { return gEntityCounters; }
 double last_draw_ms() { return gLastDrawMs; }
 
 void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }

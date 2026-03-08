@@ -1,6 +1,7 @@
 #include "engine/debug/debug_panels.h"
 #include "engine/ui/ui_theme.h"
 #include "engine/render/terrain_materials.h"
+#include "engine/render/renderer.h"
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -25,6 +26,7 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Checkbox("AI state", &state.aiState);
   ImGui::Checkbox("terrain material overlay", &state.terrainMaterialOverlay);
   ImGui::Checkbox("water feature overlay", &state.waterOverlay);
+  ImGui::Checkbox("entity presentation debug", &state.entityPresentationDebug);
   ImGui::Text("Units: %zu | Buildings: %zu | Operations: %zu", world.units.size(), world.buildings.size(), world.operations.size());
   ImGui::Text("Theaters: %zu | Objectives: %zu | ArmyGroups: %zu | NavalTF: %zu | AirWings: %zu",
               world.theaterCommands.size(), world.operationalObjectives.size(), world.armyGroups.size(), world.navalTaskForces.size(), world.airWings.size());
@@ -33,6 +35,15 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   const auto& terrainCounters = dom::render::terrain_presentation_counters();
   ImGui::Text("TERRAIN_MATERIAL_RESOLVES=%llu WATER_FEATURE_RESOLVES=%llu", (unsigned long long)terrainCounters.terrainMaterialResolves, (unsigned long long)terrainCounters.waterFeatureResolves);
   ImGui::Text("FOREST_CLUSTER_COUNT=%llu MOUNTAIN_FEATURE_COUNT=%llu FALLBACKS=%llu", (unsigned long long)terrainCounters.forestClusterCount, (unsigned long long)terrainCounters.mountainFeatureCount, (unsigned long long)terrainCounters.presentationFallbackCount);
+  const auto& entityCounters = dom::render::entity_presentation_counters();
+  ImGui::Text("UNIT_PRESENTATION_RESOLVES=%llu BUILDING_PRESENTATION_RESOLVES=%llu CITY_PRESENTATION_RESOLVES=%llu",
+              (unsigned long long)entityCounters.unitPresentationResolves,
+              (unsigned long long)entityCounters.buildingPresentationResolves,
+              (unsigned long long)entityCounters.cityPresentationResolves);
+  ImGui::Text("GUARDIAN_PRESENTATION_RESOLVES=%llu ENTITY_PRESENTATION_FALLBACKS=%llu FAR_LOD_CLUSTER_COUNT=%llu",
+              (unsigned long long)entityCounters.guardianPresentationResolves,
+              (unsigned long long)entityCounters.entityPresentationFallbacks,
+              (unsigned long long)entityCounters.farLodClusterCount);
   ImGui::End();
 
   if (!ImGui::Begin("Perf Graphs")) { ImGui::End(); return; }

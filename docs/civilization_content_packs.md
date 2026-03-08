@@ -57,3 +57,15 @@ The lookup is content-only and does not alter authoritative gameplay state.
 - Civ accent tinting in HUD/panels is derived from civilization runtime bias values and is presentation-only.
 - Content icon/portrait IDs shown in polished panels still resolve via deterministic content lookup; missing assets use the same fallback IDs.
 - Unique content markers are surfaced in player-facing context cards without changing authoritative unit/building definitions.
+
+
+## Entity rendering resolution order
+
+Unit/building presentation for map entities resolves deterministically in this order:
+1. Gameplay definition id
+2. Civilization-specific mapping
+3. Theme mapping
+4. Category placeholder
+5. Fallback icon/silhouette id
+
+Fallbacks are non-fatal and reported through debug counters.

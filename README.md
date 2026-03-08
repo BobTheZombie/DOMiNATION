@@ -451,3 +451,16 @@ Determinism validation commands:
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+
+## World Entity Rendering Pass (v1)
+
+The renderer now resolves deterministic first-pass world entities for units, cities, buildings, and revealed guardian sites. Presentation resolves from authoritative state (team/civ/type/definition), applies civ/theme tints, and falls back to category placeholders without touching simulation authority or serialization.
+
+Determinism smoke commands for this pass:
+- `./build/rts --headless --smoke --ticks 400 --dump-hash`
+- `./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 800 --dump-hash`
+- `./build/rts --headless --scenario scenarios/theater_operations_test.json --smoke --ticks 1200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/world_events_test.json --smoke --ticks 1200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mythic_guardians_multi_test.json --smoke --ticks 1600 --dump-hash`
+
