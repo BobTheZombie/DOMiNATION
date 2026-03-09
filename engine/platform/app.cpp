@@ -1480,7 +1480,12 @@ int run_headless(const CliOptions& o) {
   uint32_t firstRailHubTick = 0;
   uint32_t firstStrategicCapabilityTick = 0;
   uint32_t firstStrategicLaunchTick = 0;
+  uint32_t firstArtilleryTick = 0;
+  uint32_t firstArmorTick = 0;
+  uint32_t firstAirUnitTick = 0;
   std::array<uint32_t, 5> phaseTicks{};
+  std::array<uint32_t, static_cast<size_t>(dom::sim::UnitRole::Count)> casualtyByRole{};
+  std::vector<std::pair<uint32_t, dom::sim::UnitRole>> aliveRoleSnapshot;
   std::ofstream perfLog;
   if (o.perf && !o.perfLogFile.empty()) { perfLog.open(o.perfLogFile); perfLog << "tick,sim_ms,nav_ms,combat_ms,ai_ms,render_ms,entity_count,unit_count,building_count,threads,job_count,chunk_count,movement_tasks,fog_tasks,territory_tasks,nav_requests,nav_completions,nav_stale_drops,event_count,road_count,active_trade_routes,rail_node_count,rail_edge_count,active_rail_networks,active_trains,active_supply_trains,active_freight_trains,rail_throughput,disrupted_rail_routes,supplied_units,low_supply_units,out_of_supply_units,operation_count,world_tension,alliance_count,war_count,active_espionage_ops,posture_changes,diplomacy_events,naval_unit_count,transport_count,embarked_unit_count,active_naval_operations,coastal_targets,naval_combat_events,air_unit_count,detector_count,radar_reveals,strategic_strikes,interceptions,strategic_stockpile_total,strategic_ready_total,strategic_preparing_total,strategic_warnings,strategic_retaliations,second_strike_ready_count,deterrence_posture_changes,active_denial_zones,mountain_region_count,mountain_chain_count,river_count,lake_count,start_candidate_count,mythic_candidate_count,surface_deposit_count,deep_deposit_count,active_mine_shafts,active_tunnels,underground_depots,underground_yield,guardian_site_count,guardians_discovered,guardians_spawned,guardians_joined,guardians_killed,hostile_guardian_events,allied_guardian_events,campaign_mission_count,campaign_flags_set,campaign_resources_count,campaign_branches_taken,factory_count,active_factories,blocked_factories,steel_output,fuel_output,munitions_output,machine_parts_output,electronics_output,industrial_throughput,unique_units_produced,unique_buildings_constructed,civ_doctrine_switches,civ_industry_output,civ_logistics_bonus_usage,civ_operation_count,civ_content_resolution_fallbacks,rome_content_usage,china_content_usage,europe_content_usage,middleeast_content_usage,active_bloc_count,bloc_membership_changes,bloc_formations,bloc_dissolutions,bloc_rivalries,ideology_alignment_shifts,bloc_trade_bonus_usage,bloc_operation_coordination_count\n"; }
   while (world.tick < stopTick) {
@@ -1508,6 +1513,18 @@ int run_headless(const CliOptions& o) {
     dom::sim::tick_world(world, dom::core::kSimDeltaSeconds);
     const auto flowPhase = dom::sim::compute_match_flow_phase(world);
     if (phaseTicks[static_cast<size_t>(flowPhase)] == 0) phaseTicks[static_cast<size_t>(flowPhase)] = world.tick;
+    std::vector<std::pair<uint32_t, dom::sim::UnitRole>> currentAlive;
+    currentAlive.reserve(world.units.size());
+    for (const auto& u : world.units) if (u.hp > 0.0f) currentAlive.push_back({u.id, u.role});
+    for (const auto& prior : aliveRoleSnapshot) {
+      bool stillAlive = false;
+      for (const auto& now : currentAlive) if (now.first == prior.first) { stillAlive = true; break; }
+      if (!stillAlive) {
+        const size_t idx = static_cast<size_t>(prior.second);
+        if (idx < casualtyByRole.size()) casualtyByRole[idx] += 1;
+      }
+    }
+    aliveRoleSnapshot = std::move(currentAlive);
     if (firstCombatTick == 0 && world.combatEngagementCount > 0) firstCombatTick = world.tick;
     if (firstExpansionTick == 0) {
       for (const auto& c : world.cities) {
@@ -1527,6 +1544,15 @@ int run_headless(const CliOptions& o) {
       for (const auto& d : world.strategicDeterrence) if (d.strategicCapabilityEnabled || d.strategicReadyCount > 0 || d.strategicStockpile > 0) { firstStrategicCapabilityTick = world.tick; break; }
     }
     if (firstStrategicLaunchTick == 0 && world.strategicStrikeEvents > 0) firstStrategicLaunchTick = world.tick;
+    if (firstArtilleryTick == 0) {
+      for (const auto& u : world.units) if (u.hp > 0.0f && (u.type == dom::sim::UnitType::Siege || u.type == dom::sim::UnitType::BombardShip)) { firstArtilleryTick = world.tick; break; }
+    }
+    if (firstArmorTick == 0) {
+      for (const auto& u : world.units) if (u.hp > 0.0f && u.type == dom::sim::UnitType::Cavalry) { firstArmorTick = world.tick; break; }
+    }
+    if (firstAirUnitTick == 0) {
+      for (const auto& u : world.units) if (u.hp > 0.0f && (u.type == dom::sim::UnitType::Fighter || u.type == dom::sim::UnitType::Interceptor || u.type == dom::sim::UnitType::Bomber || u.type == dom::sim::UnitType::StrategicBomber || u.type == dom::sim::UnitType::ReconDrone || u.type == dom::sim::UnitType::StrikeDrone)) { firstAirUnitTick = world.tick; break; }
+    }
     const auto simEnd = std::chrono::steady_clock::now();
     const double simMs = std::chrono::duration<double, std::milli>(simEnd - simStart).count();
     const auto profile = dom::sim::last_tick_profile();
@@ -1702,10 +1728,25 @@ int run_headless(const CliOptions& o) {
   if (!o.hashOnly) std::cout << "DIPLOMACY_RESULT tension=" << world.worldTension << " alliances=" << allianceCount << " wars=" << warCount << " espionageOps=" << activeEspionage << " postureChanges=" << world.postureChangeCount << " events=" << world.diplomacyEventCount << "\n";
   if (!o.hashOnly) std::cout << "WORLD_EVENT_RESULT active=" << world.activeWorldEventCount << " resolved=" << world.resolvedWorldEventCount << " triggered=" << world.triggeredWorldEventCount << "\n";
   if (!o.hashOnly) {
+    std::array<uint32_t, 5> roleMix{};
+    for (const auto& u : world.units) {
+      if (u.hp <= 0.0f) continue;
+      const size_t bucket = (u.role == dom::sim::UnitRole::Infantry) ? 0 : (u.role == dom::sim::UnitRole::Ranged) ? 1 : (u.role == dom::sim::UnitRole::Cavalry) ? 2 : (u.role == dom::sim::UnitRole::Siege) ? 3 : 4;
+      if (bucket < roleMix.size()) roleMix[bucket] += 1;
+    }
+    std::array<uint32_t, 5> casualtyMix{};
+    casualtyMix[0] = casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Infantry)];
+    casualtyMix[1] = casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Ranged)];
+    casualtyMix[2] = casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Cavalry)];
+    casualtyMix[3] = casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Siege)];
+    casualtyMix[4] = casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Worker)] + casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Naval)] + casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Transport)] + casualtyByRole[static_cast<size_t>(dom::sim::UnitRole::Building)];
     std::cout << "MATCH_PACING_TELEMETRY"
               << " firstExpansionTick=" << firstExpansionTick
               << " firstCombatTick=" << firstCombatTick
               << " firstFactoryTick=" << firstFactoryTick
+              << " firstArtilleryTick=" << firstArtilleryTick
+              << " firstArmorTick=" << firstArmorTick
+              << " firstAirUnitTick=" << firstAirUnitTick
               << " firstRailHubTick=" << firstRailHubTick
               << " firstStrategicCapabilityTick=" << firstStrategicCapabilityTick
               << " firstStrategicLaunchTick=" << firstStrategicLaunchTick
@@ -1723,6 +1764,17 @@ int run_headless(const CliOptions& o) {
               << " strategicStrikes=" << world.strategicStrikeEvents
               << " activeWorldEvents=" << world.activeWorldEventCount
               << " resolvedWorldEvents=" << world.resolvedWorldEventCount
+              << " roleMixInfantry=" << roleMix[0]
+              << " roleMixRanged=" << roleMix[1]
+              << " roleMixCavalry=" << roleMix[2]
+              << " roleMixSiege=" << roleMix[3]
+              << " roleMixSupport=" << roleMix[4]
+              << " casualtyMixInfantry=" << casualtyMix[0]
+              << " casualtyMixRanged=" << casualtyMix[1]
+              << " casualtyMixCavalry=" << casualtyMix[2]
+              << " casualtyMixSiege=" << casualtyMix[3]
+              << " casualtyMixSupport=" << casualtyMix[4]
+              << " dominantCompositionByPhase=" << roleMix[0] << ":" << roleMix[1] << ":" << roleMix[2] << ":" << roleMix[3] << ":" << roleMix[4]
               << " matchCondition=" << victory_to_string(world.match.condition)
               << "\n";
   }

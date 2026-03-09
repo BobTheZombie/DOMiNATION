@@ -2,7 +2,7 @@
   {
     "civilization_id": "rome",
     "display_name": "Rome",
-    "short_description": "Disciplined infantry empire with elite roads and offensive theater posture.",
+    "short_description": "Disciplined infantry core with fortified territorial control and reliable line armies.",
     "theme_id": "rome",
     "economyBias": 0.98,
     "militaryBias": 1.2,
@@ -59,10 +59,10 @@
       "workerTargetMult": 0.92,
       "expansionTiming": 0.86,
       "researchPriority": 0.9,
-      "reconPriority": 0.95,
+      "reconPriority": 0.9,
       "navalPriority": 0.95,
-      "airPriority": 0.9,
-      "strategicPriority": 1.06
+      "airPriority": 0.88,
+      "strategicPriority": 1.02
     },
     "unitBonuses": {
       "attackMult": {
@@ -124,7 +124,7 @@
   {
     "civilization_id": "china",
     "display_name": "China",
-    "short_description": "High-scale agrarian and scholarly state with steady industrial expansion.",
+    "short_description": "Scalable combined-arms empire with strong development-backed force growth.",
     "theme_id": "china",
     "economyBias": 1.2,
     "militaryBias": 0.96,
@@ -178,12 +178,12 @@
       ]
     },
     "aiDoctrineModifiers": {
-      "workerTargetMult": 1.26,
+      "workerTargetMult": 1.3,
       "expansionTiming": 1.08,
-      "researchPriority": 1.24,
+      "researchPriority": 1.25,
       "reconPriority": 1.1,
       "navalPriority": 1.0,
-      "airPriority": 1.0,
+      "airPriority": 1.04,
       "strategicPriority": 0.98
     },
     "unitBonuses": {
@@ -342,7 +342,7 @@
   {
     "civilization_id": "russia",
     "display_name": "Russia",
-    "short_description": "Attritional land power with winter resilience and rail depth.",
+    "short_description": "Heavy land warfare doctrine centered on artillery, armor pressure, and attrition.",
     "theme_id": "russia",
     "campaign_tags": [
       "winter_front",
@@ -380,8 +380,9 @@
     },
     "aiDoctrineModifiers": {
       "navalPriority": 0.85,
-      "airPriority": 0.95,
-      "strategicPriority": 1.12
+      "airPriority": 0.9,
+      "strategicPriority": 1.08,
+      "reconPriority": 0.94
     },
     "unitBonuses": {
       "attackMult": {
@@ -430,7 +431,7 @@
   {
     "civilization_id": "usa",
     "display_name": "USA",
-    "short_description": "Industrial superpower with global logistics and late-game air projection.",
+    "short_description": "Logistics-led force projection with strong late-game air and mobility power.",
     "theme_id": "usa",
     "campaign_tags": [
       "expeditionary",
@@ -469,9 +470,9 @@
       }
     },
     "aiDoctrineModifiers": {
-      "navalPriority": 1.16,
-      "airPriority": 1.26,
-      "strategicPriority": 1.24
+      "navalPriority": 1.08,
+      "airPriority": 1.22,
+      "strategicPriority": 1.18
     },
     "unitBonuses": {
       "attackMult": {
@@ -518,7 +519,7 @@
   {
     "civilization_id": "japan",
     "display_name": "Japan",
-    "short_description": "Disciplined island power with elite maritime precision forces.",
+    "short_description": "Precision maritime military with disciplined elite operational timing.",
     "theme_id": "japan",
     "campaign_tags": [
       "island_power",
@@ -556,8 +557,9 @@
     },
     "aiDoctrineModifiers": {
       "navalPriority": 1.22,
-      "airPriority": 1.1,
-      "reconPriority": 1.12
+      "airPriority": 1.08,
+      "reconPriority": 1.12,
+      "strategicPriority": 1.02
     },
     "unitBonuses": {
       "attackMult": {
@@ -777,7 +779,7 @@
   {
     "civilization_id": "egypt",
     "display_name": "Egypt",
-    "short_description": "River/desert logistics civilization focused on corridor control and fortification.",
+    "short_description": "Corridor defense and desert mobility specialist with strong regional control tools.",
     "theme_id": "egypt",
     "campaign_tags": [
       "river_valley",
@@ -816,7 +818,8 @@
     "aiDoctrineModifiers": {
       "workerTargetMult": 1.14,
       "navalPriority": 0.92,
-      "strategicPriority": 1.0
+      "strategicPriority": 1.0,
+      "reconPriority": 1.08
     },
     "unitBonuses": {
       "attackMult": {
@@ -864,7 +867,7 @@
   {
     "civilization_id": "tartaria",
     "display_name": "Tartaria (Fictional)",
-    "short_description": "Fictional/alt-history civilization with monumental lost-tech infrastructure synergy.",
+    "short_description": "Alt-history infrastructure-synergy military with distinctive elite pressure windows.",
     "theme_id": "tartaria",
     "campaign_tags": [
       "fictional_alt_history",
@@ -908,8 +911,8 @@
     },
     "aiDoctrineModifiers": {
       "researchPriority": 1.18,
-      "strategicPriority": 1.24,
-      "reconPriority": 1.12
+      "strategicPriority": 1.12,
+      "reconPriority": 1.14
     },
     "unitBonuses": {
       "attackMult": {

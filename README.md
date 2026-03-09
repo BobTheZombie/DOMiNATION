@@ -584,3 +584,7 @@ These are presentation-only overlays derived from authoritative world state and 
 
 Debug panel (`Debug Visualization`) includes a **Strategic Visualization** section with counters:
 `MOVEMENT_PATH_RESOLVES`, `SUPPLY_FLOW_RESOLVES`, `RAIL_VISUAL_EVENTS`, `FRONTLINE_ZONE_UPDATES`, `THEATER_VISUAL_RESOLVES`, `VISUAL_FALLBACK_COUNT`, plus optional rail/logistics detail counters.
+
+## Military roster tuning
+
+This branch includes a deterministic roster pass focused on role taxonomy, counter readability, phase-aligned progression, and civ archetype emphasis. See `docs/unit_roster_design.md` and `docs/combat_roles_and_counters.md` for the design summary.

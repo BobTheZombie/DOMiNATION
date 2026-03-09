@@ -707,6 +707,8 @@ BuildingType parse_building(const std::string& v) {
   return BuildingType::House;
 }
 
+
+
 const char* unit_name(UnitType t) {
   switch (t) {
     case UnitType::Worker: return "Worker";
@@ -1484,7 +1486,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Infantry)].role = UnitRole::Infantry;
   gUnitDefs[uidx(UnitType::Infantry)].attackType = AttackType::Melee;
   gUnitDefs[uidx(UnitType::Infantry)].preferredTargetRole = UnitRole::Ranged;
-  gUnitDefs[uidx(UnitType::Infantry)].vsRoleMultiplierPermille = {1000, 1300, 900, 900, 1000, 1000, 1000, 1000};
+  gUnitDefs[uidx(UnitType::Infantry)].vsRoleMultiplierPermille = {1050, 1200, 900, 850, 1000, 1000, 1000, 1000};
 
   gUnitDefs[uidx(UnitType::Archer)].trainTime = 13.0f;
   gUnitDefs[uidx(UnitType::Archer)].cost[ridx(Resource::Food)] = 65;
@@ -1492,8 +1494,8 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Archer)].popCost = 1;
   gUnitDefs[uidx(UnitType::Archer)].role = UnitRole::Ranged;
   gUnitDefs[uidx(UnitType::Archer)].attackType = AttackType::Ranged;
-  gUnitDefs[uidx(UnitType::Archer)].preferredTargetRole = UnitRole::Cavalry;
-  gUnitDefs[uidx(UnitType::Archer)].vsRoleMultiplierPermille = {1000, 900, 1300, 1000, 1000, 900, 1000, 1000};
+  gUnitDefs[uidx(UnitType::Archer)].preferredTargetRole = UnitRole::Infantry;
+  gUnitDefs[uidx(UnitType::Archer)].vsRoleMultiplierPermille = {1100, 1000, 800, 1050, 1000, 900, 950, 900};
   gUnitDefs[uidx(UnitType::Archer)].attackCooldownTicks = 16;
 
   gUnitDefs[uidx(UnitType::Cavalry)].trainTime = 16.0f;
@@ -1502,8 +1504,8 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Cavalry)].popCost = 2;
   gUnitDefs[uidx(UnitType::Cavalry)].role = UnitRole::Cavalry;
   gUnitDefs[uidx(UnitType::Cavalry)].attackType = AttackType::Melee;
-  gUnitDefs[uidx(UnitType::Cavalry)].preferredTargetRole = UnitRole::Siege;
-  gUnitDefs[uidx(UnitType::Cavalry)].vsRoleMultiplierPermille = {1000, 1000, 900, 1300, 1100, 900, 1000, 1000};
+  gUnitDefs[uidx(UnitType::Cavalry)].preferredTargetRole = UnitRole::Ranged;
+  gUnitDefs[uidx(UnitType::Cavalry)].vsRoleMultiplierPermille = {950, 1450, 950, 1400, 1200, 900, 1000, 1000};
 
   gUnitDefs[uidx(UnitType::Siege)].trainTime = 18.0f;
   gUnitDefs[uidx(UnitType::Siege)].cost[ridx(Resource::Wood)] = 90;
@@ -1512,7 +1514,7 @@ void set_default_defs() {
   gUnitDefs[uidx(UnitType::Siege)].role = UnitRole::Siege;
   gUnitDefs[uidx(UnitType::Siege)].attackType = AttackType::Ranged;
   gUnitDefs[uidx(UnitType::Siege)].preferredTargetRole = UnitRole::Building;
-  gUnitDefs[uidx(UnitType::Siege)].vsRoleMultiplierPermille = {900, 900, 900, 1000, 900, 1800, 900, 900};
+  gUnitDefs[uidx(UnitType::Siege)].vsRoleMultiplierPermille = {800, 900, 900, 1050, 900, 1850, 850, 900};
   gUnitDefs[uidx(UnitType::Siege)].attackCooldownTicks = 22;
 
   gUnitDefs[uidx(UnitType::TransportShip)].trainTime = 16.0f;
@@ -2375,6 +2377,16 @@ float unit_detection_radius(const Unit& u) {
   return 0.0f;
 }
 
+
+
+uint16_t unit_type_counter_multiplier_permille(UnitType attacker, UnitType target) {
+  if (attacker == UnitType::Interceptor && (target == UnitType::Bomber || target == UnitType::StrategicBomber || target == UnitType::ReconDrone || target == UnitType::StrikeDrone)) return 1450;
+  if (attacker == UnitType::Fighter && (target == UnitType::Bomber || target == UnitType::StrategicBomber || target == UnitType::ReconDrone || target == UnitType::StrikeDrone)) return 1250;
+  if ((attacker == UnitType::Bomber || attacker == UnitType::StrategicBomber) && (target == UnitType::HeavyWarship || target == UnitType::Siege)) return 1200;
+  if (attacker == UnitType::LightWarship && (target == UnitType::TransportShip || target == UnitType::BombardShip)) return 1300;
+  if (attacker == UnitType::Cavalry && (target == UnitType::Archer || target == UnitType::Siege || target == UnitType::ReconDrone || target == UnitType::StrikeDrone)) return 1400;
+  return 1000;
+}
 
 bool unit_is_air(UnitType t) {
   return t == UnitType::Fighter || t == UnitType::Interceptor || t == UnitType::Bomber || t == UnitType::StrategicBomber || t == UnitType::ReconDrone || t == UnitType::StrikeDrone || t == UnitType::TacticalMissile || t == UnitType::StrategicMissile;
@@ -5860,6 +5872,7 @@ void tick_world(World& w, float dt) {
     if (u.type != UnitType::Worker && !u.embarked && u.attackCooldownTicks == 0) {
       if (locked && dist(u.pos, locked->pos) <= u.range + 0.2f) {
         int mult = (int)u.vsRoleMultiplierPermille[role_idx(locked->role)];
+        mult = (mult * static_cast<int>(unit_type_counter_multiplier_permille(u.type, locked->type))) / 1000;
         float damage = u.attack * (mult / 1000.0f);
         locked->hp -= damage;
         w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
@@ -6261,6 +6274,7 @@ bool enqueue_train_unit(World& world, uint16_t team, uint32_t buildingId, UnitTy
   if (it->type == BuildingType::Airbase && !(type == UnitType::Fighter || type == UnitType::Interceptor || type == UnitType::Bomber || type == UnitType::StrategicBomber || type == UnitType::ReconDrone || type == UnitType::StrikeDrone)) return false;
   if (it->type == BuildingType::MissileSilo && !(type == UnitType::TacticalMissile || type == UnitType::StrategicMissile)) return false;
   if (it->type != BuildingType::Port && it->type != BuildingType::Airbase && it->type != BuildingType::MissileSilo && (unit_is_naval(type) || unit_is_air(type))) return false;
+  if (compute_match_flow_phase(world) < unit_phase_requirement(type)) return false;
   auto& p = world.players[team];
   if (p.popUsed + (int)it->queue.size() + gUnitDefs[uidx(type)].popCost > p.popCap) return false;
   auto cost = gUnitDefs[uidx(type)].cost;
