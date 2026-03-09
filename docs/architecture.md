@@ -409,3 +409,7 @@ This keeps authoritative simulation hashes unchanged while improving strategic r
 - Phase transition state is stored in world state (`matchFlowPhase`, `matchFlowPhaseTick`) and included in authoritative hashing.
 - Headless mode emits pacing telemetry markers to support repeatable balance analysis without renderer/UI coupling.
 - Score pressure includes additional weighting for industrial depth and strategic readiness so non-conquest paths remain connected to military-economic escalation.
+
+## Roster taxonomy and counters
+
+The simulation exposes deterministic role taxonomy metadata (`unit_role_label`, `unit_role_purpose`, `unit_counter_hint`) consumed by UI and AI. Unit production is phase-gated via `unit_phase_requirement` so match-flow progression controls roster unlock timing.

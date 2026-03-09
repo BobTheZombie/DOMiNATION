@@ -192,17 +192,22 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     float archBias = civ.scienceBias;
     float cavBias = civ.aggression;
     float siegeBias = civ.defense;
-    if (civ.id == "rome") { infBias *= 1.18f; siegeBias *= 1.08f; }
-    else if (civ.id == "china") { archBias *= 1.16f; infBias *= 0.96f; }
-    else if (civ.id == "usa") { infBias *= 0.95f; siegeBias *= 1.08f; }
-    else if (civ.id == "russia") { infBias *= 1.12f; cavBias *= 0.9f; siegeBias *= 1.15f; }
-    else if (civ.id == "japan") { cavBias *= 1.1f; archBias *= 1.1f; }
-    else if (civ.id == "egypt") { siegeBias *= 1.14f; infBias *= 1.05f; }
-    else if (civ.id == "tartaria") { archBias *= 1.12f; siegeBias *= 1.12f; }
-    int infTarget = std::clamp((int)std::round(5.0f * infBias), 3, 16);
-    int archTarget = std::clamp((int)std::round(2.0f * archBias + 1.0f), 1, 7);
-    int cavTarget = std::clamp((int)std::round(2.0f * cavBias + 1.0f), 1, 7);
-    int siegeTarget = std::clamp((int)std::round(2.0f * siegeBias), 1, 5);
+    if (civ.id == "rome") { infBias *= 1.24f; siegeBias *= 1.10f; }
+    else if (civ.id == "china") { archBias *= 1.18f; infBias *= 1.05f; }
+    else if (civ.id == "usa") { archBias *= 1.08f; cavBias *= 1.05f; }
+    else if (civ.id == "russia") { infBias *= 1.10f; siegeBias *= 1.24f; }
+    else if (civ.id == "japan") { cavBias *= 1.12f; archBias *= 1.12f; }
+    else if (civ.id == "egypt") { cavBias *= 1.15f; siegeBias *= 1.10f; }
+    else if (civ.id == "tartaria") { cavBias *= 1.16f; siegeBias *= 1.16f; }
+
+    const float earlyScale = flowPhase == dom::sim::MatchFlowPhase::EarlyExpansion ? 1.18f : 1.0f;
+    const float regionalScale = flowPhase >= dom::sim::MatchFlowPhase::RegionalContest ? 1.0f : 0.35f;
+    const float industrialScale = flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.55f;
+
+    int infTarget = std::clamp((int)std::round(5.0f * infBias * earlyScale), 4, 18);
+    int archTarget = std::clamp((int)std::round((2.0f * archBias + 1.0f) * regionalScale), 1, 8);
+    int cavTarget = std::clamp((int)std::round((2.0f * cavBias + 1.0f) * regionalScale), 1, 8);
+    int siegeTarget = std::clamp((int)std::round((2.0f * siegeBias) * industrialScale), 1, 6);
     if (count_units(world, team, dom::sim::UnitType::Infantry) < infTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Infantry);
     if (count_units(world, team, dom::sim::UnitType::Archer) < archTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Archer);
     if (count_units(world, team, dom::sim::UnitType::Cavalry) < cavTarget) dom::sim::enqueue_train_unit(world, team, barracks, dom::sim::UnitType::Cavalry);
@@ -211,11 +216,13 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
 
   uint32_t airbase = first_building(world, team, dom::sim::BuildingType::Airbase);
   if (airbase) {
-    int fighterTarget = std::clamp((int)std::round(2.0f * civ.militaryBias + (world.worldTension > 40.0f ? 2.0f : 0.0f)), 1, 8);
-    int bomberTarget = std::clamp((int)std::round(1.5f * civ.militaryBias + (civ.aggression > 1.1f ? 1.0f : 0.0f)), 1, 5);
+    const float crisisBoost = flowPhase >= dom::sim::MatchFlowPhase::StrategicCrisis ? 1.25f : 1.0f;
+    int fighterTarget = std::clamp((int)std::round((2.0f * civ.militaryBias + (world.worldTension > 40.0f ? 2.0f : 0.0f)) * crisisBoost), 1, 10);
+    int interceptorTarget = std::clamp((int)std::round(1.0f * civ.defense + (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.0f)), 1, 6);
+    int bomberTarget = std::clamp((int)std::round((1.5f * civ.militaryBias + (civ.aggression > 1.1f ? 1.0f : 0.0f)) * (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.4f)), 1, 6);
     int reconTarget = std::clamp((int)std::round(1.0f + 2.0f * civ.scienceBias), 1, 4);
     if (count_units(world, team, dom::sim::UnitType::Fighter) < fighterTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Fighter);
-    if (count_units(world, team, dom::sim::UnitType::Interceptor) < fighterTarget / 2) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Interceptor);
+    if (count_units(world, team, dom::sim::UnitType::Interceptor) < interceptorTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Interceptor);
     if (count_units(world, team, dom::sim::UnitType::Bomber) < bomberTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Bomber);
     if (count_units(world, team, dom::sim::UnitType::ReconDrone) < reconTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::ReconDrone);
   }
@@ -232,8 +239,10 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   if (port && navalRelevant) {
     int tTarget = std::max(1, (int)std::round(civ.economyBias));
     int lTarget = std::max(1, (int)std::round(civ.militaryBias));
-    int hTarget = std::max(1, (int)std::round(civ.aggression));
-    int bTarget = std::max(1, (int)std::round(civ.defense));
+    int hTarget = std::max(1, (int)std::round(civ.aggression * (flowPhase >= dom::sim::MatchFlowPhase::RegionalContest ? 1.0f : 0.5f)));
+    int bTarget = std::max(1, (int)std::round(civ.defense * (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.45f)));
+    if (civ.id == "japan") { lTarget += 1; hTarget += 1; }
+    if (civ.id == "usa") { tTarget += 1; lTarget += 1; }
     if (count_units(world, team, dom::sim::UnitType::TransportShip) < tTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::TransportShip);
     if (count_units(world, team, dom::sim::UnitType::LightWarship) < lTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::LightWarship);
     if (count_units(world, team, dom::sim::UnitType::HeavyWarship) < hTarget) dom::sim::enqueue_train_unit(world, team, port, dom::sim::UnitType::HeavyWarship);

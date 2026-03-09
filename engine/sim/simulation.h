@@ -748,6 +748,101 @@ const char* posture_name(StrategicPosture posture);
 const char* match_flow_phase_name(MatchFlowPhase phase);
 MatchFlowPhase compute_match_flow_phase(const World& world);
 
+inline const char* unit_role_label(UnitType type) {
+  switch (type) {
+    case UnitType::Worker: return "Worker / Engineer";
+    case UnitType::Infantry: return "Line Infantry";
+    case UnitType::Archer: return "Ranged Infantry";
+    case UnitType::Cavalry: return "Fast Raider / Anti-Armor";
+    case UnitType::Siege: return "Artillery / Siege";
+    case UnitType::TransportShip: return "Transport";
+    case UnitType::LightWarship: return "Naval Escort";
+    case UnitType::HeavyWarship: return "Capital Ship";
+    case UnitType::BombardShip: return "Naval Siege";
+    case UnitType::Fighter: return "Fighter";
+    case UnitType::Interceptor: return "Anti-Air Interceptor";
+    case UnitType::Bomber: return "Strike Bomber";
+    case UnitType::StrategicBomber: return "Strategic Support Bomber";
+    case UnitType::ReconDrone: return "Recon / Precision Support";
+    case UnitType::StrikeDrone: return "Precision Strike Support";
+    case UnitType::TacticalMissile:
+    case UnitType::StrategicMissile: return "Strategic Support Missile";
+    case UnitType::Count: break;
+  }
+  return "Line Infantry";
+}
+
+inline const char* unit_role_purpose(UnitType type) {
+  switch (type) {
+    case UnitType::Worker: return "Economy, construction, and emergency repairs.";
+    case UnitType::Infantry: return "Hold territory and anchor early combined-arms lines.";
+    case UnitType::Archer: return "Apply safe ranged pressure from behind a front line.";
+    case UnitType::Cavalry: return "Flank, raid logistics, and punish exposed backlines.";
+    case UnitType::Siege: return "Break static defenses and dense concentrations.";
+    case UnitType::TransportShip: return "Project armies across water and support logistics.";
+    case UnitType::LightWarship: return "Escort fleets and hunt hostile transports/support.";
+    case UnitType::HeavyWarship: return "Win fleet line combat and absorb punishment.";
+    case UnitType::BombardShip: return "Pressure coastlines and static naval positions.";
+    case UnitType::Fighter: return "Contest airspace and protect bombers and fleets.";
+    case UnitType::Interceptor: return "Hard-counter bombers, drones, and strategic aviation.";
+    case UnitType::Bomber: return "Deliver high-value strikes against land concentrations.";
+    case UnitType::StrategicBomber: return "Long-range strategic pressure in late phases.";
+    case UnitType::ReconDrone: return "Reveal threats and provide precision support spotting.";
+    case UnitType::StrikeDrone: return "Pick off priority support and damaged targets.";
+    case UnitType::TacticalMissile: return "Crisis-phase precision strike and deterrence pressure.";
+    case UnitType::StrategicMissile: return "Endgame strategic deterrence and decisive escalation.";
+    case UnitType::Count: break;
+  }
+  return "General combat role.";
+}
+
+inline const char* unit_counter_hint(UnitType type) {
+  switch (type) {
+    case UnitType::Infantry: return "Strong vs exposed ranged/support; weak vs sustained siege.";
+    case UnitType::Archer: return "Strong in backline duels; vulnerable to raiders.";
+    case UnitType::Cavalry: return "Counters ranged/siege/support; checked by formed infantry.";
+    case UnitType::Siege: return "Counters buildings and static armies; fragile when rushed.";
+    case UnitType::LightWarship: return "Escort counter to transports and light naval threats.";
+    case UnitType::HeavyWarship: return "Dominates fleet lines; expensive and slower to field.";
+    case UnitType::BombardShip: return "Sieges coasts; needs escort versus fleet hunters.";
+    case UnitType::Interceptor: return "Direct anti-air counter to bombers and drones.";
+    case UnitType::Fighter: return "General anti-air and air superiority coverage.";
+    case UnitType::Bomber: return "Punishes concentrations; vulnerable to interceptors and AA.";
+    case UnitType::ReconDrone: return "Recon utility; avoid direct anti-air fights.";
+    case UnitType::StrikeDrone: return "Precision support; vulnerable to anti-air screens.";
+    case UnitType::TransportShip: return "Avoid escorts and fleet combat; move under protection.";
+    default: return "Use with combined arms for reliable outcomes.";
+  }
+}
+
+inline MatchFlowPhase unit_phase_requirement(UnitType type) {
+  switch (type) {
+    case UnitType::Worker:
+    case UnitType::Infantry:
+    case UnitType::Archer:
+    case UnitType::Cavalry:
+    case UnitType::TransportShip:
+    case UnitType::LightWarship:
+    case UnitType::ReconDrone:
+      return MatchFlowPhase::EarlyExpansion;
+    case UnitType::Siege:
+    case UnitType::HeavyWarship:
+    case UnitType::BombardShip:
+    case UnitType::Fighter:
+    case UnitType::Interceptor:
+      return MatchFlowPhase::RegionalContest;
+    case UnitType::Bomber:
+    case UnitType::StrikeDrone:
+    case UnitType::TacticalMissile:
+      return MatchFlowPhase::IndustrialEscalation;
+    case UnitType::StrategicBomber:
+    case UnitType::StrategicMissile:
+      return MatchFlowPhase::StrategicCrisis;
+    case UnitType::Count: break;
+  }
+  return MatchFlowPhase::EarlyExpansion;
+}
+
 uint64_t map_setup_hash(const World& world);
 uint64_t state_hash(const World& world);
 TickProfile last_tick_profile();

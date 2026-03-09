@@ -95,6 +95,9 @@ void draw_selection_summary(dom::sim::World& world, const std::vector<uint32_t>&
     if (u.id != id) continue;
     ImGui::Text("%s %s Unit #%u | Team P%u", icons::glyph_for_icon(civEmblem), civEmblem.c_str(), u.id, u.team);
     ImGui::Text("HP %.0f | Supply %s | Cargo %zu", u.hp, supply_name(u.supplyState), u.cargo.size());
+    ImGui::TextDisabled("Role: %s", dom::sim::unit_role_label(u.type));
+    ImGui::TextWrapped("Purpose: %s", dom::sim::unit_role_purpose(u.type));
+    ImGui::TextColored(theme::state_color_info(), "Counter: %s", dom::sim::unit_counter_hint(u.type));
     const auto info = dom::sim::unit_content_presentation(world, u.team, u.type, u.definitionId);
     const auto resolvedIcon = icons::resolve_icon_id(world, u.team, info.iconId, "unit", "ui_icon_unit_generic_fallback");
     ImGui::Text("%s %s | %s", icons::glyph_for_icon(resolvedIcon), info.displayName.c_str(), resolvedIcon.c_str());

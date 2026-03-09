@@ -61,7 +61,10 @@ void train_card(dom::sim::World& world, uint16_t team, uint32_t buildingId, dom:
   ImGui::PushID(static_cast<int>(type));
   ImGui::BeginChild("card", ImVec2(0.0f, 58.0f), true);
   ImGui::TextUnformatted(unit_button_label(world, team, type).c_str());
+  ImGui::TextDisabled("Role: %s", dom::sim::unit_role_label(type));
   ImGui::TextDisabled("%s", costInfo);
+  ImGui::TextWrapped("%s", dom::sim::unit_role_purpose(type));
+  ImGui::TextColored(theme::state_color_info(), "Counter: %s", dom::sim::unit_counter_hint(type));
   if (locked) {
     ImGui::TextColored(theme::state_color_warning(), "Locked: %s", lockReason);
   } else if (ImGui::Button("Queue")) {
@@ -94,6 +97,7 @@ void draw_production_menu(dom::sim::World& world, const std::vector<uint32_t>& s
   const auto bInfo = dom::sim::building_content_presentation(world, ownerTeam, building->type, building->definitionId);
   const auto bIcon = icons::resolve_icon_id(world, ownerTeam, bInfo.iconId, "building", "ui_icon_building_generic_fallback");
   ImGui::Text("%s %s Building #%u | Queue %zu", icons::glyph_for_icon(bIcon), bInfo.displayName.c_str(), building->id, building->queue.size());
+  ImGui::TextDisabled("Use role labels and counter hints to build combined-arms compositions.");
   theme::section_header("Build Cards");
 
   if (building->type == dom::sim::BuildingType::Barracks) {
