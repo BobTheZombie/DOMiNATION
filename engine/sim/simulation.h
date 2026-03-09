@@ -543,6 +543,18 @@ struct SimulationStats {
   uint32_t matchFlowPhase{0};
   uint32_t matchFlowPhaseTick{0};
   float matchFlowProgress{0.0f};
+  uint32_t aiExpansionEarlyCount{0};
+  uint32_t aiExpansionRegionalCount{0};
+  uint32_t aiExpansionIndustrialCount{0};
+  uint32_t aiExpansionCrisisCount{0};
+  uint32_t aiExpansionArmageddonCount{0};
+  uint32_t aiCounterResponseEvents{0};
+  uint32_t aiRailUsageEvents{0};
+  uint32_t aiLogisticsDisruptedFronts{0};
+  uint32_t aiIndustrialActivationCount{0};
+  uint32_t aiIndustrialActivationTick{0};
+  uint32_t aiDeterrencePostureChanges{0};
+  uint32_t aiOperationLaunches{0};
 };
 
 struct ChunkCoord {
@@ -689,6 +701,18 @@ struct World {
   uint32_t resolvedWorldEventCount{0};
   uint32_t triggeredWorldEventCount{0};
   MatchFlowPhase matchFlowPhase{MatchFlowPhase::EarlyExpansion};
+  uint32_t aiExpansionEarlyCount{0};
+  uint32_t aiExpansionRegionalCount{0};
+  uint32_t aiExpansionIndustrialCount{0};
+  uint32_t aiExpansionCrisisCount{0};
+  uint32_t aiExpansionArmageddonCount{0};
+  uint32_t aiCounterResponseEvents{0};
+  uint32_t aiRailUsageEvents{0};
+  uint32_t aiLogisticsDisruptedFronts{0};
+  uint32_t aiIndustrialActivationCount{0};
+  uint32_t aiIndustrialActivationTick{0};
+  uint32_t aiDeterrencePostureChanges{0};
+  uint32_t aiOperationLaunches{0};
   uint32_t matchFlowPhaseTick{0};
   bool territoryDirty{true}; bool fogDirty{true};
 };

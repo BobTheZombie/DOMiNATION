@@ -69,6 +69,21 @@ See:
 - `docs/match_flow.md`
 - `docs/balance_telemetry.md`
 
+
+## AI behavior smoke suite
+```bash
+./build/rts --headless --smoke --ticks 1200 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --smoke --ticks 2200 --dump-hash
+./build/rts --headless --scenario scenarios/theater_operations_test.json --smoke --ticks 2800 --dump-hash
+./build/rts --headless --scenario scenarios/industrial_economy_test.json --smoke --ticks 2600 --dump-hash
+./build/rts --headless --scenario scenarios/armageddon_test.json --smoke --ticks 3400 --dump-hash
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
+```
+
+See `docs/ai_telemetry.md` for deterministic AI counters.
+
 ## CLI flags
 - `--headless` run simulation without SDL window or GL context
 - `--smoke` enable deterministic validation checks and strict failures
