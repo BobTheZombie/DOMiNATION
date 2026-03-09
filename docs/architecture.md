@@ -72,6 +72,13 @@
 - Ranged/focus behavior is modeled through stable target lock + switching threshold to reduce thrash and overkill churn.
 
 
+
+## AI strategic behavior layer
+- `game/ai/simple_ai.cpp` uses deterministic phase-aware priorities for economy, army composition, logistics rail usage, and attack/retreat pivots.
+- Enemy composition scanning drives counter-building weights (anti-armor, anti-air, artillery/static-break, mobility response).
+- Civilization-specific pressure tuning is expressed directly in strategic mix and target selection (Rome, China, USA, Russia, Japan, Egypt, Tartaria).
+- Deterministic AI telemetry counters are authored in `World` + `SimulationStats` and included in authoritative hash (`docs/ai_telemetry.md`).
+
 ## Match flow state machine
 Simulation owns match phase transitions: `RUNNING -> ENDED -> POSTMATCH`.
 Authoritative orders are rejected outside `RUNNING`. Ended matches persist winner ID, victory condition, end tick, and tie-break flag in sim state.
