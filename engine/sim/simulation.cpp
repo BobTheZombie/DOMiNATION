@@ -2120,6 +2120,95 @@ bool region_has_active_tunnel(const World& w, uint32_t regionId, uint16_t team) 
   return false;
 }
 
+int tunnel_exit_cell_for_region_team(const World& w, uint32_t regionId, uint16_t team) {
+  int best = -1;
+  for (const auto& n : w.undergroundNodes) {
+    if (!n.active || n.regionId != regionId || n.type != UndergroundNodeType::Shaft) continue;
+    if (n.owner != UINT16_MAX && n.owner != team) continue;
+    if (best < 0 || n.cell < best) best = n.cell;
+  }
+  return best;
+}
+
+bool cell_is_mountain_biome(const World& w, int cell) {
+  BiomeType b = biome_at(w, cell);
+  return b == BiomeType::Mountain || b == BiomeType::SnowMountain;
+}
+
+bool is_pass_cell(const World& w, int cell) {
+  if (cell < 0 || cell >= w.width * w.height) return false;
+  if (terrain_class_at(w, cell) != TerrainClass::Land) return false;
+  const int x = cell % w.width;
+  const int y = cell / w.width;
+  auto land = [&](int nx, int ny){
+    if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) return false;
+    return terrain_class_at(w, ny * w.width + nx) == TerrainClass::Land;
+  };
+  const bool left = land(x - 1, y);
+  const bool right = land(x + 1, y);
+  const bool up = land(x, y - 1);
+  const bool down = land(x, y + 1);
+  int cardinal = static_cast<int>(left) + static_cast<int>(right) + static_cast<int>(up) + static_cast<int>(down);
+  if (cardinal > 2) return false;
+  int mountainAdj = 0;
+  for (int oy = -1; oy <= 1; ++oy) for (int ox = -1; ox <= 1; ++ox) {
+    if (ox == 0 && oy == 0) continue;
+    int nx = x + ox, ny = y + oy;
+    if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+    if (cell_is_mountain_biome(w, ny * w.width + nx)) ++mountainAdj;
+  }
+  return mountainAdj >= 3;
+}
+
+float mountain_movement_multiplier(const World& w, const Unit& u, int cell) {
+  if (cell < 0) return 1.0f;
+  float m = 1.0f;
+  const bool mountain = cell_is_mountain_biome(w, cell);
+  const bool pass = is_pass_cell(w, cell);
+  if (mountain) {
+    if (u.type == UnitType::Infantry || u.type == UnitType::Archer || u.type == UnitType::Worker) m *= 0.94f;
+    else if (u.type == UnitType::Siege) m *= 0.74f;
+    else if (u.type == UnitType::Cavalry) m *= 0.66f;
+    else m *= 0.82f;
+  }
+  if (pass) m *= 0.85f;
+  if (u.supplyState == SupplyState::OutOfSupply && mountain) m *= 0.87f;
+  return std::clamp(m, 0.45f, 1.05f);
+}
+
+float mountain_attack_multiplier(const World& w, const Unit& attacker, const Unit& target) {
+  if (unit_is_air(attacker.type) || unit_is_naval(attacker.type) || unit_is_air(target.type) || unit_is_naval(target.type)) return 1.0f;
+  const int ac = std::clamp((int)attacker.pos.y, 0, w.height - 1) * w.width + std::clamp((int)attacker.pos.x, 0, w.width - 1);
+  const int tc = std::clamp((int)target.pos.y, 0, w.height - 1) * w.width + std::clamp((int)target.pos.x, 0, w.width - 1);
+  const bool aM = cell_is_mountain_biome(w, ac);
+  const bool tM = cell_is_mountain_biome(w, tc);
+  const bool tPass = is_pass_cell(w, tc);
+  float m = 1.0f;
+  if (aM && (attacker.type == UnitType::Infantry || attacker.type == UnitType::Archer)) m *= 1.08f;
+  if (tM) {
+    if (attacker.type == UnitType::Cavalry) m *= 0.82f;
+    if (attacker.type == UnitType::Siege) m *= 0.90f;
+    if (target.type == UnitType::Infantry || target.type == UnitType::Archer) m *= 0.90f;
+  }
+  if (tPass) m *= 0.92f;
+  return std::clamp(m, 0.65f, 1.2f);
+}
+
+float mountain_building_defense_multiplier(const World& w, const Unit& attacker, const Building& b) {
+  if (unit_is_air(attacker.type) || unit_is_naval(attacker.type)) return 1.0f;
+  const int bc = std::clamp((int)b.pos.y, 0, w.height - 1) * w.width + std::clamp((int)b.pos.x, 0, w.width - 1);
+  const bool mountain = cell_is_mountain_biome(w, bc);
+  const bool pass = is_pass_cell(w, bc);
+  bool strong = b.type == BuildingType::Barracks || b.type == BuildingType::RadarTower || b.type == BuildingType::AABattery;
+  if (!mountain && !pass) return 1.0f;
+  if (!strong && b.type != BuildingType::Mine) return 1.0f;
+  float mult = 1.0f;
+  if (mountain) mult *= 0.86f;
+  if (pass) mult *= 0.88f;
+  if (b.type == BuildingType::Mine) mult *= 0.93f;
+  return std::clamp(mult, 0.64f, 1.0f);
+}
+
 void update_underground_economy(World& w, float dt) {
   w.undergroundYield = 0.0f;
   w.mountainThroughput = 0.0f;
@@ -5829,7 +5918,20 @@ void tick_world(World& w, float dt) {
           if (src.supplyState == SupplyState::LowSupply) supplyMul = 0.9f;
           else if (src.supplyState == SupplyState::OutOfSupply) supplyMul = 0.75f;
           float roadMul = near_friendly_road(w, src.team, src.pos) ? 1.2f : 1.0f;
-          out.pos += out.moveDir * src.speed * supplyMul * roadMul * dt;
+          const int srcCell = std::clamp((int)src.pos.y, 0, w.height - 1) * w.width + std::clamp((int)src.pos.x, 0, w.width - 1);
+          float mountainMul = mountain_movement_multiplier(w, src, srcCell);
+          int rid = mountain_region_id_at(w, srcCell);
+          if (!unit_is_air(src.type) && !unit_is_naval(src.type) && rid > 0 && region_has_active_tunnel(w, static_cast<uint32_t>(rid), src.team)) {
+            int exitCell = tunnel_exit_cell_for_region_team(w, static_cast<uint32_t>(rid), src.team);
+            if (exitCell >= 0 && src.stuckTicks > 40) {
+              out.pos = cell_center(w, exitCell);
+              mountainMul = std::max(mountainMul, 0.95f);
+              ++w.tunnelMilitaryMoves;
+              ++w.mountainRouteSelections;
+            }
+          }
+          out.pos += out.moveDir * src.speed * supplyMul * roadMul * mountainMul * dt;
+          if (is_pass_cell(w, srcCell)) ++w.mountainRouteSelections;
           int nc = cell_of(w, out.pos);
           if (!unit_cell_valid(w, src, nc)) out.pos = prev;
           if (glm::length(out.pos - prev) < 0.005f && src.hasMoveOrder) {
@@ -5884,6 +5986,16 @@ void tick_world(World& w, float dt) {
       ++w.targetSwitchCount;
       locked = find_unit(w, candidate);
     }
+    const int uCell = cell_of(w, u.pos);
+    if (is_pass_cell(w, uCell)) {
+      uint32_t friendly = 0, enemy = 0;
+      for (const auto& other : w.units) {
+        if (other.hp <= 0 || unit_is_air(other.type) || unit_is_naval(other.type)) continue;
+        if (dist(other.pos, u.pos) > 5.0f) continue;
+        if (other.team == u.team) ++friendly; else ++enemy;
+      }
+      if (friendly > 0 && enemy > 0) ++w.chokepointContests;
+    }
 
     int buildingTarget = -1;
     if ((u.role == UnitRole::Siege || u.type == UnitType::BombardShip) && (!locked || u.attackMove)) {
@@ -5896,6 +6008,7 @@ void tick_world(World& w, float dt) {
         int mult = (int)u.vsRoleMultiplierPermille[role_idx(locked->role)];
         mult = (mult * static_cast<int>(unit_type_counter_multiplier_permille(u.type, locked->type))) / 1000;
         float damage = u.attack * (mult / 1000.0f);
+        damage *= mountain_attack_multiplier(w, u, *locked);
         locked->hp -= damage;
         w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
         ++w.combatEngagementCount;
@@ -5905,7 +6018,9 @@ void tick_world(World& w, float dt) {
         engagedThisTick = true;
       } else if (buildingTarget >= 0 && dist(u.pos, w.buildings[buildingTarget].pos) <= u.range + 0.8f) {
         float mult = (u.role == UnitRole::Siege) ? 1.8f : 0.8f;
-        float damage = u.attack * mult;
+        float fortMul = mountain_building_defense_multiplier(w, u, w.buildings[buildingTarget]);
+        float damage = u.attack * mult * fortMul;
+        if (fortMul < 1.0f) ++w.mountainFortBonusEvents;
         w.buildings[buildingTarget].hp -= damage;
         w.totalDamageDealtPermille += (uint32_t)(damage * 1000.0f);
         ++w.buildingDamageEvents;
@@ -5915,7 +6030,12 @@ void tick_world(World& w, float dt) {
         engagedThisTick = true;
       }
     }
-    if (engagedThisTick) ++w.combatTicks;
+    if (engagedThisTick) {
+      ++w.combatTicks;
+      const int uc = cell_of(w, u.pos);
+      if (cell_is_mountain_biome(w, uc)) ++w.mountainCombatEvents;
+      if (is_pass_cell(w, uc)) ++w.passControlEvents;
+    }
     u.renderPos = glm::mix(u.renderPos, u.pos, 0.35f);
   }
   const auto combatEnd = Clock::now();
@@ -6093,6 +6213,12 @@ void tick_world(World& w, float dt) {
   gLastStats.undergroundConnections = w.undergroundConnections;
   gLastStats.undergroundYield = w.undergroundYield;
   gLastStats.mountainThroughput = w.mountainThroughput;
+  gLastStats.mountainCombatEvents = w.mountainCombatEvents;
+  gLastStats.passControlEvents = w.passControlEvents;
+  gLastStats.tunnelMilitaryMoves = w.tunnelMilitaryMoves;
+  gLastStats.mountainFortBonusEvents = w.mountainFortBonusEvents;
+  gLastStats.chokepointContests = w.chokepointContests;
+  gLastStats.mountainRouteSelections = w.mountainRouteSelections;
   gLastStats.guardianSiteCount = static_cast<uint32_t>(w.guardianSites.size());
   gLastStats.guardiansDiscovered = w.guardiansDiscovered;
   gLastStats.guardiansSpawned = w.guardiansSpawned;
@@ -6589,6 +6715,12 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.aiIndustrialActivationTick);
   hash_u32(h, w.aiDeterrencePostureChanges);
   hash_u32(h, w.aiOperationLaunches);
+  hash_u32(h, w.mountainCombatEvents);
+  hash_u32(h, w.passControlEvents);
+  hash_u32(h, w.tunnelMilitaryMoves);
+  hash_u32(h, w.mountainFortBonusEvents);
+  hash_u32(h, w.chokepointContests);
+  hash_u32(h, w.mountainRouteSelections);
   for (float v : w.refinedOutputByTick) hash_float(h, v);
   hash_u32(h, w.suppliedUnits);
   hash_u32(h, w.lowSupplyUnits);

@@ -421,3 +421,10 @@ This keeps authoritative simulation hashes unchanged while improving strategic r
 ## Roster taxonomy and counters
 
 The simulation exposes deterministic role taxonomy metadata (`unit_role_label`, `unit_role_purpose`, `unit_counter_hint`) consumed by UI and AI. Unit production is phase-gated via `unit_phase_requirement` so match-flow progression controls roster unlock timing.
+
+## Mountain warfare + chokepoint control (deterministic)
+- Land movement applies deterministic mountain/pass multipliers by unit class and supply state.
+- Land combat applies deterministic mountain attack/defense modifiers and mountain strongpoint building bonuses.
+- Passes are inferred from narrow land fronts near mountain biomes and influence control/event counters and AI target selection.
+- Tunnel graph authority is reused for deterministic military reroute when mountain movement is blocked/stuck.
+- New authoritative counters are tracked in world state hash + save/load: `MOUNTAIN_COMBAT_EVENTS`, `PASS_CONTROL_EVENTS`, `TUNNEL_MILITARY_MOVES`, `MOUNTAIN_FORT_BONUS_EVENTS`, `CHOKEPOINT_CONTESTS`, `MOUNTAIN_ROUTE_SELECTIONS`.

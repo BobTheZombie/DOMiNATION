@@ -612,3 +612,17 @@ Debug panel (`Debug Visualization`) includes a **Strategic Visualization** secti
 ## Military roster tuning
 
 This branch includes a deterministic roster pass focused on role taxonomy, counter readability, phase-aligned progression, and civ archetype emphasis. See `docs/unit_roster_design.md` and `docs/combat_roles_and_counters.md` for the design summary.
+
+### Mountain warfare smoke commands
+```bash
+./build/rts --headless --smoke --ticks 1800 --seed 1234 --dump-hash
+./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 2400 --dump-hash
+./build/rts --headless --scenario scenarios/theater_operations_test.json --smoke --ticks 2600 --dump-hash
+./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 1 --hash-only
+./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 4 --hash-only
+./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 8 --hash-only
+./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 1400 --save /tmp/mountain_warfare_save.json --dump-hash
+./build/rts --headless --load /tmp/mountain_warfare_save.json --smoke --ticks 2400 --dump-hash
+```
+
+Mountain warfare now adds deterministic mountain/pass combat modifiers, tunnel military reroute interaction, mountain strongpoint bonuses, and AI pass-control behavior with dedicated counters in PERF output.

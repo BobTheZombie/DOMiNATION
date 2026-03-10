@@ -162,6 +162,9 @@ void draw_top_bar(const ImGuiViewport* vp, dom::sim::World& world, const std::st
     ImGui::SameLine();
     ImGui::TextColored(theme::state_color_failure(), "[ARMAGEDDON ACTIVE]");
   }
+  ImGui::Text("Mountain warfare | combat %u pass %u tunnel %u fort %u chokepoint %u route %u",
+              world.mountainCombatEvents, world.passControlEvents, world.tunnelMilitaryMoves,
+              world.mountainFortBonusEvents, world.chokepointContests, world.mountainRouteSelections);
   if (!overlay.empty()) ImGui::TextColored(theme::state_color_info(), "%s", overlay.c_str());
   ImGui::End();
 }
