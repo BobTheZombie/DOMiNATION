@@ -1,4 +1,5 @@
 #include "engine/ui/ui_icons.h"
+#include "engine/render/content_resolution.h"
 
 #include <array>
 #include <unordered_map>
@@ -56,12 +57,21 @@ std::string resolve_icon_id(const dom::sim::World& world,
                             std::string_view category,
                             std::string_view fallbackIconId) {
   ++gCounters.iconResolveCount;
-  if (!is_fallback(exactIconId)) return exactIconId;
-  if (category == "civ") return civ_emblem_icon_id(world, team);
+  std::string civMapping;
+  if (category == "civ") civMapping = civ_emblem_icon_id(world, team);
+  std::string categoryMapping;
   auto cat = kCategoryIcon.find(std::string(category));
-  if (cat != kCategoryIcon.end()) return cat->second;
-  ++gCounters.presentationFallbackCount;
-  return std::string(fallbackIconId);
+  if (cat != kCategoryIcon.end()) categoryMapping = cat->second;
+
+  const std::string resolved = dom::render::resolve_content_id(
+      exactIconId,
+      civMapping,
+      {},
+      categoryMapping,
+      fallbackIconId,
+      dom::render::ContentResolutionDomain::Icon);
+  if (is_fallback(resolved)) ++gCounters.presentationFallbackCount;
+  return resolved;
 }
 
 std::string resolve_marker_id(std::string_view category, uint16_t team) {

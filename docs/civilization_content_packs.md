@@ -85,3 +85,8 @@ Resolution order for city-region presentation:
 2. civ/theme mapped settlement shape
 3. generic settlement shape
 4. default fallback (debug counter only; no crash)
+
+
+## Content resolution and fallback
+
+Civ packs resolve through exact mapping, civ mapping, theme mapping, then category/default fallback, to keep renderer/UI deterministic when specific art is missing.

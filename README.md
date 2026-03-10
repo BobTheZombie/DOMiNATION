@@ -626,3 +626,8 @@ This branch includes a deterministic roster pass focused on role taxonomy, count
 ```
 
 Mountain warfare now adds deterministic mountain/pass combat modifiers, tunnel military reroute interaction, mountain strongpoint bonuses, and AI pass-control behavior with dedicated counters in PERF output.
+
+
+## Production rendering/content pipeline integration
+
+See `docs/render_pipeline.md` and `docs/content_resolution_model.md` for deterministic material/entity/icon resolution order, LOD policy, and validation/smoke commands.
