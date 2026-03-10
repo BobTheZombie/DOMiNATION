@@ -296,5 +296,12 @@
         28
       ]
     }
-  ]
+  ],
+  "mission": {
+    "scenarioTags": [
+      "smoke",
+      "industry",
+      "industrial_economy"
+    ]
+  }
 }

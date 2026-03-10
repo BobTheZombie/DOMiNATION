@@ -138,6 +138,48 @@ struct SaveEntry {
   uint32_t tick{0};
 };
 
+enum class SmokeValidationIntent : uint32_t {
+  None = 0,
+  Combat = 1u << 0,
+  Logistics = 1u << 1,
+  Crises = 1u << 2,
+  Guardians = 1u << 3,
+  Industry = 1u << 4,
+  StrategicEscalation = 1u << 5,
+};
+
+constexpr SmokeValidationIntent operator|(SmokeValidationIntent a, SmokeValidationIntent b) {
+  return static_cast<SmokeValidationIntent>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+constexpr bool smoke_intent_has(SmokeValidationIntent set, SmokeValidationIntent flag) {
+  return (static_cast<uint32_t>(set) & static_cast<uint32_t>(flag)) != 0;
+}
+
+bool scenario_match(const std::string& scenarioFile, const std::vector<std::string>& scenarioTags, const std::string& token) {
+  if (!scenarioFile.empty() && scenarioFile.find(token) != std::string::npos) return true;
+  return std::any_of(scenarioTags.begin(), scenarioTags.end(), [&](const std::string& tag){ return tag == token; });
+}
+
+SmokeValidationIntent classify_smoke_validation_intent(const CliOptions& o, const dom::sim::World& world) {
+  const auto& tags = world.mission.scenarioTags;
+  SmokeValidationIntent intent = SmokeValidationIntent::Combat;
+  if (scenario_match(o.scenarioFile, tags, "rail_logistics_test") || scenario_match(o.scenarioFile, tags, "logistics")) {
+    intent = SmokeValidationIntent::Logistics;
+  } else if (scenario_match(o.scenarioFile, tags, "world_events_test") || scenario_match(o.scenarioFile, tags, "crisis") || scenario_match(o.scenarioFile, tags, "world_events")) {
+    intent = SmokeValidationIntent::Crises;
+  } else if (scenario_match(o.scenarioFile, tags, "mythic_guardians_multi_test") || scenario_match(o.scenarioFile, tags, "mythic_guardians") || scenario_match(o.scenarioFile, tags, "guardians")) {
+    intent = SmokeValidationIntent::Guardians;
+  } else if (scenario_match(o.scenarioFile, tags, "industrial_economy") || scenario_match(o.scenarioFile, tags, "industry")) {
+    intent = SmokeValidationIntent::Industry;
+  } else if (scenario_match(o.scenarioFile, tags, "strategic_warfare") || scenario_match(o.scenarioFile, tags, "armageddon") || scenario_match(o.scenarioFile, tags, "strategic_escalation")) {
+    intent = SmokeValidationIntent::StrategicEscalation;
+  }
+  if (scenario_match(o.scenarioFile, tags, "combat")) intent = intent | SmokeValidationIntent::Combat;
+  if (scenario_match(o.scenarioFile, tags, "naval") || scenario_match(o.scenarioFile, tags, "theater_operations")) intent = intent | SmokeValidationIntent::Combat;
+  return intent;
+}
+
 struct FrontendState {
   enum class Screen { MainMenu, Skirmish, Scenario, Campaign, LoadGame, Options };
   Screen screen{Screen::MainMenu};
@@ -1810,13 +1852,33 @@ int run_headless(const CliOptions& o) {
   }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("trigger") != std::string::npos && world.triggerExecutionCount < 1) { std::cerr << "Smoke failure: trigger did not fire\n"; return 65; }
   if (o.smoke && !world.worldEventDefinitions.empty() && world.triggeredWorldEventCount < 1 && o.ticks >= 200) { std::cerr << "Smoke failure: no world event triggered\n"; return 96; }
+  const SmokeValidationIntent smokeIntent = o.smoke ? classify_smoke_validation_intent(o, world) : SmokeValidationIntent::None;
   if (o.smoke) {
-    const bool industrialFocused = !o.scenarioFile.empty() && (o.scenarioFile.find("industrial_economy") != std::string::npos || o.scenarioFile.find("civ_content") != std::string::npos);
-    if (industrialFocused && firstFactoryTick == 0 && world.industrialThroughput <= 0.0f) { std::cerr << "Smoke failure: industrial pacing telemetry never activated\n"; return 117; }
-    const bool economyOnlyScenario = !o.scenarioFile.empty() && o.scenarioFile.find("industrial_economy") != std::string::npos;
-    const bool escalationOnlyScenario = !o.scenarioFile.empty() && o.scenarioFile.find("armageddon") != std::string::npos;
-    if (!economyOnlyScenario && !escalationOnlyScenario && firstCombatTick == 0 && world.combatEngagementCount == 0) { std::cerr << "Smoke failure: military pacing telemetry never activated\n"; return 118; }
+    const bool requiresCombatPacing = smoke_intent_has(smokeIntent, SmokeValidationIntent::Combat);
+    const bool requiresIndustrialPacing = smoke_intent_has(smokeIntent, SmokeValidationIntent::Industry);
+    const bool escalationOnlyScenario = smoke_intent_has(smokeIntent, SmokeValidationIntent::StrategicEscalation) && !requiresCombatPacing;
+    if (requiresIndustrialPacing && firstFactoryTick == 0 && world.industrialThroughput <= 0.0f) { std::cerr << "Smoke failure: industrial pacing telemetry never activated\n"; return 117; }
+    if (requiresCombatPacing && firstCombatTick == 0 && world.combatEngagementCount == 0) { std::cerr << "Smoke failure: military pacing telemetry never activated\n"; return 118; }
     if (!escalationOnlyScenario && phaseTicks[1] == 0 && world.tick >= 900) { std::cerr << "Smoke failure: regional contest phase never reached\n"; return 119; }
+
+    if (smoke_intent_has(smokeIntent, SmokeValidationIntent::Logistics)) {
+      if (firstRailHubTick == 0) { std::cerr << "Smoke failure: logistics scenario never reached rail capability\n"; return 120; }
+      if (world.railThroughput <= 0.0f && world.logisticsTradeActiveCount < 1) { std::cerr << "Smoke failure: logistics scenario produced no logistics throughput\n"; return 121; }
+    }
+    if (smoke_intent_has(smokeIntent, SmokeValidationIntent::Crises)) {
+      if (world.triggeredWorldEventCount < 1) { std::cerr << "Smoke failure: crisis scenario did not trigger an event\n"; return 122; }
+      if (world.activeWorldEventCount + world.resolvedWorldEventCount < 1) { std::cerr << "Smoke failure: crisis scenario had no active or resolved events\n"; return 123; }
+    }
+    if (smoke_intent_has(smokeIntent, SmokeValidationIntent::Guardians)) {
+      if (world.guardianSites.empty()) { std::cerr << "Smoke failure: guardian scenario has no guardian sites\n"; return 124; }
+      if (world.guardiansDiscovered < 1 || world.guardiansSpawned < 1) { std::cerr << "Smoke failure: guardian scenario did not discover/spawn guardians\n"; return 125; }
+    }
+    if (smoke_intent_has(smokeIntent, SmokeValidationIntent::Industry)) {
+      if (world.activeFactories < 1) { std::cerr << "Smoke failure: industry scenario has no active factories\n"; return 126; }
+    }
+    if (smoke_intent_has(smokeIntent, SmokeValidationIntent::StrategicEscalation)) {
+      if (world.strategicWarningEvents < 1 && world.strategicStrikeEvents < 1) { std::cerr << "Smoke failure: strategic escalation scenario had no strategic activity\n"; return 127; }
+    }
   }
   if (o.smoke && !o.scenarioFile.empty() && o.scenarioFile.find("campaign_test") != std::string::npos) {
     bool objectiveActive = false;

@@ -68,6 +68,7 @@ Headless runs emit deterministic `MATCH_PACING_TELEMETRY` lines that include fir
 See:
 - `docs/match_flow.md`
 - `docs/balance_telemetry.md`
+- `docs/smoke_validation.md`
 
 
 ## AI behavior smoke suite

@@ -1,49 +1,336 @@
 {
   "schemaVersion": 1,
   "seed": 97531,
-  "map": {"width": 128, "height": 128},
+  "map": {
+    "width": 128,
+    "height": 128
+  },
   "worldTension": 76.0,
   "armageddonNationsThreshold": 2,
   "armageddonUsesPerNationThreshold": 2,
   "players": [
-    {"id": 0, "age": 7, "isHuman": false, "isCPU": true, "civilization": "russia", "team": 0, "popCap": 60,
-      "startingResources": {"Food": 1200, "Wood": 1000, "Metal": 1800, "Wealth": 1200, "Knowledge": 950, "Oil": 900}},
-    {"id": 1, "age": 7, "isHuman": false, "isCPU": true, "civilization": "usa", "team": 1, "popCap": 60,
-      "startingResources": {"Food": 1200, "Wood": 1000, "Metal": 1800, "Wealth": 1200, "Knowledge": 950, "Oil": 900}},
-    {"id": 2, "age": 7, "isHuman": false, "isCPU": true, "civilization": "uk", "team": 2, "popCap": 60,
-      "startingResources": {"Food": 1200, "Wood": 1000, "Metal": 1800, "Wealth": 1200, "Knowledge": 950, "Oil": 900}}
+    {
+      "id": 0,
+      "age": 7,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "russia",
+      "team": 0,
+      "popCap": 60,
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1000,
+        "Metal": 1800,
+        "Wealth": 1200,
+        "Knowledge": 950,
+        "Oil": 900
+      }
+    },
+    {
+      "id": 1,
+      "age": 7,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "usa",
+      "team": 1,
+      "popCap": 60,
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1000,
+        "Metal": 1800,
+        "Wealth": 1200,
+        "Knowledge": 950,
+        "Oil": 900
+      }
+    },
+    {
+      "id": 2,
+      "age": 7,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "uk",
+      "team": 2,
+      "popCap": 60,
+      "startingResources": {
+        "Food": 1200,
+        "Wood": 1000,
+        "Metal": 1800,
+        "Wealth": 1200,
+        "Knowledge": 950,
+        "Oil": 900
+      }
+    }
   ],
   "placements": {
     "cities": [
-      {"id": 1, "team": 0, "pos": [24, 24], "level": 3, "capital": true},
-      {"id": 2, "team": 1, "pos": [103, 103], "level": 3, "capital": true},
-      {"id": 3, "team": 2, "pos": [63, 64], "level": 2, "capital": true}
+      {
+        "id": 1,
+        "team": 0,
+        "pos": [
+          24,
+          24
+        ],
+        "level": 3,
+        "capital": true
+      },
+      {
+        "id": 2,
+        "team": 1,
+        "pos": [
+          103,
+          103
+        ],
+        "level": 3,
+        "capital": true
+      },
+      {
+        "id": 3,
+        "team": 2,
+        "pos": [
+          63,
+          64
+        ],
+        "level": 2,
+        "capital": true
+      }
     ],
     "buildings": [
-      {"id": 10, "team": 0, "type": "CityCenter", "pos": [24, 24], "underConstruction": false, "hp": 2200},
-      {"id": 11, "team": 0, "type": "MissileSilo", "pos": [20, 22], "underConstruction": false, "hp": 1100},
-      {"id": 20, "team": 1, "type": "CityCenter", "pos": [103, 103], "underConstruction": false, "hp": 2200},
-      {"id": 21, "team": 1, "type": "MissileSilo", "pos": [106, 99], "underConstruction": false, "hp": 1100},
-      {"id": 30, "team": 2, "type": "CityCenter", "pos": [63, 64], "underConstruction": false, "hp": 2200},
-      {"id": 31, "team": 2, "type": "AntiMissileDefense", "pos": [67, 64], "underConstruction": false, "hp": 900},
-      {"id": 32, "team": 2, "type": "RadarTower", "pos": [64, 68], "underConstruction": false, "hp": 900}
+      {
+        "id": 10,
+        "team": 0,
+        "type": "CityCenter",
+        "pos": [
+          24,
+          24
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 11,
+        "team": 0,
+        "type": "MissileSilo",
+        "pos": [
+          20,
+          22
+        ],
+        "underConstruction": false,
+        "hp": 1100
+      },
+      {
+        "id": 20,
+        "team": 1,
+        "type": "CityCenter",
+        "pos": [
+          103,
+          103
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 21,
+        "team": 1,
+        "type": "MissileSilo",
+        "pos": [
+          106,
+          99
+        ],
+        "underConstruction": false,
+        "hp": 1100
+      },
+      {
+        "id": 30,
+        "team": 2,
+        "type": "CityCenter",
+        "pos": [
+          63,
+          64
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 31,
+        "team": 2,
+        "type": "AntiMissileDefense",
+        "pos": [
+          67,
+          64
+        ],
+        "underConstruction": false,
+        "hp": 900
+      },
+      {
+        "id": 32,
+        "team": 2,
+        "type": "RadarTower",
+        "pos": [
+          64,
+          68
+        ],
+        "underConstruction": false,
+        "hp": 900
+      }
     ]
   },
   "diplomacyRelations": [
-    {"a": 0, "b": 1, "relation": "War"},
-    {"a": 0, "b": 2, "relation": "War"},
-    {"a": 1, "b": 2, "relation": "War"}
+    {
+      "a": 0,
+      "b": 1,
+      "relation": "War"
+    },
+    {
+      "a": 0,
+      "b": 2,
+      "relation": "War"
+    },
+    {
+      "a": 1,
+      "b": 2,
+      "relation": "War"
+    }
   ],
   "strategicDeterrence": [
-    {"player": 0, "strategicCapabilityEnabled": true, "strategicStockpile": 5, "strategicReadyCount": 4, "strategicPreparingCount": 1, "strategicAlertLevel": 3, "deterrencePosture": "MASSIVE_RETALIATION", "launchWarningActive": false, "recentStrategicUseTick": 0, "retaliationCapability": true, "secondStrikeCapability": true},
-    {"player": 1, "strategicCapabilityEnabled": true, "strategicStockpile": 5, "strategicReadyCount": 4, "strategicPreparingCount": 1, "strategicAlertLevel": 3, "deterrencePosture": "MASSIVE_RETALIATION", "launchWarningActive": false, "recentStrategicUseTick": 0, "retaliationCapability": true, "secondStrikeCapability": true},
-    {"player": 2, "strategicCapabilityEnabled": true, "strategicStockpile": 3, "strategicReadyCount": 2, "strategicPreparingCount": 1, "strategicAlertLevel": 2, "deterrencePosture": "FLEXIBLE_RESPONSE", "launchWarningActive": false, "recentStrategicUseTick": 0, "retaliationCapability": true, "secondStrikeCapability": true}
+    {
+      "player": 0,
+      "strategicCapabilityEnabled": true,
+      "strategicStockpile": 5,
+      "strategicReadyCount": 4,
+      "strategicPreparingCount": 1,
+      "strategicAlertLevel": 3,
+      "deterrencePosture": "MASSIVE_RETALIATION",
+      "launchWarningActive": false,
+      "recentStrategicUseTick": 0,
+      "retaliationCapability": true,
+      "secondStrikeCapability": true
+    },
+    {
+      "player": 1,
+      "strategicCapabilityEnabled": true,
+      "strategicStockpile": 5,
+      "strategicReadyCount": 4,
+      "strategicPreparingCount": 1,
+      "strategicAlertLevel": 3,
+      "deterrencePosture": "MASSIVE_RETALIATION",
+      "launchWarningActive": false,
+      "recentStrategicUseTick": 0,
+      "retaliationCapability": true,
+      "secondStrikeCapability": true
+    },
+    {
+      "player": 2,
+      "strategicCapabilityEnabled": true,
+      "strategicStockpile": 3,
+      "strategicReadyCount": 2,
+      "strategicPreparingCount": 1,
+      "strategicAlertLevel": 2,
+      "deterrencePosture": "FLEXIBLE_RESPONSE",
+      "launchWarningActive": false,
+      "recentStrategicUseTick": 0,
+      "retaliationCapability": true,
+      "secondStrikeCapability": true
+    }
   ],
   "strategicStrikes": [
-    {"id": 1, "team": 0, "type": 1, "from": [20, 22], "target": [103, 103], "targetTeam": 1, "prepTicksRemaining": 40, "travelTicksRemaining": 80, "cooldownTicks": 0, "interceptionState": 0, "phase": 1, "interceptionResult": 0, "launched": false, "resolved": false},
-    {"id": 2, "team": 0, "type": 1, "from": [20, 22], "target": [63, 64], "targetTeam": 2, "prepTicksRemaining": 55, "travelTicksRemaining": 90, "cooldownTicks": 0, "interceptionState": 0, "phase": 1, "interceptionResult": 0, "launched": false, "resolved": false},
-    {"id": 3, "team": 1, "type": 1, "from": [106, 99], "target": [24, 24], "targetTeam": 0, "prepTicksRemaining": 65, "travelTicksRemaining": 110, "cooldownTicks": 0, "interceptionState": 0, "phase": 1, "interceptionResult": 0, "launched": false, "resolved": false},
-    {"id": 4, "team": 1, "type": 1, "from": [106, 99], "target": [63, 64], "targetTeam": 2, "prepTicksRemaining": 75, "travelTicksRemaining": 110, "cooldownTicks": 0, "interceptionState": 0, "phase": 1, "interceptionResult": 0, "launched": false, "resolved": false}
+    {
+      "id": 1,
+      "team": 0,
+      "type": 1,
+      "from": [
+        20,
+        22
+      ],
+      "target": [
+        103,
+        103
+      ],
+      "targetTeam": 1,
+      "prepTicksRemaining": 40,
+      "travelTicksRemaining": 80,
+      "cooldownTicks": 0,
+      "interceptionState": 0,
+      "phase": 1,
+      "interceptionResult": 0,
+      "launched": false,
+      "resolved": false
+    },
+    {
+      "id": 2,
+      "team": 0,
+      "type": 1,
+      "from": [
+        20,
+        22
+      ],
+      "target": [
+        63,
+        64
+      ],
+      "targetTeam": 2,
+      "prepTicksRemaining": 55,
+      "travelTicksRemaining": 90,
+      "cooldownTicks": 0,
+      "interceptionState": 0,
+      "phase": 1,
+      "interceptionResult": 0,
+      "launched": false,
+      "resolved": false
+    },
+    {
+      "id": 3,
+      "team": 1,
+      "type": 1,
+      "from": [
+        106,
+        99
+      ],
+      "target": [
+        24,
+        24
+      ],
+      "targetTeam": 0,
+      "prepTicksRemaining": 65,
+      "travelTicksRemaining": 110,
+      "cooldownTicks": 0,
+      "interceptionState": 0,
+      "phase": 1,
+      "interceptionResult": 0,
+      "launched": false,
+      "resolved": false
+    },
+    {
+      "id": 4,
+      "team": 1,
+      "type": 1,
+      "from": [
+        106,
+        99
+      ],
+      "target": [
+        63,
+        64
+      ],
+      "targetTeam": 2,
+      "prepTicksRemaining": 75,
+      "travelTicksRemaining": 110,
+      "cooldownTicks": 0,
+      "interceptionState": 0,
+      "phase": 1,
+      "interceptionResult": 0,
+      "launched": false,
+      "resolved": false
+    }
   ],
-  "rulesOverrides": {"timeLimit": 5600, "disabledVictoryTypes": []}
+  "rulesOverrides": {
+    "timeLimit": 5600,
+    "disabledVictoryTypes": []
+  },
+  "mission": {
+    "scenarioTags": [
+      "smoke",
+      "strategic_escalation",
+      "armageddon"
+    ]
+  }
 }

@@ -307,5 +307,12 @@
       "hostile_events": 0,
       "allied_events": 0
     }
+  },
+  "mission": {
+    "scenarioTags": [
+      "smoke",
+      "logistics",
+      "rail_logistics_test"
+    ]
   }
 }
