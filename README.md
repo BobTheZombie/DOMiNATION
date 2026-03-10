@@ -310,6 +310,15 @@ Smoke scenario: `scenarios/campaign_test.json` with optional script `scripts/cam
 
 - Mountain extraction + underground tunnel network layer (deterministic node/edge model, snow-capped mountain generation, deep deposits).
 
+### Mountain mining deterministic smoke
+- `./build/rts --headless --smoke --ticks 1800 --seed 1234 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 2200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 1 --hash-only`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 4 --hash-only`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 8 --hash-only`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 1200 --save /tmp/mountain_save.json --dump-hash`
+- `./build/rts --headless --load /tmp/mountain_save.json --smoke --ticks 2200 --dump-hash`
+
 ## Mythic Guardians (new)
 
 The engine now includes a reusable deterministic Mythic Guardian layer:

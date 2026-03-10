@@ -2122,8 +2122,10 @@ bool region_has_active_tunnel(const World& w, uint32_t regionId, uint16_t team) 
 
 void update_underground_economy(World& w, float dt) {
   w.undergroundYield = 0.0f;
+  w.mountainThroughput = 0.0f;
   w.activeMineShafts = 0;
   w.activeTunnels = 0;
+  w.undergroundConnections = 0;
   w.undergroundDepots = 0;
   for (const auto& n : w.undergroundNodes) if (n.type == UndergroundNodeType::Depot && n.active) ++w.undergroundDepots;
   for (const auto& e : w.undergroundEdges) if (e.active) ++w.activeTunnels;
@@ -2134,16 +2136,36 @@ void update_underground_economy(World& w, float dt) {
     const int rid = mountain_region_id_at(w, cell);
     if (rid <= 0) continue;
     ++w.activeMineShafts;
-    const bool connected = region_has_active_tunnel(w, static_cast<uint32_t>(rid), b.team);
-    const float rate = connected ? 1.35f : 0.45f;
+    uint32_t tunnelLinks = 0;
+    for (const auto& e : w.undergroundEdges) {
+      if (!e.active || e.regionId != static_cast<uint32_t>(rid)) continue;
+      if (e.owner != UINT16_MAX && e.owner != b.team) continue;
+      ++tunnelLinks;
+    }
+    w.undergroundConnections += tunnelLinks;
+    const bool connected = tunnelLinks > 0;
+    const float tunnelBonus = connected ? (1.0f + 0.08f * std::min<uint32_t>(tunnelLinks, 6u)) : 0.55f;
+
+    for (auto& d : w.surfaceDeposits) {
+      if (d.regionId != static_cast<uint32_t>(rid) || d.remaining <= 0.0f) continue;
+      if (d.owner == UINT16_MAX) d.owner = b.team;
+      if (d.owner != b.team) continue;
+      const float mined = std::min(d.remaining, dt * 4.5f * tunnelBonus);
+      d.remaining -= mined;
+      w.players[b.team].resources[ridx(Resource::Metal)] += mined * 0.11f;
+      w.mountainThroughput += mined;
+      break;
+    }
+
     for (auto& d : w.deepDeposits) {
       if (d.regionId != static_cast<uint32_t>(rid) || d.remaining <= 0.0f || !d.active) continue;
       if (d.owner == UINT16_MAX) d.owner = b.team;
       if (d.owner != b.team) continue;
-      float mined = std::min(d.remaining, rate * dt * 20.0f * d.richness);
+      const float mined = std::min(d.remaining, dt * 16.0f * d.richness * tunnelBonus);
       d.remaining -= mined;
       w.players[b.team].resources[ridx(Resource::Metal)] += mined * 0.18f;
       w.undergroundYield += mined;
+      w.mountainThroughput += mined;
       break;
     }
   }
@@ -6068,7 +6090,9 @@ void tick_world(World& w, float dt) {
   gLastStats.activeMineShafts = w.activeMineShafts;
   gLastStats.activeTunnels = w.activeTunnels;
   gLastStats.undergroundDepots = w.undergroundDepots;
+  gLastStats.undergroundConnections = w.undergroundConnections;
   gLastStats.undergroundYield = w.undergroundYield;
+  gLastStats.mountainThroughput = w.mountainThroughput;
   gLastStats.guardianSiteCount = static_cast<uint32_t>(w.guardianSites.size());
   gLastStats.guardiansDiscovered = w.guardiansDiscovered;
   gLastStats.guardiansSpawned = w.guardiansSpawned;
@@ -6705,7 +6729,7 @@ uint64_t state_hash(const World& w) {
   hash_u32(h, w.nuclearUseCountTotal);
   for (uint16_t c : w.nuclearUseCountByPlayer) hash_u32(h, c);
   hash_u32(h, w.mountainRegionCount); hash_u32(h, w.surfaceDepositCount); hash_u32(h, w.deepDepositCount);
-  hash_u32(h, w.activeMineShafts); hash_u32(h, w.activeTunnels); hash_u32(h, w.undergroundDepots); hash_float(h, w.undergroundYield);
+  hash_u32(h, w.activeMineShafts); hash_u32(h, w.activeTunnels); hash_u32(h, w.undergroundConnections); hash_u32(h, w.undergroundDepots); hash_float(h, w.undergroundYield); hash_float(h, w.mountainThroughput);
   hash_u32(h, w.guardiansDiscovered); hash_u32(h, w.guardiansSpawned); hash_u32(h, w.guardiansJoined); hash_u32(h, w.guardiansKilled);
   hash_u32(h, w.hostileGuardianEvents); hash_u32(h, w.alliedGuardianEvents);
   for (const auto& s : w.guardianSites) {
@@ -6717,6 +6741,7 @@ uint64_t state_hash(const World& w) {
   }
   for (const auto& d : w.deepDeposits) { hash_u32(h, d.id); hash_float(h, d.remaining); hash_u32(h, d.owner); hash_u32(h, d.active?1u:0u); }
   for (const auto& e : w.undergroundEdges) { hash_u32(h, e.id); hash_u32(h, e.owner); hash_u32(h, e.active?1u:0u); }
+  hash_u32(h, w.undergroundConnections); hash_float(h, w.mountainThroughput);
   for (uint8_t v : w.fog) hash_u32(h, v);
   for (uint8_t v : w.fogVisibilityByPlayer) hash_u32(h, v);
   for (uint8_t v : w.fogExploredByPlayer) hash_u32(h, v);

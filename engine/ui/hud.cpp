@@ -115,6 +115,21 @@ void draw_selection_summary(dom::sim::World& world, const std::vector<uint32_t>&
     if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery) {
       ImGui::Text("Factory %s | throughput %.2f", b.factory.active ? "active" : "idle", b.factory.throughputBonus);
     }
+    if (b.type == dom::sim::BuildingType::Mine) {
+      const int tx = std::clamp((int)b.pos.x, 0, world.width - 1);
+      const int ty = std::clamp((int)b.pos.y, 0, world.height - 1);
+      const int cell = ty * world.width + tx;
+      int regionId = 0;
+      if (!world.mountainRegionByCell.empty() && cell >= 0 && cell < (int)world.mountainRegionByCell.size()) regionId = world.mountainRegionByCell[(size_t)cell];
+      uint32_t regionSurface = 0;
+      uint32_t regionDeep = 0;
+      for (const auto& d : world.surfaceDeposits) if ((int)d.regionId == regionId) ++regionSurface;
+      for (const auto& d : world.deepDeposits) if ((int)d.regionId == regionId) ++regionDeep;
+      uint32_t links = 0;
+      for (const auto& e : world.undergroundEdges) if ((int)e.regionId == regionId && e.active && (e.owner == UINT16_MAX || e.owner == b.team)) ++links;
+      ImGui::Text("Mountain region %d | surface %u | deep %u", regionId, regionSurface, regionDeep);
+      ImGui::Text("Tunnel links %u | active shafts %u | throughput %.1f", links, world.activeMineShafts, world.mountainThroughput);
+    }
     return;
   }
   ImGui::Text("Selection id #%u not visible", id);

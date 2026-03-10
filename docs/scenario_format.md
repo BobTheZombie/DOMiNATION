@@ -197,3 +197,6 @@ The scenario front-end browser reads optional metadata keys (with fallbacks):
 - first `players[].civilization` as civ/faction hint
 
 Missing metadata is allowed and never blocks deterministic launch.
+
+### Mountain mining fixture
+`scenarios/mountain_mining_test.json` is the deterministic fixture for mountain regions, surface/deep deposits, shafts, and underground tunnel connectivity smoke validation.
