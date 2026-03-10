@@ -443,3 +443,17 @@ Audio is integrated as a presentation subsystem only. It is reconstructed from a
 - `content/audio_manifest.json`: event/civ/category/default mappings
 
 Failure modes (missing assets/device unavailable) degrade to fallback or silence and are non-fatal.
+## Production world rendering integration (deterministic)
+
+The world rendering pass is presentation-only and must not mutate authoritative simulation state.
+
+Deterministic resolution model:
+1. exact manifest mapping
+2. civ-specific mapping
+3. civ-theme mapping
+4. category mapping
+5. stable fallback
+
+Applied across terrain materials, unit glyph/silhouette selection, and building/object shape categories with near/mid/far LOD tiers.
+
+Debug counters are presentation-only and include resolution/fallback and LOD tier counts.
