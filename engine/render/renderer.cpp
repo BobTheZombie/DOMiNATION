@@ -1,4 +1,5 @@
 #include "engine/render/renderer.h"
+#include "engine/render/content_resolution.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <algorithm>
@@ -1115,6 +1116,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glLoadIdentity();
 
   reset_terrain_presentation_counters();
+  reset_content_resolution_counters();
   gEntityCounters = {};
   gStrategicCounters = {};
   glBegin(GL_QUADS);
@@ -1261,8 +1263,9 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glBegin(GL_QUADS);
   for (const auto& b : w.buildings) {
     ++gEntityCounters.buildingPresentationResolves;
+    note_content_resolution(ContentResolutionDomain::Entity, false);
     auto bPres = dom::sim::building_content_presentation(w, b.team, b.type, b.definitionId);
-    if (bPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
+    if (bPres.iconId.find("fallback") != std::string::npos) { ++gEntityCounters.entityPresentationFallbacks; note_content_resolution(ContentResolutionDomain::Entity, true); }
     auto rel = diplomatic_color(w, b.team);
     auto theme = theme_tint_for_team(w, b.team);
     auto base = mix_color(rel, theme, 0.35f);
@@ -1343,8 +1346,9 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   const float nearThreshold = 22.0f;
   const float farThreshold = 58.0f;
   const float clusterThreshold = 95.0f;
+  const ContentLodTier lodTier = select_lod_tier(c.zoom);
 
-  if (c.zoom >= clusterThreshold) {
+  if (lodTier == ContentLodTier::Far && c.zoom >= clusterThreshold) {
     const float cell = std::max(6.0f, c.zoom * 0.18f);
     int cols = std::max(1, static_cast<int>(std::ceil(w.width / cell)));
     int rows = std::max(1, static_cast<int>(std::ceil(w.height / cell)));
@@ -1374,8 +1378,9 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     for (const auto& u : w.units) {
       if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
       ++gEntityCounters.unitPresentationResolves;
+      note_content_resolution(ContentResolutionDomain::Entity, false);
       auto uPres = dom::sim::unit_content_presentation(w, u.team, u.type, u.definitionId);
-      if (uPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
+      if (uPres.iconId.find("fallback") != std::string::npos) { ++gEntityCounters.entityPresentationFallbacks; note_content_resolution(ContentResolutionDomain::Entity, true); }
       auto rel = unit_color(u);
       auto theme = theme_tint_for_team(w, u.team);
       auto base = mix_color(rel, theme, 0.25f);
@@ -1460,6 +1465,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     int gy = std::clamp(static_cast<int>(cty.pos.y), 0, w.height - 1);
     if (!w.godMode && w.fog[gy * w.width + gx] > 0 && cty.team != 0) continue;
     ++gEntityCounters.cityPresentationResolves;
+    note_content_resolution(ContentResolutionDomain::CityRegion, false);
     if (cty.capital) ++gEntityCounters.capitalPresentationResolves;
 
     TeamRegionMarkers markers{};
@@ -1491,7 +1497,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     else if (shape == CivSettlementShape::Tartaria) { kx = 0.34f; ky = 0.72f; }
     else if (shape == CivSettlementShape::Egypt || shape == CivSettlementShape::MiddleEast) { kx = 0.48f; ky = 0.64f; }
     else if (shape == CivSettlementShape::Eu || shape == CivSettlementShape::Uk || shape == CivSettlementShape::Usa) { kx = 0.56f; ky = 0.52f; }
-    else ++gEntityCounters.cityPresentationFallbacks;
+    else { ++gEntityCounters.cityPresentationFallbacks; note_content_resolution(ContentResolutionDomain::CityRegion, true); }
 
     glBegin(GL_TRIANGLES);
     auto lm = cty.capital ? std::array<float,3>{1.0f, 0.95f, 0.65f} : std::array<float,3>{0.88f, 0.88f, 0.9f};

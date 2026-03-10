@@ -1,4 +1,5 @@
 #include "engine/render/terrain_materials.h"
+#include "engine/render/content_resolution.h"
 #include <algorithm>
 #include <glm/common.hpp>
 
@@ -65,8 +66,10 @@ float terrain_slope_hint(const dom::sim::World& world, int cellIndex) {
 TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cellIndex) {
   TerrainVisualSample sample{};
   ++gCounters.terrainMaterialResolves;
+  note_content_resolution(ContentResolutionDomain::Material, false);
   if (cellIndex < 0 || cellIndex >= static_cast<int>(world.heightmap.size())) {
     ++gCounters.presentationFallbackCount;
+    note_content_resolution(ContentResolutionDomain::Material, true);
     return sample;
   }
   const auto tc = static_cast<dom::sim::TerrainClass>(world.terrainClass[static_cast<size_t>(cellIndex)]);
@@ -108,7 +111,7 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
       case dom::sim::BiomeType::Wetlands: sample.material = TerrainMaterialId::Wetlands; sample.hasForestCanopy = true; break;
       case dom::sim::BiomeType::Mountain: sample.material = TerrainMaterialId::Mountain; sample.mountain = true; ++gCounters.mountainFeatureCount; break;
       case dom::sim::BiomeType::SnowMountain: sample.material = TerrainMaterialId::SnowMountain; sample.mountain = true; sample.snowCap = true; ++gCounters.mountainFeatureCount; break;
-      default: ++gCounters.presentationFallbackCount; sample.material = TerrainMaterialId::Grassland; break;
+      default: ++gCounters.presentationFallbackCount; note_content_resolution(ContentResolutionDomain::Material, true); sample.material = TerrainMaterialId::Grassland; break;
     }
   }
 

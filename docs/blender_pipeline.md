@@ -20,3 +20,8 @@ Naming convention used by the pack:
 - UI: `ui_icon_civ_<civ>`, `ui_emblem_<civ>`, `portrait_diplomacy_<civ>`, `portrait_campaign_<civ>`
 
 Blender exporters should continue emitting deterministic IDs and file paths so generated manifests remain stable across runs.
+
+
+## Validation
+
+Run `python tools/blender/validate_asset_conventions.py` to verify asset naming/LOD-id format/theme family coverage before export packaging.

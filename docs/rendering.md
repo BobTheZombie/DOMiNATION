@@ -237,3 +237,8 @@ Debug counters (Debug Visualization → Strategic Visualization):
 - `RAIL_FLOW_LINES`
 - `TRAIN_MARKERS`
 - `LOGISTICS_VISUAL_EVENTS`
+
+
+## Deterministic content resolution
+
+The renderer now shares a single ordered content fallback model (exact -> civ -> theme -> category -> default) with debug counters for material/entity/city-region/icon resolution and fallback totals.

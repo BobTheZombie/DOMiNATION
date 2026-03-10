@@ -428,3 +428,8 @@ The simulation exposes deterministic role taxonomy metadata (`unit_role_label`, 
 - Passes are inferred from narrow land fronts near mountain biomes and influence control/event counters and AI target selection.
 - Tunnel graph authority is reused for deterministic military reroute when mountain movement is blocked/stuck.
 - New authoritative counters are tracked in world state hash + save/load: `MOUNTAIN_COMBAT_EVENTS`, `PASS_CONTROL_EVENTS`, `TUNNEL_MILITARY_MOVES`, `MOUNTAIN_FORT_BONUS_EVENTS`, `CHOKEPOINT_CONTESTS`, `MOUNTAIN_ROUTE_SELECTIONS`.
+
+
+## Rendering/content pipeline integration
+
+Presentation resolution is centralized in `engine/render/content_resolution.*` and uses deterministic ordered fallback across terrain/entities/city-region markers/icons.

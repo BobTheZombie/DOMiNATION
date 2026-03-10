@@ -2,6 +2,7 @@
 #include "engine/ui/ui_theme.h"
 #include "engine/render/terrain_materials.h"
 #include "engine/render/renderer.h"
+#include "engine/render/content_resolution.h"
 #include "engine/ui/ui_icons.h"
 #include "engine/ui/ui_alerts.h"
 
@@ -58,6 +59,17 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)entityCounters.guardianPresentationResolves,
               (unsigned long long)entityCounters.entityPresentationFallbacks,
               (unsigned long long)entityCounters.farLodClusterCount);
+  const auto& resolveCounters = dom::render::content_resolution_counters();
+  ImGui::Text("MATERIAL_RESOLVE_COUNT=%llu ENTITY_RESOLVE_COUNT=%llu CITY_REGION_RESOLVE_COUNT=%llu ICON_RESOLVE_COUNT=%llu FALLBACK_COUNT=%llu",
+              (unsigned long long)resolveCounters.materialResolveCount,
+              (unsigned long long)resolveCounters.entityResolveCount,
+              (unsigned long long)resolveCounters.cityRegionResolveCount,
+              (unsigned long long)resolveCounters.iconResolveCount,
+              (unsigned long long)resolveCounters.fallbackCount);
+  ImGui::Text("LOD_NEAR_COUNT=%llu LOD_MID_COUNT=%llu LOD_FAR_COUNT=%llu",
+              (unsigned long long)resolveCounters.lodNearCount,
+              (unsigned long long)resolveCounters.lodMidCount,
+              (unsigned long long)resolveCounters.lodFarCount);
   ImGui::SeparatorText("Strategic Visualization");
   const auto& strategicCounters = dom::render::strategic_visualization_counters();
   ImGui::Text("MOVEMENT_PATH_RESOLVES=%llu SUPPLY_FLOW_RESOLVES=%llu RAIL_VISUAL_EVENTS=%llu",
