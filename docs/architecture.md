@@ -433,3 +433,13 @@ The simulation exposes deterministic role taxonomy metadata (`unit_role_label`, 
 ## Rendering/content pipeline integration
 
 Presentation resolution is centralized in `engine/render/content_resolution.*` and uses deterministic ordered fallback across terrain/entities/city-region markers/icons.
+
+## Deterministic audio architecture
+
+Audio is integrated as a presentation subsystem only. It is reconstructed from authoritative simulation events/state each frame/tick and does not participate in authoritative state mutation or hash calculation.
+
+- `engine/audio/audio_system.*`: runtime trigger path, SDL audio device handling, ambient/context update
+- `engine/audio/audio_resolution.*`: deterministic content manifest resolution and fallback accounting
+- `content/audio_manifest.json`: event/civ/category/default mappings
+
+Failure modes (missing assets/device unavailable) degrade to fallback or silence and are non-fatal.

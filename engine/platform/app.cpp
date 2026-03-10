@@ -9,6 +9,7 @@
 #include "engine/debug/debug_visuals.h"
 #include "engine/assets/asset_manager.h"
 #include "engine/tools/asset_browser.h"
+#include "engine/audio/audio_system.h"
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <chrono>
@@ -1923,7 +1924,7 @@ int run_app(int argc, char** argv) {
   }
   if (opts.headless) return run_headless(opts);
 
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) return 1;
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) return 1;
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
@@ -1938,6 +1939,10 @@ int run_app(int argc, char** argv) {
   dom::render::set_render_scale(opts.renderScale);
   dom::render::set_ui_scale(opts.uiScale);
   dom::render::set_resolution(opts.windowW, opts.windowH);
+
+  dom::audio::initialize(true, false);
+  dom::audio::AudioSettings audioSettings{};
+  dom::audio::set_settings(audioSettings);
 
   dom::sim::set_nav_debug(opts.navDebug);
   dom::ai::set_attack_early(opts.aiAttackEarly);
@@ -2076,6 +2081,7 @@ int run_app(int argc, char** argv) {
   double lastAiMs = 0.0;
   while (running) {
     Uint64 now = SDL_GetPerformanceCounter(); float frameDt = (now - prev) / static_cast<float>(SDL_GetPerformanceFrequency()); prev = now; accum += frameDt;
+    dom::audio::set_settings(audioSettings);
 
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
@@ -2092,8 +2098,14 @@ int run_app(int argc, char** argv) {
       }
       if (e.type == SDL_KEYDOWN) {
         if (e.key.keysym.sym == SDLK_F1) uiState.showHudDebug = !uiState.showHudDebug;
-        if (e.key.keysym.sym == SDLK_F2) { uiState.showProductionMenu = !uiState.showProductionMenu; world.uiTrainMenu = uiState.showProductionMenu; }
-        if (e.key.keysym.sym == SDLK_F3) { uiState.showResearchPanel = !uiState.showResearchPanel; world.uiResearchMenu = uiState.showResearchPanel; }
+        if (e.key.keysym.sym == SDLK_F2) {
+          uiState.showProductionMenu = !uiState.showProductionMenu; world.uiTrainMenu = uiState.showProductionMenu;
+          dom::audio::trigger_ui(uiState.showProductionMenu ? dom::audio::AudioEventKey::UiPanelOpen : dom::audio::AudioEventKey::UiPanelClose, world.tick, 22, world.players.empty() ? "default" : world.players[0].civilization.id);
+        }
+        if (e.key.keysym.sym == SDLK_F3) {
+          uiState.showResearchPanel = !uiState.showResearchPanel; world.uiResearchMenu = uiState.showResearchPanel;
+          dom::audio::trigger_ui(uiState.showResearchPanel ? dom::audio::AudioEventKey::UiPanelOpen : dom::audio::AudioEventKey::UiPanelClose, world.tick, 23, world.players.empty() ? "default" : world.players[0].civilization.id);
+        }
         if (e.key.keysym.sym == SDLK_F4) uiState.showDiplomacyPanel = !uiState.showDiplomacyPanel;
         if (e.key.keysym.sym == SDLK_F5) uiState.showOperationsPanel = !uiState.showOperationsPanel;
         if (e.key.keysym.sym == SDLK_F9) uiState.showScenarioEditor = !uiState.showScenarioEditor;
@@ -2243,7 +2255,9 @@ int run_app(int argc, char** argv) {
         } else if (world.placementActive) {
           auto wp = dom::render::screen_to_world(camera, w, h, screen);
           dom::sim::update_build_placement(world, 0, wp);
-          dom::sim::confirm_build_placement(world, 0);
+          if (dom::sim::confirm_build_placement(world, 0)) {
+            dom::audio::trigger_ui(dom::audio::AudioEventKey::CommandBuild, world.tick, world.tick, world.players.empty() ? "default" : world.players[0].civilization.id);
+          }
         } else {
           glm::vec2 worldPos{};
           if (dom::render::minimap_screen_to_world(world, w, h, screen, worldPos)) {
@@ -2267,11 +2281,13 @@ int run_app(int argc, char** argv) {
           selected.clear();
           if (pick) selected.push_back(pick);
           apply_selection(world, selected, selected);
+          if (!selected.empty()) dom::audio::trigger_ui(dom::audio::AudioEventKey::SelectionAcknowledge, world.tick, selected.front(), world.players.empty() ? "default" : world.players[0].civilization.id);
         } else {
           glm::vec2 wa = dom::render::screen_to_world(camera, w, h, sel.dragStart);
           glm::vec2 wb = dom::render::screen_to_world(camera, w, h, sel.dragCurrent);
           auto ids = collect_team_units(world, 0, wa, wb);
           apply_selection(world, selected, ids);
+          if (!ids.empty()) dom::audio::trigger_ui(dom::audio::AudioEventKey::SelectionAcknowledge, world.tick, ids.front(), world.players.empty() ? "default" : world.players[0].civilization.id);
         }
         sel.dragHighlight.clear();
       }
@@ -2281,6 +2297,7 @@ int run_app(int argc, char** argv) {
           int w, h; SDL_GetWindowSize(window, &w, &h);
           auto target = dom::render::screen_to_world(camera, w, h, {(float)e.button.x, (float)e.button.y});
           dom::sim::issue_move(world, 0, selected, target);
+          dom::audio::trigger_ui(dom::audio::AudioEventKey::CommandMove, world.tick, selected.front(), world.players.empty() ? "default" : world.players[0].civilization.id);
         }
       }
     }
@@ -2288,6 +2305,7 @@ int run_app(int argc, char** argv) {
     std::vector<dom::sim::GameplayEvent> newEvents;
     dom::sim::consume_gameplay_events(newEvents);
     for (const auto& ev : newEvents) {
+      dom::audio::trigger_from_gameplay_event(world, ev);
       eventLog.push_back(ev);
       if (eventLog.size() > 512) eventLog.erase(eventLog.begin());
       notifications.push_front({ev.tick, ev.text.empty() ? std::string("event") : ev.text});
@@ -2394,6 +2412,16 @@ int run_app(int argc, char** argv) {
       dom::ui::draw_hud(window, world, selected, uiState, replayOverlay);
       if (uiState.showScenarioEditor) dom::editor::draw_scenario_editor(world, camera.center, scenarioEditorState);
       if (uiState.showHudDebug || uiState.showDebugPanels) dom::debug::draw_debug_panels(world, debugVisualState);
+#ifdef DOM_HAS_IMGUI
+      if (uiState.showHudDebug) {
+        auto audioReports = dom::audio::consume_debug_reports();
+        if (!audioReports.empty()) {
+          ImGui::Begin("Audio Resolve Fallbacks");
+          for (const auto& r : audioReports) ImGui::BulletText("%s", r.c_str());
+          ImGui::End();
+        }
+      }
+#endif
       dom::debug::sync_debug_visuals(debugVisualState);
     }
 #ifdef DOM_HAS_IMGUI
@@ -2416,11 +2444,11 @@ int run_app(int argc, char** argv) {
       ImGui::Text("DOMiNATION RTS");
       ImGui::Separator();
       if (frontend.screen == FrontendState::Screen::MainMenu) {
-        if (ImGui::Button("Skirmish", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Skirmish;
-        if (ImGui::Button("Scenario", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Scenario;
-        if (ImGui::Button("Campaign", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Campaign;
-        if (ImGui::Button("Load Game", ImVec2(220, 0))) { saveEntries = read_save_entries(); frontend.screen = FrontendState::Screen::LoadGame; }
-        if (ImGui::Button("Options", ImVec2(220, 0))) frontend.screen = FrontendState::Screen::Options;
+if (ImGui::Button("Skirmish", ImVec2(220, 0))) { frontend.screen = FrontendState::Screen::Skirmish; dom::audio::trigger_ui(dom::audio::AudioEventKey::UiButtonSelect, world.tick, 1, "default"); }
+if (ImGui::Button("Scenario", ImVec2(220, 0))) { frontend.screen = FrontendState::Screen::Scenario; dom::audio::trigger_ui(dom::audio::AudioEventKey::UiButtonSelect, world.tick, 2, "default"); }
+if (ImGui::Button("Campaign", ImVec2(220, 0))) { frontend.screen = FrontendState::Screen::Campaign; dom::audio::trigger_ui(dom::audio::AudioEventKey::UiButtonSelect, world.tick, 3, "default"); }
+if (ImGui::Button("Load Game", ImVec2(220, 0))) { saveEntries = read_save_entries(); frontend.screen = FrontendState::Screen::LoadGame; dom::audio::trigger_ui(dom::audio::AudioEventKey::UiButtonSelect, world.tick, 4, "default"); }
+if (ImGui::Button("Options", ImVec2(220, 0))) { frontend.screen = FrontendState::Screen::Options; dom::audio::trigger_ui(dom::audio::AudioEventKey::UiPanelOpen, world.tick, 5, "default"); }
         if (ImGui::Button("Quit", ImVec2(220, 0))) running = false;
       } else if (frontend.screen == FrontendState::Screen::Skirmish) {
         ImGui::Columns(2, nullptr, true);
@@ -2551,6 +2579,12 @@ int run_app(int argc, char** argv) {
         ImGui::Text("Lightweight Options");
         ImGui::SliderFloat("UI Scale", &opts.uiScale, 0.5f, 3.0f);
         ImGui::SliderFloat("Render Scale", &opts.renderScale, 0.5f, 1.0f);
+        ImGui::SeparatorText("Audio");
+        ImGui::Checkbox("Audio Enabled", &audioSettings.enabled);
+        ImGui::SliderFloat("Master Volume", &audioSettings.masterVolume, 0.0f, 1.0f);
+        ImGui::SliderFloat("UI Volume", &audioSettings.uiVolume, 0.0f, 1.0f);
+        ImGui::SliderFloat("World/Effects Volume", &audioSettings.worldVolume, 0.0f, 1.0f);
+        ImGui::SliderFloat("Ambient Volume", &audioSettings.ambientVolume, 0.0f, 1.0f);
         dom::render::set_ui_scale(opts.uiScale);
         dom::render::set_render_scale(opts.renderScale);
         ImGui::TextDisabled("Debug panels are still available in-match (F1/F9/F10). ");
@@ -2724,6 +2758,7 @@ int run_app(int argc, char** argv) {
       }
       ImGui::End();
     }
+    dom::audio::update_ambient(world, camera.zoom);
     assetBrowser.draw(assetManager);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -2742,5 +2777,6 @@ int run_app(int argc, char** argv) {
   ImGui::DestroyContext();
 #endif
 
+  dom::audio::shutdown();
   SDL_GL_DeleteContext(ctx); SDL_DestroyWindow(window); SDL_Quit(); return 0;
 }

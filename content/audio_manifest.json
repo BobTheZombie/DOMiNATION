@@ -1,0 +1,47 @@
+{
+  "exact": {
+    "ui_select": {"sound": "ui_click", "category": "ui"},
+    "ui_confirm": {"sound": "ui_confirm", "category": "ui"},
+    "ui_cancel": {"sound": "ui_cancel", "category": "ui"},
+    "ui_panel_open": {"sound": "ui_panel_open", "category": "ui"},
+    "ui_panel_close": {"sound": "ui_panel_close", "category": "ui"},
+    "selection_ack": {"sound": "selection_ack", "category": "unit_command"},
+    "command_move": {"sound": "command_move", "category": "unit_command"},
+    "command_attack": {"sound": "command_attack", "category": "unit_command"},
+    "command_build": {"sound": "command_build", "category": "unit_command"},
+    "objective_complete": {"sound": "objective_complete", "category": "ui"},
+    "objective_fail": {"sound": "objective_fail", "category": "ui"},
+    "combat_small_arms": {"sound": "combat_small_arms", "category": "combat"},
+    "combat_artillery": {"sound": "combat_artillery", "category": "combat"},
+    "combat_armor_impact": {"sound": "combat_armor_impact", "category": "combat"},
+    "combat_naval_gunfire": {"sound": "combat_naval_gunfire", "category": "combat"},
+    "combat_air_strike": {"sound": "combat_air_strike", "category": "combat"},
+    "strategic_launch_warning": {"sound": "strategic_launch_warning", "category": "strategic"},
+    "strategic_interception": {"sound": "strategic_interception", "category": "strategic"},
+    "strategic_detonation": {"sound": "strategic_detonation", "category": "strategic"},
+    "armageddon_alarm": {"sound": "armageddon_alarm", "category": "strategic"},
+    "crisis_activate": {"sound": "crisis_activate", "category": "crisis"},
+    "crisis_resolve": {"sound": "crisis_resolve", "category": "crisis"},
+    "guardian_discovered": {"sound": "guardian_discovered", "category": "guardian"},
+    "guardian_awaken": {"sound": "guardian_awaken", "category": "guardian"},
+    "guardian_joined": {"sound": "guardian_joined", "category": "guardian"},
+    "ambient_wind": {"sound": "ambient_wind", "category": "ambient"},
+    "ambient_coast": {"sound": "ambient_coast", "category": "ambient"},
+    "ambient_forest": {"sound": "ambient_forest", "category": "ambient"},
+    "ambient_industry": {"sound": "ambient_industry", "category": "ambient"},
+    "ambient_rail": {"sound": "ambient_rail", "category": "ambient"},
+    "ambient_battle": {"sound": "ambient_battle", "category": "ambient"}
+  },
+  "category": {
+    "ui": {"sound": "ui_click_generic", "category": "ui"},
+    "unit_command": {"sound": "command_generic", "category": "unit_command"},
+    "combat": {"sound": "combat_generic", "category": "combat"},
+    "strategic": {"sound": "strategic_generic", "category": "strategic"},
+    "crisis": {"sound": "crisis_generic", "category": "crisis"},
+    "guardian": {"sound": "guardian_generic", "category": "guardian"},
+    "ambient": {"sound": "ambient_generic", "category": "ambient"}
+  },
+  "default": {
+    "default": {"sound": "silence", "category": "ui"}
+  }
+}
