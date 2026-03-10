@@ -67,6 +67,9 @@ add_executable(rts
   engine/render/content_resolution.cpp
   engine/render/terrain_materials.cpp
   engine/sim/simulation.cpp
+  engine/audio/audio_events.cpp
+  engine/audio/audio_resolution.cpp
+  engine/audio/audio_system.cpp
   engine/assets/asset_manager.cpp
   engine/assets/asset_registry.cpp
   engine/assets/texture_atlas.cpp

@@ -631,3 +631,27 @@ Mountain warfare now adds deterministic mountain/pass combat modifiers, tunnel m
 ## Production rendering/content pipeline integration
 
 See `docs/render_pipeline.md` and `docs/content_resolution_model.md` for deterministic material/entity/icon resolution order, LOD policy, and validation/smoke commands.
+
+## Deterministic audio integration layer
+
+A lightweight audio layer now resolves sound content deterministically from authoritative events/state and never mutates gameplay authority.
+
+- Core runtime: `engine/audio/audio_system.*`
+- Resolution/fallback: `engine/audio/audio_resolution.*`
+- Event/category keys: `engine/audio/audio_events.*`
+- Manifest: `content/audio_manifest.json`
+
+Resolution order is fixed: exact event -> civilization/theme -> category -> default -> silence.
+
+Audio controls are runtime-only in frontend options:
+- audio enabled
+- master/UI/world/ambient volumes
+
+Debug panels expose:
+- `AUDIO_RESOLVE_COUNT`
+- `AUDIO_FALLBACK_COUNT`
+- `ACTIVE_AMBIENT_CHANNELS`
+- `EVENT_SOUND_TRIGGERS`
+- `UI_SOUND_TRIGGERS`
+
+See `docs/audio_system.md` for details and smoke commands.

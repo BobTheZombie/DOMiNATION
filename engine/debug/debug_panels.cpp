@@ -5,6 +5,7 @@
 #include "engine/render/content_resolution.h"
 #include "engine/ui/ui_icons.h"
 #include "engine/ui/ui_alerts.h"
+#include "engine/audio/audio_system.h"
 
 #ifdef DOM_HAS_IMGUI
 #include <imgui.h>
@@ -70,6 +71,14 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)resolveCounters.lodNearCount,
               (unsigned long long)resolveCounters.lodMidCount,
               (unsigned long long)resolveCounters.lodFarCount);
+  const auto audioCounters = dom::audio::debug_counters();
+  ImGui::Text("AUDIO_RESOLVE_COUNT=%llu AUDIO_FALLBACK_COUNT=%llu ACTIVE_AMBIENT_CHANNELS=%llu",
+              (unsigned long long)audioCounters.audioResolveCount,
+              (unsigned long long)audioCounters.audioFallbackCount,
+              (unsigned long long)audioCounters.activeAmbientChannels);
+  ImGui::Text("EVENT_SOUND_TRIGGERS=%llu UI_SOUND_TRIGGERS=%llu",
+              (unsigned long long)audioCounters.eventSoundTriggers,
+              (unsigned long long)audioCounters.uiSoundTriggers);
   ImGui::SeparatorText("Strategic Visualization");
   const auto& strategicCounters = dom::render::strategic_visualization_counters();
   ImGui::Text("MOVEMENT_PATH_RESOLVES=%llu SUPPLY_FLOW_RESOLVES=%llu RAIL_VISUAL_EVENTS=%llu",

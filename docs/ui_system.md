@@ -59,3 +59,7 @@ The runtime now includes a player-facing title/setup shell before gameplay start
 - Scenario/campaign/save browsers surface metadata from authored files with deterministic fallbacks
 - Debug panels remain available after match entry and are visually separated from player setup flow
 
+
+## UI audio feedback hooks
+
+UI interactions now emit deterministic audio event keys (select/confirm/cancel/panel open-close) from the same input paths used by UI command submission. These hooks are presentation-only and do not influence authoritative simulation behavior.
