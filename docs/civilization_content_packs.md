@@ -90,3 +90,21 @@ Resolution order for city-region presentation:
 ## Content resolution and fallback
 
 Civ packs resolve through exact mapping, civ mapping, theme mapping, then category/default fallback, to keep renderer/UI deterministic when specific art is missing.
+## Civilization world-visual differentiation requirements
+
+World map visual differentiation is deterministic and uses civ + theme mappings for unit/building/settlement presentation.
+
+Minimum supported civilizations in production pass:
+- Rome
+- China
+- Europe
+- Middle East
+- Russia
+- USA
+- Japan
+- EU
+- UK
+- Egypt
+- Tartaria (fictional / alt-history, visually distinct)
+
+Missing civ-specific assets must resolve via theme/category fallbacks before default fallback IDs.

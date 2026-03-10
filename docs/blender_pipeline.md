@@ -25,3 +25,11 @@ Blender exporters should continue emitting deterministic IDs and file paths so g
 ## Validation
 
 Run `python tools/blender/validate_asset_conventions.py` to verify asset naming/LOD-id format/theme family coverage before export packaging.
+## World rendering fallback expectations
+
+When production meshes/textures are missing, export packs should still provide deterministic placeholder compatibility:
+- category-correct unit silhouettes
+- category-correct structure silhouettes
+- civ/theme mapping hooks that resolve to stable fallback IDs
+
+This keeps save/load/replay/hash behavior stable while art assets iterate.

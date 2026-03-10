@@ -102,10 +102,14 @@ std::array<float, 3> theme_tint_for_team(const dom::sim::World& w, uint16_t team
   std::string theme = normalized_civ_key(w, team);
   if (theme.find("rome") != std::string::npos) return {0.78f, 0.62f, 0.42f};
   if (theme.find("china") != std::string::npos) return {0.56f, 0.44f, 0.32f};
+  if (theme.find("europe") != std::string::npos) return {0.52f, 0.62f, 0.76f};
+  if (theme == "eu" || theme.find("european_union") != std::string::npos) return {0.42f, 0.5f, 0.84f};
+  if (theme.find("uk") != std::string::npos || theme.find("brit") != std::string::npos) return {0.48f, 0.56f, 0.72f};
+  if (theme.find("usa") != std::string::npos || theme.find("america") != std::string::npos) return {0.56f, 0.64f, 0.78f};
+  if (theme.find("middle") != std::string::npos) return {0.78f, 0.66f, 0.44f};
+  if (theme.find("egypt") != std::string::npos) return {0.82f, 0.72f, 0.48f};
   if (theme.find("russia") != std::string::npos) return {0.62f, 0.62f, 0.68f};
   if (theme.find("japan") != std::string::npos) return {0.84f, 0.72f, 0.74f};
-  if (theme.find("middle") != std::string::npos || theme.find("egypt") != std::string::npos) return {0.76f, 0.66f, 0.48f};
-  if (theme.find("usa") != std::string::npos || theme.find("uk") != std::string::npos || theme.find("europe") != std::string::npos || theme.find("eu") != std::string::npos) return {0.55f, 0.62f, 0.72f};
   if (theme.find("tartaria") != std::string::npos) return {0.63f, 0.36f, 0.74f};
   return {0.64f, 0.64f, 0.64f};
 }
@@ -119,24 +123,27 @@ CivSettlementShape civ_settlement_shape(const dom::sim::World& w, uint16_t team)
   if (k.find("europe") != std::string::npos) return CivSettlementShape::Europe;
   if (k.find("middle") != std::string::npos) return CivSettlementShape::MiddleEast;
   if (k.find("russia") != std::string::npos) return CivSettlementShape::Russia;
-  if (k.find("usa") != std::string::npos) return CivSettlementShape::Usa;
-  if (k == "eu") return CivSettlementShape::Eu;
-  if (k.find("uk") != std::string::npos) return CivSettlementShape::Uk;
+  if (k.find("usa") != std::string::npos || k.find("america") != std::string::npos) return CivSettlementShape::Usa;
+  if (k == "eu" || k.find("european_union") != std::string::npos) return CivSettlementShape::Eu;
+  if (k.find("uk") != std::string::npos || k.find("brit") != std::string::npos) return CivSettlementShape::Uk;
   if (k.find("japan") != std::string::npos) return CivSettlementShape::Japan;
   if (k.find("egypt") != std::string::npos) return CivSettlementShape::Egypt;
   if (k.find("tartaria") != std::string::npos) return CivSettlementShape::Tartaria;
   return CivSettlementShape::Generic;
 }
 
-enum class UnitGlyph : uint8_t { Worker, Infantry, HeavyInfantry, Cavalry, Artillery, Armor, Rail, Naval, Aircraft, Guardian };
+enum class UnitGlyph : uint8_t { Worker, Infantry, RangedInfantry, HeavyInfantry, Cavalry, Artillery, Armor, Rail, Naval, Aircraft, Guardian };
 
 UnitGlyph unit_glyph(const dom::sim::Unit& u) {
   using UT = dom::sim::UnitType;
   using UR = dom::sim::UnitRole;
   if (u.definitionId.find("guardian") != std::string::npos) return UnitGlyph::Guardian;
+  if (u.definitionId.find("archer") != std::string::npos || u.definitionId.find("ranged") != std::string::npos || u.definitionId.find("bow") != std::string::npos) return UnitGlyph::RangedInfantry;
+  if (u.definitionId.find("raider") != std::string::npos || u.definitionId.find("scout") != std::string::npos) return UnitGlyph::Cavalry;
   if (u.definitionId.find("tank") != std::string::npos || u.definitionId.find("mech") != std::string::npos) return UnitGlyph::Armor;
   if (u.definitionId.find("heavy") != std::string::npos || u.definitionId.find("legion") != std::string::npos) return UnitGlyph::HeavyInfantry;
   if (u.definitionId.find("artillery") != std::string::npos) return UnitGlyph::Artillery;
+  if (u.definitionId.find("train") != std::string::npos) return UnitGlyph::Rail;
   if (u.role == UR::Worker || u.type == UT::Worker) return UnitGlyph::Worker;
   if (u.role == UR::Naval || u.type == UT::TransportShip || u.type == UT::LightWarship || u.type == UT::HeavyWarship || u.type == UT::BombardShip) return UnitGlyph::Naval;
   if (u.type == UT::Fighter || u.type == UT::Interceptor || u.type == UT::Bomber || u.type == UT::StrategicBomber || u.type == UT::ReconDrone || u.type == UT::StrikeDrone || u.type == UT::TacticalMissile || u.type == UT::StrategicMissile) return UnitGlyph::Aircraft;
@@ -1277,9 +1284,13 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     const bool military = b.type == dom::sim::BuildingType::Barracks || b.type == dom::sim::BuildingType::AABattery || b.type == dom::sim::BuildingType::AntiMissileDefense || b.type == dom::sim::BuildingType::Airbase || b.type == dom::sim::BuildingType::MissileSilo;
     const bool logistics = b.type == dom::sim::BuildingType::Port || b.type == dom::sim::BuildingType::Market;
     const bool industrial = b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::Mine;
+    const bool strategic = b.type == dom::sim::BuildingType::MissileSilo || b.type == dom::sim::BuildingType::RadarTower || b.type == dom::sim::BuildingType::MobileRadar || b.type == dom::sim::BuildingType::AntiMissileDefense;
+    const bool mythic = b.type == dom::sim::BuildingType::Wonder;
     if (military) { sx *= 1.0f; sy *= 0.8f; }
     else if (logistics) { sx *= 1.2f; sy *= 0.75f; }
     else if (industrial) { sx *= 1.1f; sy *= 1.05f; }
+    else if (strategic) { sx *= 0.88f; sy *= 1.2f; }
+    else if (mythic) { sx *= 1.2f; sy *= 1.2f; }
     glColor3f(base[0], base[1], base[2]);
     glVertex2f(b.pos.x - sx, b.pos.y - sy);
     glVertex2f(b.pos.x + sx, b.pos.y - sy);
@@ -1289,6 +1300,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     auto accent = mix_color(rel, {1.0f, 1.0f, 1.0f}, 0.2f);
     if (b.type == dom::sim::BuildingType::MissileSilo) accent = {0.95f, 0.24f, 0.24f};
     if (b.type == dom::sim::BuildingType::RadarTower || b.type == dom::sim::BuildingType::MobileRadar) accent = {0.35f, 0.95f, 0.95f};
+    if (mythic) accent = {0.82f, 0.62f, 0.95f};
+    if (logistics) accent = mix_color(accent, {0.92f, 0.86f, 0.44f}, 0.25f);
     glColor3f(accent[0], accent[1], accent[2]);
     float ax = sx * 0.42f;
     float ay = sy * 0.42f;
@@ -1420,6 +1433,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
           float a = i * 0.62831853f;
           float rr = s;
           if (glyph == UnitGlyph::Worker) rr *= 0.8f;
+          if (glyph == UnitGlyph::RangedInfantry) rr *= (i % 2 == 0 ? 1.12f : 0.74f);
           if (glyph == UnitGlyph::HeavyInfantry) rr *= 1.12f;
           if (glyph == UnitGlyph::Cavalry) rr *= (i % 2 == 0 ? 1.05f : 0.82f);
           glVertex2f(u.renderPos.x + std::cos(a) * rr, u.renderPos.y + std::sin(a) * rr);

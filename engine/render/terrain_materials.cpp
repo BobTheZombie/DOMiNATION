@@ -30,6 +30,26 @@ glm::vec3 material_color(TerrainMaterialId id) {
   return {0.65f, 0.2f, 0.65f};
 }
 
+
+
+float neighbor_water_factor(const dom::sim::World& world, int cellIndex) {
+  int x = cellIndex % world.width;
+  int y = cellIndex / world.width;
+  int water = 0;
+  int total = 0;
+  constexpr int kDirs[8][2] = {{1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {1,-1}, {-1,1}, {-1,-1}};
+  for (const auto& d : kDirs) {
+    int nx = x + d[0], ny = y + d[1];
+    if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height) continue;
+    ++total;
+    int ni = ny * world.width + nx;
+    auto tc = static_cast<dom::sim::TerrainClass>(world.terrainClass[static_cast<size_t>(ni)]);
+    if (tc == dom::sim::TerrainClass::ShallowWater || tc == dom::sim::TerrainClass::DeepWater) ++water;
+  }
+  if (total == 0) return 0.0f;
+  return static_cast<float>(water) / static_cast<float>(total);
+}
+
 bool is_land_coast(const dom::sim::World& world, int cellIndex) {
   if (cellIndex < 0 || cellIndex >= static_cast<int>(world.terrainClass.size())) return false;
   if (static_cast<dom::sim::TerrainClass>(world.terrainClass[static_cast<size_t>(cellIndex)]) != dom::sim::TerrainClass::Land) return false;
@@ -120,10 +140,11 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
 
   if (!sample.isWater) {
     const float slope = terrain_slope_hint(world, cellIndex);
+    const float waterAdj = neighbor_water_factor(world, cellIndex);
     const bool cliff = slope > 0.33f && h > 0.45f;
     sample.hasCliff = cliff;
-    float shade = std::clamp(0.85f + h * 0.35f - slope * 0.18f, 0.65f, 1.25f);
-    float fertMul = std::clamp(0.84f + fertility * 0.24f, 0.75f, 1.15f);
+    float shade = std::clamp(0.84f + h * 0.36f - slope * 0.2f + waterAdj * 0.05f, 0.62f, 1.26f);
+    float fertMul = std::clamp(0.82f + fertility * 0.26f, 0.72f, 1.16f);
     sample.color *= shade * fertMul;
     if (sample.mountain) {
       sample.accent = glm::clamp(sample.color + glm::vec3(0.14f), glm::vec3(0.0f), glm::vec3(1.0f));
@@ -133,6 +154,12 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
       }
     }
     if (sample.material == TerrainMaterialId::Wetlands && isRiver) sample.color = glm::mix(sample.color, material_color(TerrainMaterialId::River), 0.35f);
+    if (sample.material == TerrainMaterialId::Littoral) {
+      sample.color = glm::mix(sample.color, material_color(TerrainMaterialId::ShallowOcean), 0.18f);
+      sample.accent = glm::mix(sample.color, material_color(TerrainMaterialId::Desert), 0.1f);
+    }
+  } else if (sample.material == TerrainMaterialId::River || sample.material == TerrainMaterialId::Lake) {
+    sample.accent = glm::mix(sample.color, material_color(TerrainMaterialId::ShallowOcean), 0.35f);
   }
   sample.color = glm::clamp(sample.color, glm::vec3(0.0f), glm::vec3(1.0f));
   sample.accent = glm::clamp(sample.accent, glm::vec3(0.0f), glm::vec3(1.0f));
