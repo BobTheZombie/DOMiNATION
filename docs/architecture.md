@@ -32,7 +32,9 @@
   - >=1 trained unit via queue,
   - >=1 research/age-up start,
   - no false early win state.
+- Smoke validation is scenario-intent aware (`combat`, `logistics`, `crisis`, `guardians`, `industry`, `strategic_escalation`): combat pacing telemetry is only mandatory for combat-focused intent while logistics/crisis/guardian scenarios assert their own domain outcomes.
 - `--dump-hash` emits deterministic map/state hashes including queue/building/pop/resource data.
+- See `docs/smoke_validation.md` for the full contract.
 
 ## GOD mode
 - GOD Mode still suppresses fog gating and forces global reveal.

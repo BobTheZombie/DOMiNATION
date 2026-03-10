@@ -1,39 +1,246 @@
 {
   "schemaVersion": 1,
   "seed": 1234,
-  "map": {"width": 128, "height": 128},
+  "map": {
+    "width": 128,
+    "height": 128
+  },
   "players": [
-    {"id": 0, "isHuman": false, "isCPU": true, "civilization": "iron_phalanx", "team": 0, "popCap": 30,
-     "startingResources": {"Food": 800, "Wood": 700, "Metal": 900, "Wealth": 500, "Knowledge": 450, "Oil": 300}},
-    {"id": 1, "isHuman": false, "isCPU": true, "civilization": "scholar_dynasty", "team": 1, "popCap": 30,
-     "startingResources": {"Food": 800, "Wood": 700, "Metal": 900, "Wealth": 500, "Knowledge": 450, "Oil": 300}}
+    {
+      "id": 0,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "iron_phalanx",
+      "team": 0,
+      "popCap": 30,
+      "startingResources": {
+        "Food": 800,
+        "Wood": 700,
+        "Metal": 900,
+        "Wealth": 500,
+        "Knowledge": 450,
+        "Oil": 300
+      }
+    },
+    {
+      "id": 1,
+      "isHuman": false,
+      "isCPU": true,
+      "civilization": "scholar_dynasty",
+      "team": 1,
+      "popCap": 30,
+      "startingResources": {
+        "Food": 800,
+        "Wood": 700,
+        "Metal": 900,
+        "Wealth": 500,
+        "Knowledge": 450,
+        "Oil": 300
+      }
+    }
   ],
   "placements": {
     "cities": [
-      {"id": 1, "team": 0, "pos": [22, 22], "level": 2, "capital": true},
-      {"id": 2, "team": 1, "pos": [98, 98], "level": 2, "capital": true}
+      {
+        "id": 1,
+        "team": 0,
+        "pos": [
+          22,
+          22
+        ],
+        "level": 2,
+        "capital": true
+      },
+      {
+        "id": 2,
+        "team": 1,
+        "pos": [
+          98,
+          98
+        ],
+        "level": 2,
+        "capital": true
+      }
     ],
     "buildings": [
-      {"id": 10, "team": 0, "type": "CityCenter", "pos": [22, 22], "underConstruction": false, "hp": 2200},
-      {"id": 11, "team": 0, "type": "Airbase", "pos": [26, 20], "underConstruction": false, "hp": 1000},
-      {"id": 12, "team": 0, "type": "RadarTower", "pos": [24, 18], "underConstruction": false, "hp": 900},
-      {"id": 13, "team": 0, "type": "MissileSilo", "pos": [20, 18], "underConstruction": false, "hp": 1000},
-      {"id": 20, "team": 1, "type": "CityCenter", "pos": [98, 98], "underConstruction": false, "hp": 2200},
-      {"id": 21, "team": 1, "type": "Airbase", "pos": [94, 100], "underConstruction": false, "hp": 1000},
-      {"id": 22, "team": 1, "type": "AABattery", "pos": [95, 94], "underConstruction": false, "hp": 900},
-      {"id": 23, "team": 1, "type": "AntiMissileDefense", "pos": [99, 93], "underConstruction": false, "hp": 900}
+      {
+        "id": 10,
+        "team": 0,
+        "type": "CityCenter",
+        "pos": [
+          22,
+          22
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 11,
+        "team": 0,
+        "type": "Airbase",
+        "pos": [
+          26,
+          20
+        ],
+        "underConstruction": false,
+        "hp": 1000
+      },
+      {
+        "id": 12,
+        "team": 0,
+        "type": "RadarTower",
+        "pos": [
+          24,
+          18
+        ],
+        "underConstruction": false,
+        "hp": 900
+      },
+      {
+        "id": 13,
+        "team": 0,
+        "type": "MissileSilo",
+        "pos": [
+          20,
+          18
+        ],
+        "underConstruction": false,
+        "hp": 1000
+      },
+      {
+        "id": 20,
+        "team": 1,
+        "type": "CityCenter",
+        "pos": [
+          98,
+          98
+        ],
+        "underConstruction": false,
+        "hp": 2200
+      },
+      {
+        "id": 21,
+        "team": 1,
+        "type": "Airbase",
+        "pos": [
+          94,
+          100
+        ],
+        "underConstruction": false,
+        "hp": 1000
+      },
+      {
+        "id": 22,
+        "team": 1,
+        "type": "AABattery",
+        "pos": [
+          95,
+          94
+        ],
+        "underConstruction": false,
+        "hp": 900
+      },
+      {
+        "id": 23,
+        "team": 1,
+        "type": "AntiMissileDefense",
+        "pos": [
+          99,
+          93
+        ],
+        "underConstruction": false,
+        "hp": 900
+      }
     ],
     "units": [
-      {"id": 100, "team": 0, "type": "Infantry", "pos": [27, 24]},
-      {"id": 101, "team": 1, "type": "Infantry", "pos": [93, 96]}
+      {
+        "id": 100,
+        "team": 0,
+        "type": "Infantry",
+        "pos": [
+          27,
+          24
+        ]
+      },
+      {
+        "id": 101,
+        "team": 1,
+        "type": "Infantry",
+        "pos": [
+          93,
+          96
+        ]
+      }
     ]
   },
   "airUnits": [
-    {"id": 1, "team": 0, "class": 4, "state": 0, "pos": [24, 24], "missionTarget": [96, 96], "hp": 60, "speed": 8.5, "cooldownTicks": 0, "missionPerformed": false},
-    {"id": 2, "team": 1, "class": 2, "state": 0, "pos": [96, 96], "missionTarget": [24, 24], "hp": 120, "speed": 6.2, "cooldownTicks": 0, "missionPerformed": false}
+    {
+      "id": 1,
+      "team": 0,
+      "class": 4,
+      "state": 0,
+      "pos": [
+        24,
+        24
+      ],
+      "missionTarget": [
+        96,
+        96
+      ],
+      "hp": 60,
+      "speed": 8.5,
+      "cooldownTicks": 0,
+      "missionPerformed": false
+    },
+    {
+      "id": 2,
+      "team": 1,
+      "class": 2,
+      "state": 0,
+      "pos": [
+        96,
+        96
+      ],
+      "missionTarget": [
+        24,
+        24
+      ],
+      "hp": 120,
+      "speed": 6.2,
+      "cooldownTicks": 0,
+      "missionPerformed": false
+    }
   ],
   "strategicStrikes": [
-    {"id": 1, "team": 0, "type": 1, "from": [20, 18], "target": [98, 98], "prepTicksRemaining": 150, "travelTicksRemaining": 200, "cooldownTicks": 0, "interceptionState": 0, "launched": false, "resolved": false}
+    {
+      "id": 1,
+      "team": 0,
+      "type": 1,
+      "from": [
+        20,
+        18
+      ],
+      "target": [
+        98,
+        98
+      ],
+      "prepTicksRemaining": 150,
+      "travelTicksRemaining": 200,
+      "cooldownTicks": 0,
+      "interceptionState": 0,
+      "launched": false,
+      "resolved": false
+    }
   ],
-  "rulesOverrides": {"timeLimit": 7000, "disabledVictoryTypes": []}
+  "rulesOverrides": {
+    "timeLimit": 7000,
+    "disabledVictoryTypes": []
+  },
+  "mission": {
+    "scenarioTags": [
+      "smoke",
+      "strategic_escalation",
+      "strategic_warfare"
+    ]
+  }
 }
