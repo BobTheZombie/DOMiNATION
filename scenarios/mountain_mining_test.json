@@ -3,23 +3,33 @@
   "seed": 1234,
   "map": { "width": 128, "height": 128 },
   "players": [
-    { "id": 0, "isHuman": false, "isCPU": true, "team": 0, "civilization": "default" },
-    { "id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "default" }
+    { "id": 0, "isHuman": false, "isCPU": true, "team": 0, "civilization": "rome" },
+    { "id": 1, "isHuman": false, "isCPU": true, "team": 1, "civilization": "tartaria" }
   ],
   "placements": {
     "cities": [
-      { "id": 1, "team": 0, "pos": [18.0, 18.0], "level": 2, "capital": true },
-      { "id": 2, "team": 1, "pos": [92.0, 92.0], "level": 2, "capital": true }
+      { "id": 1, "team": 0, "pos": [30.0, 34.0], "level": 2, "capital": true },
+      { "id": 2, "team": 1, "pos": [84.0, 76.0], "level": 2, "capital": true }
     ],
     "buildings": [
-      { "id": 1, "team": 0, "type": "CityCenter", "pos": [18.0, 18.0], "underConstruction": false },
-      { "id": 2, "team": 1, "type": "CityCenter", "pos": [92.0, 92.0], "underConstruction": false },
-      { "id": 3, "team": 0, "type": "Mine", "pos": [58.5, 51.5], "underConstruction": false }
+      { "id": 1, "team": 0, "type": "CityCenter", "pos": [30.0, 34.0], "underConstruction": false },
+      { "id": 2, "team": 1, "type": "CityCenter", "pos": [84.0, 76.0], "underConstruction": false },
+      { "id": 3, "team": 0, "type": "Mine", "pos": [58.5, 51.5], "underConstruction": false },
+      { "id": 4, "team": 0, "type": "Barracks", "pos": [56.0, 49.0], "underConstruction": false },
+      { "id": 5, "team": 1, "type": "RadarTower", "pos": [61.0, 54.0], "underConstruction": false }
+    ],
+    "units": [
+      { "id": 10, "team": 0, "type": "Infantry", "pos": [56.0, 50.5] },
+      { "id": 11, "team": 0, "type": "Archer", "pos": [57.0, 51.0] },
+      { "id": 12, "team": 0, "type": "Cavalry", "pos": [55.5, 50.0] },
+      { "id": 20, "team": 1, "type": "Infantry", "pos": [61.5, 53.5] },
+      { "id": 21, "team": 1, "type": "Archer", "pos": [62.0, 54.0] },
+      { "id": 22, "team": 1, "type": "Siege", "pos": [62.5, 54.5] }
     ]
   },
   "mission": {
     "title": "Mountain Mining Test",
-    "briefing": "Validate mountain extraction, shafts, and deterministic tunnel logistics.",
-    "introMessages": ["Mountain shafts initialized."]
+    "briefing": "Validate mountain extraction, tunnel authority, pass control, and deterministic mountain warfare.",
+    "introMessages": ["Mountain strongpoints initialized."]
   }
 }

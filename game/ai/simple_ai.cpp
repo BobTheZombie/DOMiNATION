@@ -50,6 +50,46 @@ bool coastal_city_exists(const dom::sim::World& w, uint16_t team) {
   return false;
 }
 
+bool is_mountain_cell(const dom::sim::World& w, int cell) {
+  if (cell < 0 || cell >= w.width * w.height) return false;
+  auto b = dom::sim::biome_at(w, cell);
+  return b == dom::sim::BiomeType::Mountain || b == dom::sim::BiomeType::SnowMountain;
+}
+
+bool is_pass_cell(const dom::sim::World& w, int cell) {
+  if (cell < 0 || cell >= w.width * w.height) return false;
+  if (w.terrainClass[cell] != static_cast<uint8_t>(dom::sim::TerrainClass::Land)) return false;
+  const int x = cell % w.width;
+  const int y = cell / w.width;
+  auto land = [&](int nx, int ny) {
+    if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) return false;
+    return w.terrainClass[ny * w.width + nx] == static_cast<uint8_t>(dom::sim::TerrainClass::Land);
+  };
+  int cardinal = static_cast<int>(land(x-1,y)) + static_cast<int>(land(x+1,y)) + static_cast<int>(land(x,y-1)) + static_cast<int>(land(x,y+1));
+  if (cardinal > 2) return false;
+  int mountainAdj = 0;
+  for (int oy=-1; oy<=1; ++oy) for (int ox=-1; ox<=1; ++ox) {
+    if (ox==0 && oy==0) continue;
+    int nx=x+ox, ny=y+oy;
+    if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+    if (is_mountain_cell(w, ny * w.width + nx)) ++mountainAdj;
+  }
+  return mountainAdj >= 3;
+}
+
+bool find_pass_target(const dom::sim::World& w, uint16_t team, glm::vec2 from, glm::vec2& out) {
+  float best = 1e9f;
+  bool found = false;
+  for (int i = 0; i < w.width * w.height; ++i) {
+    if (!is_pass_cell(w, i)) continue;
+    if (w.territoryOwner[i] != team && w.territoryOwner[i] != UINT16_MAX) continue;
+    glm::vec2 p{(float)(i % w.width) + 0.5f, (float)(i / w.width) + 0.5f};
+    float d = glm::length(p - from);
+    if (d < best) { best = d; out = p; found = true; }
+  }
+  return found;
+}
+
 bool find_mountain_mine_spot(const dom::sim::World& w, uint16_t team, glm::vec2& out) {
   for (int y = 0; y < w.height; ++y) for (int x = 0; x < w.width; ++x) {
     const int cell = y * w.width + x;
@@ -233,6 +273,13 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   }
 
   maybeBuild(dom::sim::BuildingType::Barracks, {14, 8});
+  glm::vec2 passPos{};
+  const bool hasPassTarget = find_pass_target(world, team, base, passPos);
+  if (hasPassTarget && count_buildings(world, team, dom::sim::BuildingType::RadarTower) < 2) {
+    dom::sim::start_build_placement(world, team, dom::sim::BuildingType::RadarTower);
+    dom::sim::update_build_placement(world, team, passPos);
+    if (dom::sim::confirm_build_placement(world, team)) ++world.mountainFortBonusEvents;
+  }
   if (civ.scienceBias * civ.aiReconPriority >= 1.0f || civ.defense >= 1.0f) maybeBuild(dom::sim::BuildingType::RadarTower, {9, 10});
   if (civ.militaryBias * civ.aiAirPriority >= 1.0f) maybeBuild(dom::sim::BuildingType::Airbase, {16, 10});
   if (flowPhase >= dom::sim::MatchFlowPhase::StrategicCrisis || world.worldTension > 48.0f || civ.scienceBias * civ.aiStrategicPriority > 1.1f || civ.strategicBias > 1.1f) maybeBuild(dom::sim::BuildingType::MissileSilo, {18, 12});
@@ -258,10 +305,10 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (civ.id == "rome") { infBias *= 1.28f; siegeBias *= 1.12f; }
     else if (civ.id == "china") { archBias *= 1.2f; infBias *= 1.08f; }
     else if (civ.id == "usa") { archBias *= 1.1f; cavBias *= 1.08f; }
-    else if (civ.id == "russia") { infBias *= 1.08f; siegeBias *= 1.3f; }
+    else if (civ.id == "russia") { infBias *= 1.08f; siegeBias *= 1.35f; }
     else if (civ.id == "japan") { cavBias *= 1.15f; archBias *= 1.12f; }
-    else if (civ.id == "egypt") { cavBias *= 1.16f; siegeBias *= 1.16f; }
-    else if (civ.id == "tartaria") { cavBias *= 1.22f; siegeBias *= 1.18f; }
+    else if (civ.id == "egypt") { cavBias *= 1.08f; archBias *= 1.12f; siegeBias *= 1.2f; }
+    else if (civ.id == "tartaria") { cavBias *= 1.22f; siegeBias *= 1.2f; if (hasMountainSpot) siegeBias *= 1.08f; }
 
     const float earlyScale = flowPhase == dom::sim::MatchFlowPhase::EarlyExpansion ? 1.2f : 1.0f;
     const float regionalScale = flowPhase >= dom::sim::MatchFlowPhase::RegionalContest ? 1.0f : 0.35f;
@@ -360,6 +407,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (op.team == team && op.active) { opType = op.type; opTarget = op.target; break; }
   }
   if (opType == dom::sim::OperationType::DefendBorder || opType == dom::sim::OperationType::SecureRoute) opTarget = rally;
+  if (hasPassTarget && (civ.id == "rome" || civ.id == "egypt" || civ.defense >= 1.1f)) { opTarget = passPos; ++world.passControlEvents; }
   if (flowPhase == dom::sim::MatchFlowPhase::EarlyExpansion) opTarget = rally;
   if (armageddon) {
     if (civ.id == "russia") opTarget = rally;
@@ -381,6 +429,8 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   }
   const bool shouldRetreat = ours.hp < retreatHpThreshold || (theirs.hp > 0 && ours.hp * 100 < theirs.hp * (gAggressive ? 60 : 80)) || outSupply > (int)army.size() / 3;
 
+  if (hasPassTarget) ++world.mountainRouteSelections;
+  if (hasMountainSpot && civ.id == "tartaria") ++world.tunnelMilitaryMoves;
   if (shouldRetreat) {
     dom::sim::issue_move(world, team, army, rally);
     ++world.aiRetreatCount;

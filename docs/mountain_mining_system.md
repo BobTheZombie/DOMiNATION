@@ -39,3 +39,9 @@
 - `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 8 --hash-only`
 - `./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 1200 --save /tmp/mountain_save.json --dump-hash`
 - `./build/rts --headless --load /tmp/mountain_save.json --smoke --ticks 2200 --dump-hash`
+
+## Mountain warfare extension
+- Mountain combat/movement modifiers now reuse mountain biome + pass inference to create bounded tactical differences.
+- Existing structures gain bounded mountain/pass strongpoint bonuses (no new fortress subsystem).
+- Tunnel authority now contributes to military reroute options and chokepoint bypass decisions while remaining deterministic.
+- See `docs/mountain_warfare_system.md` for detailed combat/pass/AI/counter notes.

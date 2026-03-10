@@ -476,6 +476,12 @@ struct SimulationStats {
   uint32_t undergroundDepots{0};
   float undergroundYield{0.0f};
   float mountainThroughput{0.0f};
+  uint32_t mountainCombatEvents{0};
+  uint32_t passControlEvents{0};
+  uint32_t tunnelMilitaryMoves{0};
+  uint32_t mountainFortBonusEvents{0};
+  uint32_t chokepointContests{0};
+  uint32_t mountainRouteSelections{0};
   uint32_t guardianSiteCount{0};
   uint32_t guardiansDiscovered{0};
   uint32_t guardiansSpawned{0};
@@ -647,6 +653,12 @@ struct World {
   uint32_t mountainChainCount{0}; uint32_t riverCount{0}; uint32_t lakeCount{0}; uint32_t startCandidateCount{0}; uint32_t mythicCandidateCount{0};
   uint32_t activeMineShafts{0}; uint32_t activeTunnels{0}; uint32_t undergroundConnections{0}; uint32_t undergroundDepots{0};
   float undergroundYield{0.0f}; float mountainThroughput{0.0f};
+  uint32_t mountainCombatEvents{0};
+  uint32_t passControlEvents{0};
+  uint32_t tunnelMilitaryMoves{0};
+  uint32_t mountainFortBonusEvents{0};
+  uint32_t chokepointContests{0};
+  uint32_t mountainRouteSelections{0};
   uint32_t guardiansDiscovered{0};
   uint32_t guardiansSpawned{0};
   uint32_t guardiansJoined{0};
