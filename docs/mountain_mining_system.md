@@ -26,5 +26,16 @@
 - `DEEP_DEPOSIT_COUNT`
 - `ACTIVE_MINE_SHAFTS`
 - `ACTIVE_TUNNELS`
+- `UNDERGROUND_CONNECTIONS`
 - `UNDERGROUND_DEPOTS`
 - `UNDERGROUND_YIELD`
+- `MOUNTAIN_THROUGHPUT`
+
+## Smoke validation commands
+- `./build/rts --headless --smoke --ticks 1800 --seed 1234 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 2200 --dump-hash`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 1 --hash-only`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 4 --hash-only`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --threads 8 --hash-only`
+- `./build/rts --headless --scenario scenarios/mountain_mining_test.json --smoke --ticks 1200 --save /tmp/mountain_save.json --dump-hash`
+- `./build/rts --headless --load /tmp/mountain_save.json --smoke --ticks 2200 --dump-hash`

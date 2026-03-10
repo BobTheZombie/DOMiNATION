@@ -223,6 +223,7 @@ Applied authoritative hooks now include resource gather/trickle, trade income, s
 - Authoritative deterministic mountain regions (`mountainRegions`) and cell-region map.
 - Two-layer deposits: `surfaceDeposits` and `deepDeposits`.
 - Underground logistics graph (`undergroundNodes`, `undergroundEdges`) is serialized and replay-safe.
+- Deterministic runtime counters include `ACTIVE_MINE_SHAFTS`, `ACTIVE_TUNNELS`, `UNDERGROUND_CONNECTIONS`, `UNDERGROUND_YIELD`, and `MOUNTAIN_THROUGHPUT`.
 
 ## Mythic Guardians world layer
 
