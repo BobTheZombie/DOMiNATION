@@ -15,10 +15,11 @@ DOM Asset Studio is a standalone desktop content-authoring companion for DOMiNAT
 
 ## Content workflow
 1. Author meshes/materials in Blender and export glTF/GLB.
-2. Register assets in `content/asset_manifest.json` and `content/lod_manifest.json`.
-3. Edit style mappings in `terrain_styles.json`, `unit_styles.json`, `building_styles.json`, and `object_styles.json`.
-4. Open Asset Studio, inspect manifest/style data, switch civ/theme/state/LOD variants, and preview resolved render mappings on real asset geometry.
-5. Save stylesheet updates and run validation (`tools/validate_content_pipeline.py`) before runtime use.
+2. Open DOM Asset Studio and create/edit entries in `content/asset_manifest.json` and `content/lod_manifest.json` from **Inspector → Asset Manifest / LOD**.
+3. Assign render class, category metadata, civ/theme tags, and attachment profile metadata for selected assets/LODs.
+4. Use **Apply Asset->Stylesheet Mapping** to seed/update exact style mappings from manifest metadata, then edit style layers in `terrain_styles.json`, `unit_styles.json`, `building_styles.json`, and `object_styles.json`.
+5. Inspect resolved preview variants (domain/civ/theme/state/LOD), open imported glTF/GLB assets, and verify resolved mesh/material/lod references.
+6. Run in-studio validation + pipeline validation and use Export to save manifests/stylesheets and package engine-compatible content.
 
 ## Real asset preview capabilities
 - Opens `.gltf` and `.glb` files from Project Browser and from the Asset menu path field.
@@ -32,7 +33,9 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 
 ## Validation and safety behavior
 - Manifest diagnostics are shown in the Inspector panel.
+- Validation includes internal checks for duplicate IDs, bad LOD→asset links, missing manifest/style references, and stylesheet mesh/LOD mismatches.
 - Validation panel can execute `python3 tools/validate_content_pipeline.py` and stream output.
+- Export workflow runs save/apply/reload + validation + `tools/asset_pipeline/package_assets.py` packaging and reports status in the Validation panel.
 - Missing/invalid asset references are reported in log/inspector as non-fatal preview errors.
 - Unsupported glTF payloads (for example, missing triangle POSITION accessors) fail safely and keep the studio responsive.
 - JSON parse errors and missing references are surfaced in UI instead of crashing.
