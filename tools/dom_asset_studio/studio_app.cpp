@@ -13,7 +13,9 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
@@ -23,7 +25,46 @@ namespace dom::tools {
 namespace {
 const char* kDomainNames[] = {"Terrain", "Unit", "Building", "Object"};
 const char* kLodNames[] = {"Near", "Mid", "Far"};
+const char* kVariantSourceNames[] = {"Resolver (class/exact)", "Exact mapping only", "Render class only"};
+
+struct BufferViewRef {
+  int buffer{-1};
+  size_t byteOffset{0};
+  size_t byteLength{0};
+  size_t byteStride{0};
+};
+
+size_t component_size(int componentType) {
+  switch (componentType) {
+    case 5120:
+    case 5121: return 1;
+    case 5122:
+    case 5123: return 2;
+    case 5125:
+    case 5126: return 4;
+    default: return 0;
+  }
 }
+
+bool read_file_bytes(const std::filesystem::path& path, std::vector<uint8_t>& out) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in.good()) return false;
+  in.seekg(0, std::ios::end);
+  const auto len = static_cast<size_t>(in.tellg());
+  in.seekg(0, std::ios::beg);
+  out.resize(len);
+  if (len > 0) in.read(reinterpret_cast<char*>(out.data()), static_cast<std::streamsize>(len));
+  return in.good() || in.eof();
+}
+
+uint32_t read_u32_le(const uint8_t* p) {
+  return static_cast<uint32_t>(p[0]) |
+         (static_cast<uint32_t>(p[1]) << 8U) |
+         (static_cast<uint32_t>(p[2]) << 16U) |
+         (static_cast<uint32_t>(p[3]) << 24U);
+}
+
+} // namespace
 
 int DomAssetStudioApp::run(int, char**) {
   if (!init_sdl()) return 1;
@@ -120,6 +161,8 @@ void DomAssetStudioApp::poll_events(bool& running) {
 
 void DomAssetStudioApp::render_frame() {
 #ifdef DOM_HAS_IMGUI
+  if (turntable_) orbitYaw_ = std::fmod(orbitYaw_ + 0.4f, 360.0f);
+
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplSDL2_NewFrame(window_);
   ImGui::NewFrame();
@@ -169,13 +212,13 @@ void DomAssetStudioApp::draw_main_menu() {
     ImGui::MenuItem("Grid", nullptr, &showGrid_);
     ImGui::MenuItem("Wireframe", nullptr, &wireframe_);
     ImGui::MenuItem("Normals", nullptr, &showNormals_);
+    ImGui::MenuItem("Turntable", nullptr, &turntable_);
+    ImGui::MenuItem("Attachments", nullptr, &showAttachments_);
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("Asset")) {
     ImGui::InputText("Open glTF/GLB", &gltfOpenPath_);
-    if (ImGui::MenuItem("Inspect Path")) {
-      append_log("Inspect asset path: " + gltfOpenPath_);
-    }
+    if (ImGui::MenuItem("Open For Preview")) open_asset_for_preview(gltfOpenPath_, false);
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("Stylesheet")) {
@@ -206,7 +249,14 @@ void DomAssetStudioApp::draw_project_browser() {
   ImGui::Separator();
   for (const auto& p : treeEntries_) {
     std::string rel = p.string();
-    if (ImGui::Selectable(rel.c_str())) append_log("Selected file: " + rel);
+    bool isGltf = p.extension() == ".gltf" || p.extension() == ".glb";
+    if (ImGui::Selectable(rel.c_str())) {
+      append_log("Selected file: " + rel);
+      if (isGltf) {
+        gltfOpenPath_ = rel;
+        open_asset_for_preview(rel, false);
+      }
+    }
   }
   ImGui::End();
 #endif
@@ -223,6 +273,46 @@ void DomAssetStudioApp::draw_asset_inspector() {
   if (ImGui::CollapsingHeader("Manifest Diagnostics", ImGuiTreeNodeFlags_DefaultOpen)) {
     for (const auto& e : status.errors) ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "%s", e.c_str());
     for (const auto& w : status.warnings) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "%s", w.c_str());
+  }
+
+  if (ImGui::CollapsingHeader("Resolved Preview Metadata", ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::Text("style_id: %s", resolvedPreview_.styleId.c_str());
+    ImGui::Text("mesh ref: %s", resolvedPreview_.mesh.c_str());
+    ImGui::Text("material: %s", resolvedPreview_.material.c_str());
+    ImGui::Text("lod_group: %s", resolvedPreview_.lodGroup.c_str());
+    ImGui::Text("loaded asset: %s", loadedAssetPath_.empty() ? "<none>" : loadedAssetPath_.c_str());
+
+    if (previewAsset_.loaded) {
+      ImGui::Text("meshes: %d", static_cast<int>(previewAsset_.meshNames.size()));
+      ImGui::Text("materials: %d", static_cast<int>(previewAsset_.materialNames.size()));
+      ImGui::Text("vertices/indices: %d / %d",
+                  static_cast<int>(previewAsset_.vertexCount),
+                  static_cast<int>(previewAsset_.indexCount));
+      ImGui::Text("bounds min: %.2f %.2f %.2f", previewAsset_.minBounds[0], previewAsset_.minBounds[1], previewAsset_.minBounds[2]);
+      ImGui::Text("bounds max: %.2f %.2f %.2f", previewAsset_.maxBounds[0], previewAsset_.maxBounds[1], previewAsset_.maxBounds[2]);
+
+      if (ImGui::TreeNode("Mesh Names")) {
+        for (const auto& name : previewAsset_.meshNames) ImGui::BulletText("%s", name.c_str());
+        ImGui::TreePop();
+      }
+      if (ImGui::TreeNode("Material Names")) {
+        for (const auto& name : previewAsset_.materialNames) ImGui::BulletText("%s", name.c_str());
+        ImGui::TreePop();
+      }
+    } else if (!previewAsset_.error.empty()) {
+      ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Asset preview unavailable: %s", previewAsset_.error.c_str());
+    }
+
+    if (ImGui::TreeNode("Attachments / Sockets")) {
+      if (resolvedPreview_.attachments.empty()) {
+        ImGui::TextDisabled("No attachment mappings in style");
+      } else {
+        for (const auto& [socket, target] : resolvedPreview_.attachments) {
+          ImGui::BulletText("%s -> %s", socket.c_str(), target.c_str());
+        }
+      }
+      ImGui::TreePop();
+    }
   }
 
   if (ImGui::CollapsingHeader("Asset Manifest / LOD", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -307,53 +397,25 @@ void DomAssetStudioApp::draw_stylesheet_editor() {
     }
   }
 
-  ImGui::Combo("Preview Domain", &previewDomain_, kDomainNames, 4);
-  ImGui::InputText("Preview Civ", &previewCiv_);
-  ImGui::InputText("Preview Theme", &previewTheme_);
-  ImGui::InputText("Preview State", &previewState_);
-  ImGui::Combo("Preview LOD", &previewLod_, kLodNames, 3);
+  bool changed = false;
+  changed |= ImGui::Combo("Preview Domain", &previewDomain_, kDomainNames, 4);
+  changed |= ImGui::Combo("Variant Source", &previewStyleVariant_, kVariantSourceNames, 3);
+  changed |= ImGui::InputText("Preview Civ", &previewCiv_);
+  changed |= ImGui::InputText("Preview Theme", &previewTheme_);
+  changed |= ImGui::InputText("Preview State", &previewState_);
+  changed |= ImGui::Combo("Preview LOD", &previewLod_, kLodNames, 3);
+  if (changed) update_preview_resolution();
 
   if (sheet.json.contains("render_classes") && sheet.json["render_classes"].contains(selectedRenderClass_)) {
     auto& rc = sheet.json["render_classes"][selectedRenderClass_];
     if (!rc.contains("default") || !rc["default"].is_object()) rc["default"] = nlohmann::json::object();
     ImGui::SeparatorText("Default Mapping");
     edit_style_layer(rc["default"], "rc_default");
-
-    if (!rc.contains("civ_overrides") || !rc["civ_overrides"].is_object()) rc["civ_overrides"] = nlohmann::json::object();
-    if (ImGui::TreeNode("Civ Overrides")) {
-      for (auto& [civ, layer] : rc["civ_overrides"].items()) {
-        if (!layer.is_object()) continue;
-        if (ImGui::TreeNode(civ.c_str())) {
-          edit_style_layer(layer, civ.c_str());
-          ImGui::TreePop();
-        }
-      }
-      ImGui::TreePop();
-    }
-
-    if (!rc.contains("theme_overrides") || !rc["theme_overrides"].is_object()) rc["theme_overrides"] = nlohmann::json::object();
-    if (ImGui::TreeNode("Theme Overrides")) {
-      for (auto& [theme, layer] : rc["theme_overrides"].items()) {
-        if (!layer.is_object()) continue;
-        if (ImGui::TreeNode(theme.c_str())) {
-          edit_style_layer(layer, theme.c_str());
-          ImGui::TreePop();
-        }
-      }
-      ImGui::TreePop();
-    }
-
   }
 
   if (ImGui::Button("Save Sheet")) save_stylesheet(sheet);
   ImGui::SameLine();
   if (ImGui::Button("Re-resolve Preview")) update_preview_resolution();
-
-  if (ImGui::TreeNode("Raw JSON")) {
-    std::string raw = sheet.json.dump(2);
-    ImGui::InputTextMultiline("##raw", &raw, ImVec2(-1, 240));
-    ImGui::TreePop();
-  }
 
   ImGui::SeparatorText("Resolved Preview Chain");
   ImGui::Text("style_id: %s", resolvedPreview_.styleId.c_str());
@@ -370,15 +432,17 @@ void DomAssetStudioApp::draw_viewport() {
 #ifdef DOM_HAS_IMGUI
   if (!ImGui::Begin("Viewport")) { ImGui::End(); return; }
 
-  ImGui::Text("Real-time model preview shell");
+  ImGui::Text("3D preview (manifest + stylesheet resolved)");
   ImGui::SliderFloat("Orbit Yaw", &orbitYaw_, -180.0f, 180.0f);
   ImGui::SliderFloat("Orbit Pitch", &orbitPitch_, -89.0f, 89.0f);
   ImGui::SliderFloat("Zoom", &orbitDistance_, 1.0f, 20.0f);
   ImGui::SliderFloat("Pan X", &panX_, -10.0f, 10.0f);
   ImGui::SliderFloat("Pan Y", &panY_, -10.0f, 10.0f);
+  ImGui::Checkbox("Turntable", &turntable_);
   ImGui::Checkbox("Grid", &showGrid_);
   ImGui::Checkbox("Wireframe", &wireframe_);
   ImGui::Checkbox("Normals", &showNormals_);
+  ImGui::Checkbox("Sockets/Attachments", &showAttachments_);
   ImGui::Combo("Lighting Preset", &lightingPreset_, "Studio\0Sunset\0Flat\0");
   ImGui::Combo("Background", &backgroundMode_, "Dark\0Sky\0Neutral\0");
 
@@ -398,25 +462,66 @@ void DomAssetStudioApp::draw_viewport() {
     }
   }
 
-  float cx = p.x + size.x * (0.5f + panX_ * 0.03f);
-  float cy = p.y + size.y * (0.55f + panY_ * 0.03f);
-  float radius = std::max(20.0f, 160.0f / orbitDistance_);
-  ImU32 color = wireframe_ ? IM_COL32(255, 255, 120, 255) : IM_COL32(120, 210, 255, 220);
-  draw->AddCircle(ImVec2(cx, cy), radius, color, 24, wireframe_ ? 2.5f : 0.0f);
-  if (showNormals_) {
-    for (int i = 0; i < 12; ++i) {
-      float a = (i / 12.0f) * 6.28318f;
-      draw->AddLine(ImVec2(cx + std::cos(a) * radius, cy + std::sin(a) * radius),
-                    ImVec2(cx + std::cos(a) * (radius + 14.0f), cy + std::sin(a) * (radius + 14.0f)), IM_COL32(255, 100, 100, 255), 1.0f);
+  const float yaw = orbitYaw_ * 0.0174533f;
+  const float pitch = orbitPitch_ * 0.0174533f;
+  const float cy = std::cos(yaw);
+  const float sy = std::sin(yaw);
+  const float cp = std::cos(pitch);
+  const float sp = std::sin(pitch);
+
+  auto project = [&](const PreviewSurfacePoint& v, float& ox, float& oy, float& depth) {
+    float x = v.x;
+    float yv = v.y;
+    float z = v.z;
+    float rx = x * cy + z * sy;
+    float rz = -x * sy + z * cy;
+    float ry = yv * cp - rz * sp;
+    float rz2 = yv * sp + rz * cp;
+    const float d = orbitDistance_ + 4.0f + rz2;
+    const float scale = 170.0f / std::max(1.0f, d);
+    ox = p.x + size.x * (0.5f + panX_ * 0.03f) + rx * scale;
+    oy = p.y + size.y * (0.55f + panY_ * 0.03f) - ry * scale;
+    depth = d;
+  };
+
+  if (previewAsset_.loaded && !previewAsset_.surfaces.empty()) {
+    for (const auto& surface : previewAsset_.surfaces) {
+      for (size_t i = 0; i + 2 < surface.indices.size(); i += 3) {
+        const auto i0 = surface.indices[i + 0];
+        const auto i1 = surface.indices[i + 1];
+        const auto i2 = surface.indices[i + 2];
+        if (i0 >= surface.points.size() || i1 >= surface.points.size() || i2 >= surface.points.size()) continue;
+        float x0, y0, z0, x1, y1, z1, x2, y2, z2;
+        project(surface.points[i0], x0, y0, z0);
+        project(surface.points[i1], x1, y1, z1);
+        project(surface.points[i2], x2, y2, z2);
+        if (wireframe_) {
+          draw->AddTriangle(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(255, 230, 120, 210), 1.0f);
+        } else {
+          draw->AddTriangleFilled(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(120, 210, 255, 140));
+          draw->AddTriangle(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(20, 40, 65, 200), 1.0f);
+        }
+        if (showNormals_) {
+          const float cx = (x0 + x1 + x2) / 3.0f;
+          const float cy2 = (y0 + y1 + y2) / 3.0f;
+          draw->AddLine(ImVec2(cx, cy2), ImVec2(cx, cy2 - 8.0f), IM_COL32(255, 100, 100, 220), 1.0f);
+        }
+      }
+    }
+  }
+
+  if (showAttachments_) {
+    float sx = p.x + size.x * 0.12f;
+    float sy2 = p.y + size.y * 0.15f;
+    for (const auto& [socket, target] : resolvedPreview_.attachments) {
+      draw->AddCircleFilled(ImVec2(sx, sy2), 3.0f, IM_COL32(255, 190, 80, 220));
+      draw->AddText(ImVec2(sx + 8.0f, sy2 - 8.0f), IM_COL32(255, 230, 190, 255), (socket + " -> " + target).c_str());
+      sy2 += 18.0f;
     }
   }
 
   draw->AddText(ImVec2(p.x + 8, p.y + 8), IM_COL32_WHITE, ("mesh: " + resolvedPreview_.mesh).c_str());
   draw->AddText(ImVec2(p.x + 8, p.y + 26), IM_COL32_WHITE, ("material: " + resolvedPreview_.material).c_str());
-
-  if (ImGui::Button("Reset View")) {
-    orbitYaw_ = 25.0f; orbitPitch_ = 20.0f; orbitDistance_ = 8.0f; panX_ = panY_ = 0.0f;
-  }
 
   ImGui::End();
 #endif
@@ -490,13 +595,275 @@ void DomAssetStudioApp::run_content_validation() {
 void DomAssetStudioApp::update_preview_resolution() {
   dom::render::RenderStyleRequest req{};
   req.domain = static_cast<dom::render::RenderStyleDomain>(std::clamp(previewDomain_, 0, 3));
-  req.exactId = selectedExactId_;
+  req.exactId = previewStyleVariant_ == 2 ? "" : selectedExactId_;
   req.civId = previewCiv_;
   req.themeId = previewTheme_;
-  req.renderClass = selectedRenderClass_;
+  req.renderClass = previewStyleVariant_ == 1 ? "" : selectedRenderClass_;
   req.state = previewState_;
   req.lodTier = static_cast<dom::render::ContentLodTier>(std::clamp(previewLod_, 0, 2));
   resolvedPreview_ = dom::render::resolve_render_style(req);
+  refresh_preview_asset_from_resolution();
+}
+
+void DomAssetStudioApp::refresh_preview_asset_from_resolution() {
+  if (resolvedPreview_.mesh.empty()) {
+    previewAsset_ = {};
+    previewAsset_.error = "resolved style has no mesh";
+    loadedAssetPath_.clear();
+    return;
+  }
+
+  if (const auto* mesh = assets_.get_mesh(resolvedPreview_.mesh)) {
+    if (!mesh->sourcePath.empty()) {
+      open_asset_for_preview(mesh->sourcePath, true);
+      return;
+    }
+  }
+
+  open_asset_for_preview(resolvedPreview_.mesh, true);
+}
+
+void DomAssetStudioApp::open_asset_for_preview(const std::filesystem::path& requestedPath, bool fromResolver) {
+  if (requestedPath.empty()) return;
+  std::filesystem::path path = requestedPath;
+  if (!path.is_absolute()) path = std::filesystem::path("content") / path;
+  if (!std::filesystem::exists(path)) {
+    previewAsset_ = {};
+    previewAsset_.error = "file not found: " + path.string();
+    if (!fromResolver) append_log("Cannot open asset: " + previewAsset_.error);
+    return;
+  }
+
+  std::string error;
+  auto loaded = load_preview_asset(path, error);
+  if (!loaded) {
+    previewAsset_ = {};
+    previewAsset_.error = error;
+    loadedAssetPath_ = path.string();
+    append_log("Preview load failed: " + error);
+    return;
+  }
+
+  previewAsset_ = *loaded;
+  loadedAssetPath_ = path.string();
+  if (!fromResolver) append_log("Loaded preview asset: " + loadedAssetPath_);
+}
+
+std::optional<DomAssetStudioApp::PreviewAsset> DomAssetStudioApp::load_preview_asset(const std::filesystem::path& path, std::string& error) const {
+  PreviewAsset out{};
+  out.sourcePath = path.string();
+
+  std::vector<uint8_t> bytes;
+  if (!read_file_bytes(path, bytes)) {
+    error = "failed to read file bytes";
+    return std::nullopt;
+  }
+
+  nlohmann::json j;
+  std::vector<uint8_t> glbBinChunk;
+  const auto ext = path.extension().string();
+  if (ext == ".gltf") {
+    out.sourceKind = "gltf";
+    try {
+      j = nlohmann::json::parse(bytes.begin(), bytes.end());
+    } catch (const std::exception& e) {
+      error = std::string("gltf parse error: ") + e.what();
+      return std::nullopt;
+    }
+  } else if (ext == ".glb") {
+    out.sourceKind = "glb";
+    if (bytes.size() < 20) {
+      error = "glb too small";
+      return std::nullopt;
+    }
+    if (read_u32_le(bytes.data()) != 0x46546C67U) {
+      error = "invalid glb magic";
+      return std::nullopt;
+    }
+    size_t off = 12;
+    bool gotJson = false;
+    while (off + 8 <= bytes.size()) {
+      const uint32_t chunkLen = read_u32_le(bytes.data() + off);
+      const uint32_t chunkType = read_u32_le(bytes.data() + off + 4);
+      off += 8;
+      if (off + chunkLen > bytes.size()) break;
+      if (chunkType == 0x4E4F534AU) {
+        try {
+          j = nlohmann::json::parse(bytes.begin() + static_cast<long>(off), bytes.begin() + static_cast<long>(off + chunkLen));
+          gotJson = true;
+        } catch (const std::exception& e) {
+          error = std::string("glb json parse error: ") + e.what();
+          return std::nullopt;
+        }
+      } else if (chunkType == 0x004E4942U) {
+        glbBinChunk.assign(bytes.begin() + static_cast<long>(off), bytes.begin() + static_cast<long>(off + chunkLen));
+      }
+      off += chunkLen;
+    }
+    if (!gotJson) {
+      error = "glb missing JSON chunk";
+      return std::nullopt;
+    }
+  } else {
+    error = "unsupported asset extension: " + ext;
+    return std::nullopt;
+  }
+
+  std::vector<std::vector<uint8_t>> buffers;
+  if (j.contains("buffers") && j["buffers"].is_array()) {
+    buffers.resize(j["buffers"].size());
+    for (size_t i = 0; i < j["buffers"].size(); ++i) {
+      const auto& bj = j["buffers"][i];
+      if (ext == ".glb" && i == 0 && !glbBinChunk.empty()) {
+        buffers[i] = glbBinChunk;
+        continue;
+      }
+      const std::string uri = bj.value("uri", "");
+      if (uri.empty() || uri.rfind("data:", 0) == 0) {
+        error = "embedded/data URI buffer unsupported for now";
+        return std::nullopt;
+      }
+      std::filesystem::path bpath = path.parent_path() / uri;
+      if (!read_file_bytes(bpath, buffers[i])) {
+        error = "failed reading external buffer: " + bpath.string();
+        return std::nullopt;
+      }
+    }
+  }
+
+  std::vector<BufferViewRef> views;
+  if (j.contains("bufferViews") && j["bufferViews"].is_array()) {
+    for (const auto& v : j["bufferViews"]) {
+      BufferViewRef ref{};
+      ref.buffer = v.value("buffer", -1);
+      ref.byteOffset = v.value("byteOffset", 0);
+      ref.byteLength = v.value("byteLength", 0);
+      ref.byteStride = v.value("byteStride", 0);
+      views.push_back(ref);
+    }
+  }
+
+  auto load_accessor_positions = [&](int accessorIndex, std::vector<PreviewSurfacePoint>& points) -> bool {
+    if (!j.contains("accessors") || !j["accessors"].is_array()) return false;
+    if (accessorIndex < 0 || accessorIndex >= static_cast<int>(j["accessors"].size())) return false;
+    const auto& acc = j["accessors"][accessorIndex];
+    if (acc.value("type", "") != "VEC3") return false;
+    if (acc.value("componentType", 0) != 5126) return false;
+    const int viewIdx = acc.value("bufferView", -1);
+    if (viewIdx < 0 || viewIdx >= static_cast<int>(views.size())) return false;
+    const auto& view = views[viewIdx];
+    if (view.buffer < 0 || view.buffer >= static_cast<int>(buffers.size())) return false;
+    const auto& b = buffers[view.buffer];
+    const size_t count = acc.value("count", 0);
+    const size_t accOffset = acc.value("byteOffset", 0);
+    const size_t stride = view.byteStride > 0 ? view.byteStride : 12;
+    size_t base = view.byteOffset + accOffset;
+    if (base >= b.size()) return false;
+    points.reserve(points.size() + count);
+    for (size_t i = 0; i < count; ++i) {
+      size_t p0 = base + i * stride;
+      if (p0 + 12 > b.size()) break;
+      const float* fp = reinterpret_cast<const float*>(b.data() + p0);
+      points.push_back({fp[0], fp[1], fp[2]});
+    }
+    return !points.empty();
+  };
+
+  auto load_accessor_indices = [&](int accessorIndex, std::vector<uint32_t>& indices) -> bool {
+    if (!j.contains("accessors") || !j["accessors"].is_array()) return false;
+    if (accessorIndex < 0 || accessorIndex >= static_cast<int>(j["accessors"].size())) return false;
+    const auto& acc = j["accessors"][accessorIndex];
+    if (acc.value("type", "") != "SCALAR") return false;
+    const int compType = acc.value("componentType", 0);
+    const size_t csize = component_size(compType);
+    if (csize == 0) return false;
+    const int viewIdx = acc.value("bufferView", -1);
+    if (viewIdx < 0 || viewIdx >= static_cast<int>(views.size())) return false;
+    const auto& view = views[viewIdx];
+    if (view.buffer < 0 || view.buffer >= static_cast<int>(buffers.size())) return false;
+    const auto& b = buffers[view.buffer];
+    const size_t count = acc.value("count", 0);
+    const size_t accOffset = acc.value("byteOffset", 0);
+    const size_t stride = view.byteStride > 0 ? view.byteStride : csize;
+    size_t base = view.byteOffset + accOffset;
+    if (base >= b.size()) return false;
+    indices.reserve(indices.size() + count);
+    for (size_t i = 0; i < count; ++i) {
+      size_t p0 = base + i * stride;
+      if (p0 + csize > b.size()) break;
+      uint32_t idx = 0;
+      if (compType == 5121) idx = b[p0];
+      else if (compType == 5123) idx = static_cast<uint16_t>(b[p0] | (static_cast<uint16_t>(b[p0 + 1]) << 8U));
+      else if (compType == 5125) idx = read_u32_le(b.data() + p0);
+      else return false;
+      indices.push_back(idx);
+    }
+    return !indices.empty();
+  };
+
+  if (j.contains("materials") && j["materials"].is_array()) {
+    for (const auto& m : j["materials"]) out.materialNames.push_back(m.value("name", "<unnamed_material>"));
+  }
+
+  if (!j.contains("meshes") || !j["meshes"].is_array()) {
+    error = "asset has no meshes";
+    return std::nullopt;
+  }
+
+  bool boundsInit = false;
+  for (const auto& m : j["meshes"]) {
+    out.meshNames.push_back(m.value("name", "<unnamed_mesh>"));
+    if (!m.contains("primitives") || !m["primitives"].is_array()) continue;
+    for (const auto& prim : m["primitives"]) {
+      if (prim.value("mode", 4) != 4) continue;
+      if (!prim.contains("attributes") || !prim["attributes"].is_object()) continue;
+      int posAccessor = prim["attributes"].value("POSITION", -1);
+      if (posAccessor < 0) continue;
+      PreviewSurface surface{};
+      const int materialIdx = prim.value("material", -1);
+      if (materialIdx >= 0 && materialIdx < static_cast<int>(out.materialNames.size())) surface.materialName = out.materialNames[materialIdx];
+      if (!load_accessor_positions(posAccessor, surface.points)) continue;
+      if (prim.contains("indices")) {
+        if (!load_accessor_indices(prim["indices"].get<int>(), surface.indices)) {
+          surface.indices.clear();
+        }
+      }
+      if (surface.indices.empty()) {
+        for (uint32_t i = 0; i + 2 < static_cast<uint32_t>(surface.points.size()); i += 3) {
+          surface.indices.push_back(i);
+          surface.indices.push_back(i + 1);
+          surface.indices.push_back(i + 2);
+        }
+      }
+
+      for (const auto& p : surface.points) {
+        if (!boundsInit) {
+          out.minBounds = {p.x, p.y, p.z};
+          out.maxBounds = {p.x, p.y, p.z};
+          boundsInit = true;
+        } else {
+          out.minBounds[0] = std::min(out.minBounds[0], p.x);
+          out.minBounds[1] = std::min(out.minBounds[1], p.y);
+          out.minBounds[2] = std::min(out.minBounds[2], p.z);
+          out.maxBounds[0] = std::max(out.maxBounds[0], p.x);
+          out.maxBounds[1] = std::max(out.maxBounds[1], p.y);
+          out.maxBounds[2] = std::max(out.maxBounds[2], p.z);
+        }
+      }
+
+      out.vertexCount += surface.points.size();
+      out.indexCount += surface.indices.size();
+      out.surfaces.push_back(std::move(surface));
+    }
+  }
+
+  if (out.surfaces.empty()) {
+    error = "mesh primitives unavailable (expects TRIANGLES + POSITION accessor)";
+    return std::nullopt;
+  }
+
+  out.loaded = true;
+  return out;
 }
 
 } // namespace dom::tools

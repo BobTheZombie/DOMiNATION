@@ -78,7 +78,9 @@ Run:
 Studio focus:
 - manifest/style inspection
 - stylesheet form editing + save
-- resolved render-style preview chain
+- resolved render-style preview chain with civ/theme/state/LOD switching
+- real glTF/GLB mesh preview in the viewport (orbit/turntable/grid/wireframe/normals)
+- attachment/socket overlay visualization from stylesheet mappings
 - content validation/export-safe workflow
 
 ## Match pacing telemetry
