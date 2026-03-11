@@ -59,7 +59,6 @@ bool DomAssetStudioApp::init_sdl() {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
-  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
   ImGui::StyleColorsDark();
   ImGui_ImplSDL2_InitForOpenGL(window_, glContext_);
@@ -121,10 +120,9 @@ void DomAssetStudioApp::poll_events(bool& running) {
 void DomAssetStudioApp::render_frame() {
 #ifdef DOM_HAS_IMGUI
   ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplSDL2_NewFrame(window_);
+  ImGui_ImplSDL2_NewFrame();
   ImGui::NewFrame();
 
-  ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
   draw_main_menu();
   draw_project_browser();
   draw_asset_inspector();
@@ -232,7 +230,6 @@ void DomAssetStudioApp::draw_asset_inspector() {
       if (ImGui::TreeNode(id.c_str())) {
         ImGui::Text("mesh: %s", rec.meshPath.c_str());
         ImGui::Text("type: %s", rec.type.c_str());
-        ImGui::Text("render_class: %s", rec.renderClass.c_str());
         ImGui::Text("civ/theme: %s", rec.civilizationTheme.c_str());
         for (const auto& lod : rec.lodIds) ImGui::BulletText("lod: %s", lod.c_str());
         ImGui::TreePop();
