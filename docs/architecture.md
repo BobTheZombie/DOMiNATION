@@ -461,3 +461,8 @@ Applied across terrain materials, unit glyph/silhouette selection, and building/
 Debug counters are presentation-only and include resolution/fallback and LOD tier counts.
 
 - Render stylesheet resolution is deterministic and isolated from authoritative simulation.
+
+## Render stylesheet determinism constraints
+The populated production stylesheets remain presentation-only. Runtime style caches are not serialized and are reconstructed from authoritative world state + civ/theme IDs + JSON manifests each run/load/replay.
+
+Expanded terrain/unit/building/object class coverage does not alter command processing, simulation update order, RNG streams, or hash computation; only visual lookup richness is increased.
