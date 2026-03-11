@@ -253,3 +253,18 @@ The renderer now shares a single ordered content fallback model (exact -> civ ->
 
 ## Render Stylesheets
 Renderer presentation now resolves through `engine/render/render_stylesheet.*` and JSON style files (`content/terrain_styles.json`, `content/unit_styles.json`, `content/building_styles.json`, `content/object_styles.json`).
+
+## Stylesheet population pass (presentation-only)
+The production population pass expands render classes without changing simulation state, gameplay rules, or hash inputs. Resolution order is unchanged (exact id -> civ override -> theme override -> class default -> domain default).
+
+### State variants now used across content
+- Units: `selected`, `low_supply`, `damaged`
+- Buildings: `construction`, `damaged`, `strategic_warning`
+- Objects: class-specific overlays using allowed deterministic states (e.g. `strategic_warning`, `selected`, `damaged`)
+
+### Attachments
+Attachment hooks are now authored broadly in stylesheets for deterministic marker placement:
+- `banner_socket`, `civ_emblem` on major buildings
+- `smoke_stack` on industrial entities
+- `muzzle_flash` on artillery/armor
+- `selection_badge`, `warning_badge`, `guardian_aura` for UI/FX anchoring

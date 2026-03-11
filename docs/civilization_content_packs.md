@@ -110,3 +110,16 @@ Minimum supported civilizations in production pass:
 Missing civ-specific assets must resolve via theme/category fallbacks before default fallback IDs.
 
 Civilization-specific visuals can now be authored via stylesheet `civ_overrides`/`theme_overrides` without renderer code edits.
+
+## Stylesheet civ override patterns
+Production stylesheet population now uses civ/theme overrides consistently across unit and building families. Recommended pattern:
+- Put stable family baseline in `default`.
+- Use `civ_overrides` for civilization-specific mesh/lod/material swaps.
+- Use `theme_overrides` when multiple civs share an art direction bucket.
+- Keep fallback IDs valid so unresolved civ/theme still resolve deterministically.
+
+Attachment conventions by family:
+- Governance/identity buildings: `banner_socket`, `civ_emblem`
+- Industrial chains: `smoke_stack`
+- Strategic warning entities: `warning_badge`
+- Guardian content: `guardian_aura`
