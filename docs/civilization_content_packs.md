@@ -108,3 +108,5 @@ Minimum supported civilizations in production pass:
 - Tartaria (fictional / alt-history, visually distinct)
 
 Missing civ-specific assets must resolve via theme/category fallbacks before default fallback IDs.
+
+Civilization-specific visuals can now be authored via stylesheet `civ_overrides`/`theme_overrides` without renderer code edits.

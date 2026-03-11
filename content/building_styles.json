@@ -1,0 +1,15 @@
+{
+  "default": {"style_id": "building_default", "mesh": "missing_mesh", "lod_group": "missing_mesh", "icon": "missing_icon", "size_scale": [1.0, 1.0]},
+  "render_classes": {
+    "city_settlement": {"default": {"style_id": "building_city", "mesh": "rome_city_center_a", "lod_group": "rome_city_center_a_lod0", "size_scale": [1.2, 1.0], "lods": {"far": {"size_scale": [0.8, 0.8]}}}},
+    "barracks": {"default": {"style_id": "building_barracks", "mesh": "rome_barracks_a", "lod_group": "rome_barracks_a_lod0", "attachments": {"banner": "socket_banner", "selection_badge": "anchor_center"}, "state_variants": {"damaged": {"decal_set": "decal_damage_smoke"}, "construction": {"tint": [0.62, 0.62, 0.62]}}}},
+    "market": {"default": {"style_id": "building_market", "mesh": "rome_market_a", "lod_group": "rome_market_a_lod0", "size_scale": [1.2, 0.78]}},
+    "factory": {"default": {"style_id": "building_factory", "mesh": "rome_factory_hub_a", "lod_group": "rome_factory_hub_a_lod0", "size_scale": [1.1, 1.05], "state_variants": {"damaged": {"decal_set": "decal_damage_industrial"}}}},
+    "industrial_node": {"default": {"style_id": "building_industry", "mesh": "rome_machine_works_a", "lod_group": "rome_machine_works_a_lod0", "size_scale": [1.08, 1.0], "attachments": {"smoke_stack": "socket_smokestack"}}},
+    "port": {"default": {"style_id": "building_port", "mesh": "rome_port_a", "lod_group": "rome_port_a_lod0", "size_scale": [1.24, 0.75]}},
+    "mine_entrance": {"default": {"style_id": "building_mine", "mesh": "rome_mine_a", "lod_group": "rome_mine_a_lod0", "size_scale": [1.1, 0.95]}},
+    "missile_silo": {"default": {"style_id": "building_silo", "mesh": "rome_missile_silo_a", "lod_group": "rome_missile_silo_a_lod0", "size_scale": [0.88, 1.2], "lods": {"far": {"badge": "ui_icon_warning_strategic", "size_scale": [0.7, 0.7]}}}},
+    "radar": {"default": {"style_id": "building_radar", "mesh": "rome_radar_tower_a", "lod_group": "rome_radar_tower_a_lod0", "size_scale": [0.9, 1.16]}},
+    "strategic_structure": {"default": {"style_id": "building_strategic", "size_scale": [1.0, 1.0]}}
+  }
+}

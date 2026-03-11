@@ -1,0 +1,32 @@
+{
+  "default": {
+    "style_id": "terrain_default",
+    "material_set": "temperate_grass",
+    "decal_set": "terrain_accent_default",
+    "attachments": {
+      "edge": "terrain_edge_default",
+      "cliff": "terrain_cliff_default"
+    }
+  },
+  "exact_mappings": {
+    "river": {"style_id": "terrain_river", "material_set": "river_water"},
+    "lake": {"style_id": "terrain_lake", "material_set": "lake_water"}
+  },
+  "render_classes": {
+    "grassland": {"default": {"style_id": "terrain_grassland", "material_set": "temperate_grass"}},
+    "steppe": {"default": {"style_id": "terrain_steppe", "material_set": "steppe_dry"}},
+    "forest_ground": {"default": {"style_id": "terrain_forest_ground", "material_set": "forest_floor"}},
+    "desert": {"default": {"style_id": "terrain_desert", "material_set": "sand_dune"}},
+    "mediterranean": {"default": {"style_id": "terrain_mediterranean", "material_set": "mediterranean_soil"}},
+    "jungle": {"default": {"style_id": "terrain_jungle", "material_set": "jungle_floor"}},
+    "tundra": {"default": {"style_id": "terrain_tundra", "material_set": "tundra_soil"}},
+    "snow_arctic": {"default": {"style_id": "terrain_snow_arctic", "material_set": "snow"}},
+    "wetlands_marsh": {"default": {"style_id": "terrain_wetlands", "material_set": "marsh"}},
+    "mountains": {"default": {"style_id": "terrain_mountains", "material_set": "rock_highland", "attachments": {"cliff": "terrain_cliff_rock"}}},
+    "snow_mountains": {"default": {"style_id": "terrain_snow_mountains", "material_set": "snow_rock_highland", "attachments": {"cliff": "terrain_cliff_snow"}}},
+    "coast_littoral": {"default": {"style_id": "terrain_coast", "material_set": "coastal_mix", "attachments": {"edge": "terrain_edge_coast"}}},
+    "shallow_water": {"default": {"style_id": "terrain_shallow", "material_set": "shallow_water"}},
+    "deep_water": {"default": {"style_id": "terrain_deep", "material_set": "deep_water"}},
+    "river_lake": {"default": {"style_id": "terrain_inland_water", "material_set": "river_water"}}
+  }
+}

@@ -44,6 +44,10 @@ def validate_required_manifests():
         "asset_manifest.json",
         "atlas_manifest.json",
         "lod_manifest.json",
+        "terrain_styles.json",
+        "unit_styles.json",
+        "building_styles.json",
+        "object_styles.json",
     ]
     for name in required:
         path = CONTENT / name
@@ -145,6 +149,66 @@ def validate_lod_manifest_metadata(lod_manifest):
         assert not missing, f"lod_manifest category coverage missing: {missing}"
 
 
+
+def collect_style_refs(style_blob, refs):
+    if isinstance(style_blob, dict):
+        for key, value in style_blob.items():
+            if key == "mesh" and isinstance(value, str) and value:
+                refs["mesh"].add(value)
+            elif key == "lod_group" and isinstance(value, str) and value:
+                refs["lod"].add(value)
+            elif key == "icon" and isinstance(value, str) and value:
+                refs["icon"].add(value)
+            elif key == "state_variants" and isinstance(value, dict):
+                for state_key in value.keys():
+                    assert state_key in {"default", "construction", "damaged", "selected", "low_supply", "strategic_warning"}, f"invalid style state variant key: {state_key}"
+                for sub in value.values():
+                    collect_style_refs(sub, refs)
+            else:
+                collect_style_refs(value, refs)
+    elif isinstance(style_blob, list):
+        for v in style_blob:
+            collect_style_refs(v, refs)
+
+
+def validate_render_stylesheets(asset_manifest, lod_manifest, atlas_manifest):
+    warnings = []
+    style_files = [
+        CONTENT / "terrain_styles.json",
+        CONTENT / "unit_styles.json",
+        CONTENT / "building_styles.json",
+        CONTENT / "object_styles.json",
+    ]
+    asset_ids = {a.get("asset_id") for a in asset_manifest.get("assets", [])}
+    lod_ids = {l.get("lod_id") for l in lod_manifest.get("lod_entries", [])}
+    icon_ids = {s.get("sprite_id") for s in atlas_manifest.get("sprites", [])}
+    refs = {"mesh": set(), "lod": set(), "icon": set()}
+
+    for sf in style_files:
+      data = load(sf)
+      assert data.get("render_classes"), f"{sf.name} missing render_classes"
+      assert "default" in data, f"{sf.name} missing default fallback style"
+      collect_style_refs(data, refs)
+      ids = set()
+      for cls, cls_data in data.get("render_classes", {}).items():
+        assert re.match(r"^[a-z0-9_]+$", cls), f"invalid render_class name {cls} in {sf.name}"
+        sid = cls_data.get("default", {}).get("style_id")
+        if sid:
+          assert sid not in ids, f"duplicate style_id {sid} in {sf.name}"
+          ids.add(sid)
+
+    for mesh in sorted(refs["mesh"]):
+      if mesh not in asset_ids and mesh != "missing_mesh":
+        warnings.append(f"render stylesheet mesh reference missing in asset_manifest: {mesh}")
+    for lod in sorted(refs["lod"]):
+      if lod not in lod_ids and lod != "missing_mesh":
+        warnings.append(f"render stylesheet lod_group reference missing in lod_manifest: {lod}")
+    for icon in sorted(refs["icon"]):
+      if icon not in icon_ids and icon != "missing_icon":
+        warnings.append(f"render stylesheet icon reference missing in atlas_manifest: {icon}")
+
+    return warnings
+
 def main():
     validate_required_manifests()
 
@@ -161,6 +225,7 @@ def main():
     warnings = []
     warnings.extend(validate_assets(assets, atlas, lod))
     warnings.extend(validate_civ_variants(themes, assets))
+    warnings.extend(validate_render_stylesheets(assets, lod, atlas))
     validate_biome_coverage(biomes)
     validate_lod_manifest_metadata(lod)
 
