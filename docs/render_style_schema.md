@@ -21,3 +21,7 @@ The Studio exposes structured form fields for core schema keys (`render_classes.
 - Render class names should map to supported engine classes (terrain, unit, building, object/site/city_cluster/icon/marker).
 - `lod_group`/LOD references should resolve to `lod_manifest.json` entries.
 - Attachment mapping keys should use supported hook names (`banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`).
+
+
+## Scene context validation notes
+Studio scene placements keep resolved style IDs and mesh refs as editor-only preview state. Missing or invalid refs are surfaced as warnings in Studio logs/validation UI and continue to fail safely without mutating runtime simulation authority.

@@ -47,3 +47,24 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 - Attachment key inspection supports runtime hooks such as `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, and `guardian_aura`.
 - Apply+Reload workflow keeps preview in sync with runtime-equivalent resolver behavior after edits.
 - Saves use temp-file writes followed by replace for safer manifest/stylesheet updates.
+
+
+## Scene context preview workflow
+- Switch **Viewport → Mode** between **Isolated Asset** and **Scene Context**.
+- In scene mode, pick a terrain/biome context and use **Place Current Resolved Asset** to stage multiple assets together.
+- Use the Scene Outliner to select placements and adjust editor-only transform controls (position/rotation/scale), visibility, and labels.
+- Use **Reset Scene Layout**, **Reload Placed Assets**, and **Clear Scene** for safe iteration.
+
+## Terrain/biome validation workflow
+Scene context includes bounded preview presets for: grassland, plains/steppe, forest ground, desert, mediterranean, jungle, tundra, snow/arctic, wetlands, mountains, snow mountains, and coast/littoral.
+Use this to test whether style variants remain legible in expected world environments (for example mine entrances in mountain/snow mountain or port assets in littoral context).
+
+## LOD and RTS readability checks
+- Zoom can be validated at tactical/near, mid, and strategic/far camera distance.
+- Keep manual LOD selection for explicit testing, or enable **Auto LOD From Zoom** to mirror runtime LOD tier picks.
+- Civ/theme/state variant inputs remain active in both viewport modes to compare overrides in context.
+
+## Safety and limitations
+- Scene context placement state is editor-only and is not gameplay-authoritative map data.
+- Broken/missing mesh references stay listed in the outliner with warnings and do not crash the Studio.
+- Scene context preview is intentionally bounded: it is not a level editor, gameplay map editor, or Blender replacement.

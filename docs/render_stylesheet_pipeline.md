@@ -25,3 +25,6 @@ The resolver is deterministic and does not mutate simulation state.
 Studio save/apply flow:
 - Use **Apply and Reload** after manifest/LOD/style edits to persist metadata, reload resolver state, and refresh preview chains deterministically.
 - Use **Export Engine-Compatible Content** to run save/apply + validation + package summary generation in one action.
+
+
+Scene context preview mode reuses the same stylesheet resolver chain while allowing multiple placements in one bounded preview patch; use this to validate biome contrast, variant overrides, and near/mid/far readability without entering gameplay-authoritative tooling.

@@ -27,7 +27,13 @@ namespace dom::tools {
 namespace {
 const char* kDomainNames[] = {"Terrain", "Unit", "Building", "Object"};
 const char* kLodNames[] = {"Near", "Mid", "Far"};
+const char* kZoomPresetNames[] = {"Near/Tactical", "Mid", "Far/Strategic"};
 const char* kVariantSourceNames[] = {"Resolver (class/exact)", "Exact mapping only", "Render class only"};
+const char* kViewportModeNames[] = {"Isolated Asset", "Scene Context"};
+const char* kTerrainContextNames[] = {
+  "Grassland", "Plains/Steppe", "Forest Ground", "Desert", "Mediterranean", "Jungle",
+  "Tundra", "Snow/Arctic", "Wetlands", "Mountains", "Snow Mountains", "Coast/Littoral"
+};
 
 struct BufferViewRef {
   int buffer{-1};
@@ -145,6 +151,7 @@ void DomAssetStudioApp::reload_content() {
     }
   }
 
+  reload_scene_placements();
   append_log("Content and stylesheet data loaded.");
 }
 
@@ -214,6 +221,9 @@ void DomAssetStudioApp::draw_main_menu() {
     if (ImGui::MenuItem("Reset View")) {
       orbitYaw_ = 25.0f; orbitPitch_ = 20.0f; orbitDistance_ = 8.0f; panX_ = panY_ = 0.0f;
     }
+    if (ImGui::MenuItem("Reset Scene Layout")) reset_scene_layout();
+    if (ImGui::MenuItem("Clear Scene")) clear_scene();
+    if (ImGui::MenuItem("Reload Placed Assets")) reload_scene_placements();
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("View")) {
@@ -593,7 +603,8 @@ void DomAssetStudioApp::draw_stylesheet_editor() {
   changed |= ImGui::InputText("Preview Civ", &previewCiv_);
   changed |= ImGui::InputText("Preview Theme", &previewTheme_);
   changed |= ImGui::InputText("Preview State", &previewState_);
-  changed |= ImGui::Combo("Preview LOD", &previewLod_, kLodNames, 3);
+  changed |= ImGui::Checkbox("Auto LOD From Zoom", &autoPreviewLod_);
+  if (!autoPreviewLod_) changed |= ImGui::Combo("Preview LOD", &previewLod_, kLodNames, 3);
   if (changed) update_preview_resolution();
 
   if (sheet.json.contains("render_classes") && sheet.json["render_classes"].contains(selectedRenderClass_)) {
@@ -623,9 +634,11 @@ void DomAssetStudioApp::draw_viewport() {
   if (!ImGui::Begin("Viewport")) { ImGui::End(); return; }
 
   ImGui::Text("3D preview (manifest + stylesheet resolved)");
+  ImGui::Combo("Mode", &viewportMode_, kViewportModeNames, 2);
   ImGui::SliderFloat("Orbit Yaw", &orbitYaw_, -180.0f, 180.0f);
   ImGui::SliderFloat("Orbit Pitch", &orbitPitch_, -89.0f, 89.0f);
-  ImGui::SliderFloat("Zoom", &orbitDistance_, 1.0f, 20.0f);
+  ImGui::SliderFloat("Zoom", &orbitDistance_, 1.0f, 60.0f);
+  ImGui::Text("Zoom Preset: %s", kZoomPresetNames[active_preview_lod()]);
   ImGui::SliderFloat("Pan X", &panX_, -10.0f, 10.0f);
   ImGui::SliderFloat("Pan Y", &panY_, -10.0f, 10.0f);
   ImGui::Checkbox("Turntable", &turntable_);
@@ -636,17 +649,50 @@ void DomAssetStudioApp::draw_viewport() {
   ImGui::Combo("Lighting Preset", &lightingPreset_, "Studio\0Sunset\0Flat\0");
   ImGui::Combo("Background", &backgroundMode_, "Dark\0Sky\0Neutral\0");
 
+  if (viewportMode_ == 1) {
+    ImGui::SeparatorText("Scene Context");
+    ImGui::Combo("Terrain/Biome", &terrainContext_, kTerrainContextNames, 12);
+    if (ImGui::Button("Place Current Resolved Asset")) add_current_asset_to_scene();
+    ImGui::SameLine();
+    if (ImGui::Button("Reload Placed")) reload_scene_placements();
+    ImGui::SameLine();
+    if (ImGui::Button("Clear Scene")) clear_scene();
+
+    ImGui::Text("Placements: %d", static_cast<int>(scenePlacements_.size()));
+    if (ImGui::BeginListBox("Scene Outliner")) {
+      for (int i = 0; i < static_cast<int>(scenePlacements_.size()); ++i) {
+        const auto& item = scenePlacements_[i];
+        std::string label = item.label.empty() ? ("placement_" + std::to_string(i)) : item.label;
+        if (!item.valid) label += " [warning]";
+        bool selected = sceneSelectedIndex_ == i;
+        if (ImGui::Selectable(label.c_str(), selected)) sceneSelectedIndex_ = i;
+      }
+      ImGui::EndListBox();
+    }
+
+    if (sceneSelectedIndex_ >= 0 && sceneSelectedIndex_ < static_cast<int>(scenePlacements_.size())) {
+      auto& item = scenePlacements_[sceneSelectedIndex_];
+      ImGui::Checkbox("Visible", &item.visible);
+      ImGui::InputText("Label", &item.label);
+      ImGui::SliderFloat3("Position", &item.posX, -20.0f, 20.0f);
+      ImGui::SliderFloat("Rotation Y", &item.rotYDeg, -180.0f, 180.0f);
+      ImGui::SliderFloat("Scale", &item.scale, 0.1f, 5.0f);
+      if (!item.warning.empty()) ImGui::TextColored(ImVec4(1, 0.5f, 0.3f, 1), "warning: %s", item.warning.c_str());
+    }
+  }
+
   ImVec2 p = ImGui::GetCursorScreenPos();
   ImVec2 size = ImGui::GetContentRegionAvail();
   if (size.x < 10 || size.y < 10) { ImGui::End(); return; }
 
   ImDrawList* draw = ImGui::GetWindowDrawList();
-  ImU32 bg = backgroundMode_ == 1 ? IM_COL32(80, 120, 170, 255) : (backgroundMode_ == 2 ? IM_COL32(120, 120, 120, 255) : IM_COL32(32, 32, 40, 255));
+  const ImU32 bg = backgroundMode_ == 1 ? IM_COL32(80, 120, 170, 255) : (backgroundMode_ == 2 ? IM_COL32(120, 120, 120, 255) : IM_COL32(32, 32, 40, 255));
   draw->AddRectFilled(p, ImVec2(p.x + size.x, p.y + size.y), bg);
 
   if (showGrid_) {
-    for (int i = 0; i <= 20; ++i) {
-      float t = static_cast<float>(i) / 20.0f;
+    const int lines = viewportMode_ == 1 ? 24 : 20;
+    for (int i = 0; i <= lines; ++i) {
+      const float t = static_cast<float>(i) / static_cast<float>(lines);
       draw->AddLine(ImVec2(p.x + t * size.x, p.y), ImVec2(p.x + t * size.x, p.y + size.y), IM_COL32(70, 70, 75, 120));
       draw->AddLine(ImVec2(p.x, p.y + t * size.y), ImVec2(p.x + size.x, p.y + t * size.y), IM_COL32(70, 70, 75, 120));
     }
@@ -659,50 +705,72 @@ void DomAssetStudioApp::draw_viewport() {
   const float cp = std::cos(pitch);
   const float sp = std::sin(pitch);
 
-  auto project = [&](const PreviewSurfacePoint& v, float& ox, float& oy, float& depth) {
-    float x = v.x;
-    float yv = v.y;
-    float z = v.z;
-    float rx = x * cy + z * sy;
-    float rz = -x * sy + z * cy;
-    float ry = yv * cp - rz * sp;
-    float rz2 = yv * sp + rz * cp;
-    const float d = orbitDistance_ + 4.0f + rz2;
-    const float scale = 170.0f / std::max(1.0f, d);
+  auto project = [&](const PreviewSurfacePoint& v, float tx, float ty, float tz, float rotYDeg, float uniformScale, float& ox, float& oy) {
+    const float rr = rotYDeg * 0.0174533f;
+    const float cr = std::cos(rr);
+    const float sr = std::sin(rr);
+    const float lx = (v.x * cr + v.z * sr) * uniformScale + tx;
+    const float lz = (-v.x * sr + v.z * cr) * uniformScale + tz;
+    const float ly = v.y * uniformScale + ty;
+    const float rx = lx * cy + lz * sy;
+    const float rz = -lx * sy + lz * cy;
+    const float ry = ly * cp - rz * sp;
+    const float rz2 = ly * sp + rz * cp;
+    const float d = orbitDistance_ + 8.0f + rz2;
+    const float scale = 190.0f / std::max(1.0f, d);
     ox = p.x + size.x * (0.5f + panX_ * 0.03f) + rx * scale;
     oy = p.y + size.y * (0.55f + panY_ * 0.03f) - ry * scale;
-    depth = d;
   };
 
-  if (previewAsset_.loaded && !previewAsset_.surfaces.empty()) {
-    for (const auto& surface : previewAsset_.surfaces) {
+  auto draw_asset = [&](const PreviewAsset& asset, float tx, float ty, float tz, float rotYDeg, float uniformScale, ImU32 fillCol) {
+    if (!asset.loaded || asset.surfaces.empty()) return;
+    for (const auto& surface : asset.surfaces) {
       for (size_t i = 0; i + 2 < surface.indices.size(); i += 3) {
-        const auto i0 = surface.indices[i + 0];
-        const auto i1 = surface.indices[i + 1];
-        const auto i2 = surface.indices[i + 2];
+        const uint32_t i0 = surface.indices[i + 0];
+        const uint32_t i1 = surface.indices[i + 1];
+        const uint32_t i2 = surface.indices[i + 2];
         if (i0 >= surface.points.size() || i1 >= surface.points.size() || i2 >= surface.points.size()) continue;
-        float x0, y0, z0, x1, y1, z1, x2, y2, z2;
-        project(surface.points[i0], x0, y0, z0);
-        project(surface.points[i1], x1, y1, z1);
-        project(surface.points[i2], x2, y2, z2);
+        float x0, y0, x1, y1, x2, y2;
+        project(surface.points[i0], tx, ty, tz, rotYDeg, uniformScale, x0, y0);
+        project(surface.points[i1], tx, ty, tz, rotYDeg, uniformScale, x1, y1);
+        project(surface.points[i2], tx, ty, tz, rotYDeg, uniformScale, x2, y2);
         if (wireframe_) {
           draw->AddTriangle(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(255, 230, 120, 210), 1.0f);
         } else {
-          draw->AddTriangleFilled(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(120, 210, 255, 140));
+          draw->AddTriangleFilled(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), fillCol);
           draw->AddTriangle(ImVec2(x0, y0), ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(20, 40, 65, 200), 1.0f);
         }
-        if (showNormals_) {
-          const float cx = (x0 + x1 + x2) / 3.0f;
-          const float cy2 = (y0 + y1 + y2) / 3.0f;
-          draw->AddLine(ImVec2(cx, cy2), ImVec2(cx, cy2 - 8.0f), IM_COL32(255, 100, 100, 220), 1.0f);
-        }
+      }
+    }
+  };
+
+  if (viewportMode_ == 0) {
+    draw_asset(previewAsset_, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, IM_COL32(120, 210, 255, 140));
+  } else {
+    static const ImU32 terrainCols[] = {
+      IM_COL32(80, 130, 75, 255), IM_COL32(136, 134, 80, 255), IM_COL32(70, 95, 60, 255), IM_COL32(150, 132, 92, 255),
+      IM_COL32(158, 145, 99, 255), IM_COL32(58, 108, 65, 255), IM_COL32(122, 130, 128, 255), IM_COL32(218, 224, 232, 255),
+      IM_COL32(84, 115, 92, 255), IM_COL32(110, 110, 118, 255), IM_COL32(235, 237, 245, 255), IM_COL32(82, 116, 137, 255)};
+    const ImU32 terrain = terrainCols[std::clamp(terrainContext_, 0, 11)];
+    draw->AddRectFilled(ImVec2(p.x + 10.0f, p.y + size.y * 0.58f), ImVec2(p.x + size.x - 10.0f, p.y + size.y - 10.0f), terrain);
+    draw->AddText(ImVec2(p.x + 12.0f, p.y + size.y - 28.0f), IM_COL32(245, 245, 245, 220), kTerrainContextNames[std::clamp(terrainContext_, 0, 11)]);
+
+    for (int i = 0; i < static_cast<int>(scenePlacements_.size()); ++i) {
+      const auto& item = scenePlacements_[i];
+      if (!item.visible) continue;
+      const ImU32 col = item.valid ? IM_COL32(136, 214, 248, 155) : IM_COL32(232, 92, 92, 165);
+      draw_asset(item.asset, item.posX, item.posY, item.posZ, item.rotYDeg, item.scale, col);
+      if (sceneSelectedIndex_ == i) {
+        float lx, ly;
+        project({0.0f, 0.0f, 0.0f}, item.posX, item.posY, item.posZ, 0.0f, 1.0f, lx, ly);
+        draw->AddCircle(ImVec2(lx, ly), 8.0f, IM_COL32(255, 230, 120, 220), 0, 1.5f);
       }
     }
   }
 
   if (showAttachments_) {
     float sx = p.x + size.x * 0.12f;
-    float sy2 = p.y + size.y * 0.15f;
+    float sy2 = p.y + size.y * 0.12f;
     for (const auto& [socket, target] : resolvedPreview_.attachments) {
       draw->AddCircleFilled(ImVec2(sx, sy2), 3.0f, IM_COL32(255, 190, 80, 220));
       draw->AddText(ImVec2(sx + 8.0f, sy2 - 8.0f), IM_COL32(255, 230, 190, 255), (socket + " -> " + target).c_str());
@@ -712,6 +780,7 @@ void DomAssetStudioApp::draw_viewport() {
 
   draw->AddText(ImVec2(p.x + 8, p.y + 8), IM_COL32_WHITE, ("mesh: " + resolvedPreview_.mesh).c_str());
   draw->AddText(ImVec2(p.x + 8, p.y + 26), IM_COL32_WHITE, ("material: " + resolvedPreview_.material).c_str());
+  draw->AddText(ImVec2(p.x + 8, p.y + 44), IM_COL32_WHITE, ("LOD: " + std::string(kLodNames[active_preview_lod()])).c_str());
 
   ImGui::End();
 #endif
@@ -741,6 +810,9 @@ void DomAssetStudioApp::draw_validation_panel() {
               assetManifest_.dirty ? "yes" : "no",
               lodManifest_.dirty ? "yes" : "no",
               stylesheets_[selectedStylesheet_].dirty ? "yes" : "no");
+  int sceneWarnings = 0;
+  for (const auto& placement : scenePlacements_) if (!placement.valid || !placement.warning.empty()) ++sceneWarnings;
+  ImGui::Text("Scene warnings: %d", sceneWarnings);
   for (const auto& m : validationMessages_) ImGui::TextUnformatted(m.c_str());
   if (!packageStatus_.empty()) {
     ImGui::SeparatorText("Packaging");
@@ -974,7 +1046,86 @@ void DomAssetStudioApp::apply_and_reload() {
     if (sheet.dirty) save_stylesheet(sheet);
   }
   reload_content();
+  reload_scene_placements();
   append_log("Apply + reload completed.");
+}
+
+int DomAssetStudioApp::active_preview_lod() const {
+  if (autoPreviewLod_) return std::clamp(static_cast<int>(dom::render::select_lod_tier(orbitDistance_)), 0, 2);
+  return std::clamp(previewLod_, 0, 2);
+}
+
+void DomAssetStudioApp::add_current_asset_to_scene() {
+  ScenePlacement placement{};
+  placement.label = selectedExactId_.empty() ? (resolvedPreview_.styleId.empty() ? "placement" : resolvedPreview_.styleId) : selectedExactId_;
+  placement.meshRef = resolvedPreview_.mesh;
+  placement.resolvedStyleId = resolvedPreview_.styleId;
+  placement.asset = previewAsset_;
+  placement.valid = previewAsset_.loaded;
+  placement.warning = previewAsset_.loaded ? "" : previewAsset_.error;
+  const int idx = static_cast<int>(scenePlacements_.size());
+  placement.posX = static_cast<float>(idx % 4) * 2.4f - 3.0f;
+  placement.posZ = static_cast<float>(idx / 4) * 2.4f - 2.0f;
+  scenePlacements_.push_back(placement);
+  sceneSelectedIndex_ = static_cast<int>(scenePlacements_.size()) - 1;
+  if (!placement.valid) append_log("Scene placement warning: " + placement.warning);
+}
+
+void DomAssetStudioApp::clear_scene() {
+  scenePlacements_.clear();
+  sceneSelectedIndex_ = -1;
+  append_log("Scene cleared.");
+}
+
+void DomAssetStudioApp::reset_scene_layout() {
+  for (size_t i = 0; i < scenePlacements_.size(); ++i) {
+    auto& p = scenePlacements_[i];
+    p.posX = static_cast<float>(i % 4) * 2.4f - 3.0f;
+    p.posY = 0.0f;
+    p.posZ = static_cast<float>(i / 4) * 2.4f - 2.0f;
+    p.rotYDeg = 0.0f;
+    p.scale = 1.0f;
+  }
+  append_log("Scene placement transforms reset.");
+}
+
+bool DomAssetStudioApp::open_asset_for_scene_placement(const std::filesystem::path& requestedPath, ScenePlacement& placement) {
+  std::filesystem::path path = requestedPath;
+  if (path.empty()) return false;
+  if (!path.is_absolute()) path = std::filesystem::path("content") / path;
+  if (!std::filesystem::exists(path)) {
+    placement.valid = false;
+    placement.warning = "file not found: " + path.string();
+    return false;
+  }
+  std::string error;
+  auto loaded = load_preview_asset(path, error);
+  if (!loaded) {
+    placement.valid = false;
+    placement.warning = error;
+    return false;
+  }
+  placement.asset = *loaded;
+  placement.valid = true;
+  placement.warning.clear();
+  return true;
+}
+
+void DomAssetStudioApp::reload_scene_placements() {
+  for (auto& p : scenePlacements_) {
+    if (p.meshRef.empty()) {
+      p.valid = false;
+      p.warning = "mesh reference missing";
+      continue;
+    }
+    std::filesystem::path source = p.meshRef;
+    if (const auto* mesh = assets_.get_mesh(p.meshRef)) {
+      if (!mesh->sourcePath.empty()) source = mesh->sourcePath;
+    }
+    if (!open_asset_for_scene_placement(source, p)) {
+      append_log("Scene placement reload warning for " + p.label + ": " + p.warning);
+    }
+  }
 }
 
 void DomAssetStudioApp::update_preview_resolution() {
@@ -985,7 +1136,7 @@ void DomAssetStudioApp::update_preview_resolution() {
   req.themeId = previewTheme_;
   req.renderClass = previewStyleVariant_ == 1 ? "" : selectedRenderClass_;
   req.state = previewState_;
-  req.lodTier = static_cast<dom::render::ContentLodTier>(std::clamp(previewLod_, 0, 2));
+  req.lodTier = static_cast<dom::render::ContentLodTier>(std::clamp(active_preview_lod(), 0, 2));
   resolvedPreview_ = dom::render::resolve_render_style(req);
   refresh_preview_asset_from_resolution();
 }
