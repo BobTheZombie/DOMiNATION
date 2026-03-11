@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <nlohmann/json.hpp>
 
 namespace dom::render {
@@ -21,8 +22,8 @@ struct StyleLayer {
   std::array<float, 3> tint{1.0f, 1.0f, 1.0f};
   std::array<float, 2> sizeScale{1.0f, 1.0f};
   std::unordered_map<std::string, std::string> attachments;
-  std::unordered_map<std::string, StyleLayer> stateVariants;
-  std::unordered_map<std::string, StyleLayer> lodVariants;
+  std::unordered_map<std::string, std::shared_ptr<StyleLayer>> stateVariants;
+  std::unordered_map<std::string, std::shared_ptr<StyleLayer>> lodVariants;
 };
 
 struct ClassStyle {
@@ -75,10 +76,14 @@ StyleLayer parse_style_layer(const json& j) {
     for (auto& [k, v] : it->items()) if (v.is_string()) s.attachments[k] = v.get<std::string>();
   }
   if (auto it = j.find("state_variants"); it != j.end() && it->is_object()) {
-    for (auto& [k, v] : it->items()) if (v.is_object()) s.stateVariants[k] = parse_style_layer(v);
+    for (auto& [k, v] : it->items()) {
+      if (v.is_object()) s.stateVariants[k] = std::make_shared<StyleLayer>(parse_style_layer(v));
+    }
   }
   if (auto it = j.find("lods"); it != j.end() && it->is_object()) {
-    for (auto& [k, v] : it->items()) if (v.is_object()) s.lodVariants[k] = parse_style_layer(v);
+    for (auto& [k, v] : it->items()) {
+      if (v.is_object()) s.lodVariants[k] = std::make_shared<StyleLayer>(parse_style_layer(v));
+    }
   }
   return s;
 }
@@ -183,9 +188,11 @@ ResolvedRenderStyle resolve_render_style(const RenderStyleRequest& request) {
   }
 
   const std::string lodId = lod_tier_id(request.lodTier);
-  if (auto it = selected.lodVariants.find(lodId); it != selected.lodVariants.end()) overlay(selected, it->second);
+  if (auto it = selected.lodVariants.find(lodId); it != selected.lodVariants.end() && it->second) overlay(selected, *it->second);
   if (!request.state.empty()) {
-    if (auto st = selected.stateVariants.find(request.state); st != selected.stateVariants.end()) overlay(selected, st->second);
+    if (auto st = selected.stateVariants.find(request.state); st != selected.stateVariants.end() && st->second) {
+      overlay(selected, *st->second);
+    }
   }
 
   note_content_resolution(to_content_domain(request.domain), fallback);
