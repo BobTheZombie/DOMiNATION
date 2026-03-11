@@ -81,6 +81,10 @@ Studio focus:
 - manifest/style inspection
 - stylesheet form editing + save
 - resolved render-style preview chain with civ/theme/state/LOD switching
+- viewport mode toggle: isolated asset vs scene context preview
+- terrain/biome context presets for readability checks (grassland, snow, mountain, coast, etc.)
+- multi-asset scene outliner with editor-only placement transforms (position/rotation/scale + visibility)
+- near/mid/far strategic zoom validation with optional auto-LOD selection from zoom distance
 - real glTF/GLB mesh preview in the viewport (orbit/turntable/grid/wireframe/normals)
 - attachment/socket overlay visualization from stylesheet mappings
 - content validation/export-safe workflow

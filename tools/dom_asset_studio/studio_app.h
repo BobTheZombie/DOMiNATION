@@ -48,6 +48,21 @@ private:
     std::array<float, 3> maxBounds{0.0f, 0.0f, 0.0f};
   };
 
+  struct ScenePlacement {
+    std::string label;
+    std::string meshRef;
+    std::string resolvedStyleId;
+    PreviewAsset asset;
+    bool visible{true};
+    bool valid{false};
+    std::string warning;
+    float posX{0.0f};
+    float posY{0.0f};
+    float posZ{0.0f};
+    float rotYDeg{0.0f};
+    float scale{1.0f};
+  };
+
   struct StylesheetDoc {
     std::string label;
     std::filesystem::path path;
@@ -93,6 +108,12 @@ private:
   void update_preview_resolution();
   void refresh_preview_asset_from_resolution();
   void open_asset_for_preview(const std::filesystem::path& requestedPath, bool fromResolver);
+  bool open_asset_for_scene_placement(const std::filesystem::path& requestedPath, ScenePlacement& placement);
+  void add_current_asset_to_scene();
+  void clear_scene();
+  void reset_scene_layout();
+  void reload_scene_placements();
+  int active_preview_lod() const;
   std::optional<PreviewAsset> load_preview_asset(const std::filesystem::path& path, std::string& error) const;
 
   SDL_Window* window_{nullptr};
@@ -112,6 +133,7 @@ private:
   std::string previewState_;
   int previewDomain_{1};
   int previewLod_{0};
+  bool autoPreviewLod_{false};
 
   std::vector<std::string> logs_;
   std::vector<std::filesystem::path> treeEntries_;
@@ -132,6 +154,10 @@ private:
   int lightingPreset_{0};
   int backgroundMode_{0};
   int previewStyleVariant_{0};
+  int viewportMode_{0};
+  int terrainContext_{0};
+  int sceneSelectedIndex_{-1};
+  std::vector<ScenePlacement> scenePlacements_;
 
   dom::render::ResolvedRenderStyle resolvedPreview_{};
   PreviewAsset previewAsset_{};
