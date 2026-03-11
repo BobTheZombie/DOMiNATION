@@ -84,10 +84,11 @@ private:
   void load_manifest(ManifestDoc& doc);
   void save_manifest(ManifestDoc& doc);
   void save_json_doc(const std::filesystem::path& path, const nlohmann::json& json, std::string& status, const char* kind);
-  void edit_style_layer(nlohmann::json& layer, const char* idPrefix);
+  bool edit_style_layer(nlohmann::json& layer, const char* idPrefix);
   void run_content_validation();
   void run_internal_validation();
   void run_package_workflow();
+  void apply_and_reload();
   void apply_manifest_to_stylesheet();
   void update_preview_resolution();
   void refresh_preview_asset_from_resolution();

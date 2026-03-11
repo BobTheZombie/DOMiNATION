@@ -20,3 +20,8 @@ The resolver is deterministic and does not mutate simulation state.
 
 ## DOM Asset Studio
 `dom_asset_studio` reuses this stylesheet resolution pipeline for preview and exports. Style edits should be validated through the Studio Validate panel (runs `tools/validate_content_pipeline.py`) before shipping content.
+
+
+Studio save/apply flow:
+- Use **Apply and Reload** after manifest/LOD/style edits to persist metadata, reload resolver state, and refresh preview chains deterministically.
+- Use **Export Engine-Compatible Content** to run save/apply + validation + package summary generation in one action.

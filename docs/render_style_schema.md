@@ -15,3 +15,9 @@ Style entry keys:
 
 ## DOM Asset Studio structured editing
 The Studio exposes structured form fields for core schema keys (`render_classes.default`, `civ_overrides`, `theme_overrides`, `lod_group`, `attachments`) with optional raw JSON inspection.
+
+
+## Validation expectations in Studio
+- Render class names should map to supported engine classes (terrain, unit, building, object/site/city_cluster/icon/marker).
+- `lod_group`/LOD references should resolve to `lod_manifest.json` entries.
+- Attachment mapping keys should use supported hook names (`banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`).

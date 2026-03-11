@@ -196,10 +196,11 @@ void DomAssetStudioApp::draw_main_menu() {
 
   if (ImGui::BeginMenu("File")) {
     if (ImGui::MenuItem("Reload Content")) reload_content();
+    if (ImGui::MenuItem("Apply and Reload")) apply_and_reload();
     if (ImGui::MenuItem("Save Manifests")) {
       save_manifest(assetManifest_);
       save_manifest(lodManifest_);
-      reload_content();
+      apply_and_reload();
     }
     if (ImGui::MenuItem("Apply Asset->Stylesheet Mapping")) apply_manifest_to_stylesheet();
     if (ImGui::MenuItem("Quit")) {
@@ -236,9 +237,7 @@ void DomAssetStudioApp::draw_main_menu() {
   }
   if (ImGui::BeginMenu("Export")) {
     if (ImGui::MenuItem("Export Engine-Compatible Content (save + validate)")) {
-      save_manifest(assetManifest_);
-      save_manifest(lodManifest_);
-      for (auto& s : stylesheets_) save_stylesheet(s);
+      apply_and_reload();
       run_internal_validation();
       run_content_validation();
       run_package_workflow();
@@ -379,6 +378,7 @@ void DomAssetStudioApp::draw_asset_inspector() {
         }
       }
       if (selectedAsset) {
+        const nlohmann::json before = *selectedAsset;
         std::string type = selectedAsset->value("type", "object");
         std::string civTheme = selectedAsset->value("civilization_theme", "neutral");
         std::string mesh = selectedAsset->value("mesh", "");
@@ -386,6 +386,12 @@ void DomAssetStudioApp::draw_asset_inspector() {
         std::string renderClass = selectedAsset->value("render_class", "");
         std::string category = selectedAsset->value("category", "");
         std::string attachmentProfile = selectedAsset->value("attachment_profile", "");
+        std::string notes = selectedAsset->value("notes", "");
+        std::string assetStatus = selectedAsset->value("status", "draft");
+        std::string materialRef = selectedAsset->value("material_ref", "");
+        std::string previewThumbnail = selectedAsset->value("preview_thumbnail", "");
+        std::string civTag = selectedAsset->value("civ_tag", "");
+        std::string themeTag = selectedAsset->value("theme_tag", "");
         ImGui::InputText("Type", &type);
         ImGui::InputText("Civilization Theme", &civTheme);
         ImGui::InputText("Mesh", &mesh);
@@ -393,6 +399,12 @@ void DomAssetStudioApp::draw_asset_inspector() {
         ImGui::InputText("Render Class", &renderClass);
         ImGui::InputText("Category Metadata", &category);
         ImGui::InputText("Attachment Profile", &attachmentProfile);
+        ImGui::InputText("Material Ref", &materialRef);
+        ImGui::InputText("Civ Tag", &civTag);
+        ImGui::InputText("Theme Tag", &themeTag);
+        ImGui::InputText("Preview/Thumbnail", &previewThumbnail);
+        ImGui::InputText("Status", &assetStatus);
+        ImGui::InputText("Notes", &notes);
         (*selectedAsset)["type"] = type;
         (*selectedAsset)["civilization_theme"] = civTheme;
         (*selectedAsset)["mesh"] = mesh;
@@ -400,7 +412,13 @@ void DomAssetStudioApp::draw_asset_inspector() {
         (*selectedAsset)["render_class"] = renderClass;
         (*selectedAsset)["category"] = category;
         (*selectedAsset)["attachment_profile"] = attachmentProfile;
-        assetManifest_.dirty = true;
+        (*selectedAsset)["material_ref"] = materialRef;
+        (*selectedAsset)["civ_tag"] = civTag;
+        (*selectedAsset)["theme_tag"] = themeTag;
+        (*selectedAsset)["preview_thumbnail"] = previewThumbnail;
+        (*selectedAsset)["status"] = assetStatus;
+        (*selectedAsset)["notes"] = notes;
+        if (before != *selectedAsset) assetManifest_.dirty = true;
       }
 
       ImGui::SeparatorText("LOD Entries");
@@ -434,22 +452,38 @@ void DomAssetStudioApp::draw_asset_inspector() {
 
       for (auto& lod : lodManifest_.json["lod_entries"]) {
         if (lod.value("lod_id", "") == selectedManifestLodId_) {
+          const nlohmann::json before = lod;
           std::string aid = lod.value("asset_id", "");
           std::string mesh = lod.value("mesh", "");
           std::string category = lod.value("category", "");
           std::string renderClass = lod.value("render_class", "");
+          std::string lodGroupId = lod.value("lod_group_id", lod.value("lod_id", ""));
+          std::string nearRef = lod.value("near_asset", "");
+          std::string midRef = lod.value("mid_asset", "");
+          std::string farRef = lod.value("far_asset", "");
+          std::string fallbackRef = lod.value("fallback_asset", "");
           float screenSize = lod.value("screen_size", 1.0f);
           ImGui::InputText("LOD Asset ID", &aid);
           ImGui::InputText("LOD Mesh", &mesh);
           ImGui::InputText("LOD Category", &category);
           ImGui::InputText("LOD Render Class", &renderClass);
+          ImGui::InputText("LOD Group ID", &lodGroupId);
+          ImGui::InputText("Near Asset Ref", &nearRef);
+          ImGui::InputText("Mid Asset Ref", &midRef);
+          ImGui::InputText("Far Asset Ref", &farRef);
+          ImGui::InputText("Fallback Asset Ref", &fallbackRef);
           ImGui::SliderFloat("LOD Screen Size", &screenSize, 0.0f, 1.0f);
           lod["asset_id"] = aid;
           lod["mesh"] = mesh;
           lod["category"] = category;
           lod["render_class"] = renderClass;
+          lod["lod_group_id"] = lodGroupId;
+          lod["near_asset"] = nearRef;
+          lod["mid_asset"] = midRef;
+          lod["far_asset"] = farRef;
+          lod["fallback_asset"] = fallbackRef;
           lod["screen_size"] = screenSize;
-          lodManifest_.dirty = true;
+          if (before != lod) lodManifest_.dirty = true;
           break;
         }
       }
@@ -457,8 +491,10 @@ void DomAssetStudioApp::draw_asset_inspector() {
       if (ImGui::Button("Save Manifests")) {
         save_manifest(assetManifest_);
         save_manifest(lodManifest_);
-        reload_content();
+        apply_and_reload();
       }
+      ImGui::SameLine();
+      if (ImGui::Button("Apply + Reload")) apply_and_reload();
     }
   }
 
@@ -466,7 +502,7 @@ void DomAssetStudioApp::draw_asset_inspector() {
 #endif
 }
 
-void DomAssetStudioApp::edit_style_layer(nlohmann::json& layer, const char* idPrefix) {
+bool DomAssetStudioApp::edit_style_layer(nlohmann::json& layer, const char* idPrefix) {
 #ifdef DOM_HAS_IMGUI
   std::string styleId = layer.value("style_id", "");
   std::string renderClass = layer.value("render_class", "");
@@ -486,6 +522,7 @@ void DomAssetStudioApp::edit_style_layer(nlohmann::json& layer, const char* idPr
   ImGui::InputText((std::string("Category##") + idPrefix).c_str(), &category);
   ImGui::InputText((std::string("Civ Tag##") + idPrefix).c_str(), &civTag);
   ImGui::InputText((std::string("Theme Tag##") + idPrefix).c_str(), &themeTag);
+  const nlohmann::json before = layer;
   layer["style_id"] = styleId;
   layer["render_class"] = renderClass;
   layer["mesh"] = mesh;
@@ -507,6 +544,9 @@ void DomAssetStudioApp::edit_style_layer(nlohmann::json& layer, const char* idPr
     }
     ImGui::TreePop();
   }
+  return before != layer;
+#else
+  return false;
 #endif
 }
 
@@ -520,7 +560,7 @@ void DomAssetStudioApp::draw_stylesheet_editor() {
 
   auto& sheet = stylesheets_[selectedStylesheet_];
   ImGui::Text("Path: %s", sheet.path.string().c_str());
-  ImGui::Text("Status: %s", sheet.status.c_str());
+  ImGui::Text("Status: %s%s", sheet.status.c_str(), sheet.dirty ? " (dirty)" : "");
 
   if (!sheet.json.is_object()) {
     ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Invalid JSON object");
@@ -560,7 +600,7 @@ void DomAssetStudioApp::draw_stylesheet_editor() {
     auto& rc = sheet.json["render_classes"][selectedRenderClass_];
     if (!rc.contains("default") || !rc["default"].is_object()) rc["default"] = nlohmann::json::object();
     ImGui::SeparatorText("Default Mapping");
-    edit_style_layer(rc["default"], "rc_default");
+    if (edit_style_layer(rc["default"], "rc_default")) sheet.dirty = true;
   }
 
   if (ImGui::Button("Save Sheet")) save_stylesheet(sheet);
@@ -692,6 +732,15 @@ void DomAssetStudioApp::draw_validation_panel() {
     run_internal_validation();
     run_content_validation();
   }
+  ImGui::SameLine();
+  if (ImGui::Button("Revalidate Current Project")) {
+    run_internal_validation();
+    run_content_validation();
+  }
+  ImGui::Text("Dirty: manifest=%s lod=%s stylesheet=%s",
+              assetManifest_.dirty ? "yes" : "no",
+              lodManifest_.dirty ? "yes" : "no",
+              stylesheets_[selectedStylesheet_].dirty ? "yes" : "no");
   for (const auto& m : validationMessages_) ImGui::TextUnformatted(m.c_str());
   if (!packageStatus_.empty()) {
     ImGui::SeparatorText("Packaging");
@@ -724,13 +773,24 @@ void DomAssetStudioApp::load_stylesheet(StylesheetDoc& doc) {
 
 void DomAssetStudioApp::save_json_doc(const std::filesystem::path& path, const nlohmann::json& json, std::string& status, const char* kind) {
   try {
-    std::ofstream out(path);
-    if (!out.good()) {
-      status = "open failed";
-      append_log(std::string("Failed to save ") + kind + ": " + path.string());
-      return;
+    const auto parent = path.parent_path();
+    if (!parent.empty()) std::filesystem::create_directories(parent);
+    const std::filesystem::path tempPath = path.string() + ".tmp";
+    {
+      std::ofstream out(tempPath);
+      if (!out.good()) {
+        status = "open failed";
+        append_log(std::string("Failed to save ") + kind + ": " + path.string());
+        return;
+      }
+      out << json.dump(2) << "\n";
+      if (!out.good()) {
+        status = "write failed";
+        append_log(std::string("Failed to write ") + kind + ": " + tempPath.string());
+        return;
+      }
     }
-    out << json.dump(2) << "\n";
+    std::filesystem::rename(tempPath, path);
     status = "saved";
     append_log(std::string("Saved ") + kind + ": " + path.string());
   } catch (const std::exception& e) {
@@ -826,6 +886,8 @@ void DomAssetStudioApp::run_internal_validation() {
   std::set<std::string> lodIds;
   std::set<std::string> duplicateAssets;
   std::set<std::string> duplicateLods;
+  const std::set<std::string> validRenderClasses = {"terrain", "unit", "building", "object", "site", "city_cluster", "icon", "marker"};
+  const std::set<std::string> validAttachmentKeys = {"banner_socket", "civ_emblem", "smoke_stack", "muzzle_flash", "selection_badge", "warning_badge", "guardian_aura"};
 
   if (assetManifest_.json.contains("assets") && assetManifest_.json["assets"].is_array()) {
     for (const auto& asset : assetManifest_.json["assets"]) {
@@ -837,6 +899,12 @@ void DomAssetStudioApp::run_internal_validation() {
       if (!assetIds.insert(aid).second) duplicateAssets.insert(aid);
       const std::string mesh = asset.value("mesh", "");
       if (mesh.empty()) validationMessages_.push_back("warning: asset " + aid + " has empty mesh path");
+      const std::string renderClass = asset.value("render_class", "");
+      if (!renderClass.empty() && !validRenderClasses.contains(renderClass)) validationMessages_.push_back("error: asset " + aid + " has invalid render_class " + renderClass);
+      const std::string civTag = asset.value("civ_tag", "");
+      const std::string themeTag = asset.value("theme_tag", "");
+      if (!civTag.empty() && (civTag.find(' ') != std::string::npos || civTag.find('/') != std::string::npos)) validationMessages_.push_back("error: asset " + aid + " has invalid civ_tag " + civTag);
+      if (!themeTag.empty() && (themeTag.find(' ') != std::string::npos || themeTag.find('/') != std::string::npos)) validationMessages_.push_back("error: asset " + aid + " has invalid theme_tag " + themeTag);
     }
   }
   if (lodManifest_.json.contains("lod_entries") && lodManifest_.json["lod_entries"].is_array()) {
@@ -850,6 +918,15 @@ void DomAssetStudioApp::run_internal_validation() {
       if (!lodIds.insert(lid).second) duplicateLods.insert(lid);
       if (!aid.empty() && !assetIds.contains(aid) && aid != "missing_mesh") {
         validationMessages_.push_back("error: lod " + lid + " references unknown asset_id " + aid);
+      }
+      for (const char* key : {"near_asset", "mid_asset", "far_asset", "fallback_asset"}) {
+        const std::string ref = lod.value(key, "");
+        if (!ref.empty() && !assetIds.contains(ref) && ref != "missing_mesh") validationMessages_.push_back(std::string("error: lod ") + lid + " has invalid " + key + " " + ref);
+      }
+      if (lod.contains("attachments") && lod["attachments"].is_object()) {
+        for (const auto& [socket, _] : lod["attachments"].items()) {
+          if (!validAttachmentKeys.contains(socket)) validationMessages_.push_back("error: lod " + lid + " has invalid attachment key " + socket);
+        }
       }
     }
   }
@@ -888,6 +965,16 @@ void DomAssetStudioApp::run_package_workflow() {
     packageStatus_ += "\n";
   }
   append_log(rc == 0 ? "Packaging complete." : "Packaging failed (see Validation panel). ");
+}
+
+void DomAssetStudioApp::apply_and_reload() {
+  save_manifest(assetManifest_);
+  save_manifest(lodManifest_);
+  for (auto& sheet : stylesheets_) {
+    if (sheet.dirty) save_stylesheet(sheet);
+  }
+  reload_content();
+  append_log("Apply + reload completed.");
 }
 
 void DomAssetStudioApp::update_preview_resolution() {
