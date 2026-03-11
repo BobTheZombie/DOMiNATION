@@ -693,3 +693,10 @@ Use these deterministic integration checks after world-render/content changes:
 ```
 
 - Data-driven render stylesheet pipeline (`content/*_styles.json`) for terrain/units/buildings/objects with deterministic fallback resolution.
+
+## Production render stylesheet coverage
+- Terrain stylesheet now includes full biome-oriented classes (land, mountain, coast, inland water) with deterministic fallback aliases for legacy runtime class IDs.
+- Unit stylesheet now covers worker/infantry/ranged/heavy/cavalry/raider/artillery/armor/train/naval/aircraft/guardian families plus legacy aliases used by current renderer class mapping.
+- Building stylesheet now covers city, economic, military, industrial, strategic, and wonder classes with explicit `construction`, `damaged`, and `strategic_warning` states.
+- Object stylesheet now covers resource/rail/logistics/guardian/strategic map objects and deterministic fallback classes used by current overlays.
+- Attachments are authored in JSON (`banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`) and remain renderer-driven behavior.
