@@ -36,11 +36,6 @@ This keeps save/load/replay/hash behavior stable while art assets iterate.
 
 Styles exported from Blender should be registered in `content/asset_manifest.json` + `content/lod_manifest.json`, then mapped into render classes in stylesheet JSON files.
 
-## Authoring guidance for populated render classes
-When exporting new meshes/material families for populated stylesheet classes:
-1. Keep stable `asset_id` + `lod_id` naming patterns.
-2. Register assets in `content/asset_manifest.json` and `content/lod_manifest.json`.
-3. Map families through stylesheet `render_classes` with deterministic `civ_overrides`/`theme_overrides`.
-4. Use attachment hooks (`banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`) instead of hard-coded renderer special cases.
-
-This keeps renderer behavior deterministic while allowing content packs to scale.
+## DOM Asset Studio integration
+- Use `./build/dom_asset_studio` for stylesheet/manifest inspection and preview before packaging.
+- Keep Blender as source-authoring tool; Studio is for validation, preview, and export-safe stylesheet edits.

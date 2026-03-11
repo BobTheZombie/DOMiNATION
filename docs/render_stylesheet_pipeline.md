@@ -17,3 +17,6 @@ Files:
 Runtime code: `engine/render/render_stylesheet.*`.
 
 The resolver is deterministic and does not mutate simulation state.
+
+## DOM Asset Studio
+`dom_asset_studio` reuses this stylesheet resolution pipeline for preview and exports. Style edits should be validated through the Studio Validate panel (runs `tools/validate_content_pipeline.py`) before shipping content.

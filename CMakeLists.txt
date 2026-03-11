@@ -46,6 +46,7 @@ if(RTS_ENABLE_IMGUI)
     third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_sdl2.cpp
     third_party/imgui/backends/imgui_impl_opengl3.cpp
+    third_party/imgui/misc/cpp/imgui_stdlib.cpp
   )
 
   target_include_directories(thirdparty_imgui PUBLIC
@@ -91,6 +92,24 @@ add_executable(rts
   game/ai/simple_ai.cpp
   main.cpp
 )
+
+
+add_executable(dom_asset_studio
+  engine/render/content_resolution.cpp
+  engine/render/render_stylesheet.cpp
+  engine/assets/asset_manager.cpp
+  engine/assets/asset_registry.cpp
+  engine/assets/texture_atlas.cpp
+  tools/dom_asset_studio/studio_app.cpp
+  tools/dom_asset_studio_main.cpp
+)
+
+target_include_directories(dom_asset_studio PRIVATE .)
+target_link_libraries(dom_asset_studio PRIVATE SDL2::SDL2 OpenGL::GL glm::glm nlohmann_json::nlohmann_json)
+if(RTS_ENABLE_IMGUI)
+  target_link_libraries(dom_asset_studio PRIVATE thirdparty_imgui)
+  target_compile_definitions(dom_asset_studio PRIVATE DOM_HAS_IMGUI=1)
+endif()
 
 target_include_directories(rts PRIVATE .)
 target_link_libraries(rts PRIVATE SDL2::SDL2 OpenGL::GL glm::glm nlohmann_json::nlohmann_json)
