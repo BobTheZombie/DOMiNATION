@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DIST_DIR = ROOT / "dist"
 ARCHIVE = DIST_DIR / "rts_assets.tar.gz"
 SUMMARY = DIST_DIR / "package_summary.json"
+STUDIO_EXPORT_MANIFEST = DIST_DIR / "studio_export_manifest.json"
 
 INCLUDE_DIRS = [
     ROOT / "assets_final/atlases",
@@ -25,6 +26,13 @@ MANIFESTS = [
     ROOT / "content/biome_manifest.json",
     ROOT / "content/civilization_theme_manifest.json",
     ROOT / "content/lod_manifest.json",
+]
+
+STYLE_SHEETS = [
+    ROOT / "content/terrain_styles.json",
+    ROOT / "content/unit_styles.json",
+    ROOT / "content/building_styles.json",
+    ROOT / "content/object_styles.json",
 ]
 
 
@@ -67,8 +75,20 @@ def main() -> None:
         "civilizations": len(civ_manifest.get("themes", [])),
         "packaged_files": count_files(INCLUDE_DIRS),
         "required_manifest_count": sum(1 for m in MANIFESTS if m.exists()),
+        "stylesheet_count": sum(1 for s in STYLE_SHEETS if s.exists()),
     }
     SUMMARY.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+
+    export_manifest = {
+        "schema_version": 1,
+        "pipeline": "dom_asset_studio_export",
+        "content_root": "content",
+        "required_manifests": [str(m.relative_to(ROOT)) for m in MANIFESTS if m.exists()],
+        "render_stylesheets": [str(s.relative_to(ROOT)) for s in STYLE_SHEETS if s.exists()],
+        "archive": str(ARCHIVE.relative_to(ROOT)),
+        "summary": str(SUMMARY.relative_to(ROOT)),
+    }
+    STUDIO_EXPORT_MANIFEST.write_text(json.dumps(export_manifest, indent=2), encoding="utf-8")
     print(f"packaged assets -> {ARCHIVE}")
 
 

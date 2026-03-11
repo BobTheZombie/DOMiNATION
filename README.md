@@ -34,6 +34,8 @@ python tools/asset_pipeline/package_assets.py
 python tools/validate_content_pipeline.py
 ```
 
+DOM Asset Studio export/package pass now also emits `dist/studio_export_manifest.json`, which records required manifest and render stylesheet references used for deterministic engine content resolution.
+
 Asset browser (ImGui):
 - Press `F10` in-game to toggle the Asset Browser panel.
 ## Build dependencies (Ubuntu)

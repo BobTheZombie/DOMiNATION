@@ -38,4 +38,6 @@ Styles exported from Blender should be registered in `content/asset_manifest.jso
 
 ## DOM Asset Studio integration
 - Use `./build/dom_asset_studio` for stylesheet/manifest inspection and preview before packaging.
+- Author and edit `asset_manifest.json` + `lod_manifest.json` entries directly in Studio when integrating new exports (including render class, category, civ/theme, and attachment metadata fields).
 - Keep Blender as source-authoring tool; Studio is for validation, preview, and export-safe stylesheet edits.
+- Before publishing: run Studio Export (save + validation + package), then verify `dist/studio_export_manifest.json` and `dist/package_summary.json` for engine-compatible bundle references.
