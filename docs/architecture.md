@@ -459,3 +459,5 @@ Deterministic resolution model:
 Applied across terrain materials, unit glyph/silhouette selection, and building/object shape categories with near/mid/far LOD tiers.
 
 Debug counters are presentation-only and include resolution/fallback and LOD tier counts.
+
+- Render stylesheet resolution is deterministic and isolated from authoritative simulation.

@@ -672,3 +672,5 @@ Use these deterministic integration checks after world-render/content changes:
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 4 --hash-only
 ./build/rts --headless --scenario scenarios/civ_content_test.json --threads 8 --hash-only
 ```
+
+- Data-driven render stylesheet pipeline (`content/*_styles.json`) for terrain/units/buildings/objects with deterministic fallback resolution.

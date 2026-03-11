@@ -1,5 +1,6 @@
 #include "engine/render/renderer.h"
 #include "engine/render/content_resolution.h"
+#include "engine/render/render_stylesheet.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <algorithm>
@@ -151,6 +152,55 @@ UnitGlyph unit_glyph(const dom::sim::Unit& u) {
   if (u.role == UR::Cavalry || u.type == UT::Cavalry) return UnitGlyph::Cavalry;
   if (u.role == UR::Transport) return UnitGlyph::Rail;
   return UnitGlyph::Infantry;
+}
+
+
+std::string team_theme_id(const dom::sim::World& w, uint16_t team) {
+  if (team >= w.players.size()) return "default";
+  std::string theme = w.players[team].civilization.themeId;
+  std::transform(theme.begin(), theme.end(), theme.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+  return theme.empty() ? "default" : theme;
+}
+
+std::string unit_render_class(const dom::sim::Unit& u) {
+  switch (u.type) {
+    case dom::sim::UnitType::Worker: return "worker";
+    case dom::sim::UnitType::Infantry: return "infantry";
+    case dom::sim::UnitType::Archer: return "infantry";
+    case dom::sim::UnitType::Cavalry: return "cavalry";
+    case dom::sim::UnitType::Siege: return "artillery";
+    case dom::sim::UnitType::TransportShip: return "transport_ship";
+    case dom::sim::UnitType::LightWarship:
+    case dom::sim::UnitType::HeavyWarship:
+    case dom::sim::UnitType::BombardShip: return "warship";
+    case dom::sim::UnitType::Fighter:
+    case dom::sim::UnitType::Interceptor: return "fighter";
+    case dom::sim::UnitType::Bomber:
+    case dom::sim::UnitType::StrategicBomber: return "bomber";
+    case dom::sim::UnitType::TacticalMissile:
+    case dom::sim::UnitType::StrategicMissile: return "missile";
+    default: return "infantry";
+  }
+}
+
+std::string building_render_class(dom::sim::BuildingType type) {
+  switch (type) {
+    case dom::sim::BuildingType::CityCenter: return "city_settlement";
+    case dom::sim::BuildingType::Barracks: return "barracks";
+    case dom::sim::BuildingType::Market: return "market";
+    case dom::sim::BuildingType::FactoryHub: return "factory";
+    case dom::sim::BuildingType::SteelMill:
+    case dom::sim::BuildingType::Refinery:
+    case dom::sim::BuildingType::MachineWorks:
+    case dom::sim::BuildingType::MunitionsPlant:
+    case dom::sim::BuildingType::ElectronicsLab: return "industrial_node";
+    case dom::sim::BuildingType::MissileSilo: return "missile_silo";
+    case dom::sim::BuildingType::RadarTower:
+    case dom::sim::BuildingType::MobileRadar: return "radar";
+    case dom::sim::BuildingType::Port: return "port";
+    case dom::sim::BuildingType::Mine: return "mine_entrance";
+    default: return "strategic_structure";
+  }
 }
 
 std::array<float, 3> diplomatic_color(const dom::sim::World& w, uint16_t team) {
@@ -862,12 +912,14 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
       int gy = std::clamp(static_cast<int>(rn.pos.y), 0, w.height - 1);
       if (w.fog[static_cast<size_t>(gy * w.width + gx)] > 0) continue;
     }
-    std::array<float, 3> col{0.85f, 0.8f, 0.35f};
-    if (rn.type == dom::sim::ResourceNodeType::Forest) col = {0.14f, 0.45f, 0.20f};
-    else if (rn.type == dom::sim::ResourceNodeType::Ore) col = {0.78f, 0.78f, 0.84f};
-    else if (rn.type == dom::sim::ResourceNodeType::Farmable) col = {0.85f, 0.72f, 0.34f};
-    else if (rn.type == dom::sim::ResourceNodeType::Ruins) col = {0.66f, 0.56f, 0.66f};
-    draw_feature_circle(rn.pos, strategic ? 0.16f : 0.24f, col);
+    std::string rc = "industrial_node";
+    if (rn.type == dom::sim::ResourceNodeType::Forest) rc = "forest_site";
+    else if (rn.type == dom::sim::ResourceNodeType::Ore) rc = "mine_entrance";
+    else if (rn.type == dom::sim::ResourceNodeType::Farmable) rc = "settlement_object";
+    else if (rn.type == dom::sim::ResourceNodeType::Ruins) rc = "capital_landmark";
+    const auto objStyle = resolve_render_style({RenderStyleDomain::Object, {}, {}, {}, rc, {}, {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
+    std::array<float, 3> col{objStyle.tint[0], objStyle.tint[1], objStyle.tint[2]};
+    draw_feature_circle(rn.pos, (strategic ? 0.16f : 0.24f) * objStyle.sizeScale[0], col);
   }
 
   for (const auto& dd : w.deepDeposits) {
@@ -892,9 +944,9 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     auto gPres = dom::sim::guardian_content_presentation(s.guardianId, s.siteType);
     if (gPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
     if (!s.discovered && !w.godMode) continue;
-    std::array<float, 3> col{0.77f, 0.22f, 0.82f};
-    if (s.spawned && s.alive) col = {0.92f, 0.42f, 0.26f};
-    draw_feature_circle(s.pos, strategic ? 0.26f : 0.34f, col);
+    const auto gStyle = resolve_render_style({RenderStyleDomain::Object, s.guardianId, {}, {}, "guardian_site", (s.spawned && s.alive) ? "strategic_warning" : "default", {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
+    std::array<float, 3> col{gStyle.tint[0], gStyle.tint[1], gStyle.tint[2]};
+    draw_feature_circle(s.pos, (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0], col);
   }
 }
 
@@ -1062,6 +1114,7 @@ void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<fl
 
 bool init_renderer() {
   glClearColor(0.08f, 0.1f, 0.14f, 1.0f);
+  load_render_stylesheets();
   return true;
 }
 
@@ -1124,6 +1177,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
 
   reset_terrain_presentation_counters();
   reset_content_resolution_counters();
+  reset_render_stylesheet_counters();
   gEntityCounters = {};
   gStrategicCounters = {};
   glBegin(GL_QUADS);
@@ -1270,27 +1324,23 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glBegin(GL_QUADS);
   for (const auto& b : w.buildings) {
     ++gEntityCounters.buildingPresentationResolves;
-    note_content_resolution(ContentResolutionDomain::Entity, false);
     auto bPres = dom::sim::building_content_presentation(w, b.team, b.type, b.definitionId);
-    if (bPres.iconId.find("fallback") != std::string::npos) { ++gEntityCounters.entityPresentationFallbacks; note_content_resolution(ContentResolutionDomain::Entity, true); }
+    if (bPres.iconId.find("fallback") != std::string::npos) { ++gEntityCounters.entityPresentationFallbacks; }
     auto rel = diplomatic_color(w, b.team);
     auto theme = theme_tint_for_team(w, b.team);
     auto base = mix_color(rel, theme, 0.35f);
     if (b.underConstruction) base = mix_color(base, {0.35f, 0.35f, 0.35f}, 0.45f);
     if (b.factory.blocked) base = {0.88f, 0.35f, 0.25f};
     else if (b.factory.active) base = mix_color(base, {0.95f, 0.95f, 0.42f}, 0.2f);
-    float sx = b.size.x * 0.5f;
-    float sy = b.size.y * 0.5f;
-    const bool military = b.type == dom::sim::BuildingType::Barracks || b.type == dom::sim::BuildingType::AABattery || b.type == dom::sim::BuildingType::AntiMissileDefense || b.type == dom::sim::BuildingType::Airbase || b.type == dom::sim::BuildingType::MissileSilo;
     const bool logistics = b.type == dom::sim::BuildingType::Port || b.type == dom::sim::BuildingType::Market;
-    const bool industrial = b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::ElectronicsLab || b.type == dom::sim::BuildingType::Mine;
-    const bool strategic = b.type == dom::sim::BuildingType::MissileSilo || b.type == dom::sim::BuildingType::RadarTower || b.type == dom::sim::BuildingType::MobileRadar || b.type == dom::sim::BuildingType::AntiMissileDefense;
     const bool mythic = b.type == dom::sim::BuildingType::Wonder;
-    if (military) { sx *= 1.0f; sy *= 0.8f; }
-    else if (logistics) { sx *= 1.2f; sy *= 0.75f; }
-    else if (industrial) { sx *= 1.1f; sy *= 1.05f; }
-    else if (strategic) { sx *= 0.88f; sy *= 1.2f; }
-    else if (mythic) { sx *= 1.2f; sy *= 1.2f; }
+    std::string state = b.underConstruction ? "construction" : (b.hp < b.maxHp * 0.5f ? "damaged" : "default");
+    if (b.factory.blocked) state = "strategic_warning";
+    const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, select_lod_tier(c.zoom)});
+    if (bStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
+    base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
+    float sx = b.size.x * 0.5f * bStyle.sizeScale[0];
+    float sy = b.size.y * 0.5f * bStyle.sizeScale[1];
     glColor3f(base[0], base[1], base[2]);
     glVertex2f(b.pos.x - sx, b.pos.y - sy);
     glVertex2f(b.pos.x + sx, b.pos.y - sy);
@@ -1391,14 +1441,17 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     for (const auto& u : w.units) {
       if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
       ++gEntityCounters.unitPresentationResolves;
-      note_content_resolution(ContentResolutionDomain::Entity, false);
-      auto uPres = dom::sim::unit_content_presentation(w, u.team, u.type, u.definitionId);
-      if (uPres.iconId.find("fallback") != std::string::npos) { ++gEntityCounters.entityPresentationFallbacks; note_content_resolution(ContentResolutionDomain::Entity, true); }
+        auto uPres = dom::sim::unit_content_presentation(w, u.team, u.type, u.definitionId);
+      if (uPres.iconId.find("fallback") != std::string::npos) { ++gEntityCounters.entityPresentationFallbacks; }
       auto rel = unit_color(u);
       auto theme = theme_tint_for_team(w, u.team);
       auto base = mix_color(rel, theme, 0.25f);
+      std::string uState = u.selected ? "selected" : (u.supplyState == dom::sim::SupplyState::LowSupply ? "low_supply" : "default");
+      const auto uStyle = resolve_render_style({RenderStyleDomain::Unit, u.definitionId, normalized_civ_key(w, u.team), team_theme_id(w, u.team), unit_render_class(u), uState, {}, lodTier});
+      if (uStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
+      base = mix_color(base, {uStyle.tint[0], uStyle.tint[1], uStyle.tint[2]}, 0.2f);
       UnitGlyph glyph = unit_glyph(u);
-      float s = c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f);
+      float s = (c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f)) * uStyle.sizeScale[0];
       if (glyph == UnitGlyph::Guardian) s += 0.16f;
       if (glyph == UnitGlyph::Armor || glyph == UnitGlyph::Naval) s += 0.08f;
 

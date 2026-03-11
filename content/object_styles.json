@@ -1,0 +1,13 @@
+{
+  "default": {"style_id": "object_default", "mesh": "missing_mesh", "lod_group": "missing_mesh", "tint": [0.85, 0.8, 0.35], "size_scale": [1.0, 1.0]},
+  "render_classes": {
+    "rail_hub": {"default": {"style_id": "object_rail_hub", "tint": [0.95, 0.9, 0.45]}},
+    "mine_entrance": {"default": {"style_id": "object_mine", "tint": [0.78, 0.78, 0.84]}},
+    "guardian_site": {"default": {"style_id": "object_guardian_site", "tint": [0.77, 0.22, 0.82], "state_variants": {"strategic_warning": {"tint": [0.92, 0.42, 0.26]}}, "lods": {"far": {"size_scale": [0.8, 0.8]}}}},
+    "capital_landmark": {"default": {"style_id": "object_capital", "tint": [0.95, 0.9, 0.45]}},
+    "industrial_node": {"default": {"style_id": "object_industrial", "tint": [0.86, 0.72, 0.34]}},
+    "forest_site": {"default": {"style_id": "object_forest", "tint": [0.14, 0.45, 0.2]}},
+    "settlement_object": {"default": {"style_id": "object_settlement", "tint": [0.86, 0.72, 0.34]}},
+    "strategic_structure": {"default": {"style_id": "object_strategic", "tint": [0.95, 0.4, 0.35]}}
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "default": {"style_id": "unit_default", "mesh": "missing_mesh", "lod_group": "missing_mesh", "icon": "missing_icon", "size_scale": [1.0, 1.0]},
+  "render_classes": {
+    "worker": {"default": {"style_id": "unit_worker", "tint": [0.82, 0.86, 0.8], "size_scale": [0.92, 0.92]}},
+    "infantry": {"default": {"style_id": "unit_infantry", "tint": [0.9, 0.9, 0.9]}},
+    "cavalry": {"default": {"style_id": "unit_cavalry", "tint": [0.86, 0.8, 0.62], "size_scale": [1.04, 1.04]}},
+    "artillery": {"default": {"style_id": "unit_artillery", "tint": [0.9, 0.82, 0.66], "size_scale": [1.08, 1.08]}},
+    "tank": {"default": {"style_id": "unit_tank", "tint": [0.72, 0.78, 0.75], "size_scale": [1.12, 1.12], "attachments": {"muzzle_flash": "socket_muzzle"}}},
+    "warship": {"default": {"style_id": "unit_warship", "tint": [0.6, 0.74, 0.9], "size_scale": [1.12, 1.12]}},
+    "fighter": {"default": {"style_id": "unit_fighter", "tint": [0.92, 0.92, 0.96], "size_scale": [1.1, 1.1], "lods": {"far": {"size_scale": [0.9, 0.9]}}}},
+    "bomber": {"default": {"style_id": "unit_bomber", "tint": [0.92, 0.84, 0.76], "size_scale": [1.18, 1.18]}},
+    "missile": {"default": {"style_id": "unit_missile", "tint": [0.96, 0.4, 0.32], "size_scale": [0.95, 0.95]}}
+  }
+}

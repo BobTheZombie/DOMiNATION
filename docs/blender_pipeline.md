@@ -33,3 +33,5 @@ When production meshes/textures are missing, export packs should still provide d
 - civ/theme mapping hooks that resolve to stable fallback IDs
 
 This keeps save/load/replay/hash behavior stable while art assets iterate.
+
+Styles exported from Blender should be registered in `content/asset_manifest.json` + `content/lod_manifest.json`, then mapped into render classes in stylesheet JSON files.

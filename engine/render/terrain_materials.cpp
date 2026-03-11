@@ -1,5 +1,6 @@
 #include "engine/render/terrain_materials.h"
 #include "engine/render/content_resolution.h"
+#include "engine/render/render_stylesheet.h"
 #include <algorithm>
 #include <glm/common.hpp>
 
@@ -31,6 +32,28 @@ glm::vec3 material_color(TerrainMaterialId id) {
 }
 
 
+
+
+TerrainMaterialId material_from_set(std::string_view setId) {
+  if (setId == "temperate_grass") return TerrainMaterialId::Grassland;
+  if (setId == "steppe_dry") return TerrainMaterialId::Steppe;
+  if (setId == "forest_floor") return TerrainMaterialId::ForestGround;
+  if (setId == "sand_dune") return TerrainMaterialId::Desert;
+  if (setId == "mediterranean_soil") return TerrainMaterialId::Mediterranean;
+  if (setId == "jungle_floor") return TerrainMaterialId::Jungle;
+  if (setId == "tundra_soil") return TerrainMaterialId::Tundra;
+  if (setId == "snow") return TerrainMaterialId::Snow;
+  if (setId == "marsh") return TerrainMaterialId::Wetlands;
+  if (setId == "rock_highland") return TerrainMaterialId::Mountain;
+  if (setId == "snow_rock_highland") return TerrainMaterialId::SnowMountain;
+  if (setId == "coastal_mix") return TerrainMaterialId::Littoral;
+  if (setId == "river_water") return TerrainMaterialId::River;
+  if (setId == "lake_water") return TerrainMaterialId::Lake;
+  if (setId == "shallow_water") return TerrainMaterialId::ShallowOcean;
+  if (setId == "deep_water") return TerrainMaterialId::DeepOcean;
+  ++gCounters.presentationFallbackCount;
+  return TerrainMaterialId::Grassland;
+}
 
 float neighbor_water_factor(const dom::sim::World& world, int cellIndex) {
   int x = cellIndex % world.width;
@@ -86,10 +109,8 @@ float terrain_slope_hint(const dom::sim::World& world, int cellIndex) {
 TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cellIndex) {
   TerrainVisualSample sample{};
   ++gCounters.terrainMaterialResolves;
-  note_content_resolution(ContentResolutionDomain::Material, false);
   if (cellIndex < 0 || cellIndex >= static_cast<int>(world.heightmap.size())) {
     ++gCounters.presentationFallbackCount;
-    note_content_resolution(ContentResolutionDomain::Material, true);
     return sample;
   }
   const auto tc = static_cast<dom::sim::TerrainClass>(world.terrainClass[static_cast<size_t>(cellIndex)]);
@@ -99,41 +120,33 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
   const float fertility = world.fertility[static_cast<size_t>(cellIndex)];
   const auto biome = dom::sim::biome_at(world, cellIndex);
 
-  if (isRiver) {
-    sample.material = TerrainMaterialId::River;
-    sample.isWater = true;
-    ++gCounters.waterFeatureResolves;
-  } else if (isLake) {
-    sample.material = TerrainMaterialId::Lake;
-    sample.isWater = true;
-    ++gCounters.waterFeatureResolves;
-  } else if (tc == dom::sim::TerrainClass::DeepWater) {
-    sample.material = TerrainMaterialId::DeepOcean;
-    sample.isWater = true;
-    ++gCounters.waterFeatureResolves;
-  } else if (tc == dom::sim::TerrainClass::ShallowWater) {
-    sample.material = TerrainMaterialId::ShallowOcean;
-    sample.isWater = true;
-    ++gCounters.waterFeatureResolves;
-  } else if (is_land_coast(world, cellIndex)) {
-    sample.material = TerrainMaterialId::Littoral;
-  } else {
+  std::string renderClass = "grassland";
+  std::string exactId;
+  if (isRiver) { exactId = "river"; renderClass = "river_lake"; sample.isWater = true; ++gCounters.waterFeatureResolves; }
+  else if (isLake) { exactId = "lake"; renderClass = "river_lake"; sample.isWater = true; ++gCounters.waterFeatureResolves; }
+  else if (tc == dom::sim::TerrainClass::DeepWater) { renderClass = "deep_water"; sample.isWater = true; ++gCounters.waterFeatureResolves; }
+  else if (tc == dom::sim::TerrainClass::ShallowWater) { renderClass = "shallow_water"; sample.isWater = true; ++gCounters.waterFeatureResolves; }
+  else if (is_land_coast(world, cellIndex)) { renderClass = "coast_littoral"; }
+  else {
     switch (biome) {
-      case dom::sim::BiomeType::TemperateGrassland: sample.material = TerrainMaterialId::Grassland; break;
-      case dom::sim::BiomeType::Steppe: sample.material = TerrainMaterialId::Steppe; break;
-      case dom::sim::BiomeType::Forest: sample.material = TerrainMaterialId::ForestGround; sample.hasForestCanopy = true; break;
-      case dom::sim::BiomeType::Desert: sample.material = TerrainMaterialId::Desert; break;
-      case dom::sim::BiomeType::Mediterranean: sample.material = TerrainMaterialId::Mediterranean; break;
-      case dom::sim::BiomeType::Jungle: sample.material = TerrainMaterialId::Jungle; sample.hasForestCanopy = true; break;
-      case dom::sim::BiomeType::Tundra: sample.material = TerrainMaterialId::Tundra; break;
-      case dom::sim::BiomeType::Arctic: sample.material = TerrainMaterialId::Snow; break;
-      case dom::sim::BiomeType::Coast: sample.material = TerrainMaterialId::Littoral; break;
-      case dom::sim::BiomeType::Wetlands: sample.material = TerrainMaterialId::Wetlands; sample.hasForestCanopy = true; break;
-      case dom::sim::BiomeType::Mountain: sample.material = TerrainMaterialId::Mountain; sample.mountain = true; ++gCounters.mountainFeatureCount; break;
-      case dom::sim::BiomeType::SnowMountain: sample.material = TerrainMaterialId::SnowMountain; sample.mountain = true; sample.snowCap = true; ++gCounters.mountainFeatureCount; break;
-      default: ++gCounters.presentationFallbackCount; note_content_resolution(ContentResolutionDomain::Material, true); sample.material = TerrainMaterialId::Grassland; break;
+      case dom::sim::BiomeType::TemperateGrassland: renderClass = "grassland"; break;
+      case dom::sim::BiomeType::Steppe: renderClass = "steppe"; break;
+      case dom::sim::BiomeType::Forest: renderClass = "forest_ground"; sample.hasForestCanopy = true; break;
+      case dom::sim::BiomeType::Desert: renderClass = "desert"; break;
+      case dom::sim::BiomeType::Mediterranean: renderClass = "mediterranean"; break;
+      case dom::sim::BiomeType::Jungle: renderClass = "jungle"; sample.hasForestCanopy = true; break;
+      case dom::sim::BiomeType::Tundra: renderClass = "tundra"; break;
+      case dom::sim::BiomeType::Arctic: renderClass = "snow_arctic"; break;
+      case dom::sim::BiomeType::Coast: renderClass = "coast_littoral"; break;
+      case dom::sim::BiomeType::Wetlands: renderClass = "wetlands_marsh"; sample.hasForestCanopy = true; break;
+      case dom::sim::BiomeType::Mountain: renderClass = "mountains"; sample.mountain = true; ++gCounters.mountainFeatureCount; break;
+      case dom::sim::BiomeType::SnowMountain: renderClass = "snow_mountains"; sample.mountain = true; sample.snowCap = true; ++gCounters.mountainFeatureCount; break;
+      default: ++gCounters.presentationFallbackCount; renderClass = "grassland"; break;
     }
   }
+  const auto style = resolve_render_style({RenderStyleDomain::Terrain, exactId, {}, {}, renderClass, {}, dom::sim::biome_runtime(biome).id, ContentLodTier::Near});
+  if (style.fallback) ++gCounters.presentationFallbackCount;
+  sample.material = material_from_set(style.materialSet);
 
   sample.color = material_color(sample.material);
   sample.accent = sample.color;

@@ -65,6 +65,7 @@ add_executable(rts
   engine/platform/app.cpp
   engine/render/renderer.cpp
   engine/render/content_resolution.cpp
+  engine/render/render_stylesheet.cpp
   engine/render/terrain_materials.cpp
   engine/sim/simulation.cpp
   engine/audio/audio_events.cpp

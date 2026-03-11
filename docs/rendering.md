@@ -250,3 +250,6 @@ The renderer now shares a single ordered content fallback model (exact -> civ ->
 - Structure rendering differentiates civic/military/industrial/logistics/strategic/mythic categories via deterministic shape and accent treatment.
 - Civ identity handling includes Rome, China, Europe, Middle East, Russia, USA, Japan, EU, UK, Egypt, and Tartaria-specific tint and settlement silhouette routing with stable fallback.
 - LOD behavior: near keeps richer silhouettes, mid simplifies, far clusters armies while preserving strategic readability.
+
+## Render Stylesheets
+Renderer presentation now resolves through `engine/render/render_stylesheet.*` and JSON style files (`content/terrain_styles.json`, `content/unit_styles.json`, `content/building_styles.json`, `content/object_styles.json`).
