@@ -62,6 +62,25 @@ Headless deterministic smoke mode (CI/container friendly):
 ./build/rts --headless --smoke --ticks 1200 --seed 1234 --dump-hash
 ```
 
+
+## DOM Asset Studio (standalone content tool)
+Build target is produced by the normal build:
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target dom_asset_studio
+```
+
+Run:
+```bash
+./build/dom_asset_studio
+```
+
+Studio focus:
+- manifest/style inspection
+- stylesheet form editing + save
+- resolved render-style preview chain
+- content validation/export-safe workflow
+
 ## Match pacing telemetry
 Headless runs emit deterministic `MATCH_PACING_TELEMETRY` lines that include first-expansion/combat/factory/rail/strategic timestamps, phase transition ticks, throughput/supply pressure, and end-state condition.
 

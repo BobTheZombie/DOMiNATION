@@ -157,6 +157,12 @@ ContentResolutionDomain to_content_domain(RenderStyleDomain domain) {
 
 void load_render_stylesheets() { maybe_load(); }
 
+void reload_render_stylesheets() {
+  gLoaded = false;
+  gStyles = {};
+  maybe_load();
+}
+
 std::string lod_tier_id(ContentLodTier tier) {
   if (tier == ContentLodTier::Near) return "near";
   if (tier == ContentLodTier::Mid) return "mid";

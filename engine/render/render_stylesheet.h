@@ -49,6 +49,7 @@ struct RenderStylesheetCounters {
 };
 
 void load_render_stylesheets();
+void reload_render_stylesheets();
 ResolvedRenderStyle resolve_render_style(const RenderStyleRequest& request);
 const RenderStylesheetCounters& render_stylesheet_counters();
 void reset_render_stylesheet_counters();

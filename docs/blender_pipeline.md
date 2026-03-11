@@ -35,3 +35,7 @@ When production meshes/textures are missing, export packs should still provide d
 This keeps save/load/replay/hash behavior stable while art assets iterate.
 
 Styles exported from Blender should be registered in `content/asset_manifest.json` + `content/lod_manifest.json`, then mapped into render classes in stylesheet JSON files.
+
+## DOM Asset Studio integration
+- Use `./build/dom_asset_studio` for stylesheet/manifest inspection and preview before packaging.
+- Keep Blender as source-authoring tool; Studio is for validation, preview, and export-safe stylesheet edits.
