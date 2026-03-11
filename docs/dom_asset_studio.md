@@ -39,3 +39,11 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 - Missing/invalid asset references are reported in log/inspector as non-fatal preview errors.
 - Unsupported glTF payloads (for example, missing triangle POSITION accessors) fail safely and keep the studio responsive.
 - JSON parse errors and missing references are surfaced in UI instead of crashing.
+
+
+## Authoring coverage in this pass
+- Structured manifest authoring for asset-facing metadata: `asset_id`, type/category, mesh path, material ref, render class, civ/theme tags, icon/thumbnail refs, notes, and status.
+- Structured LOD authoring for `lod_id`/`lod_group_id`, near/mid/far/fallback references, and attachment hook metadata.
+- Attachment key inspection supports runtime hooks such as `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, and `guardian_aura`.
+- Apply+Reload workflow keeps preview in sync with runtime-equivalent resolver behavior after edits.
+- Saves use temp-file writes followed by replace for safer manifest/stylesheet updates.

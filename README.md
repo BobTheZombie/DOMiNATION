@@ -84,6 +84,8 @@ Studio focus:
 - real glTF/GLB mesh preview in the viewport (orbit/turntable/grid/wireframe/normals)
 - attachment/socket overlay visualization from stylesheet mappings
 - content validation/export-safe workflow
+- manifest + LOD authoring with apply/reload dirty-state workflow
+- export/package action that saves, revalidates, and runs packaging tools with in-studio logs
 
 ## Match pacing telemetry
 Headless runs emit deterministic `MATCH_PACING_TELEMETRY` lines that include first-expansion/combat/factory/rail/strategic timestamps, phase transition ticks, throughput/supply pressure, and end-state condition.
