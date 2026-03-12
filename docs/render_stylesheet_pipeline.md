@@ -24,6 +24,8 @@ The resolver is deterministic and does not mutate simulation state.
 
 Studio save/apply flow:
 - Use **Apply and Reload** after manifest/LOD/style edits to persist metadata, reload resolver state, and refresh preview chains deterministically.
+- Auto reimport (Live Reload menu) also watches external stylesheet/manifest/asset file edits and performs safe targeted refreshes of resolver outputs, preview, catalog, and validation state.
+- Dirty local stylesheet/manifest edits block auto-overwrite: Studio logs a skip warning instead of discarding unsaved authoring changes.
 - Use **Export Engine-Compatible Content** to run save/apply + validation + package summary generation in one action.
 
 
