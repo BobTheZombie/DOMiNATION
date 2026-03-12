@@ -31,3 +31,6 @@ Scene context preview mode reuses the same stylesheet resolver chain while allow
 
 
 Style-context selector modes in Studio (default/exact/render-class/civ/theme/state focus) are preview-only resolution filters and do not mutate runtime stylesheet semantics.
+
+
+Attachment metadata remains non-authoritative gameplay data: hooks/anchors are authored in manifests/stylesheets for renderer/pipeline consumption only, and Studio diagnostics enforce safe failures for missing or invalid references during preview/export.

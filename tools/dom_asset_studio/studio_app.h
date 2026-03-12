@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 struct SDL_Window;
@@ -61,6 +62,18 @@ private:
     float posZ{0.0f};
     float rotYDeg{0.0f};
     float scale{1.0f};
+    std::unordered_map<std::string, std::string> attachments;
+  };
+
+  struct AttachmentAnchor {
+    std::string socket;
+    float x{0.0f};
+    float y{0.0f};
+    float z{0.0f};
+    float radius{0.2f};
+    bool selected{false};
+    bool valid{true};
+    std::string warning;
   };
 
   struct StylesheetDoc {
@@ -105,6 +118,9 @@ private:
   void run_package_workflow();
   void apply_and_reload();
   void apply_manifest_to_stylesheet();
+  void refresh_attachment_anchors_from_style();
+  void write_attachment_anchors_to_style();
+  void refresh_scene_attachment_previews();
   void update_preview_resolution();
   void refresh_preview_asset_from_resolution();
   void open_asset_for_preview(const std::filesystem::path& requestedPath, bool fromResolver);
@@ -165,6 +181,11 @@ private:
   int sceneSelectedIndex_{-1};
   std::filesystem::path sceneLayoutPath_{"tools/dom_asset_studio/scene_preview_layout.json"};
   std::vector<ScenePlacement> scenePlacements_;
+  std::vector<AttachmentAnchor> previewAnchors_;
+  int selectedAttachmentAnchor_{-1};
+  bool showAttachmentDiagnostics_{true};
+  float attachmentGizmoScale_{1.0f};
+  std::unordered_set<std::string> supportedAttachmentTypes_;
 
   dom::render::ResolvedRenderStyle resolvedPreview_{};
   PreviewAsset previewAsset_{};

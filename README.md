@@ -88,6 +88,9 @@ Studio focus:
 - near/mid/far strategic zoom validation with optional auto-LOD selection from zoom distance
 - real glTF/GLB mesh preview in the viewport (orbit/turntable/grid/wireframe/normals)
 - attachment/socket overlay visualization from stylesheet mappings
+- viewport anchor authoring for attachment hooks (select/edit anchor position + radius and write back to stylesheet `attachment_anchors`)
+- manifest/LOD attachment hook authoring with safe key-constrained inputs for `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`
+- attachment diagnostics for unsupported hooks, missing targets, off-mesh anchors, and overlap risk warnings
 - content validation/export-safe workflow
 - manifest + LOD authoring with apply/reload dirty-state workflow
 - export/package action that saves, revalidates, and runs packaging tools with in-studio logs
