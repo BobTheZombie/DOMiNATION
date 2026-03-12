@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cctype>
 #include <cstdint>
@@ -91,6 +92,7 @@ int DomAssetStudioApp::run(int, char**) {
   bool running = true;
   while (running) {
     poll_events(running);
+    poll_auto_reimport();
     render_frame();
   }
 
@@ -165,7 +167,253 @@ void DomAssetStudioApp::reload_content() {
 
   reload_scene_placements();
   rebuild_asset_catalog();
+  rebuild_watch_list();
   append_log("Content and stylesheet data loaded.");
+}
+
+
+
+std::string DomAssetStudioApp::change_type_label(FileWatch::ChangeType type) {
+  switch (type) {
+    case FileWatch::ChangeType::Created: return "created";
+    case FileWatch::ChangeType::Modified: return "modified";
+    case FileWatch::ChangeType::Removed: return "removed";
+  }
+  return "unknown";
+}
+
+void DomAssetStudioApp::register_asset_watch(const std::filesystem::path& sourcePath) {
+  for (const auto& p : collect_related_asset_files(sourcePath)) {
+    fileWatch_.watch(p, "asset");
+  }
+}
+
+std::vector<std::filesystem::path> DomAssetStudioApp::collect_related_asset_files(const std::filesystem::path& sourcePath) const {
+  std::vector<std::filesystem::path> out;
+  if (sourcePath.empty()) return out;
+  std::filesystem::path root = sourcePath;
+  if (!root.is_absolute()) root = std::filesystem::path("content") / root;
+  out.push_back(root);
+  if (root.extension() == ".gltf") {
+    std::ifstream in(root);
+    if (in.good()) {
+      try {
+        nlohmann::json doc;
+        in >> doc;
+        if (doc.contains("buffers") && doc["buffers"].is_array()) {
+          for (const auto& b : doc["buffers"]) {
+            if (!b.is_object()) continue;
+            const std::string uri = b.value("uri", "");
+            if (uri.empty() || uri.rfind("data:", 0) == 0) continue;
+            out.push_back(root.parent_path() / uri);
+          }
+        }
+        if (doc.contains("images") && doc["images"].is_array()) {
+          for (const auto& i : doc["images"]) {
+            if (!i.is_object()) continue;
+            const std::string uri = i.value("uri", "");
+            if (uri.empty() || uri.rfind("data:", 0) == 0) continue;
+            out.push_back(root.parent_path() / uri);
+          }
+        }
+      } catch (...) {
+      }
+    }
+  }
+  std::sort(out.begin(), out.end());
+  out.erase(std::unique(out.begin(), out.end()), out.end());
+  return out;
+}
+
+void DomAssetStudioApp::rebuild_watch_list() {
+  constexpr size_t kMaxWatchFiles = 4096;
+  size_t watched = 0;
+  bool overflow = false;
+  auto watchPath = [&](const std::filesystem::path& path, const char* tag) {
+    if (path.empty() || overflow) return;
+    if (watched >= kMaxWatchFiles) {
+      overflow = true;
+      return;
+    }
+    if (!fileWatch_.is_watched(path)) ++watched;
+    fileWatch_.watch(path, tag);
+  };
+  auto watchAssetPath = [&](const std::filesystem::path& sourcePath) {
+    for (const auto& p : collect_related_asset_files(sourcePath)) {
+      watchPath(p, "asset");
+      if (overflow) break;
+    }
+  };
+
+  fileWatch_.clear();
+  for (const auto& sheet : stylesheets_) watchPath(sheet.path, "stylesheet");
+  watchPath(assetManifest_.path, "manifest");
+  watchPath(lodManifest_.path, "lod_manifest");
+  if (!loadedAssetPath_.empty()) watchAssetPath(loadedAssetPath_);
+  for (const auto& p : scenePlacements_) {
+    if (!p.asset.sourcePath.empty()) watchAssetPath(p.asset.sourcePath);
+    if (overflow) break;
+  }
+  if (!overflow && assetManifest_.json.is_object() && assetManifest_.json.contains("assets") && assetManifest_.json["assets"].is_array()) {
+    for (const auto& asset : assetManifest_.json["assets"]) {
+      if (!asset.is_object()) continue;
+      const std::string mesh = asset.value("mesh", "");
+      if (mesh.empty()) continue;
+      std::filesystem::path meshPath = mesh;
+      if (const auto* m = assets_.get_mesh(mesh)) {
+        if (!m->sourcePath.empty()) meshPath = m->sourcePath;
+      }
+      watchAssetPath(meshPath);
+      if (overflow) break;
+    }
+  }
+  if (!overflow) {
+    for (const auto& entry : catalogEntries_) {
+      if (!entry.assetId.empty()) watchPath(thumbnailCacheDir_ / (entry.assetId + ".ppm"), "thumbnail");
+      if (overflow) break;
+    }
+  }
+  if (overflow) append_log("Watch list bounded at 4096 files; additional files were skipped.");
+}
+
+bool DomAssetStudioApp::is_dirty_doc_for_path(const std::filesystem::path& path) const {
+  const auto norm = std::filesystem::absolute(path).lexically_normal();
+  for (const auto& sheet : stylesheets_) {
+    if (sheet.dirty && std::filesystem::absolute(sheet.path).lexically_normal() == norm) return true;
+  }
+  if (assetManifest_.dirty && std::filesystem::absolute(assetManifest_.path).lexically_normal() == norm) return true;
+  if (lodManifest_.dirty && std::filesystem::absolute(lodManifest_.path).lexically_normal() == norm) return true;
+  return false;
+}
+
+void DomAssetStudioApp::refresh_after_stylesheet_reload(bool rerunValidation) {
+  dom::render::reload_render_stylesheets();
+  dom::render::load_render_stylesheets();
+  update_preview_resolution();
+  reload_scene_placements();
+  rebuild_asset_catalog();
+  if (rerunValidation) {
+    run_internal_validation();
+    run_content_validation();
+  }
+}
+
+void DomAssetStudioApp::refresh_after_manifest_reload(bool rerunValidation) {
+  assets_.load_all("content");
+  update_preview_resolution();
+  reload_scene_placements();
+  rebuild_asset_catalog();
+  if (rerunValidation) {
+    run_internal_validation();
+    run_content_validation();
+  }
+}
+
+void DomAssetStudioApp::handle_auto_reimport_changes(const std::vector<FileWatch::Change>& changes) {
+  if (changes.empty()) return;
+  bool reloadStylesheets = false;
+  bool reloadManifests = false;
+  bool reloadPreviewAsset = false;
+  bool reloadScene = false;
+  bool refreshCatalog = false;
+  bool rerunValidation = false;
+
+  int processed = 0;
+  reloadWarnings_.clear();
+  for (const auto& change : changes) {
+    const auto label = change_type_label(change.type);
+    if (is_dirty_doc_for_path(change.path)) {
+      const std::string msg = "External change " + label + " ignored (local dirty edits): " + change.path.string();
+      append_log(msg);
+      reloadWarnings_.push_back(msg);
+      continue;
+    }
+
+    ++processed;
+    append_log("External change detected [" + change.tag + "] " + label + ": " + change.path.string());
+    if (change.tag == "stylesheet") {
+      for (auto& sheet : stylesheets_) {
+        if (std::filesystem::absolute(sheet.path).lexically_normal() == std::filesystem::absolute(change.path).lexically_normal()) {
+          load_stylesheet(sheet);
+          sheet.dirty = false;
+        }
+      }
+      reloadStylesheets = true;
+      rerunValidation = true;
+    } else if (change.tag == "manifest") {
+      load_manifest(assetManifest_);
+      reloadManifests = true;
+      rerunValidation = true;
+    } else if (change.tag == "lod_manifest") {
+      load_manifest(lodManifest_);
+      reloadManifests = true;
+      rerunValidation = true;
+    } else if (change.tag == "asset") {
+      reloadPreviewAsset = true;
+      reloadScene = true;
+      refreshCatalog = true;
+      rerunValidation = true;
+    } else if (change.tag == "thumbnail") {
+      refreshCatalog = true;
+    }
+  }
+
+  if (processed == 0) {
+    reimportStatus_ = "Auto reimport: skipped (dirty local edits)";
+    return;
+  }
+
+  try {
+    if (reloadManifests) refresh_after_manifest_reload(rerunValidation);
+    if (reloadStylesheets) refresh_after_stylesheet_reload(rerunValidation);
+    if (reloadPreviewAsset) {
+      if (!loadedAssetPath_.empty()) {
+        open_asset_for_preview(loadedAssetPath_, true);
+      } else {
+        refresh_preview_asset_from_resolution();
+      }
+    }
+    if (reloadScene) reload_scene_placements();
+    if (refreshCatalog) rebuild_asset_catalog();
+    rebuild_watch_list();
+    reimportStatus_ = "Auto reimport applied " + std::to_string(processed) + " change(s).";
+    append_log(reimportStatus_);
+  } catch (const std::exception& e) {
+    reimportStatus_ = std::string("Auto reimport failed: ") + e.what();
+    append_log(reimportStatus_);
+    reloadWarnings_.push_back(reimportStatus_);
+  }
+}
+
+void DomAssetStudioApp::poll_auto_reimport() {
+  if (!autoReimportEnabled_) return;
+  const auto now = std::chrono::steady_clock::now();
+  const auto pollElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastWatchPoll_).count();
+  if (pollElapsed < autoReimportPollMs_) return;
+  lastWatchPoll_ = now;
+
+  const auto immediate = fileWatch_.poll_changes();
+  for (const auto& change : immediate) {
+    const auto key = std::filesystem::absolute(change.path).lexically_normal().string();
+    pendingWatchChanges_[key] = change;
+    pendingWatchEvents_[key] = now;
+  }
+
+  std::vector<FileWatch::Change> ready;
+  for (const auto& [key, eventTime] : pendingWatchEvents_) {
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - eventTime).count();
+    if (!autoReimportDebounce_ || elapsed >= autoReimportDebounceMs_) {
+      if (pendingWatchChanges_.contains(key)) ready.push_back(pendingWatchChanges_.at(key));
+    }
+  }
+
+  if (ready.empty()) return;
+  for (const auto& change : ready) {
+    const auto key = std::filesystem::absolute(change.path).lexically_normal().string();
+    pendingWatchEvents_.erase(key);
+    pendingWatchChanges_.erase(key);
+  }
+  handle_auto_reimport_changes(ready);
 }
 
 void DomAssetStudioApp::poll_events(bool& running) {
@@ -278,6 +526,15 @@ void DomAssetStudioApp::draw_main_menu() {
       run_internal_validation();
       run_content_validation();
     }
+    ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("Live Reload")) {
+    ImGui::MenuItem("Enable Auto Reimport", nullptr, &autoReimportEnabled_);
+    ImGui::MenuItem("Debounce Rapid Changes", nullptr, &autoReimportDebounce_);
+    ImGui::SliderInt("Poll ms", &autoReimportPollMs_, 100, 3000);
+    ImGui::SliderInt("Debounce ms", &autoReimportDebounceMs_, 0, 2000);
+    if (ImGui::MenuItem("Rebuild Watch List")) rebuild_watch_list();
+    if (ImGui::MenuItem("Manual Auto-Reimport Poll")) poll_auto_reimport();
     ImGui::EndMenu();
   }
 
@@ -766,6 +1023,8 @@ void DomAssetStudioApp::draw_stylesheet_editor() {
   auto& sheet = stylesheets_[selectedStylesheet_];
   ImGui::Text("Path: %s", sheet.path.string().c_str());
   ImGui::Text("Status: %s%s", sheet.status.c_str(), sheet.dirty ? " (dirty)" : "");
+  ImGui::Text("Auto Reimport: %s", autoReimportEnabled_ ? "enabled" : "disabled");
+  if (!reimportStatus_.empty()) ImGui::TextWrapped("%s", reimportStatus_.c_str());
 
   if (!sheet.json.is_object()) {
     ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Invalid JSON object");
@@ -1065,6 +1324,13 @@ void DomAssetStudioApp::draw_viewport() {
 void DomAssetStudioApp::draw_log_panel() {
 #ifdef DOM_HAS_IMGUI
   if (!ImGui::Begin("Log / Output")) { ImGui::End(); return; }
+  ImGui::Text("Auto Reimport: %s", autoReimportEnabled_ ? "enabled" : "disabled");
+  if (!reimportStatus_.empty()) ImGui::TextWrapped("%s", reimportStatus_.c_str());
+  if (!reloadWarnings_.empty()) {
+    ImGui::SeparatorText("Reload Warnings");
+    for (const auto& w : reloadWarnings_) ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "%s", w.c_str());
+  }
+  ImGui::Separator();
   for (const auto& line : logs_) ImGui::TextUnformatted(line.c_str());
   ImGui::End();
 #endif
@@ -1113,6 +1379,7 @@ void DomAssetStudioApp::load_stylesheet(StylesheetDoc& doc) {
   try {
     in >> doc.json;
     doc.status = "loaded";
+    doc.dirty = false;
   } catch (const std::exception& e) {
     doc.status = std::string("parse error: ") + e.what();
     append_log("JSON parse failed for " + doc.path.string() + ": " + e.what());
@@ -1171,6 +1438,7 @@ void DomAssetStudioApp::save_manifest(ManifestDoc& doc) {
   }
   save_json_doc(doc.path, doc.json, doc.status, "manifest");
   doc.dirty = false;
+  rebuild_watch_list();
 }
 
 void DomAssetStudioApp::save_stylesheet(StylesheetDoc& doc) {
@@ -1183,6 +1451,7 @@ void DomAssetStudioApp::save_stylesheet(StylesheetDoc& doc) {
   dom::render::reload_render_stylesheets();
   dom::render::load_render_stylesheets();
   update_preview_resolution();
+  rebuild_watch_list();
 }
 
 void DomAssetStudioApp::apply_manifest_to_stylesheet() {
@@ -1214,6 +1483,7 @@ void DomAssetStudioApp::apply_manifest_to_stylesheet() {
     break;
   }
   update_preview_resolution();
+  rebuild_watch_list();
 }
 
 void DomAssetStudioApp::refresh_attachment_anchors_from_style() {
@@ -1431,6 +1701,7 @@ void DomAssetStudioApp::apply_and_reload() {
   reload_content();
   reload_scene_placements();
   append_log("Apply + reload completed.");
+  reimportStatus_ = "Apply + reload completed.";
 }
 
 int DomAssetStudioApp::active_preview_lod() const {
@@ -1517,6 +1788,7 @@ bool DomAssetStudioApp::open_asset_for_scene_placement(const std::filesystem::pa
   placement.asset = *loaded;
   placement.valid = true;
   placement.warning.clear();
+  register_asset_watch(path);
   return true;
 }
 
@@ -1837,6 +2109,7 @@ void DomAssetStudioApp::open_asset_for_preview(const std::filesystem::path& requ
 
   previewAsset_ = *loaded;
   loadedAssetPath_ = path.string();
+  register_asset_watch(path);
   if (!fromResolver) append_log("Loaded preview asset: " + loadedAssetPath_);
 }
 

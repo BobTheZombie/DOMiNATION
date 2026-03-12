@@ -2,8 +2,10 @@
 
 #include "engine/assets/asset_manager.h"
 #include "engine/render/render_stylesheet.h"
+#include "tools/dom_asset_studio/file_watch.h"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <map>
@@ -117,6 +119,15 @@ private:
   bool init_sdl();
   void shutdown();
   void reload_content();
+  void poll_auto_reimport();
+  void rebuild_watch_list();
+  void register_asset_watch(const std::filesystem::path& sourcePath);
+  void handle_auto_reimport_changes(const std::vector<FileWatch::Change>& changes);
+  void refresh_after_stylesheet_reload(bool rerunValidation);
+  void refresh_after_manifest_reload(bool rerunValidation);
+  std::vector<std::filesystem::path> collect_related_asset_files(const std::filesystem::path& sourcePath) const;
+  bool is_dirty_doc_for_path(const std::filesystem::path& path) const;
+  static std::string change_type_label(FileWatch::ChangeType type);
   void poll_events(bool& running);
   void render_frame();
 
@@ -244,6 +255,17 @@ private:
   std::string compareAssetB_;
   std::unordered_set<std::string> favoriteAssets_;
   std::map<std::string, unsigned int> thumbnailTextures_;
+
+  FileWatch fileWatch_{};
+  bool autoReimportEnabled_{true};
+  bool autoReimportDebounce_{true};
+  int autoReimportDebounceMs_{300};
+  int autoReimportPollMs_{400};
+  std::chrono::steady_clock::time_point lastWatchPoll_{std::chrono::steady_clock::now()};
+  std::unordered_map<std::string, std::chrono::steady_clock::time_point> pendingWatchEvents_;
+  std::unordered_map<std::string, FileWatch::Change> pendingWatchChanges_;
+  std::string reimportStatus_;
+  std::vector<std::string> reloadWarnings_;
 };
 
 } // namespace dom::tools

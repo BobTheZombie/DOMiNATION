@@ -42,6 +42,16 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 - JSON parse errors and missing references are surfaced in UI instead of crashing.
 
 
+## Auto reimport and live refresh
+- Studio keeps a bounded polling watch list for editor-relevant files: exported `.gltf`/`.glb` preview sources (plus local `.bin`/image refs from watched `.gltf`), asset/LOD manifests, domain stylesheet JSON files, and thumbnail cache outputs.
+- Auto reimport is editor-only, deterministic, and toggleable from **Live Reload** menu.
+- Rapid external file writes are debounced/batched before reload to avoid noisy repeated refreshes during export bursts.
+- External asset changes trigger safe preview refresh in isolated viewport, scene placements, inspector metadata, and catalog status.
+- External stylesheet changes reload resolver state and refresh style-dependent previews.
+- External manifest/LOD changes reload metadata and propagate updates to catalog + validation surfaces.
+- Dirty conflict safety: if a watched stylesheet/manifest has unsaved Studio edits, external changes are logged and skipped until the local dirty state is resolved (save or manual reload).
+- Auto reload failures remain non-fatal and are surfaced in Log/Output + Validation context.
+
 ## Authoring coverage in this pass
 - Structured manifest authoring for asset-facing metadata: `asset_id`, type/category, mesh path, material ref, render class, civ/theme tags, icon/thumbnail refs, notes, and status.
 - Structured LOD authoring for `lod_id`/`lod_group_id`, near/mid/far/fallback references, and attachment hook metadata.

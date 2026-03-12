@@ -100,6 +100,7 @@ add_executable(dom_asset_studio
   engine/assets/asset_manager.cpp
   engine/assets/asset_registry.cpp
   engine/assets/texture_atlas.cpp
+  tools/dom_asset_studio/file_watch.cpp
   tools/dom_asset_studio/studio_app.cpp
   tools/dom_asset_studio_main.cpp
 )

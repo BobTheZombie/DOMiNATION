@@ -77,6 +77,11 @@ Run:
 ./build/dom_asset_studio
 ```
 
+Live reload defaults:
+- auto reimport enabled (poll every ~400ms, debounced ~300ms)
+- toggles and tuning available in **Live Reload** menu
+- disable auto reimport at any time for manual-only apply/reload workflows
+
 Thumbnail cache (editor-only):
 - `tools/dom_asset_studio/cache/thumbnails/*.ppm`
 - Clear/rebuild from **Asset Catalog** or **Asset** menu actions.
@@ -98,6 +103,9 @@ Studio focus:
 - attachment diagnostics for unsupported hooks, missing targets, off-mesh anchors, and overlap risk warnings
 - content validation/export-safe workflow
 - manifest + LOD authoring with apply/reload dirty-state workflow
+- bounded polling-based file watch + auto-reimport for external changes to glTF/GLB (plus referenced .bin/images for .gltf), manifests, LOD manifest, stylesheets, and thumbnail cache artifacts
+- live auto refresh of isolated preview, scene placements, inspector metadata, catalog status, and targeted validation after external updates
+- conflict-safe reload behavior: files with local dirty Studio edits are not auto-overwritten; warnings are surfaced in Log / Output
 - export/package action that saves, revalidates, and runs packaging tools with in-studio logs
 - asset catalog panel with search/filter/sort for asset ID, render class, type, civ/theme tags, LOD status, thumbnail status, validation warning state, and missing-reference flags
 - thumbnail generation workflow (single selected asset or batch for filtered results) with stable editor-only preview framing and cache-safe regeneration
