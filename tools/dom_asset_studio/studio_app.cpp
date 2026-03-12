@@ -27,8 +27,8 @@ namespace dom::tools {
 namespace {
 const char* kDomainNames[] = {"Terrain", "Unit", "Building", "Object"};
 const char* kLodNames[] = {"Near", "Mid", "Far"};
-const char* kZoomPresetNames[] = {"Near/Tactical", "Mid", "Far/Strategic"};
-const char* kVariantSourceNames[] = {"Resolver (class/exact)", "Exact mapping only", "Render class only"};
+const char* kZoomPresetNames[] = {"Close / Tactical", "Mid / Operational", "Far / Strategic"};
+const char* kVariantSourceNames[] = {"Default", "Exact", "Render-Class Only", "Civ Override", "Theme Override", "State Variant"};
 const char* kViewportModeNames[] = {"Isolated Asset", "Scene Context"};
 const char* kTerrainContextNames[] = {
   "Grassland", "Plains/Steppe", "Forest Ground", "Desert", "Mediterranean", "Jungle",
@@ -123,6 +123,7 @@ bool DomAssetStudioApp::init_sdl() {
   for (auto& sheet : stylesheets_) load_stylesheet(sheet);
   load_manifest(assetManifest_);
   load_manifest(lodManifest_);
+  load_scene_layout();
 
   return true;
 }
@@ -224,6 +225,8 @@ void DomAssetStudioApp::draw_main_menu() {
     if (ImGui::MenuItem("Reset Scene Layout")) reset_scene_layout();
     if (ImGui::MenuItem("Clear Scene")) clear_scene();
     if (ImGui::MenuItem("Reload Placed Assets")) reload_scene_placements();
+    if (ImGui::MenuItem("Save Scene Layout")) save_scene_layout();
+    if (ImGui::MenuItem("Load Scene Layout")) load_scene_layout();
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("View")) {
@@ -599,7 +602,7 @@ void DomAssetStudioApp::draw_stylesheet_editor() {
 
   bool changed = false;
   changed |= ImGui::Combo("Preview Domain", &previewDomain_, kDomainNames, 4);
-  changed |= ImGui::Combo("Variant Source", &previewStyleVariant_, kVariantSourceNames, 3);
+  changed |= ImGui::Combo("Style Context", &previewStyleVariant_, kVariantSourceNames, 6);
   changed |= ImGui::InputText("Preview Civ", &previewCiv_);
   changed |= ImGui::InputText("Preview Theme", &previewTheme_);
   changed |= ImGui::InputText("Preview State", &previewState_);
@@ -635,13 +638,27 @@ void DomAssetStudioApp::draw_viewport() {
 
   ImGui::Text("3D preview (manifest + stylesheet resolved)");
   ImGui::Combo("Mode", &viewportMode_, kViewportModeNames, 2);
+  if (viewportMode_ == 0) ImGui::Checkbox("Turntable", &turntable_);
+  else turntable_ = false;
+
+  if (ImGui::Combo("Zoom Preset", &previewZoomPreset_, kZoomPresetNames, 3)) {
+    static const float zoomDistances[] = {4.0f, 10.0f, 24.0f};
+    orbitDistance_ = zoomDistances[std::clamp(previewZoomPreset_, 0, 2)];
+    if (autoPreviewLod_) update_preview_resolution();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Reset View")) {
+    orbitYaw_ = 25.0f; orbitPitch_ = 20.0f; orbitDistance_ = 8.0f; panX_ = panY_ = 0.0f;
+    previewZoomPreset_ = 1;
+    if (autoPreviewLod_) update_preview_resolution();
+  }
+
   ImGui::SliderFloat("Orbit Yaw", &orbitYaw_, -180.0f, 180.0f);
   ImGui::SliderFloat("Orbit Pitch", &orbitPitch_, -89.0f, 89.0f);
-  ImGui::SliderFloat("Zoom", &orbitDistance_, 1.0f, 60.0f);
-  ImGui::Text("Zoom Preset: %s", kZoomPresetNames[active_preview_lod()]);
+  if (ImGui::SliderFloat("Zoom", &orbitDistance_, 1.0f, 60.0f) && autoPreviewLod_) update_preview_resolution();
+  ImGui::Text("Active LOD Tier: %s", kLodNames[active_preview_lod()]);
   ImGui::SliderFloat("Pan X", &panX_, -10.0f, 10.0f);
   ImGui::SliderFloat("Pan Y", &panY_, -10.0f, 10.0f);
-  ImGui::Checkbox("Turntable", &turntable_);
   ImGui::Checkbox("Grid", &showGrid_);
   ImGui::Checkbox("Wireframe", &wireframe_);
   ImGui::Checkbox("Normals", &showNormals_);
@@ -654,15 +671,22 @@ void DomAssetStudioApp::draw_viewport() {
     ImGui::Combo("Terrain/Biome", &terrainContext_, kTerrainContextNames, 12);
     if (ImGui::Button("Place Current Resolved Asset")) add_current_asset_to_scene();
     ImGui::SameLine();
-    if (ImGui::Button("Reload Placed")) reload_scene_placements();
+    if (ImGui::Button("Reload All Placed")) reload_scene_placements();
     ImGui::SameLine();
     if (ImGui::Button("Clear Scene")) clear_scene();
+
+    if (ImGui::Button("Save Scene Layout")) save_scene_layout();
+    ImGui::SameLine();
+    if (ImGui::Button("Load Scene Layout")) load_scene_layout();
+    ImGui::SameLine();
+    if (ImGui::Button("Reset Scene")) reset_scene_layout();
 
     ImGui::Text("Placements: %d", static_cast<int>(scenePlacements_.size()));
     if (ImGui::BeginListBox("Scene Outliner")) {
       for (int i = 0; i < static_cast<int>(scenePlacements_.size()); ++i) {
         const auto& item = scenePlacements_[i];
         std::string label = item.label.empty() ? ("placement_" + std::to_string(i)) : item.label;
+        if (!item.visible) label += " [hidden]";
         if (!item.valid) label += " [warning]";
         bool selected = sceneSelectedIndex_ == i;
         if (ImGui::Selectable(label.c_str(), selected)) sceneSelectedIndex_ = i;
@@ -677,6 +701,19 @@ void DomAssetStudioApp::draw_viewport() {
       ImGui::SliderFloat3("Position", &item.posX, -20.0f, 20.0f);
       ImGui::SliderFloat("Rotation Y", &item.rotYDeg, -180.0f, 180.0f);
       ImGui::SliderFloat("Scale", &item.scale, 0.1f, 5.0f);
+      if (ImGui::Button("Duplicate")) duplicate_selected_scene_placement();
+      ImGui::SameLine();
+      if (ImGui::Button("Remove")) remove_selected_scene_placement();
+      ImGui::SameLine();
+      if (ImGui::Button("Reset Transform")) reset_selected_scene_placement();
+      ImGui::SameLine();
+      if (ImGui::Button("Reload Selected")) {
+        if (!item.meshRef.empty()) {
+          if (!open_asset_for_scene_placement(item.meshRef, item)) {
+            append_log("Scene placement reload warning for " + item.label + ": " + item.warning);
+          }
+        }
+      }
       if (!item.warning.empty()) ImGui::TextColored(ImVec4(1, 0.5f, 0.3f, 1), "warning: %s", item.warning.c_str());
     }
   }
@@ -1071,6 +1108,31 @@ void DomAssetStudioApp::add_current_asset_to_scene() {
   if (!placement.valid) append_log("Scene placement warning: " + placement.warning);
 }
 
+void DomAssetStudioApp::duplicate_selected_scene_placement() {
+  if (sceneSelectedIndex_ < 0 || sceneSelectedIndex_ >= static_cast<int>(scenePlacements_.size())) return;
+  ScenePlacement copy = scenePlacements_[sceneSelectedIndex_];
+  copy.label += "_copy";
+  copy.posX += 1.2f;
+  copy.posZ += 1.2f;
+  scenePlacements_.insert(scenePlacements_.begin() + sceneSelectedIndex_ + 1, copy);
+  ++sceneSelectedIndex_;
+}
+
+void DomAssetStudioApp::remove_selected_scene_placement() {
+  if (sceneSelectedIndex_ < 0 || sceneSelectedIndex_ >= static_cast<int>(scenePlacements_.size())) return;
+  scenePlacements_.erase(scenePlacements_.begin() + sceneSelectedIndex_);
+  if (scenePlacements_.empty()) sceneSelectedIndex_ = -1;
+  else sceneSelectedIndex_ = std::clamp(sceneSelectedIndex_, 0, static_cast<int>(scenePlacements_.size()) - 1);
+}
+
+void DomAssetStudioApp::reset_selected_scene_placement() {
+  if (sceneSelectedIndex_ < 0 || sceneSelectedIndex_ >= static_cast<int>(scenePlacements_.size())) return;
+  auto& p = scenePlacements_[sceneSelectedIndex_];
+  p.posY = 0.0f;
+  p.rotYDeg = 0.0f;
+  p.scale = 1.0f;
+}
+
 void DomAssetStudioApp::clear_scene() {
   scenePlacements_.clear();
   sceneSelectedIndex_ = -1;
@@ -1128,14 +1190,75 @@ void DomAssetStudioApp::reload_scene_placements() {
   }
 }
 
+void DomAssetStudioApp::save_scene_layout() {
+  nlohmann::json doc;
+  doc["version"] = 1;
+  doc["terrain_context"] = terrainContext_;
+  doc["placements"] = nlohmann::json::array();
+  for (const auto& p : scenePlacements_) {
+    doc["placements"].push_back({
+      {"label", p.label}, {"mesh_ref", p.meshRef}, {"style_id", p.resolvedStyleId},
+      {"visible", p.visible}, {"pos", {p.posX, p.posY, p.posZ}},
+      {"rot_y_deg", p.rotYDeg}, {"scale", p.scale}
+    });
+  }
+  std::string status;
+  save_json_doc(sceneLayoutPath_, doc, status, "scene layout");
+}
+
+void DomAssetStudioApp::load_scene_layout() {
+  std::ifstream in(sceneLayoutPath_);
+  if (!in.good()) return;
+  try {
+    nlohmann::json doc; in >> doc;
+    terrainContext_ = doc.value("terrain_context", terrainContext_);
+    scenePlacements_.clear();
+    if (doc.contains("placements") && doc["placements"].is_array()) {
+      for (const auto& p : doc["placements"]) {
+        ScenePlacement placement{};
+        placement.label = p.value("label", "placement");
+        placement.meshRef = p.value("mesh_ref", "");
+        placement.resolvedStyleId = p.value("style_id", "");
+        placement.visible = p.value("visible", true);
+        if (p.contains("pos") && p["pos"].is_array() && p["pos"].size() >= 3) {
+          placement.posX = p["pos"][0].get<float>();
+          placement.posY = p["pos"][1].get<float>();
+          placement.posZ = p["pos"][2].get<float>();
+        }
+        placement.rotYDeg = p.value("rot_y_deg", 0.0f);
+        placement.scale = p.value("scale", 1.0f);
+        scenePlacements_.push_back(std::move(placement));
+      }
+    }
+    sceneSelectedIndex_ = scenePlacements_.empty() ? -1 : 0;
+    if (!assets_.registry().assets().empty()) reload_scene_placements();
+    append_log("Loaded scene layout: " + sceneLayoutPath_.string());
+  } catch (const std::exception& e) {
+    append_log(std::string("Scene layout parse failed: ") + e.what());
+  }
+}
+
 void DomAssetStudioApp::update_preview_resolution() {
   dom::render::RenderStyleRequest req{};
   req.domain = static_cast<dom::render::RenderStyleDomain>(std::clamp(previewDomain_, 0, 3));
-  req.exactId = previewStyleVariant_ == 2 ? "" : selectedExactId_;
+  req.exactId = selectedExactId_;
   req.civId = previewCiv_;
   req.themeId = previewTheme_;
-  req.renderClass = previewStyleVariant_ == 1 ? "" : selectedRenderClass_;
+  req.renderClass = selectedRenderClass_;
   req.state = previewState_;
+
+  switch (std::clamp(previewStyleVariant_, 0, 5)) {
+    case 1: req.renderClass.clear(); break; // exact
+    case 2: req.exactId.clear(); break; // render class only
+    case 3: req.themeId.clear(); break; // civ override focus
+    case 4: req.civId.clear(); break; // theme override focus
+    case 5: {
+      if (req.state.empty()) req.state = "selected";
+      break;
+    }
+    default: break;
+  }
+
   req.lodTier = static_cast<dom::render::ContentLodTier>(std::clamp(active_preview_lod(), 0, 2));
   resolvedPreview_ = dom::render::resolve_render_style(req);
   refresh_preview_asset_from_resolution();

@@ -110,9 +110,14 @@ private:
   void open_asset_for_preview(const std::filesystem::path& requestedPath, bool fromResolver);
   bool open_asset_for_scene_placement(const std::filesystem::path& requestedPath, ScenePlacement& placement);
   void add_current_asset_to_scene();
+  void duplicate_selected_scene_placement();
+  void remove_selected_scene_placement();
+  void reset_selected_scene_placement();
   void clear_scene();
   void reset_scene_layout();
   void reload_scene_placements();
+  void save_scene_layout();
+  void load_scene_layout();
   int active_preview_lod() const;
   std::optional<PreviewAsset> load_preview_asset(const std::filesystem::path& path, std::string& error) const;
 
@@ -154,9 +159,11 @@ private:
   int lightingPreset_{0};
   int backgroundMode_{0};
   int previewStyleVariant_{0};
+  int previewZoomPreset_{1};
   int viewportMode_{0};
   int terrainContext_{0};
   int sceneSelectedIndex_{-1};
+  std::filesystem::path sceneLayoutPath_{"tools/dom_asset_studio/scene_preview_layout.json"};
   std::vector<ScenePlacement> scenePlacements_;
 
   dom::render::ResolvedRenderStyle resolvedPreview_{};

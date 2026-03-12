@@ -28,3 +28,6 @@ Studio save/apply flow:
 
 
 Scene context preview mode reuses the same stylesheet resolver chain while allowing multiple placements in one bounded preview patch; use this to validate biome contrast, variant overrides, and near/mid/far readability without entering gameplay-authoritative tooling.
+
+
+Style-context selector modes in Studio (default/exact/render-class/civ/theme/state focus) are preview-only resolution filters and do not mutate runtime stylesheet semantics.

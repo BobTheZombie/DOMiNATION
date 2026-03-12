@@ -25,3 +25,6 @@ The Studio exposes structured form fields for core schema keys (`render_classes.
 
 ## Scene context validation notes
 Studio scene placements keep resolved style IDs and mesh refs as editor-only preview state. Missing or invalid refs are surfaced as warnings in Studio logs/validation UI and continue to fail safely without mutating runtime simulation authority.
+
+
+Studio scene layout persistence (`tools/dom_asset_studio/scene_preview_layout.json`) is editor-only preview state and is intentionally outside render style schema/runtime data.
