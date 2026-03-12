@@ -35,6 +35,14 @@ const char* kTerrainContextNames[] = {
   "Tundra", "Snow/Arctic", "Wetlands", "Mountains", "Snow Mountains", "Coast/Littoral"
 };
 
+const char* kAttachmentTypeNames[] = {
+  "banner_socket", "civ_emblem", "smoke_stack", "muzzle_flash", "selection_badge", "warning_badge", "guardian_aura"
+};
+
+bool is_attachment_socket_supported(const std::unordered_set<std::string>& supported, const std::string& socket) {
+  return !socket.empty() && supported.contains(socket);
+}
+
 struct BufferViewRef {
   int buffer{-1};
   size_t byteOffset{0};
@@ -124,6 +132,7 @@ bool DomAssetStudioApp::init_sdl() {
   load_manifest(assetManifest_);
   load_manifest(lodManifest_);
   load_scene_layout();
+  supportedAttachmentTypes_ = {"banner_socket", "civ_emblem", "smoke_stack", "muzzle_flash", "selection_badge", "warning_badge", "guardian_aura"};
 
   return true;
 }
@@ -496,6 +505,19 @@ void DomAssetStudioApp::draw_asset_inspector() {
           lod["far_asset"] = farRef;
           lod["fallback_asset"] = fallbackRef;
           lod["screen_size"] = screenSize;
+          if (!lod.contains("attachments") || !lod["attachments"].is_object()) lod["attachments"] = nlohmann::json::object();
+          if (ImGui::TreeNode("LOD Attachment Hooks")) {
+            for (const auto* key : kAttachmentTypeNames) {
+              std::string target = lod["attachments"].value(key, "");
+              ImGui::Text("%s", key);
+              ImGui::SameLine();
+              if (ImGui::InputText((std::string("##lod_att") + selectedManifestLodId_ + key).c_str(), &target)) {
+                if (target.empty()) lod["attachments"].erase(key);
+                else lod["attachments"][key] = target;
+              }
+            }
+            ImGui::TreePop();
+          }
           if (before != lod) lodManifest_.dirty = true;
           break;
         }
@@ -547,13 +569,33 @@ bool DomAssetStudioApp::edit_style_layer(nlohmann::json& layer, const char* idPr
   layer["theme_tag"] = themeTag;
 
   if (!layer.contains("attachments") || !layer["attachments"].is_object()) layer["attachments"] = nlohmann::json::object();
+  if (!layer.contains("attachment_anchors") || !layer["attachment_anchors"].is_object()) layer["attachment_anchors"] = nlohmann::json::object();
+
   if (ImGui::TreeNode((std::string("Attachments##") + idPrefix).c_str())) {
-    for (auto& [k, v] : layer["attachments"].items()) {
-      std::string socket = k;
-      std::string ref = v.is_string() ? v.get<std::string>() : "";
-      ImGui::Text("%s", socket.c_str());
+    for (const auto& key : supportedAttachmentTypes_) {
+      std::string ref = layer["attachments"].value(key, "");
+      ImGui::Text("%s", key.c_str());
       ImGui::SameLine();
-      if (ImGui::InputText((std::string("##att") + idPrefix + socket).c_str(), &ref)) v = ref;
+      if (ImGui::InputText((std::string("##att") + idPrefix + key).c_str(), &ref)) {
+        if (ref.empty()) layer["attachments"].erase(key);
+        else layer["attachments"][key] = ref;
+      }
+    }
+    ImGui::TreePop();
+  }
+
+  if (ImGui::TreeNode((std::string("Attachment Anchors##") + idPrefix).c_str())) {
+    for (const auto& key : supportedAttachmentTypes_) {
+      if (!layer["attachment_anchors"].contains(key) || !layer["attachment_anchors"][key].is_object()) {
+        layer["attachment_anchors"][key] = {{"pos", {0.0, 0.0, 0.0}}, {"radius", 0.2}};
+      }
+      auto& anchor = layer["attachment_anchors"][key];
+      if (!anchor.contains("pos") || !anchor["pos"].is_array() || anchor["pos"].size() != 3) anchor["pos"] = {0.0, 0.0, 0.0};
+      std::array<float, 3> pos = {anchor["pos"][0].get<float>(), anchor["pos"][1].get<float>(), anchor["pos"][2].get<float>()};
+      float radius = anchor.value("radius", 0.2f);
+      ImGui::SeparatorText(key.c_str());
+      if (ImGui::SliderFloat3((std::string("pos##") + idPrefix + key).c_str(), pos.data(), -8.0f, 8.0f)) anchor["pos"] = {pos[0], pos[1], pos[2]};
+      if (ImGui::SliderFloat((std::string("radius##") + idPrefix + key).c_str(), &radius, 0.01f, 2.0f)) anchor["radius"] = radius;
     }
     ImGui::TreePop();
   }
@@ -665,6 +707,28 @@ void DomAssetStudioApp::draw_viewport() {
   ImGui::Checkbox("Sockets/Attachments", &showAttachments_);
   ImGui::Combo("Lighting Preset", &lightingPreset_, "Studio\0Sunset\0Flat\0");
   ImGui::Combo("Background", &backgroundMode_, "Dark\0Sky\0Neutral\0");
+
+  if (showAttachments_) {
+    ImGui::SeparatorText("Attachment Anchor Authoring");
+    ImGui::SliderFloat("Anchor Gizmo Scale", &attachmentGizmoScale_, 0.5f, 3.0f);
+    ImGui::Checkbox("Attachment Diagnostics", &showAttachmentDiagnostics_);
+    if (ImGui::BeginListBox("Anchor Sockets")) {
+      for (int i = 0; i < static_cast<int>(previewAnchors_.size()); ++i) {
+        const auto& a = previewAnchors_[i];
+        std::string label = a.socket;
+        if (!a.valid) label += " [invalid]";
+        if (ImGui::Selectable(label.c_str(), selectedAttachmentAnchor_ == i)) selectedAttachmentAnchor_ = i;
+      }
+      ImGui::EndListBox();
+    }
+    if (selectedAttachmentAnchor_ >= 0 && selectedAttachmentAnchor_ < static_cast<int>(previewAnchors_.size())) {
+      auto& a = previewAnchors_[selectedAttachmentAnchor_];
+      ImGui::Text("Selected: %s", a.socket.c_str());
+      ImGui::SliderFloat3("Anchor Pos", &a.x, -8.0f, 8.0f);
+      ImGui::SliderFloat("Anchor Radius", &a.radius, 0.01f, 2.0f);
+      if (ImGui::Button("Write Anchors To Stylesheet Layer")) write_attachment_anchors_to_style();
+    }
+  }
 
   if (viewportMode_ == 1) {
     ImGui::SeparatorText("Scene Context");
@@ -806,12 +870,37 @@ void DomAssetStudioApp::draw_viewport() {
   }
 
   if (showAttachments_) {
-    float sx = p.x + size.x * 0.12f;
-    float sy2 = p.y + size.y * 0.12f;
-    for (const auto& [socket, target] : resolvedPreview_.attachments) {
-      draw->AddCircleFilled(ImVec2(sx, sy2), 3.0f, IM_COL32(255, 190, 80, 220));
-      draw->AddText(ImVec2(sx + 8.0f, sy2 - 8.0f), IM_COL32(255, 230, 190, 255), (socket + " -> " + target).c_str());
-      sy2 += 18.0f;
+    float sx = p.x + size.x * 0.04f;
+    float sy2 = p.y + size.y * 0.09f;
+    for (int i = 0; i < static_cast<int>(previewAnchors_.size()); ++i) {
+      const auto& anchor = previewAnchors_[i];
+      float ax, ay;
+      project({anchor.x, anchor.y, anchor.z}, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, ax, ay);
+      const bool selected = i == selectedAttachmentAnchor_;
+      const ImU32 col = anchor.valid ? (selected ? IM_COL32(255, 230, 90, 240) : IM_COL32(255, 190, 80, 220)) : IM_COL32(235, 92, 92, 240);
+      draw->AddCircleFilled(ImVec2(ax, ay), 4.0f * attachmentGizmoScale_, col);
+      draw->AddCircle(ImVec2(ax, ay), 14.0f * std::max(0.2f, anchor.radius) * attachmentGizmoScale_, col, 0, 1.2f);
+      std::string target = "";
+      if (const auto it = resolvedPreview_.attachments.find(anchor.socket); it != resolvedPreview_.attachments.end()) target = it->second;
+      const std::string label = anchor.socket + " -> " + target;
+      draw->AddText(ImVec2(ax + 8.0f, ay - 8.0f), IM_COL32(255, 230, 190, 255), label.c_str());
+      if (showAttachmentDiagnostics_ && !anchor.warning.empty()) {
+        draw->AddText(ImVec2(sx, sy2), IM_COL32(255, 150, 120, 255), (anchor.socket + ": " + anchor.warning).c_str());
+        sy2 += 18.0f;
+      }
+    }
+
+    if (viewportMode_ == 1) {
+      for (const auto& item : scenePlacements_) {
+        if (!item.visible) continue;
+        float psx, psy;
+        project({0.0f, 0.0f, 0.0f}, item.posX, item.posY, item.posZ, item.rotYDeg, item.scale, psx, psy);
+        for (const auto& [socket, target] : item.attachments) {
+          const bool ok = is_attachment_socket_supported(supportedAttachmentTypes_, socket) && !target.empty();
+          draw->AddCircleFilled(ImVec2(psx, psy), 2.0f, ok ? IM_COL32(120, 220, 150, 180) : IM_COL32(230, 90, 90, 180));
+          psx += 4.0f;
+        }
+      }
     }
   }
 
@@ -977,6 +1066,76 @@ void DomAssetStudioApp::apply_manifest_to_stylesheet() {
   update_preview_resolution();
 }
 
+void DomAssetStudioApp::refresh_attachment_anchors_from_style() {
+  previewAnchors_.clear();
+  selectedAttachmentAnchor_ = -1;
+  std::unordered_map<std::string, AttachmentAnchor> bySocket;
+  for (const auto& [socket, target] : resolvedPreview_.attachments) {
+    AttachmentAnchor a{};
+    a.socket = socket;
+    a.valid = is_attachment_socket_supported(supportedAttachmentTypes_, socket) && !target.empty();
+    if (!is_attachment_socket_supported(supportedAttachmentTypes_, socket)) a.warning = "unsupported attachment socket";
+    else if (target.empty()) a.warning = "empty attachment target";
+    bySocket[socket] = a;
+  }
+
+  const auto& sheet = stylesheets_[selectedStylesheet_].json;
+  const nlohmann::json* anchors = nullptr;
+  if (!selectedExactId_.empty() && sheet.contains("exact_mappings") && sheet["exact_mappings"].contains(selectedExactId_)) {
+    const auto& layer = sheet["exact_mappings"][selectedExactId_];
+    if (layer.contains("attachment_anchors") && layer["attachment_anchors"].is_object()) anchors = &layer["attachment_anchors"];
+  }
+  if (!anchors && !selectedRenderClass_.empty() && sheet.contains("render_classes") && sheet["render_classes"].contains(selectedRenderClass_)) {
+    const auto& rc = sheet["render_classes"][selectedRenderClass_];
+    if (rc.contains("default") && rc["default"].is_object() && rc["default"].contains("attachment_anchors") && rc["default"]["attachment_anchors"].is_object()) {
+      anchors = &rc["default"]["attachment_anchors"];
+    }
+  }
+  if (anchors) {
+    for (const auto& [socket, v] : anchors->items()) {
+      auto& a = bySocket[socket];
+      a.socket = socket;
+      if (v.is_object() && v.contains("pos") && v["pos"].is_array() && v["pos"].size() == 3) {
+        a.x = v["pos"][0].get<float>();
+        a.y = v["pos"][1].get<float>();
+        a.z = v["pos"][2].get<float>();
+      }
+      a.radius = v.value("radius", a.radius);
+      if (!is_attachment_socket_supported(supportedAttachmentTypes_, socket)) {
+        a.valid = false;
+        a.warning = "unsupported attachment socket";
+      }
+    }
+  }
+
+  for (auto& [_, a] : bySocket) previewAnchors_.push_back(a);
+  std::sort(previewAnchors_.begin(), previewAnchors_.end(), [](const AttachmentAnchor& a, const AttachmentAnchor& b) { return a.socket < b.socket; });
+}
+
+void DomAssetStudioApp::write_attachment_anchors_to_style() {
+  auto& sheet = stylesheets_[selectedStylesheet_];
+  if (!sheet.json.is_object()) return;
+  nlohmann::json* layer = nullptr;
+  if (!selectedExactId_.empty() && sheet.json.contains("exact_mappings") && sheet.json["exact_mappings"].contains(selectedExactId_)) {
+    layer = &sheet.json["exact_mappings"][selectedExactId_];
+  } else if (!selectedRenderClass_.empty() && sheet.json.contains("render_classes") && sheet.json["render_classes"].contains(selectedRenderClass_)) {
+    auto& rc = sheet.json["render_classes"][selectedRenderClass_];
+    if (!rc.contains("default") || !rc["default"].is_object()) rc["default"] = nlohmann::json::object();
+    layer = &rc["default"];
+  }
+  if (!layer) return;
+  if (!layer->contains("attachment_anchors") || !(*layer)["attachment_anchors"].is_object()) (*layer)["attachment_anchors"] = nlohmann::json::object();
+  for (const auto& a : previewAnchors_) {
+    (*layer)["attachment_anchors"][a.socket] = {{"pos", {a.x, a.y, a.z}}, {"radius", std::max(0.01f, a.radius)}};
+  }
+  sheet.dirty = true;
+}
+
+void DomAssetStudioApp::refresh_scene_attachment_previews() {
+  for (auto& p : scenePlacements_) p.attachments = resolvedPreview_.attachments;
+}
+
+
 void DomAssetStudioApp::run_content_validation() {
   int rc = std::system("python3 tools/validate_content_pipeline.py > /tmp/dom_asset_studio_validate.log 2>&1");
   std::ifstream in("/tmp/dom_asset_studio_validate.log");
@@ -1039,6 +1198,29 @@ void DomAssetStudioApp::run_internal_validation() {
       }
     }
   }
+
+  for (const auto& a : previewAnchors_) {
+    if (!validAttachmentKeys.contains(a.socket)) validationMessages_.push_back("error: preview anchor has unsupported socket " + a.socket);
+    if (a.radius <= 0.0f) validationMessages_.push_back("warning: preview anchor " + a.socket + " has non-positive radius");
+    if (previewAsset_.loaded) {
+      const bool clipped = a.x < previewAsset_.minBounds[0] || a.y < previewAsset_.minBounds[1] || a.z < previewAsset_.minBounds[2] ||
+                           a.x > previewAsset_.maxBounds[0] || a.y > previewAsset_.maxBounds[1] || a.z > previewAsset_.maxBounds[2];
+      if (clipped) validationMessages_.push_back("warning: anchor " + a.socket + " lies outside preview mesh bounds");
+    }
+  }
+  for (size_t i = 0; i < previewAnchors_.size(); ++i) {
+    for (size_t j = i + 1; j < previewAnchors_.size(); ++j) {
+      const auto& a = previewAnchors_[i];
+      const auto& b = previewAnchors_[j];
+      const float dx = a.x - b.x;
+      const float dy = a.y - b.y;
+      const float dz = a.z - b.z;
+      const float d2 = dx * dx + dy * dy + dz * dz;
+      const float r = std::max(0.0f, a.radius) + std::max(0.0f, b.radius);
+      if (d2 < r * r) validationMessages_.push_back("warning: anchors overlap " + a.socket + " vs " + b.socket);
+    }
+  }
+
   for (const auto& d : duplicateAssets) validationMessages_.push_back("error: duplicate asset id " + d);
   for (const auto& d : duplicateLods) validationMessages_.push_back("error: duplicate lod id " + d);
 
@@ -1053,6 +1235,20 @@ void DomAssetStudioApp::run_internal_validation() {
         const std::string lod = node.value("lod_group", "");
         if (!lod.empty() && !lodIds.contains(lod) && lod != "missing_mesh") {
           validationMessages_.push_back("warning: stylesheet lod_group reference missing in lod_manifest: " + lod);
+        }
+        if (node.contains("attachments") && node["attachments"].is_object()) {
+          for (const auto& [socket, targetValue] : node["attachments"].items()) {
+            if (!validAttachmentKeys.contains(socket)) validationMessages_.push_back("error: stylesheet has invalid attachment hook " + socket);
+            if (!targetValue.is_string() || targetValue.get<std::string>().empty()) validationMessages_.push_back("warning: stylesheet attachment hook has empty target for " + socket);
+          }
+        }
+        if (node.contains("attachment_anchors") && node["attachment_anchors"].is_object()) {
+          for (const auto& [socket, anchor] : node["attachment_anchors"].items()) {
+            if (!validAttachmentKeys.contains(socket)) validationMessages_.push_back("error: stylesheet has invalid attachment anchor key " + socket);
+            if (!anchor.is_object() || !anchor.contains("pos") || !anchor["pos"].is_array() || anchor["pos"].size() != 3) {
+              validationMessages_.push_back("warning: attachment anchor has invalid pos triplet for " + socket);
+            }
+          }
         }
         for (const auto& [_, v] : node.items()) walk(v);
       } else if (node.is_array()) {
@@ -1106,6 +1302,7 @@ void DomAssetStudioApp::add_current_asset_to_scene() {
   scenePlacements_.push_back(placement);
   sceneSelectedIndex_ = static_cast<int>(scenePlacements_.size()) - 1;
   if (!placement.valid) append_log("Scene placement warning: " + placement.warning);
+  refresh_scene_attachment_previews();
 }
 
 void DomAssetStudioApp::duplicate_selected_scene_placement() {
@@ -1188,6 +1385,7 @@ void DomAssetStudioApp::reload_scene_placements() {
       append_log("Scene placement reload warning for " + p.label + ": " + p.warning);
     }
   }
+  refresh_scene_attachment_previews();
 }
 
 void DomAssetStudioApp::save_scene_layout() {
@@ -1261,6 +1459,8 @@ void DomAssetStudioApp::update_preview_resolution() {
 
   req.lodTier = static_cast<dom::render::ContentLodTier>(std::clamp(active_preview_lod(), 0, 2));
   resolvedPreview_ = dom::render::resolve_render_style(req);
+  refresh_attachment_anchors_from_style();
+  refresh_scene_attachment_previews();
   refresh_preview_asset_from_resolution();
 }
 

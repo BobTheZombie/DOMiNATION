@@ -26,6 +26,7 @@ DOM Asset Studio is a standalone desktop content-authoring companion for DOMiNAT
 - Auto-resolves preview mesh references through `AssetManager` + `lod_manifest` lookup first, then falls back to direct path opening.
 - Inspector reports mesh/material names, bounds, and vertex/index counts.
 - Viewport controls include orbit camera, turntable, grid, wireframe, normals, and socket/attachment overlays.
+- Attachment anchor authoring is available directly in viewport UI: select a socket, adjust 3D anchor position/radius, and write editor-only `attachment_anchors` back into the selected style layer.
 - Variant source toggle supports resolver/default mode, exact-only, and render-class-only inspection without touching gameplay code.
 
 ## Shared pipeline behavior
@@ -33,7 +34,7 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 
 ## Validation and safety behavior
 - Manifest diagnostics are shown in the Inspector panel.
-- Validation includes internal checks for duplicate IDs, bad LOD→asset links, missing manifest/style references, and stylesheet mesh/LOD mismatches.
+- Validation includes internal checks for duplicate IDs, bad LOD→asset links, missing manifest/style references, stylesheet mesh/LOD mismatches, invalid attachment hooks, empty attachment targets, anchor clipping (outside mesh bounds), and anchor overlap warnings.
 - Validation panel can execute `python3 tools/validate_content_pipeline.py` and stream output.
 - Export workflow runs save/apply/reload + validation + `tools/asset_pipeline/package_assets.py` packaging and reports status in the Validation panel.
 - Missing/invalid asset references are reported in log/inspector as non-fatal preview errors.
@@ -44,7 +45,8 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 ## Authoring coverage in this pass
 - Structured manifest authoring for asset-facing metadata: `asset_id`, type/category, mesh path, material ref, render class, civ/theme tags, icon/thumbnail refs, notes, and status.
 - Structured LOD authoring for `lod_id`/`lod_group_id`, near/mid/far/fallback references, and attachment hook metadata.
-- Attachment key inspection supports runtime hooks such as `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, and `guardian_aura`.
+- Attachment key inspection and constrained hook editing supports runtime hooks such as `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, and `guardian_aura`.
+- LOD manifest entries now expose structured attachment hook inputs so attachment metadata stays pipeline-authored and safer to serialize/export.
 - Apply+Reload workflow keeps preview in sync with runtime-equivalent resolver behavior after edits.
 - Saves use temp-file writes followed by replace for safer manifest/stylesheet updates.
 
@@ -64,7 +66,7 @@ Use this to test whether style variants remain legible in expected world environ
 ## LOD and RTS readability checks
 - Zoom can be validated at tactical/near, mid, and strategic/far camera distance.
 - Keep manual LOD selection for explicit testing, or enable **Auto LOD From Zoom** to mirror runtime LOD tier picks.
-- Civ/theme/state variant inputs remain active in both viewport modes to compare overrides in context.
+- Civ/theme/state variant inputs remain active in both viewport modes to compare overrides in context, including attachment/socket mapping previews.
 - Style-context selector supports default, exact, render-class-only, civ override focus, theme override focus, and state-variant focus while keeping resolver fallback behavior visible.
 
 ## Safety and limitations

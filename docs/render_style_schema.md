@@ -10,11 +10,12 @@ Style entry keys:
 - `tint: [r,g,b]`
 - `size_scale: [x,y]`
 - `attachments: { socket_or_hook: attachment_style_id }`
+- `attachment_anchors: { socket_or_hook: { pos: [x,y,z], radius: number } }` (editor/pipeline authored metadata for preview + renderer hook alignment)
 - `state_variants` (`construction`, `damaged`, `selected`, `low_supply`, `strategic_warning`)
 - `lods` (`near`, `mid`, `far`)
 
 ## DOM Asset Studio structured editing
-The Studio exposes structured form fields for core schema keys (`render_classes.default`, `civ_overrides`, `theme_overrides`, `lod_group`, `attachments`) with optional raw JSON inspection.
+The Studio exposes structured form fields for core schema keys (`render_classes.default`, `civ_overrides`, `theme_overrides`, `lod_group`, `attachments`, `attachment_anchors`) with optional raw JSON inspection.
 
 
 ## Validation expectations in Studio
