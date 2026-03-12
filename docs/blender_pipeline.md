@@ -45,3 +45,5 @@ Styles exported from Blender should be registered in `content/asset_manifest.jso
 - Attachment keys are authored in Studio metadata bindings (not in Blender scene rigging): validate hook names in the Studio Validation panel before packaging.
 
 - Use Studio Scene Context mode after Apply+Reload to compare civ/theme/state/LOD variants side-by-side against terrain presets for scale/readability checks before export.
+
+- Optional Studio scene layout save/load (`tools/dom_asset_studio/scene_preview_layout.json`) can preserve comparison setups between export passes without touching Blender source files or gameplay maps.

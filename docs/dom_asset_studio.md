@@ -53,7 +53,9 @@ The studio calls the same `engine/render/render_stylesheet.*` and `engine/render
 - Switch **Viewport → Mode** between **Isolated Asset** and **Scene Context**.
 - In scene mode, pick a terrain/biome context and use **Place Current Resolved Asset** to stage multiple assets together.
 - Use the Scene Outliner to select placements and adjust editor-only transform controls (position/rotation/scale), visibility, and labels.
+- Placement actions include duplicate/remove/reset-transform plus reload-selected and reload-all for broken-reference recovery.
 - Use **Reset Scene Layout**, **Reload Placed Assets**, and **Clear Scene** for safe iteration.
+- Save/load editor-only context layouts in `tools/dom_asset_studio/scene_preview_layout.json` (kept separate from gameplay/scenario content).
 
 ## Terrain/biome validation workflow
 Scene context includes bounded preview presets for: grassland, plains/steppe, forest ground, desert, mediterranean, jungle, tundra, snow/arctic, wetlands, mountains, snow mountains, and coast/littoral.
@@ -63,6 +65,7 @@ Use this to test whether style variants remain legible in expected world environ
 - Zoom can be validated at tactical/near, mid, and strategic/far camera distance.
 - Keep manual LOD selection for explicit testing, or enable **Auto LOD From Zoom** to mirror runtime LOD tier picks.
 - Civ/theme/state variant inputs remain active in both viewport modes to compare overrides in context.
+- Style-context selector supports default, exact, render-class-only, civ override focus, theme override focus, and state-variant focus while keeping resolver fallback behavior visible.
 
 ## Safety and limitations
 - Scene context placement state is editor-only and is not gameplay-authoritative map data.
