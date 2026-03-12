@@ -47,3 +47,4 @@ Styles exported from Blender should be registered in `content/asset_manifest.jso
 - Use Studio Scene Context mode after Apply+Reload to compare civ/theme/state/LOD variants side-by-side against terrain presets for scale/readability checks before export.
 
 - Optional Studio scene layout save/load (`tools/dom_asset_studio/scene_preview_layout.json`) can preserve comparison setups between export passes without touching Blender source files or gameplay maps.
+- Use Studio Asset Catalog thumbnail generation to build editor-only browse previews after new GLTF/GLB exports; cached files live under `tools/dom_asset_studio/cache/thumbnails/` and can be safely cleared/regenerated.

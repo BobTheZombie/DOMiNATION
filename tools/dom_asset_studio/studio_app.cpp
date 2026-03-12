@@ -15,12 +15,14 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <functional>
 #include <set>
 #include <sstream>
+#include <tuple>
 
 namespace dom::tools {
 
@@ -162,6 +164,7 @@ void DomAssetStudioApp::reload_content() {
   }
 
   reload_scene_placements();
+  rebuild_asset_catalog();
   append_log("Content and stylesheet data loaded.");
 }
 
@@ -190,6 +193,7 @@ void DomAssetStudioApp::render_frame() {
   draw_main_menu();
   draw_project_browser();
   draw_asset_inspector();
+  draw_asset_catalog();
   draw_stylesheet_editor();
   draw_viewport();
   draw_log_panel();
@@ -250,6 +254,9 @@ void DomAssetStudioApp::draw_main_menu() {
   if (ImGui::BeginMenu("Asset")) {
     ImGui::InputText("Open glTF/GLB", &gltfOpenPath_);
     if (ImGui::MenuItem("Open For Preview")) open_asset_for_preview(gltfOpenPath_, false);
+    if (ImGui::MenuItem("Rebuild Catalog")) rebuild_asset_catalog();
+    if (ImGui::MenuItem("Generate Thumbnails (Filtered)")) generate_thumbnails_for_visible(true);
+    if (ImGui::MenuItem("Clear Thumbnail Cache")) clear_thumbnail_cache();
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("Stylesheet")) {
@@ -602,6 +609,149 @@ bool DomAssetStudioApp::edit_style_layer(nlohmann::json& layer, const char* idPr
   return before != layer;
 #else
   return false;
+#endif
+}
+
+void DomAssetStudioApp::draw_asset_catalog() {
+#ifdef DOM_HAS_IMGUI
+  if (!ImGui::Begin("Asset Catalog")) { ImGui::End(); return; }
+
+  ImGui::InputText("Search", &catalogSearch_);
+  ImGui::InputText("Filter Type", &catalogFilterType_);
+  ImGui::InputText("Filter Render Class", &catalogFilterClass_);
+  ImGui::InputText("Filter Civ", &catalogFilterCiv_);
+  ImGui::InputText("Filter Theme", &catalogFilterTheme_);
+  ImGui::Checkbox("Has LOD only", &catalogHasLodOnly_);
+  ImGui::SameLine();
+  ImGui::Checkbox("No LOD only", &catalogNoLodOnly_);
+  ImGui::Checkbox("Has thumbnail only", &catalogHasThumbnailOnly_);
+  ImGui::SameLine();
+  ImGui::Checkbox("Missing thumbnail only", &catalogMissingThumbnailOnly_);
+  ImGui::Checkbox("Warnings only", &catalogWarningsOnly_);
+  ImGui::SameLine();
+  ImGui::Checkbox("Missing refs only", &catalogMissingRefsOnly_);
+  ImGui::Checkbox("Favorites only", &catalogFavoritesOnly_);
+
+  ImGui::Combo("Sort", &catalogSortMode_, "Asset ID\0Type\0Civ/Theme\0Validation\0Thumbnail\0");
+
+  if (ImGui::Button("Generate Thumbnail For Selected") && selectedCatalogIndex_ >= 0 && selectedCatalogIndex_ < static_cast<int>(catalogEntries_.size())) {
+    auto& e = catalogEntries_[selectedCatalogIndex_];
+    generate_thumbnail(e, true);
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Generate For Filtered")) generate_thumbnails_for_visible(true);
+  ImGui::SameLine();
+  if (ImGui::Button("Clear Thumbnail Cache")) clear_thumbnail_cache();
+
+  std::vector<int> visible;
+  for (int i = 0; i < static_cast<int>(catalogEntries_.size()); ++i) {
+    const auto& e = catalogEntries_[i];
+    auto contains = [](const std::string& h, const std::string& n) {
+      if (n.empty()) return true;
+      std::string hs = h;
+      std::string ns = n;
+      std::transform(hs.begin(), hs.end(), hs.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+      std::transform(ns.begin(), ns.end(), ns.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+      return hs.find(ns) != std::string::npos;
+    };
+    const std::string key = e.assetId + " " + e.type + " " + e.renderClass + " " + e.civTag + " " + e.themeTag;
+    if (!contains(key, catalogSearch_)) continue;
+    if (!contains(e.type, catalogFilterType_)) continue;
+    if (!contains(e.renderClass, catalogFilterClass_)) continue;
+    if (!contains(e.civTag, catalogFilterCiv_)) continue;
+    if (!contains(e.themeTag, catalogFilterTheme_)) continue;
+    if (catalogHasLodOnly_ && !e.hasLod) continue;
+    if (catalogNoLodOnly_ && e.hasLod) continue;
+    if (catalogHasThumbnailOnly_ && !e.hasThumbnail) continue;
+    if (catalogMissingThumbnailOnly_ && e.hasThumbnail) continue;
+    if (catalogWarningsOnly_ && e.warningCount == 0) continue;
+    if (catalogMissingRefsOnly_ && !e.missingReference) continue;
+    if (catalogFavoritesOnly_ && !favoriteAssets_.contains(e.assetId)) continue;
+    visible.push_back(i);
+  }
+
+  auto sorter = [&](int a, int b) {
+    const auto& l = catalogEntries_[a];
+    const auto& r = catalogEntries_[b];
+    switch (catalogSortMode_) {
+      case 1: return std::tie(l.type, l.assetId) < std::tie(r.type, r.assetId);
+      case 2: return std::tie(l.civTag, l.themeTag, l.assetId) < std::tie(r.civTag, r.themeTag, r.assetId);
+      case 3: return std::tie(l.warningCount, l.assetId) > std::tie(r.warningCount, r.assetId);
+      case 4: return std::tie(l.hasThumbnail, l.assetId) > std::tie(r.hasThumbnail, r.assetId);
+      default: return l.assetId < r.assetId;
+    }
+  };
+  std::sort(visible.begin(), visible.end(), sorter);
+
+  ImGui::Text("Visible assets: %d", static_cast<int>(visible.size()));
+  ImGui::Separator();
+
+  if (ImGui::BeginTable("catalog_table", 8, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0, 320))) {
+    ImGui::TableSetupColumn("Asset", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Type");
+    ImGui::TableSetupColumn("Class");
+    ImGui::TableSetupColumn("Civ/Theme");
+    ImGui::TableSetupColumn("LOD");
+    ImGui::TableSetupColumn("Thumb");
+    ImGui::TableSetupColumn("Warnings");
+    ImGui::TableSetupColumn("Status");
+    ImGui::TableHeadersRow();
+    for (int idx : visible) {
+      const auto& e = catalogEntries_[idx];
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      bool selected = selectedCatalogIndex_ == idx;
+      if (ImGui::Selectable(e.assetId.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns)) {
+        selectedCatalogIndex_ = idx;
+        selectedManifestAssetId_ = e.assetId;
+        draftAssetId_ = e.assetId;
+        if (!e.mesh.empty()) open_asset_for_preview(e.mesh, true);
+      }
+      ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(e.type.c_str());
+      ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(e.renderClass.c_str());
+      ImGui::TableSetColumnIndex(3); ImGui::Text("%s / %s", e.civTag.c_str(), e.themeTag.c_str());
+      ImGui::TableSetColumnIndex(4); ImGui::TextUnformatted(e.hasLod ? e.lodGroup.c_str() : "none");
+      ImGui::TableSetColumnIndex(5); ImGui::TextUnformatted(e.hasThumbnail ? "yes" : "missing");
+      ImGui::TableSetColumnIndex(6); ImGui::Text("%d", e.warningCount);
+      ImGui::TableSetColumnIndex(7);
+      if (e.missingMesh) ImGui::TextColored(ImVec4(1,0.4f,0.4f,1), "missing mesh");
+      else if (e.missingMaterial) ImGui::TextColored(ImVec4(1,0.8f,0.4f,1), "missing mat");
+      else if (e.invalidAttachmentHook) ImGui::TextColored(ImVec4(1,0.6f,0.4f,1), "bad attach");
+      else if (e.invalidStylesheetRef) ImGui::TextColored(ImVec4(1,0.8f,0.4f,1), "style ref");
+      else ImGui::TextUnformatted("ok");
+    }
+    ImGui::EndTable();
+  }
+
+  if (selectedCatalogIndex_ >= 0 && selectedCatalogIndex_ < static_cast<int>(catalogEntries_.size())) {
+    auto& e = catalogEntries_[selectedCatalogIndex_];
+    ImGui::SeparatorText("Quick Inspect / Compare");
+    ImGui::Text("asset: %s", e.assetId.c_str());
+    ImGui::Text("render_class: %s", e.renderClass.c_str());
+    ImGui::Text("lod_group: %s", e.lodGroup.c_str());
+    ImGui::Text("warnings: %d", e.warningCount);
+    bool favorite = favoriteAssets_.contains(e.assetId);
+    if (ImGui::Checkbox("Favorite", &favorite)) {
+      if (favorite) favoriteAssets_.insert(e.assetId);
+      else favoriteAssets_.erase(e.assetId);
+    }
+    if (ImGui::Button("Open Isolated Preview")) {
+      viewportMode_ = 0;
+      if (!e.mesh.empty()) open_asset_for_preview(e.mesh, true);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Open In Scene Context")) {
+      viewportMode_ = 1;
+      if (!e.mesh.empty()) open_asset_for_preview(e.mesh, true);
+      add_current_asset_to_scene();
+    }
+    if (ImGui::Button("Set Compare A")) compareAssetA_ = e.assetId;
+    ImGui::SameLine();
+    if (ImGui::Button("Set Compare B")) compareAssetB_ = e.assetId;
+    ImGui::Text("Compare: %s  <->  %s", compareAssetA_.c_str(), compareAssetB_.c_str());
+  }
+
+  ImGui::End();
 #endif
 }
 
@@ -1480,6 +1630,188 @@ void DomAssetStudioApp::refresh_preview_asset_from_resolution() {
   }
 
   open_asset_for_preview(resolvedPreview_.mesh, true);
+}
+
+void DomAssetStudioApp::rebuild_asset_catalog() {
+  catalogEntries_.clear();
+  selectedCatalogIndex_ = -1;
+  std::filesystem::create_directories(thumbnailCacheDir_);
+
+  std::unordered_set<std::string> invalidAttachmentKeys;
+  for (const auto& msg : validationMessages_) {
+    if (msg.find("invalid attachment") != std::string::npos) invalidAttachmentKeys.insert(msg);
+  }
+
+  std::unordered_map<std::string, std::string> lodByAsset;
+  if (lodManifest_.json.is_object() && lodManifest_.json.contains("lod_entries") && lodManifest_.json["lod_entries"].is_array()) {
+    for (const auto& lod : lodManifest_.json["lod_entries"]) {
+      if (!lod.is_object()) continue;
+      const std::string aid = lod.value("asset_id", "");
+      if (aid.empty()) continue;
+      lodByAsset[aid] = lod.value("lod_group_id", lod.value("lod_id", ""));
+    }
+  }
+
+  if (!assetManifest_.json.is_object() || !assetManifest_.json.contains("assets") || !assetManifest_.json["assets"].is_array()) return;
+  for (const auto& asset : assetManifest_.json["assets"]) {
+    if (!asset.is_object()) continue;
+    CatalogEntry e{};
+    e.assetId = asset.value("asset_id", "");
+    if (e.assetId.empty()) continue;
+    e.type = asset.value("type", "object");
+    e.renderClass = asset.value("render_class", "");
+    e.civTag = asset.value("civ_tag", asset.value("civilization_theme", ""));
+    e.themeTag = asset.value("theme_tag", asset.value("civilization_theme", ""));
+    e.mesh = asset.value("mesh", "");
+    e.materialRef = asset.value("material_ref", "");
+    e.lodGroup = lodByAsset.contains(e.assetId) ? lodByAsset[e.assetId] : "";
+    e.hasLod = !e.lodGroup.empty();
+    e.missingLod = !e.hasLod;
+    e.missingMesh = e.mesh.empty();
+    e.missingMaterial = e.materialRef.empty();
+    e.thumbnailPath = thumbnailCacheDir_ / (e.assetId + ".ppm");
+    e.hasThumbnail = std::filesystem::exists(e.thumbnailPath);
+    e.invalidStylesheetRef = false;
+    for (const auto& msg : validationMessages_) {
+      if (msg.find("invalid render_class") != std::string::npos && msg.find(e.assetId) != std::string::npos) {
+        e.invalidStylesheetRef = true;
+        break;
+      }
+    }
+    e.invalidAttachmentHook = false;
+    e.missingReference = e.missingMesh || e.invalidStylesheetRef;
+    e.warningCount = static_cast<int>(e.missingMesh) + static_cast<int>(e.missingMaterial) + static_cast<int>(e.missingLod)
+      + static_cast<int>(e.invalidStylesheetRef) + static_cast<int>(e.invalidAttachmentHook) + static_cast<int>(!e.hasThumbnail);
+    catalogEntries_.push_back(std::move(e));
+  }
+  append_log("Catalog rebuilt: " + std::to_string(catalogEntries_.size()) + " assets.");
+}
+
+bool DomAssetStudioApp::generate_thumbnail(CatalogEntry& entry, bool updateManifestPath) {
+  if (entry.mesh.empty()) {
+    append_log("Thumbnail skipped (missing mesh): " + entry.assetId);
+    return false;
+  }
+  std::string error;
+  std::filesystem::path meshPath = entry.mesh;
+  if (!meshPath.is_absolute()) meshPath = std::filesystem::path("content") / meshPath;
+  auto loaded = load_preview_asset(meshPath, error);
+  if (!loaded) {
+    append_log("Thumbnail failed for " + entry.assetId + ": " + error);
+    return false;
+  }
+
+  constexpr int W = 128;
+  constexpr int H = 128;
+  std::vector<unsigned char> pix(static_cast<size_t>(W * H * 3), 24);
+  auto put = [&](int x, int y, unsigned char r, unsigned char g, unsigned char b) {
+    if (x < 0 || y < 0 || x >= W || y >= H) return;
+    const size_t o = static_cast<size_t>((y * W + x) * 3);
+    pix[o + 0] = r; pix[o + 1] = g; pix[o + 2] = b;
+  };
+
+  const auto& a = *loaded;
+  const float cx = 0.5f * (a.minBounds[0] + a.maxBounds[0]);
+  const float cy = 0.5f * (a.minBounds[1] + a.maxBounds[1]);
+  const float cz = 0.5f * (a.minBounds[2] + a.maxBounds[2]);
+  const float sx = std::max(0.001f, a.maxBounds[0] - a.minBounds[0]);
+  const float sy = std::max(0.001f, a.maxBounds[1] - a.minBounds[1]);
+  const float sz = std::max(0.001f, a.maxBounds[2] - a.minBounds[2]);
+  const float span = std::max({sx, sy, sz});
+  const float inv = 1.0f / span;
+
+  for (int y = 0; y < H; ++y) {
+    for (int x = 0; x < W; ++x) {
+      const unsigned char shade = static_cast<unsigned char>(18 + (40 * y) / H);
+      put(x, y, shade, shade, static_cast<unsigned char>(shade + 8));
+    }
+  }
+
+  for (const auto& surf : a.surfaces) {
+    for (const auto& p : surf.points) {
+      const float rx = (p.x - cx) * inv;
+      const float ry = (p.y - cy) * inv;
+      const float rz = (p.z - cz) * inv;
+      const float yaw = 0.68f;
+      const float pitch = -0.42f;
+      const float x1 = std::cos(yaw) * rx + std::sin(yaw) * rz;
+      const float z1 = -std::sin(yaw) * rx + std::cos(yaw) * rz;
+      const float y2 = std::cos(pitch) * ry - std::sin(pitch) * z1;
+      const int sxp = static_cast<int>((x1 * 0.65f + 0.5f) * static_cast<float>(W - 1));
+      const int syp = static_cast<int>((0.65f - y2 * 0.65f) * static_cast<float>(H - 1));
+      put(sxp, syp, 130, 215, 245);
+    }
+  }
+
+  std::filesystem::create_directories(thumbnailCacheDir_);
+  const std::filesystem::path path = thumbnailCacheDir_ / (entry.assetId + ".ppm");
+  std::ofstream out(path, std::ios::binary);
+  if (!out.good()) {
+    append_log("Thumbnail write open failed: " + path.string());
+    return false;
+  }
+  out << "P6\n" << W << " " << H << "\n255\n";
+  out.write(reinterpret_cast<const char*>(pix.data()), static_cast<std::streamsize>(pix.size()));
+  if (!out.good()) {
+    append_log("Thumbnail write failed: " + path.string());
+    return false;
+  }
+
+  entry.thumbnailPath = path;
+  entry.hasThumbnail = true;
+  entry.warningCount = std::max(0, entry.warningCount - 1);
+
+  if (updateManifestPath && assetManifest_.json.is_object() && assetManifest_.json.contains("assets") && assetManifest_.json["assets"].is_array()) {
+    for (auto& asset : assetManifest_.json["assets"]) {
+      if (!asset.is_object() || asset.value("asset_id", "") != entry.assetId) continue;
+      asset["preview_thumbnail"] = path.string();
+      assetManifest_.dirty = true;
+      break;
+    }
+  }
+
+  append_log("Thumbnail generated: " + entry.assetId + " -> " + path.string());
+  return true;
+}
+
+void DomAssetStudioApp::generate_thumbnails_for_visible(bool updateManifestPaths) {
+  int generated = 0;
+  for (auto& e : catalogEntries_) {
+    auto contains = [](const std::string& h, const std::string& n) {
+      if (n.empty()) return true;
+      std::string hs = h;
+      std::string ns = n;
+      std::transform(hs.begin(), hs.end(), hs.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+      std::transform(ns.begin(), ns.end(), ns.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+      return hs.find(ns) != std::string::npos;
+    };
+    const std::string key = e.assetId + " " + e.type + " " + e.renderClass + " " + e.civTag + " " + e.themeTag;
+    if (!contains(key, catalogSearch_)) continue;
+    if (!contains(e.type, catalogFilterType_)) continue;
+    if (!contains(e.renderClass, catalogFilterClass_)) continue;
+    if (!contains(e.civTag, catalogFilterCiv_)) continue;
+    if (!contains(e.themeTag, catalogFilterTheme_)) continue;
+    if (catalogHasLodOnly_ && !e.hasLod) continue;
+    if (catalogNoLodOnly_ && e.hasLod) continue;
+    if (catalogHasThumbnailOnly_ && !e.hasThumbnail) continue;
+    if (catalogMissingThumbnailOnly_ && e.hasThumbnail) continue;
+    if (catalogWarningsOnly_ && e.warningCount == 0) continue;
+    if (catalogMissingRefsOnly_ && !e.missingReference) continue;
+    if (catalogFavoritesOnly_ && !favoriteAssets_.contains(e.assetId)) continue;
+    if (generate_thumbnail(e, updateManifestPaths)) ++generated;
+  }
+  append_log("Thumbnail batch complete: " + std::to_string(generated) + " generated.");
+}
+
+void DomAssetStudioApp::clear_thumbnail_cache() {
+  std::error_code ec;
+  std::filesystem::remove_all(thumbnailCacheDir_, ec);
+  std::filesystem::create_directories(thumbnailCacheDir_);
+  for (auto& e : catalogEntries_) {
+    e.hasThumbnail = false;
+    e.warningCount += 1;
+  }
+  append_log(ec ? ("Thumbnail cache clear warning: " + ec.message()) : "Thumbnail cache cleared.");
 }
 
 void DomAssetStudioApp::open_asset_for_preview(const std::filesystem::path& requestedPath, bool fromResolver) {

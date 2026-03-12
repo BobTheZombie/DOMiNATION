@@ -73,3 +73,39 @@ Use this to test whether style variants remain legible in expected world environ
 - Scene context placement state is editor-only and is not gameplay-authoritative map data.
 - Broken/missing mesh references stay listed in the outliner with warnings and do not crash the Studio.
 - Scene context preview is intentionally bounded: it is not a level editor, gameplay map editor, or Blender replacement.
+
+
+## Thumbnail generation and cache workflow
+- Open **Asset Catalog** and choose one asset, then use **Generate Thumbnail For Selected**.
+- Use **Generate For Filtered** to batch refresh currently filtered assets (for example, all `unit` entries with missing thumbnails).
+- Thumbnails are generated from the same preview mesh loading path used by viewport preview, with stable framing assumptions and bounded 128x128 capture output.
+- Thumbnail writes fail safely (logged in Log panel) when an asset mesh cannot be loaded, and Studio remains responsive.
+- Cache location is editor-only: `tools/dom_asset_studio/cache/thumbnails/` (PPM files).
+- Cache can be cleared from the catalog/menu and regenerated without touching gameplay manifests except optional `preview_thumbnail` metadata references.
+
+## Asset catalog workflow
+- Catalog panel provides searchable/filterable browsing with key metadata columns and status flags.
+- Search/filter fields support asset ID text, render class, type/category, civ tag, and theme tag.
+- Toggle filters include has-LOD/no-LOD, has-thumbnail/missing-thumbnail, warnings-only, missing-references-only, and favorites-only (session watchlist).
+- Sorting options include asset ID, type, civ/theme grouping, validation warning priority, and thumbnail presence.
+- Selecting a catalog row drives inspector selection and preview loading.
+
+## Comparison / quick inspection
+- Quick-inspection block surfaces render class, asset ID, civ/theme tags, LOD group, and warning count.
+- Selected assets can be opened directly into isolated preview mode or scene context mode for side-by-side iteration.
+- Compare A/B and favorite session toggles support rapid switching while iterating civ/theme/LOD/state variants and attachment differences.
+
+## Catalog status badges
+Catalog rows surface compact production flags:
+- missing mesh
+- missing material
+- missing LOD
+- invalid stylesheet reference
+- invalid attachment hook
+- validation warning count
+- missing thumbnail
+
+## Limitations
+- Thumbnail generation currently writes bounded static preview captures for fast local browsing, not final marketing-quality renders.
+- Favorites/watchlist are session-scoped (not persisted yet).
+- Catalog is intentionally local/editor-only and is not a cloud DAM or publishing backend.
