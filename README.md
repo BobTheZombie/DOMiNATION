@@ -77,6 +77,11 @@ Run:
 ./build/dom_asset_studio
 ```
 
+Thumbnail cache (editor-only):
+- `tools/dom_asset_studio/cache/thumbnails/*.ppm`
+- Clear/rebuild from **Asset Catalog** or **Asset** menu actions.
+- Cache files are never runtime-authoritative and are safe to delete/regenerate.
+
 Studio focus:
 - manifest/style inspection
 - stylesheet form editing + save
@@ -94,6 +99,10 @@ Studio focus:
 - content validation/export-safe workflow
 - manifest + LOD authoring with apply/reload dirty-state workflow
 - export/package action that saves, revalidates, and runs packaging tools with in-studio logs
+- asset catalog panel with search/filter/sort for asset ID, render class, type, civ/theme tags, LOD status, thumbnail status, validation warning state, and missing-reference flags
+- thumbnail generation workflow (single selected asset or batch for filtered results) with stable editor-only preview framing and cache-safe regeneration
+- quick visual comparison helpers (compare A/B labels, rapid isolated/scene open actions, session favorites/watchlist) for civ/theme/LOD/state variant iteration
+- catalog status badges for missing mesh/material/LOD, invalid stylesheet refs, invalid attachment hooks, validation warning counts, and no-thumbnail state
 
 ## Match pacing telemetry
 Headless runs emit deterministic `MATCH_PACING_TELEMETRY` lines that include first-expansion/combat/factory/rail/strategic timestamps, phase transition ticks, throughput/supply pressure, and end-state condition.
