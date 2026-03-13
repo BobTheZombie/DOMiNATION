@@ -95,6 +95,27 @@ void draw_selection_summary(dom::sim::World& world, const std::vector<uint32_t>&
     if (u.id != id) continue;
     ImGui::Text("%s %s Unit #%u | Team P%u", icons::glyph_for_icon(civEmblem), civEmblem.c_str(), u.id, u.team);
     ImGui::Text("HP %.0f | Supply %s | Cargo %zu", u.hp, supply_name(u.supplyState), u.cargo.size());
+
+    const dom::sim::ArmyGroup* selectedArmy = nullptr;
+    size_t armyVisibleUnits = 0;
+    for (const auto& ag : world.armyGroups) {
+      if (!ag.active) continue;
+      bool contains = std::find(ag.unitIds.begin(), ag.unitIds.end(), u.id) != ag.unitIds.end();
+      if (!contains) continue;
+      selectedArmy = &ag;
+      for (const auto& uid : ag.unitIds) {
+        for (const auto& wu : world.units) {
+          if (wu.id == uid) { ++armyVisibleUnits; break; }
+        }
+      }
+      break;
+    }
+    if (selectedArmy) {
+      const char* stance = selectedArmy->stance == dom::sim::ArmyGroupStance::Offensive ? "Offensive" : "Defensive";
+      ImGui::TextColored(theme::state_color_info(), "Army Group #%u | %s", selectedArmy->id, stance);
+      ImGui::Text("Formation units %zu/%zu | Theater %u", armyVisibleUnits, selectedArmy->unitIds.size(), selectedArmy->theaterId);
+    }
+
     ImGui::TextDisabled("Role: %s", dom::sim::unit_role_label(u.type));
     ImGui::TextWrapped("Purpose: %s", dom::sim::unit_role_purpose(u.type));
     ImGui::TextColored(theme::state_color_info(), "Counter: %s", dom::sim::unit_counter_hint(u.type));

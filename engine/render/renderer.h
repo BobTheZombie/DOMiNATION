@@ -39,10 +39,13 @@ struct VisualFeedbackCounters {
 
 struct StrategicVisualizationCounters {
   uint64_t movementPathResolves{0};
+  uint64_t movementDestinationMarkers{0};
   uint64_t supplyFlowResolves{0};
   uint64_t railVisualEvents{0};
   uint64_t frontlineZoneUpdates{0};
   uint64_t theaterVisualResolves{0};
+  uint64_t armyFormationVisuals{0};
+  uint64_t combatEncounterMarkers{0};
   uint64_t visualFallbackCount{0};
   uint64_t railFlowLines{0};
   uint64_t trainMarkers{0};

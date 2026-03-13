@@ -282,6 +282,164 @@ void draw_arrow_head(glm::vec2 from, glm::vec2 to, float size) {
   glEnd();
 }
 
+
+std::array<float, 3> army_stance_color(dom::sim::ArmyGroupStance stance) {
+  switch (stance) {
+    case dom::sim::ArmyGroupStance::Offensive: return {0.95f, 0.36f, 0.28f};
+    case dom::sim::ArmyGroupStance::Defensive: return {0.38f, 0.82f, 0.96f};
+  }
+  return {0.85f, 0.85f, 0.85f};
+}
+
+void draw_unit_destination_marker(const dom::sim::World& w, const dom::sim::Unit& u, float scale) {
+  auto glyph = unit_glyph(u);
+  auto col = diplomatic_color(w, u.team);
+  col = mix_color(col, {1.0f, 1.0f, 1.0f}, 0.28f);
+  float s = std::max(0.24f, scale);
+  glColor4f(col[0], col[1], col[2], 0.88f);
+  if (glyph == UnitGlyph::Aircraft) {
+    glBegin(GL_TRIANGLES);
+    glVertex2f(u.target.x, u.target.y + s * 1.25f);
+    glVertex2f(u.target.x - s, u.target.y - s * 0.75f);
+    glVertex2f(u.target.x + s, u.target.y - s * 0.75f);
+    glEnd();
+    return;
+  }
+  if (glyph == UnitGlyph::Naval) {
+    glBegin(GL_QUADS);
+    glVertex2f(u.target.x - s * 1.2f, u.target.y - s * 0.7f);
+    glVertex2f(u.target.x + s * 1.2f, u.target.y - s * 0.7f);
+    glVertex2f(u.target.x + s * 0.8f, u.target.y + s * 0.7f);
+    glVertex2f(u.target.x - s * 0.8f, u.target.y + s * 0.7f);
+    glEnd();
+    return;
+  }
+  glBegin(GL_QUADS);
+  glVertex2f(u.target.x - s, u.target.y - s);
+  glVertex2f(u.target.x + s, u.target.y - s);
+  glVertex2f(u.target.x + s, u.target.y + s);
+  glVertex2f(u.target.x - s, u.target.y + s);
+  glEnd();
+}
+
+void draw_army_group_formations(const dom::sim::World& w, const Camera& c) {
+  if (c.zoom > 55.0f) return;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  for (const auto& group : w.armyGroups) {
+    if (!group.active || group.unitIds.size() < 2) continue;
+    std::vector<const dom::sim::Unit*> units;
+    units.reserve(group.unitIds.size());
+    for (uint32_t id : group.unitIds) {
+      for (const auto& u : w.units) {
+        if (u.id != id) continue;
+        if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+        units.push_back(&u);
+        break;
+      }
+    }
+    if (units.size() < 2) {
+      ++gStrategicCounters.visualFallbackCount;
+      continue;
+    }
+
+    glm::vec2 center{0.0f, 0.0f};
+    for (const auto* u : units) center += u->renderPos;
+    center /= static_cast<float>(units.size());
+
+    float avgRadius = 0.0f;
+    for (const auto* u : units) avgRadius += glm::length(u->renderPos - center);
+    avgRadius = std::max(0.7f, avgRadius / static_cast<float>(units.size()) + 0.45f);
+
+    auto stanceCol = army_stance_color(group.stance);
+    auto teamCol = diplomatic_color(w, group.owner);
+    auto col = mix_color(stanceCol, teamCol, 0.45f);
+
+    glLineWidth(c.zoom > 28.0f ? 1.0f : 1.8f);
+    glColor4f(col[0], col[1], col[2], 0.55f);
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < 24; ++i) {
+      float a = 6.2831853f * static_cast<float>(i) / 24.0f;
+      float r = avgRadius * (0.85f + 0.15f * std::sin(a * 3.0f + tick_phase(w, group.id, 0.05f)));
+      glVertex2f(center.x + std::cos(a) * r, center.y + std::sin(a) * r);
+    }
+    glEnd();
+
+    glColor4f(col[0], col[1], col[2], 0.22f);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(center.x, center.y);
+    for (int i = 0; i <= 24; ++i) {
+      float a = 6.2831853f * static_cast<float>(i) / 24.0f;
+      glVertex2f(center.x + std::cos(a) * avgRadius, center.y + std::sin(a) * avgRadius);
+    }
+    glEnd();
+
+    glColor4f(col[0], col[1], col[2], 0.45f);
+    glBegin(GL_LINES);
+    for (const auto* u : units) {
+      glVertex2f(center.x, center.y);
+      glVertex2f(u->renderPos.x, u->renderPos.y);
+    }
+    glEnd();
+    ++gStrategicCounters.armyFormationVisuals;
+  }
+  glLineWidth(1.0f);
+  glDisable(GL_BLEND);
+}
+
+void draw_combat_encounter_markers(const dom::sim::World& w, const Camera& c) {
+  if (c.zoom > 62.0f) return;
+  struct EncounterMarker { glm::vec2 pos{}; uint16_t a{UINT16_MAX}; uint16_t b{UINT16_MAX}; uint32_t hash{0}; };
+  std::vector<EncounterMarker> markers;
+  constexpr float kEngageDist = 2.8f;
+  for (size_t i = 0; i < w.units.size(); ++i) {
+    const auto& a = w.units[i];
+    if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, a, 0)) continue;
+    for (size_t j = i + 1; j < w.units.size(); ++j) {
+      const auto& b = w.units[j];
+      if (a.team == b.team || !dom::sim::players_at_war(w, a.team, b.team)) continue;
+      if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, b, 0)) continue;
+      float d = glm::length(a.pos - b.pos);
+      if (d > kEngageDist) continue;
+      glm::vec2 mid = (a.renderPos + b.renderPos) * 0.5f;
+      bool merged = false;
+      for (auto& m : markers) {
+        if (glm::length(m.pos - mid) < 1.4f) {
+          m.pos = (m.pos + mid) * 0.5f;
+          merged = true;
+          break;
+        }
+      }
+      if (!merged) {
+        uint16_t lo = std::min(a.team, b.team);
+        uint16_t hi = std::max(a.team, b.team);
+        markers.push_back({mid, lo, hi, (static_cast<uint32_t>(lo) << 16u) ^ hi ^ static_cast<uint32_t>(markers.size() * 2654435761u)});
+      }
+    }
+  }
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  for (const auto& m : markers) {
+    auto cA = diplomatic_color(w, m.a);
+    auto cB = diplomatic_color(w, m.b);
+    auto col = mix_color(cA, cB, 0.5f);
+    float phase = tick_phase(w, m.hash, 0.09f);
+    float radius = 0.72f + std::sin(phase) * 0.12f;
+    draw_pulse_ring(m.pos, radius, 0.08f, 0.09f, phase, col);
+
+    glColor4f(1.0f, 0.38f, 0.2f, 0.78f);
+    glBegin(GL_LINES);
+    glVertex2f(m.pos.x - 0.35f, m.pos.y - 0.35f);
+    glVertex2f(m.pos.x + 0.35f, m.pos.y + 0.35f);
+    glVertex2f(m.pos.x - 0.35f, m.pos.y + 0.35f);
+    glVertex2f(m.pos.x + 0.35f, m.pos.y - 0.35f);
+    glEnd();
+    ++gStrategicCounters.combatEncounterMarkers;
+  }
+  glDisable(GL_BLEND);
+}
+
 void draw_unit_movement_paths(const dom::sim::World& w, const Camera& c) {
   if (c.zoom > 28.0f) return;
   glEnable(GL_BLEND);
@@ -367,6 +525,15 @@ void draw_unit_movement_paths(const dom::sim::World& w, const Camera& c) {
       draw_arrow_head(start, end, glyph == UnitGlyph::Armor ? 0.52f : 0.36f);
     }
   }
+
+  for (const auto& u : w.units) {
+    if (!u.hasMoveOrder) continue;
+    if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+    float markerScale = c.zoom > 18.0f ? 0.20f : (c.zoom > 10.0f ? 0.24f : 0.30f);
+    draw_unit_destination_marker(w, u, markerScale);
+    ++gStrategicCounters.movementDestinationMarkers;
+  }
+
   glLineWidth(1.0f);
   glDisable(GL_BLEND);
 }
@@ -1243,6 +1410,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     draw_supply_and_logistics_flows(w, c);
     draw_rail_traffic_visualization(w, c);
     draw_unit_movement_paths(w, c);
+    draw_army_group_formations(w, c);
+    draw_combat_encounter_markers(w, c);
   }
   if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 1.0f, {0.0f, 0.0f, 0.0f}, true);
 
