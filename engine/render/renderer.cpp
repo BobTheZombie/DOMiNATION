@@ -13,6 +13,7 @@
 #include <vector>
 #include <string_view>
 #include <chrono>
+#include <limits>
 #include <cctype>
 #include "engine/ui/ui_icons.h"
 
@@ -117,6 +118,105 @@ std::array<float, 3> theme_tint_for_team(const dom::sim::World& w, uint16_t team
 }
 
 enum class CivSettlementShape : uint8_t { Generic, Rome, China, Europe, MiddleEast, Russia, Usa, Japan, Eu, Uk, Egypt, Tartaria };
+
+enum class SettlementTier : uint8_t { Minor, Major, Capital };
+
+struct CityPresenceProfile {
+  size_t cityIndex{0};
+  int industrialHubs{0};
+  int factories{0};
+  int refineries{0};
+  int ports{0};
+  int logisticsNodes{0};
+  int miningNodes{0};
+  int nearbyResourceNodes{0};
+  bool coastalAnchor{false};
+};
+
+SettlementTier settlement_tier(const dom::sim::City& c) {
+  if (c.capital) return SettlementTier::Capital;
+  if (c.level >= 4) return SettlementTier::Major;
+  return SettlementTier::Minor;
+}
+
+bool is_factory_type(dom::sim::BuildingType t) {
+  return t == dom::sim::BuildingType::SteelMill || t == dom::sim::BuildingType::MunitionsPlant ||
+         t == dom::sim::BuildingType::MachineWorks || t == dom::sim::BuildingType::ElectronicsLab;
+}
+
+bool tile_is_coastal(const dom::sim::World& w, const glm::vec2& pos) {
+  int x = std::clamp(static_cast<int>(std::floor(pos.x)), 1, w.width - 2);
+  int y = std::clamp(static_cast<int>(std::floor(pos.y)), 1, w.height - 2);
+  int i = y * w.width + x;
+  auto center = resolve_terrain_visual(w, i);
+  if (center.isWater) return false;
+  for (int oy = -1; oy <= 1; ++oy) {
+    for (int ox = -1; ox <= 1; ++ox) {
+      if (ox == 0 && oy == 0) continue;
+      int nx = x + ox;
+      int ny = y + oy;
+      auto sample = resolve_terrain_visual(w, ny * w.width + nx);
+      if (sample.isWater) return true;
+    }
+  }
+  return false;
+}
+
+std::vector<CityPresenceProfile> build_city_presence_profiles(const dom::sim::World& w) {
+  std::vector<CityPresenceProfile> profiles(w.cities.size());
+  for (size_t i = 0; i < w.cities.size(); ++i) profiles[i].cityIndex = i;
+  if (w.cities.empty()) return profiles;
+
+  auto nearest_city_for_team = [&](uint16_t team, const glm::vec2& pos) -> size_t {
+    size_t best = SIZE_MAX;
+    float bestD2 = std::numeric_limits<float>::max();
+    for (size_t i = 0; i < w.cities.size(); ++i) {
+      const auto& c = w.cities[i];
+      if (c.team != team) continue;
+      glm::vec2 d = c.pos - pos;
+      float d2 = glm::dot(d, d);
+      if (d2 < bestD2 || (d2 == bestD2 && c.id < w.cities[best].id)) {
+        bestD2 = d2;
+        best = i;
+      }
+    }
+    if (best != SIZE_MAX) return best;
+    for (size_t i = 0; i < w.cities.size(); ++i) {
+      glm::vec2 d = w.cities[i].pos - pos;
+      float d2 = glm::dot(d, d);
+      if (d2 < bestD2 || (d2 == bestD2 && w.cities[i].id < w.cities[best].id)) {
+        bestD2 = d2;
+        best = i;
+      }
+    }
+    return best;
+  };
+
+  for (const auto& b : w.buildings) {
+    size_t ci = nearest_city_for_team(b.team, b.pos);
+    auto& p = profiles[ci];
+    if (b.type == dom::sim::BuildingType::FactoryHub) ++p.industrialHubs;
+    else if (b.type == dom::sim::BuildingType::Refinery) ++p.refineries;
+    else if (is_factory_type(b.type)) ++p.factories;
+    else if (b.type == dom::sim::BuildingType::Port) {
+      ++p.ports;
+      p.coastalAnchor = p.coastalAnchor || tile_is_coastal(w, b.pos);
+    } else if (b.type == dom::sim::BuildingType::Mine) ++p.miningNodes;
+  }
+
+  for (const auto& n : w.railNodes) {
+    if (n.type != dom::sim::RailNodeType::Depot && n.type != dom::sim::RailNodeType::Station) continue;
+    size_t ci = nearest_city_for_team(n.owner, {n.tile.x + 0.5f, n.tile.y + 0.5f});
+    ++profiles[ci].logisticsNodes;
+  }
+
+  for (const auto& rn : w.resourceNodes) {
+    uint16_t ownerTeam = rn.owner == UINT16_MAX ? 0 : static_cast<uint16_t>(rn.owner > 0 ? rn.owner - 1 : 0);
+    size_t ci = nearest_city_for_team(ownerTeam, rn.pos);
+    ++profiles[ci].nearbyResourceNodes;
+  }
+  return profiles;
+}
 
 CivSettlementShape civ_settlement_shape(const dom::sim::World& w, uint16_t team) {
   std::string k = normalized_civ_key(w, team);
@@ -1087,7 +1187,13 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     else if (rn.type == dom::sim::ResourceNodeType::Ruins) rc = "capital_landmark";
     const auto objStyle = resolve_render_style({RenderStyleDomain::Object, {}, {}, {}, rc, {}, {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
     std::array<float, 3> col{objStyle.tint[0], objStyle.tint[1], objStyle.tint[2]};
-    draw_feature_circle(rn.pos, (strategic ? 0.16f : 0.24f) * objStyle.sizeScale[0], col);
+    float r = (strategic ? 0.20f : 0.28f) * objStyle.sizeScale[0];
+    if (rn.type == dom::sim::ResourceNodeType::Ruins) r *= 1.25f;
+    else if (rn.type == dom::sim::ResourceNodeType::Ore) r *= 1.14f;
+    draw_feature_circle(rn.pos, r, col);
+    if (strategic || rn.type == dom::sim::ResourceNodeType::Ore || rn.type == dom::sim::ResourceNodeType::Ruins) {
+      draw_ring(rn.pos, r + 0.11f, 0.05f, mix_color(col, {1.0f, 1.0f, 1.0f}, 0.35f));
+    }
   }
 
   for (const auto& dd : w.deepDeposits) {
@@ -1371,28 +1477,41 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
     plot_line(out, res, ax, ay, bx, by, e.disrupted ? std::array<uint8_t, 3>{212, 78, 70} : std::array<uint8_t, 3>{220, 214, 168});
   }
 
-  for (const auto& c : w.cities) {
+  auto cityProfiles = build_city_presence_profiles(w);
+  for (size_t ci = 0; ci < w.cities.size(); ++ci) {
+    const auto& c = w.cities[ci];
     int gx = std::clamp(static_cast<int>(c.pos.x), 0, w.width - 1);
     int gy = std::clamp(static_cast<int>(c.pos.y), 0, w.height - 1);
     if (!w.godMode && w.fog[gy * w.width + gx] > 0 && c.team != 0) continue;
     int px = world_to_minimap_px(c.pos.x, static_cast<float>(w.width), res);
     int py = world_to_minimap_px(c.pos.y, static_cast<float>(w.height), res);
     auto rgb = team_rgb(c.team);
-    int dot = c.capital ? 3 : (c.level >= 4 ? 2 : 1);
+    SettlementTier tier = settlement_tier(c);
+    int dot = tier == SettlementTier::Capital ? 3 : (tier == SettlementTier::Major ? 2 : 1);
     plot_dot(out, res, px, py, rgb, dot);
-    if (c.capital) {
-      plot_dot(out, res, px, py, {255, 245, 150}, 1);
-    }
+    if (tier == SettlementTier::Capital) plot_dot(out, res, px, py, {255, 245, 150}, 1);
+    if (tier == SettlementTier::Major) plot_dot(out, res, px, py, {222, 232, 255}, 0);
+    if (cityProfiles[ci].industrialHubs > 0 || cityProfiles[ci].factories > 0) plot_dot(out, res, px + 1, py, {214, 128, 84}, 0);
+    if (cityProfiles[ci].refineries > 0) plot_dot(out, res, px + 1, py + 1, {235, 174, 94}, 0);
+    if (cityProfiles[ci].ports > 0 || cityProfiles[ci].coastalAnchor) plot_dot(out, res, px, py + 1, {80, 188, 240}, 0);
+    if (cityProfiles[ci].logisticsNodes > 0) plot_dot(out, res, px - 1, py, {224, 224, 120}, 0);
   }
 
   for (const auto& b : w.buildings) {
     int px = world_to_minimap_px(b.pos.x, static_cast<float>(w.width), res);
     int py = world_to_minimap_px(b.pos.y, static_cast<float>(w.height), res);
-    if (b.type == dom::sim::BuildingType::Port) plot_dot(out, res, px, py, {80, 188, 240}, 0);
+    if (b.type == dom::sim::BuildingType::Port) plot_dot(out, res, px, py, {80, 188, 240}, 1);
     if (b.type == dom::sim::BuildingType::Mine) plot_dot(out, res, px, py, {224, 194, 78}, 0);
-    if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery) {
+    if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || is_factory_type(b.type)) {
       plot_dot(out, res, px, py, {206, 132, 78}, 0);
     }
+  }
+
+  for (const auto& rn : w.resourceNodes) {
+    int px = world_to_minimap_px(rn.pos.x, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(rn.pos.y, static_cast<float>(w.height), res);
+    if (rn.type == dom::sim::ResourceNodeType::Ore) plot_dot(out, res, px, py, {242, 216, 112}, 0);
+    else if (rn.type == dom::sim::ResourceNodeType::Ruins) plot_dot(out, res, px, py, {196, 148, 240}, 0);
   }
 
   for (const auto& n : w.railNodes) {
@@ -1867,46 +1986,44 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     if (u.supplyState == dom::sim::SupplyState::OutOfSupply) { (void)dom::ui::icons::resolve_marker_id("warning", u.team); draw_ring(u.renderPos, 0.60f, 0.10f, {0.95f, 0.22f, 0.22f}); }
   }
 
-  struct TeamRegionMarkers { int industrial{0}; int ports{0}; int mines{0}; int rail{0}; };
-  std::vector<TeamRegionMarkers> regionMarkers(w.players.size());
-  for (const auto& b : w.buildings) {
-    if (b.team >= regionMarkers.size()) continue;
-    if (b.type == dom::sim::BuildingType::Port) ++regionMarkers[b.team].ports;
-    if (b.type == dom::sim::BuildingType::Mine) ++regionMarkers[b.team].mines;
-    if (b.type == dom::sim::BuildingType::FactoryHub || b.type == dom::sim::BuildingType::SteelMill || b.type == dom::sim::BuildingType::Refinery || b.type == dom::sim::BuildingType::MachineWorks || b.type == dom::sim::BuildingType::MunitionsPlant || b.type == dom::sim::BuildingType::ElectronicsLab) ++regionMarkers[b.team].industrial;
-  }
-  for (const auto& n : w.railNodes) {
-    if (n.owner >= regionMarkers.size()) continue;
-    if (n.type == dom::sim::RailNodeType::Depot || n.type == dom::sim::RailNodeType::Station) ++regionMarkers[n.owner].rail;
-  }
-
-  for (const auto& cty : w.cities) {
+  auto cityProfiles = build_city_presence_profiles(w);
+  for (size_t ci = 0; ci < w.cities.size(); ++ci) {
+    const auto& cty = w.cities[ci];
     int gx = std::clamp(static_cast<int>(cty.pos.x), 0, w.width - 1);
     int gy = std::clamp(static_cast<int>(cty.pos.y), 0, w.height - 1);
     if (!w.godMode && w.fog[gy * w.width + gx] > 0 && cty.team != 0) continue;
     ++gEntityCounters.cityPresentationResolves;
     note_content_resolution(ContentResolutionDomain::CityRegion, false);
-    if (cty.capital) ++gEntityCounters.capitalPresentationResolves;
 
-    TeamRegionMarkers markers{};
-    if (cty.team < regionMarkers.size()) markers = regionMarkers[cty.team];
+    const auto tier = settlement_tier(cty);
+    if (tier == SettlementTier::Capital) ++gEntityCounters.capitalPresentationResolves;
+    const auto& markers = cityProfiles[ci];
 
     auto rel = diplomatic_color(w, cty.team);
     auto theme = theme_tint_for_team(w, cty.team);
-    auto col = mix_color(rel, theme, 0.3f);
-    float core = cty.capital ? 1.28f : (cty.level >= 5 ? 1.16f : (cty.level >= 3 ? 1.0f : 0.76f));
+    auto col = mix_color(rel, theme, tier == SettlementTier::Capital ? 0.4f : 0.3f);
+    float core = tier == SettlementTier::Capital ? 1.32f : (tier == SettlementTier::Major ? 1.04f : 0.74f);
     if (c.zoom > 80.0f) core *= 0.78f;
     else if (c.zoom < 20.0f) core *= 1.08f;
 
     CivSettlementShape shape = civ_settlement_shape(w, cty.team);
 
-    glBegin(GL_QUADS);
-    glColor3f(col[0], col[1], col[2]);
-    glVertex2f(cty.pos.x - core, cty.pos.y - core * 0.85f);
-    glVertex2f(cty.pos.x + core, cty.pos.y - core * 0.85f);
-    glVertex2f(cty.pos.x + core, cty.pos.y + core * 0.85f);
-    glVertex2f(cty.pos.x - core, cty.pos.y + core * 0.85f);
-    glEnd();
+    if (tier == SettlementTier::Minor) {
+      glBegin(GL_TRIANGLES);
+      glColor3f(col[0], col[1], col[2]);
+      glVertex2f(cty.pos.x, cty.pos.y + core * 0.94f);
+      glVertex2f(cty.pos.x - core * 0.72f, cty.pos.y - core * 0.55f);
+      glVertex2f(cty.pos.x + core * 0.72f, cty.pos.y - core * 0.55f);
+      glEnd();
+    } else {
+      glBegin(GL_QUADS);
+      glColor3f(col[0], col[1], col[2]);
+      glVertex2f(cty.pos.x - core, cty.pos.y - core * 0.85f);
+      glVertex2f(cty.pos.x + core, cty.pos.y - core * 0.85f);
+      glVertex2f(cty.pos.x + core, cty.pos.y + core * 0.85f);
+      glVertex2f(cty.pos.x - core, cty.pos.y + core * 0.85f);
+      glEnd();
+    }
 
     float kx = 0.42f;
     float ky = 0.58f;
@@ -1920,29 +2037,18 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     else { ++gEntityCounters.cityPresentationFallbacks; note_content_resolution(ContentResolutionDomain::CityRegion, true); }
 
     glBegin(GL_TRIANGLES);
-    auto lm = cty.capital ? std::array<float,3>{1.0f, 0.95f, 0.65f} : std::array<float,3>{0.88f, 0.88f, 0.9f};
+    auto lm = tier == SettlementTier::Capital ? std::array<float,3>{1.0f, 0.95f, 0.65f} : (tier == SettlementTier::Major ? std::array<float,3>{0.90f, 0.92f, 0.96f} : std::array<float,3>{0.84f, 0.84f, 0.88f});
     glColor3f(lm[0], lm[1], lm[2]);
-    float h = cty.capital ? 1.0f : (cty.level >= 4 ? 0.84f : 0.62f);
+    float h = tier == SettlementTier::Capital ? 1.0f : (tier == SettlementTier::Major ? 0.8f : 0.56f);
     glVertex2f(cty.pos.x, cty.pos.y + h * ky);
     glVertex2f(cty.pos.x - h * kx, cty.pos.y - h * 0.18f);
     glVertex2f(cty.pos.x + h * kx, cty.pos.y - h * 0.18f);
     glEnd();
 
-    if (cty.level >= 5 && c.zoom < 70.0f) {
-      glBegin(GL_QUADS);
-      glColor3f(col[0] * 0.86f, col[1] * 0.86f, col[2] * 0.9f);
-      glVertex2f(cty.pos.x - core * 1.5f, cty.pos.y - core * 0.35f);
-      glVertex2f(cty.pos.x - core * 0.85f, cty.pos.y - core * 0.35f);
-      glVertex2f(cty.pos.x - core * 0.85f, cty.pos.y + core * 0.35f);
-      glVertex2f(cty.pos.x - core * 1.5f, cty.pos.y + core * 0.35f);
-      glVertex2f(cty.pos.x + core * 0.85f, cty.pos.y - core * 0.35f);
-      glVertex2f(cty.pos.x + core * 1.5f, cty.pos.y - core * 0.35f);
-      glVertex2f(cty.pos.x + core * 1.5f, cty.pos.y + core * 0.35f);
-      glVertex2f(cty.pos.x + core * 0.85f, cty.pos.y + core * 0.35f);
-      glEnd();
+    if (tier == SettlementTier::Capital || tier == SettlementTier::Major) {
+      (void)dom::ui::icons::resolve_marker_id("capital", cty.team);
+      draw_ring(cty.pos, core + 0.45f, tier == SettlementTier::Capital ? 0.11f : 0.08f, tier == SettlementTier::Capital ? std::array<float,3>{0.98f, 0.92f, 0.36f} : std::array<float,3>{0.78f, 0.82f, 0.9f});
     }
-
-    if (cty.capital || cty.level >= 4) { (void)dom::ui::icons::resolve_marker_id("capital", cty.team); draw_ring(cty.pos, core + 0.45f, cty.capital ? 0.11f : 0.08f, cty.capital ? std::array<float,3>{0.98f, 0.92f, 0.36f} : std::array<float,3>{0.78f, 0.82f, 0.9f}); }
 
     auto regionMark = [&](float ox, float oy, const std::array<float, 3>& rc, float s) {
       glBegin(GL_QUADS);
@@ -1953,10 +2059,22 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       glVertex2f(cty.pos.x + ox - s, cty.pos.y + oy + s);
       glEnd();
     };
-    if (markers.industrial > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.industrialRegionMarkers; regionMark(core * 0.95f, -core * 0.7f, {0.88f, 0.52f, 0.34f}, 0.12f); }
-    if (markers.ports > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.portRegionMarkers; regionMark(core * 0.2f, -core * 1.05f, {0.36f, 0.72f, 0.92f}, 0.11f); }
-    if (markers.rail > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.railRegionMarkers; regionMark(-core * 0.95f, -core * 0.7f, {0.95f, 0.9f, 0.44f}, 0.1f); }
-    if (markers.mines > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.miningRegionMarkers; regionMark(-core * 0.2f, -core * 1.05f, {0.94f, 0.84f, 0.42f}, 0.11f); }
+    auto regionDiamond = [&](float ox, float oy, const std::array<float, 3>& rc, float s) {
+      glBegin(GL_TRIANGLE_FAN);
+      glColor3f(rc[0], rc[1], rc[2]);
+      glVertex2f(cty.pos.x + ox, cty.pos.y + oy + s);
+      glVertex2f(cty.pos.x + ox + s, cty.pos.y + oy);
+      glVertex2f(cty.pos.x + ox, cty.pos.y + oy - s);
+      glVertex2f(cty.pos.x + ox - s, cty.pos.y + oy);
+      glEnd();
+    };
+    if (markers.industrialHubs > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.industrialRegionMarkers; regionMark(core * 1.0f, -core * 0.72f, {0.90f, 0.56f, 0.38f}, 0.12f); }
+    if (markers.factories > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.industrialRegionMarkers; regionDiamond(core * 0.7f, -core * 1.06f, {0.82f, 0.42f, 0.30f}, 0.1f); }
+    if (markers.refineries > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.industrialRegionMarkers; regionMark(core * 1.24f, -core * 1.04f, {0.95f, 0.70f, 0.42f}, 0.09f); }
+    if (markers.ports > 0 || markers.coastalAnchor) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.portRegionMarkers; regionMark(core * 0.16f, -core * 1.1f, {0.34f, 0.74f, 0.94f}, 0.11f); }
+    if (markers.logisticsNodes > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.railRegionMarkers; regionDiamond(-core * 0.95f, -core * 0.72f, {0.95f, 0.9f, 0.44f}, 0.1f); }
+    if (markers.miningNodes > 0) { ++gEntityCounters.regionPresentationResolves; ++gEntityCounters.miningRegionMarkers; regionMark(-core * 0.2f, -core * 1.05f, {0.94f, 0.84f, 0.42f}, 0.11f); }
+    if (markers.nearbyResourceNodes > 2) regionDiamond(-core * 0.65f, -core * 1.1f, {0.58f, 0.88f, 0.62f}, 0.08f);
   }
 
   if (gEntityPresentationDebug) {
