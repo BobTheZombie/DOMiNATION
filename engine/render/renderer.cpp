@@ -1118,6 +1118,154 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
   }
 }
 
+void draw_strategic_geography_grounding(const dom::sim::World& w, const Camera& c) {
+  const float roadBaseWidth = c.zoom > 34.0f ? 1.0f : 2.4f;
+  const float railBaseWidth = c.zoom > 34.0f ? 1.2f : 2.9f;
+  const float riverWidth = c.zoom > 46.0f ? 1.0f : 2.1f;
+
+  std::unordered_map<uint32_t, glm::vec2> railNodeCache;
+  railNodeCache.reserve(w.railNodes.size());
+  for (const auto& n : w.railNodes) railNodeCache[n.id] = {n.tile.x + 0.5f, n.tile.y + 0.5f};
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  glLineWidth(roadBaseWidth + 2.0f);
+  glBegin(GL_LINES);
+  for (const auto& r : w.roads) {
+    glColor4f(0.12f, 0.10f, 0.08f, 0.35f);
+    glVertex2f(static_cast<float>(r.a.x) + 0.5f, static_cast<float>(r.a.y) + 0.5f);
+    glVertex2f(static_cast<float>(r.b.x) + 0.5f, static_cast<float>(r.b.y) + 0.5f);
+  }
+  glEnd();
+
+  glLineWidth(roadBaseWidth);
+  glBegin(GL_LINES);
+  for (const auto& r : w.roads) {
+    float quality = std::clamp(r.quality / 3.0f, 0.35f, 1.0f);
+    std::array<float, 3> rc = r.owner == 0 ? std::array<float, 3>{0.94f, 0.86f, 0.52f}
+                                            : (r.owner == 1 ? std::array<float, 3>{0.45f, 0.79f, 0.95f}
+                                                            : std::array<float, 3>{0.72f, 0.72f, 0.72f});
+    rc = mix_color(rc, {0.52f, 0.36f, 0.2f}, 0.35f);
+    glColor4f(rc[0], rc[1], rc[2], 0.52f + quality * 0.34f);
+    glVertex2f(static_cast<float>(r.a.x) + 0.5f, static_cast<float>(r.a.y) + 0.5f);
+    glVertex2f(static_cast<float>(r.b.x) + 0.5f, static_cast<float>(r.b.y) + 0.5f);
+  }
+  glEnd();
+
+  glLineWidth(railBaseWidth + 2.2f);
+  glBegin(GL_LINES);
+  for (const auto& e : w.railEdges) {
+    auto ai = railNodeCache.find(e.aNode);
+    auto bi = railNodeCache.find(e.bNode);
+    if (ai == railNodeCache.end() || bi == railNodeCache.end()) continue;
+    glColor4f(0.08f, 0.08f, 0.1f, 0.5f);
+    glVertex2f(ai->second.x, ai->second.y);
+    glVertex2f(bi->second.x, bi->second.y);
+  }
+  glEnd();
+
+  glLineWidth(railBaseWidth);
+  glBegin(GL_LINES);
+  for (const auto& e : w.railEdges) {
+    auto ai = railNodeCache.find(e.aNode);
+    auto bi = railNodeCache.find(e.bNode);
+    if (ai == railNodeCache.end() || bi == railNodeCache.end()) continue;
+    std::array<float, 3> col = e.disrupted ? std::array<float, 3>{0.92f, 0.28f, 0.22f} : std::array<float, 3>{0.86f, 0.84f, 0.78f};
+    if (e.bridge) col = mix_color(col, {0.98f, 0.9f, 0.45f}, 0.55f);
+    if (e.tunnel) col = mix_color(col, {0.56f, 0.56f, 0.62f}, 0.35f);
+    float quality = std::clamp(e.quality / 3.0f, 0.3f, 1.0f);
+    glColor4f(col[0], col[1], col[2], 0.65f + quality * 0.25f);
+    glVertex2f(ai->second.x, ai->second.y);
+    glVertex2f(bi->second.x, bi->second.y);
+  }
+  glEnd();
+
+  glLineWidth(std::max(1.0f, riverWidth + 2.0f));
+  glBegin(GL_LINES);
+  for (int y = 0; y < w.height; ++y) {
+    for (int x = 0; x < w.width; ++x) {
+      size_t i = static_cast<size_t>(y * w.width + x);
+      if (w.riverMap.empty() || i >= w.riverMap.size() || w.riverMap[i] == 0) continue;
+      glm::vec2 p{x + 0.5f, y + 0.5f};
+      const int ox[4] = {1, 0, -1, 0};
+      const int oy[4] = {0, 1, 0, -1};
+      for (int d = 0; d < 4; ++d) {
+        int nx = x + ox[d], ny = y + oy[d];
+        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+        size_t ni = static_cast<size_t>(ny * w.width + nx);
+        if (ni >= w.riverMap.size() || w.riverMap[ni] == 0) continue;
+        if (nx < x || (nx == x && ny < y)) continue;
+        glColor4f(0.08f, 0.16f, 0.22f, 0.38f);
+        glVertex2f(p.x, p.y);
+        glVertex2f(nx + 0.5f, ny + 0.5f);
+      }
+    }
+  }
+  glEnd();
+
+  glLineWidth(riverWidth);
+  glBegin(GL_LINES);
+  for (int y = 0; y < w.height; ++y) {
+    for (int x = 0; x < w.width; ++x) {
+      size_t i = static_cast<size_t>(y * w.width + x);
+      if (w.riverMap.empty() || i >= w.riverMap.size() || w.riverMap[i] == 0) continue;
+      glm::vec2 p{x + 0.5f, y + 0.5f};
+      const int ox[4] = {1, 0, -1, 0};
+      const int oy[4] = {0, 1, 0, -1};
+      for (int d = 0; d < 4; ++d) {
+        int nx = x + ox[d], ny = y + oy[d];
+        if (nx < 0 || ny < 0 || nx >= w.width || ny >= w.height) continue;
+        size_t ni = static_cast<size_t>(ny * w.width + nx);
+        if (ni >= w.riverMap.size() || w.riverMap[ni] == 0) continue;
+        if (nx < x || (nx == x && ny < y)) continue;
+        glColor4f(0.22f, 0.68f, 0.94f, 0.78f);
+        glVertex2f(p.x, p.y);
+        glVertex2f(nx + 0.5f, ny + 0.5f);
+      }
+    }
+  }
+  glEnd();
+
+  glPointSize(c.zoom > 35.0f ? 3.0f : 4.0f);
+  glBegin(GL_POINTS);
+  for (const auto& e : w.railEdges) {
+    if (!e.bridge) continue;
+    auto ai = railNodeCache.find(e.aNode);
+    auto bi = railNodeCache.find(e.bNode);
+    if (ai == railNodeCache.end() || bi == railNodeCache.end()) continue;
+    glm::vec2 mid = (ai->second + bi->second) * 0.5f;
+    glColor4f(1.0f, 0.92f, 0.56f, e.disrupted ? 0.45f : 0.96f);
+    glVertex2f(mid.x, mid.y);
+  }
+  for (const auto& r : w.roads) {
+    glm::ivec2 c0 = r.a;
+    glm::ivec2 c1 = r.b;
+    const int dx = std::abs(c1.x - c0.x);
+    const int dy = std::abs(c1.y - c0.y);
+    const int steps = std::max(dx, dy);
+    if (steps <= 0) continue;
+    bool crossing = false;
+    for (int s = 0; s <= steps; ++s) {
+      float t = static_cast<float>(s) / static_cast<float>(steps);
+      int sx = std::clamp(static_cast<int>(std::round(c0.x + (c1.x - c0.x) * t)), 0, w.width - 1);
+      int sy = std::clamp(static_cast<int>(std::round(c0.y + (c1.y - c0.y) * t)), 0, w.height - 1);
+      size_t si = static_cast<size_t>(sy * w.width + sx);
+      if (!w.riverMap.empty() && si < w.riverMap.size() && w.riverMap[si] != 0) {
+        crossing = true;
+        break;
+      }
+    }
+    if (!crossing) continue;
+    glm::vec2 mid = {((float)c0.x + (float)c1.x) * 0.5f + 0.5f, ((float)c0.y + (float)c1.y) * 0.5f + 0.5f};
+    glColor4f(0.98f, 0.92f, 0.66f, 0.9f);
+    glVertex2f(mid.x, mid.y);
+  }
+  glEnd();
+
+  glDisable(GL_BLEND);
+}
+
 struct ClusterBin {
   glm::vec2 center{};
   int count{0};
@@ -1135,6 +1283,19 @@ void plot_dot(std::vector<uint8_t>& pix, int res, int x, int y, const std::array
       pix[i + 1] = rgb[1];
       pix[i + 2] = rgb[2];
     }
+  }
+}
+
+void plot_line(std::vector<uint8_t>& pix, int res, int x0, int y0, int x1, int y1, const std::array<uint8_t, 3>& rgb) {
+  int dx = std::abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+  int dy = -std::abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+  int err = dx + dy;
+  while (true) {
+    plot_dot(pix, res, x0, y0, rgb, 0);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
   }
 }
 
@@ -1176,6 +1337,38 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       out[i + 1] = static_cast<uint8_t>(g * 255.0f);
       out[i + 2] = static_cast<uint8_t>(b * 255.0f);
     }
+  }
+
+  for (int y = 1; y < w.height - 1; ++y) {
+    for (int x = 1; x < w.width - 1; ++x) {
+      size_t i = static_cast<size_t>(y * w.width + x);
+      if (w.riverMap.empty() || i >= w.riverMap.size() || w.riverMap[i] == 0) continue;
+      int px = world_to_minimap_px(x + 0.5f, static_cast<float>(w.width), res);
+      int py = world_to_minimap_px(y + 0.5f, static_cast<float>(w.height), res);
+      plot_dot(out, res, px, py, {74, 170, 230}, 0);
+    }
+  }
+
+  for (const auto& r : w.roads) {
+    int ax = world_to_minimap_px(static_cast<float>(r.a.x) + 0.5f, static_cast<float>(w.width), res);
+    int ay = world_to_minimap_px(static_cast<float>(r.a.y) + 0.5f, static_cast<float>(w.height), res);
+    int bx = world_to_minimap_px(static_cast<float>(r.b.x) + 0.5f, static_cast<float>(w.width), res);
+    int by = world_to_minimap_px(static_cast<float>(r.b.y) + 0.5f, static_cast<float>(w.height), res);
+    plot_line(out, res, ax, ay, bx, by, {180, 154, 88});
+  }
+
+  std::unordered_map<uint32_t, glm::vec2> railNodeCache;
+  railNodeCache.reserve(w.railNodes.size());
+  for (const auto& n : w.railNodes) railNodeCache[n.id] = {n.tile.x + 0.5f, n.tile.y + 0.5f};
+  for (const auto& e : w.railEdges) {
+    auto ai = railNodeCache.find(e.aNode);
+    auto bi = railNodeCache.find(e.bNode);
+    if (ai == railNodeCache.end() || bi == railNodeCache.end()) continue;
+    int ax = world_to_minimap_px(ai->second.x, static_cast<float>(w.width), res);
+    int ay = world_to_minimap_px(ai->second.y, static_cast<float>(w.height), res);
+    int bx = world_to_minimap_px(bi->second.x, static_cast<float>(w.width), res);
+    int by = world_to_minimap_px(bi->second.y, static_cast<float>(w.height), res);
+    plot_line(out, res, ax, ay, bx, by, e.disrupted ? std::array<uint8_t, 3>{212, 78, 70} : std::array<uint8_t, 3>{220, 214, 168});
   }
 
   for (const auto& c : w.cities) {
@@ -1416,32 +1609,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   if (gOverlay.showFog && !w.godMode) draw_textured_overlay(gOverlay.fogTex, w, 1.0f, {0.0f, 0.0f, 0.0f}, true);
 
   draw_forest_and_feature_markers(w, c);
-
-  glLineWidth(c.zoom > 30.0f ? 1.0f : 2.0f);
-  glBegin(GL_LINES);
-  for (const auto& r : w.roads) {
-    if (r.owner == 0) glColor3f(0.95f, 0.85f, 0.35f);
-    else if (r.owner == 1) glColor3f(0.35f, 0.8f, 0.95f);
-    else glColor3f(0.7f, 0.7f, 0.7f);
-    glVertex2f((float)r.a.x + 0.5f, (float)r.a.y + 0.5f);
-    glVertex2f((float)r.b.x + 0.5f, (float)r.b.y + 0.5f);
-  }
-  glEnd();
-
-  glLineWidth(c.zoom > 30.0f ? 1.2f : 2.6f);
-  glBegin(GL_LINES);
-  for (const auto& e : w.railEdges) {
-    glm::vec2 a{0.0f}, b{0.0f};
-    for (const auto& n : w.railNodes) {
-      if (n.id == e.aNode) a = {n.tile.x + 0.5f, n.tile.y + 0.5f};
-      if (n.id == e.bNode) b = {n.tile.x + 0.5f, n.tile.y + 0.5f};
-    }
-    if (e.disrupted) glColor3f(0.92f, 0.28f, 0.22f);
-    else if (e.bridge) glColor3f(0.86f, 0.86f, 0.52f);
-    else glColor3f(0.74f, 0.74f, 0.78f);
-    glVertex2f(a.x, a.y); glVertex2f(b.x, b.y);
-  }
-  glEnd();
+  draw_strategic_geography_grounding(w, c);
 
   glPointSize(c.zoom > 40.0f ? 4.0f : 6.0f);
   glBegin(GL_POINTS);
@@ -1510,6 +1678,11 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
     float sx = b.size.x * 0.5f * bStyle.sizeScale[0];
     float sy = b.size.y * 0.5f * bStyle.sizeScale[1];
+    glColor4f(0.06f, 0.05f, 0.04f, 0.35f);
+    glVertex2f(b.pos.x - sx * 0.95f, b.pos.y - sy * 0.95f + 0.1f);
+    glVertex2f(b.pos.x + sx * 0.95f, b.pos.y - sy * 0.95f + 0.1f);
+    glVertex2f(b.pos.x + sx * 0.95f, b.pos.y + sy * 0.95f + 0.1f);
+    glVertex2f(b.pos.x - sx * 0.95f, b.pos.y + sy * 0.95f + 0.1f);
     glColor3f(base[0], base[1], base[2]);
     glVertex2f(b.pos.x - sx, b.pos.y - sy);
     glVertex2f(b.pos.x + sx, b.pos.y - sy);
@@ -1528,6 +1701,17 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glVertex2f(b.pos.x + ax, b.pos.y - ay);
     glVertex2f(b.pos.x + ax, b.pos.y + ay);
     glVertex2f(b.pos.x - ax, b.pos.y + ay);
+
+    if (b.type == dom::sim::BuildingType::Port || b.type == dom::sim::BuildingType::Mine || b.type == dom::sim::BuildingType::FactoryHub) {
+      auto ring = b.type == dom::sim::BuildingType::Port ? std::array<float, 3>{0.44f, 0.82f, 0.94f}
+                                                         : (b.type == dom::sim::BuildingType::Mine ? std::array<float, 3>{0.96f, 0.84f, 0.46f}
+                                                                                                    : std::array<float, 3>{0.94f, 0.64f, 0.42f});
+      glColor4f(ring[0], ring[1], ring[2], 0.28f);
+      glVertex2f(b.pos.x - sx * 1.2f, b.pos.y - sy * 1.2f);
+      glVertex2f(b.pos.x + sx * 1.2f, b.pos.y - sy * 1.2f);
+      glVertex2f(b.pos.x + sx * 1.2f, b.pos.y + sy * 1.2f);
+      glVertex2f(b.pos.x - sx * 1.2f, b.pos.y + sy * 1.2f);
+    }
   }
   glEnd();
 
