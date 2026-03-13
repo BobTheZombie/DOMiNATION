@@ -29,6 +29,9 @@ int count_units(const dom::sim::World& w, uint16_t team, dom::sim::UnitType t) {
 int count_buildings(const dom::sim::World& w, uint16_t team, dom::sim::BuildingType t) {
   int n = 0; for (const auto& b : w.buildings) if (b.team == team && b.type == t && !b.underConstruction) ++n; return n;
 }
+int count_buildings_any(const dom::sim::World& w, uint16_t team, dom::sim::BuildingType t) {
+  int n = 0; for (const auto& b : w.buildings) if (b.team == team && b.type == t && b.hp > 0.0f) ++n; return n;
+}
 
 bool map_has_navigable_water(const dom::sim::World& w) {
   int water = 0;
@@ -201,7 +204,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
   if (cc && count_units(world, team, dom::sim::UnitType::Worker) < workerTarget) dom::sim::enqueue_train_unit(world, team, cc, dom::sim::UnitType::Worker);
 
   auto maybeBuild = [&](dom::sim::BuildingType t, glm::vec2 offset) {
-    if (count_buildings(world, team, t) == 0) {
+    if (count_buildings_any(world, team, t) == 0) {
       dom::sim::start_build_placement(world, team, t);
       dom::sim::update_build_placement(world, team, base + offset);
       if (dom::sim::confirm_build_placement(world, team)) record_expansion(world, flowPhase);
@@ -220,19 +223,21 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     }
   };
 
-  if (player.popCap - player.popUsed <= 3 || (flowPhase == dom::sim::MatchFlowPhase::EarlyExpansion && player.popCap < 18)) maybeBuild(dom::sim::BuildingType::House, {10, 5});
+  const bool popPressure = player.popCap - player.popUsed <= 3 || (flowPhase == dom::sim::MatchFlowPhase::EarlyExpansion && player.popCap < 18);
+  if (popPressure) maybeBuild(dom::sim::BuildingType::House, {10, 5});
   glm::vec2 mountainMinePos{};
   const bool hasMountainSpot = find_mountain_mine_spot(world, team, mountainMinePos);
-  if (count_buildings(world, team, dom::sim::BuildingType::Mine) == 0 || (metalLow && count_buildings(world, team, dom::sim::BuildingType::Mine) < 2 && flowPhase >= dom::sim::MatchFlowPhase::RegionalContest)) {
+  if (count_buildings_any(world, team, dom::sim::BuildingType::Mine) == 0 || (metalLow && count_buildings_any(world, team, dom::sim::BuildingType::Mine) < 2 && flowPhase >= dom::sim::MatchFlowPhase::RegionalContest)) {
     dom::sim::start_build_placement(world, team, dom::sim::BuildingType::Mine);
     dom::sim::update_build_placement(world, team, hasMountainSpot ? mountainMinePos : base + glm::vec2{8, 8});
     if (dom::sim::confirm_build_placement(world, team)) record_expansion(world, flowPhase);
   }
 
+  const bool hardShortage = foodLow || metalLow || wealthLow || knowledgeLow || oilLow;
   if (foodLow || civ.economyBias >= civ.militaryBias) maybeBuild(dom::sim::BuildingType::Farm, {6, 4});
   maybeBuild(dom::sim::BuildingType::LumberCamp, {4, 8});
-  if (wealthLow || flowPhase >= dom::sim::MatchFlowPhase::RegionalContest || civ.economyBias > 1.08f) maybeBuild(dom::sim::BuildingType::Market, {11, 9});
-  if ((knowledgeLow && flowPhase >= dom::sim::MatchFlowPhase::RegionalContest) || civ.scienceBias * civ.aiResearchPriority > 0.95f) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
+  if (wealthLow || flowPhase >= dom::sim::MatchFlowPhase::RegionalContest || civ.economyBias > 1.08f || hardShortage) maybeBuild(dom::sim::BuildingType::Market, {11, 9});
+  if ((knowledgeLow && flowPhase >= dom::sim::MatchFlowPhase::RegionalContest) || civ.scienceBias * civ.aiResearchPriority > 0.95f || (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation && civ.id == "china")) maybeBuild(dom::sim::BuildingType::Library, {12, 12});
 
   const bool industrialEra = player.age >= dom::sim::Age::Industrial;
   const bool industrialWindow = industrialEra || flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation || (world.tick > 760 && civ.economyBias > 1.02f);
@@ -240,12 +245,14 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     const uint32_t priorIndustrial = count_buildings(world, team, dom::sim::BuildingType::SteelMill)
       + count_buildings(world, team, dom::sim::BuildingType::Refinery)
       + count_buildings(world, team, dom::sim::BuildingType::FactoryHub);
-    if (count_buildings(world, team, dom::sim::BuildingType::SteelMill) == 0 && count_buildings(world, team, dom::sim::BuildingType::Mine) > 0 && can_afford(player, dom::sim::Resource::Metal, 80.0f)) maybeBuild(dom::sim::BuildingType::SteelMill, {12, 6});
-    if (count_buildings(world, team, dom::sim::BuildingType::Refinery) == 0 && (can_afford(player, dom::sim::Resource::Metal, 70.0f) || oilLow)) maybeBuild(dom::sim::BuildingType::Refinery, {14, 5});
-    if (count_buildings(world, team, dom::sim::BuildingType::MunitionsPlant) == 0 && civ.militaryBias >= 1.0f && !wealthLow) maybeBuild(dom::sim::BuildingType::MunitionsPlant, {15, 8});
-    if (count_buildings(world, team, dom::sim::BuildingType::MachineWorks) == 0 && (civ.economyBias >= 1.0f || civ.militaryBias >= 1.1f)) maybeBuild(dom::sim::BuildingType::MachineWorks, {13, 10});
-    if (count_buildings(world, team, dom::sim::BuildingType::ElectronicsLab) == 0 && civ.scienceBias >= 1.0f && !knowledgeLow) maybeBuild(dom::sim::BuildingType::ElectronicsLab, {10, 11});
-    if (count_buildings(world, team, dom::sim::BuildingType::FactoryHub) == 0 && (civ.logisticsBias >= 1.0f || civ.economyBias >= 1.1f)) maybeBuild(dom::sim::BuildingType::FactoryHub, {16, 10});
+    const int outSupplyUnits = world.outOfSupplyUnits;
+    const int activeFactoryGap = static_cast<int>(world.factoryCount) - static_cast<int>(world.activeFactories);
+    if (count_buildings_any(world, team, dom::sim::BuildingType::SteelMill) == 0 && count_buildings_any(world, team, dom::sim::BuildingType::Mine) > 0 && (can_afford(player, dom::sim::Resource::Metal, 80.0f) || metalLow)) maybeBuild(dom::sim::BuildingType::SteelMill, {12, 6});
+    if (count_buildings_any(world, team, dom::sim::BuildingType::Refinery) == 0 && (can_afford(player, dom::sim::Resource::Metal, 70.0f) || oilLow)) maybeBuild(dom::sim::BuildingType::Refinery, {14, 5});
+    if (count_buildings_any(world, team, dom::sim::BuildingType::MunitionsPlant) == 0 && civ.militaryBias >= 1.0f && (!wealthLow || flowPhase >= dom::sim::MatchFlowPhase::StrategicCrisis)) maybeBuild(dom::sim::BuildingType::MunitionsPlant, {15, 8});
+    if (count_buildings_any(world, team, dom::sim::BuildingType::MachineWorks) == 0 && (civ.economyBias >= 1.0f || civ.militaryBias >= 1.1f || activeFactoryGap > 0)) maybeBuild(dom::sim::BuildingType::MachineWorks, {13, 10});
+    if (count_buildings_any(world, team, dom::sim::BuildingType::ElectronicsLab) == 0 && (civ.scienceBias >= 1.0f || civ.id == "usa" || civ.id == "tartaria") && !knowledgeLow) maybeBuild(dom::sim::BuildingType::ElectronicsLab, {10, 11});
+    if (count_buildings_any(world, team, dom::sim::BuildingType::FactoryHub) == 0 && (civ.logisticsBias >= 1.0f || civ.economyBias >= 1.1f || outSupplyUnits > 2 || activeFactoryGap > 1)) maybeBuild(dom::sim::BuildingType::FactoryHub, {16, 10});
     const uint32_t nowIndustrial = count_buildings(world, team, dom::sim::BuildingType::SteelMill)
       + count_buildings(world, team, dom::sim::BuildingType::Refinery)
       + count_buildings(world, team, dom::sim::BuildingType::FactoryHub);
@@ -265,7 +272,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
         break;
       }
     }
-    if (militaryRail) maybeBuildRail(rally, dom::sim::RailNodeType::Station);
+    if (militaryRail || world.outOfSupplyUnits > 2) maybeBuildRail(rally, dom::sim::RailNodeType::Station);
     if (civ.aggression >= 1.1f) {
       for (auto& e : world.railEdges) if (e.owner != team && !dom::sim::players_allied(world, e.owner, team)) { e.disrupted = true; ++world.aiRailUsageEvents; break; }
     }
@@ -297,10 +304,10 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     float archBias = civ.scienceBias;
     float cavBias = civ.aggression;
     float siegeBias = civ.defense;
-    if (enemyMix.armor >= 2) { cavBias *= 1.2f; infBias *= 1.08f; }
-    if (enemyMix.air >= 2) { archBias *= 1.2f; infBias *= 1.08f; }
-    if (enemyMix.staticBreak >= 2) { siegeBias *= 1.2f; }
-    if (enemyMix.rangedSupport >= 2) { cavBias *= 1.18f; }
+    if (enemyMix.armor >= 2) { infBias *= 1.25f; cavBias *= 0.85f; }
+    if (enemyMix.air >= 2) { archBias *= 1.26f; }
+    if (enemyMix.staticBreak >= 2) { cavBias *= 1.22f; }
+    if (enemyMix.rangedSupport >= 2) { cavBias *= 1.18f; siegeBias *= 1.1f; }
 
     if (civ.id == "rome") { infBias *= 1.28f; siegeBias *= 1.12f; }
     else if (civ.id == "china") { archBias *= 1.2f; infBias *= 1.08f; }
@@ -314,7 +321,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     const float regionalScale = flowPhase >= dom::sim::MatchFlowPhase::RegionalContest ? 1.0f : 0.35f;
     const float industrialScale = flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.55f;
 
-    const int infTarget = std::clamp((int)std::round(5.0f * infBias * earlyScale), 4, 20);
+    const int infTarget = std::clamp((int)std::round(5.0f * infBias * earlyScale), 4, 22);
     const int archTarget = std::clamp((int)std::round((2.0f * archBias + 1.0f) * regionalScale), 1, 10);
     const int cavTarget = std::clamp((int)std::round((2.0f * cavBias + 1.0f) * regionalScale), 1, 10);
     const int siegeTarget = std::clamp((int)std::round((2.2f * siegeBias) * industrialScale), 1, 8);
@@ -329,7 +336,7 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     const float crisisBoost = flowPhase >= dom::sim::MatchFlowPhase::StrategicCrisis ? 1.3f : 1.0f;
     int fighterTarget = std::clamp((int)std::round((2.0f * civ.militaryBias + (world.worldTension > 40.0f ? 2.0f : 0.0f) + (enemyMix.air >= 2 ? 2.0f : 0.0f)) * crisisBoost), 1, 10);
     int interceptorTarget = std::clamp((int)std::round(1.0f * civ.defense + (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.0f) + (enemyMix.air >= 3 ? 2.0f : 0.0f)), 1, 7);
-    int bomberTarget = std::clamp((int)std::round((1.6f * civ.militaryBias + (enemyMix.staticBreak >= 2 ? 1.0f : 0.0f)) * (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.4f)), 1, 7);
+    int bomberTarget = std::clamp((int)std::round((1.6f * civ.militaryBias + (enemyMix.staticBreak >= 2 ? 1.0f : 0.0f) + (civ.id == "usa" ? 1.0f : 0.0f)) * (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation ? 1.0f : 0.4f)), 1, 8);
     int reconTarget = std::clamp((int)std::round(1.0f + 2.0f * civ.scienceBias), 1, 4);
     if (count_units(world, team, dom::sim::UnitType::Fighter) < fighterTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Fighter);
     if (count_units(world, team, dom::sim::UnitType::Interceptor) < interceptorTarget) dom::sim::enqueue_train_unit(world, team, airbase, dom::sim::UnitType::Interceptor);
@@ -407,6 +414,12 @@ void update_simple_ai(dom::sim::World& world, uint16_t team) {
     if (op.team == team && op.active) { opType = op.type; opTarget = op.target; break; }
   }
   if (opType == dom::sim::OperationType::DefendBorder || opType == dom::sim::OperationType::SecureRoute) opTarget = rally;
+  if (flowPhase == dom::sim::MatchFlowPhase::RegionalContest && (civ.id == "rome" || civ.id == "egypt")) opTarget = rally + glm::vec2{6.0f, 4.0f};
+  if (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation && civ.id == "china") opTarget = enemyBase + glm::vec2{-4.0f, 3.0f};
+  if (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation && civ.id == "usa") opTarget = enemyBase + glm::vec2{2.0f, -6.0f};
+  if (flowPhase >= dom::sim::MatchFlowPhase::RegionalContest && civ.id == "russia") opTarget = enemyBase + glm::vec2{-8.0f, -2.0f};
+  if (flowPhase >= dom::sim::MatchFlowPhase::RegionalContest && civ.id == "japan" && navalRelevant) opTarget = enemyBase + glm::vec2{7.0f, -5.0f};
+  if (flowPhase >= dom::sim::MatchFlowPhase::IndustrialEscalation && civ.id == "tartaria") opTarget = enemyBase + glm::vec2{-10.0f, 6.0f};
   if (hasPassTarget && (civ.id == "rome" || civ.id == "egypt" || civ.defense >= 1.1f)) { opTarget = passPos; ++world.passControlEvents; }
   if (flowPhase == dom::sim::MatchFlowPhase::EarlyExpansion) opTarget = rally;
   if (armageddon) {
