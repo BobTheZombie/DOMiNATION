@@ -1,6 +1,7 @@
 #include "engine/render/renderer.h"
 #include "engine/render/content_resolution.h"
 #include "engine/render/render_stylesheet.h"
+#include "engine/render/terrain_chunk_mesh.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <algorithm>
@@ -983,7 +984,7 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
       int gx = std::clamp(static_cast<int>((static_cast<float>(x) / res) * w.width), 0, w.width - 1);
       int gy = std::clamp(static_cast<int>((static_cast<float>(y) / res) * w.height), 0, w.height - 1);
       size_t gi = static_cast<size_t>(gy * w.width + gx);
-      auto sample = resolve_terrain_visual(w, static_cast<int>(gi));
+      auto sample = resolve_terrain_visual_blended(w, gx + 0.5f, gy + 0.5f);
       float r = sample.color.r;
       float g = sample.color.g;
       float b = sample.color.b;
@@ -1180,13 +1181,13 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   reset_render_stylesheet_counters();
   gEntityCounters = {};
   gStrategicCounters = {};
-  glBegin(GL_QUADS);
-  for (int y = 0; y < w.height - 1; ++y) {
-    for (int x = 0; x < w.width - 1; ++x) {
-      size_t i = y * w.width + x;
-      auto sample = resolve_terrain_visual(w, static_cast<int>(i));
-      glColor3f(sample.color.r, sample.color.g, sample.color.b);
-      glVertex2f(x, y); glVertex2f(x + 1, y); glVertex2f(x + 1, y + 1); glVertex2f(x, y + 1);
+  std::vector<TerrainChunkMesh> terrainChunks;
+  build_terrain_chunk_meshes(w, 16, terrainChunks);
+  glBegin(GL_TRIANGLES);
+  for (const auto& chunk : terrainChunks) {
+    for (const auto& v : chunk.triangles) {
+      glColor3f(v.color.r, v.color.g, v.color.b);
+      glVertex2f(v.x, v.y);
     }
   }
   glEnd();
@@ -1195,7 +1196,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   for (int y = 1; y < w.height - 1; ++y) {
     for (int x = 1; x < w.width - 1; ++x) {
       size_t i = y * w.width + x;
-      auto sample = resolve_terrain_visual(w, static_cast<int>(i));
+      auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f);
       if (!sample.hasCliff) continue;
       float slope = terrain_slope_hint(w, static_cast<int>(i));
       float len = 0.18f + slope * 0.24f;
@@ -1212,8 +1213,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glBegin(GL_QUADS);
     for (int y = 0; y < w.height - 1; ++y) {
       for (int x = 0; x < w.width - 1; ++x) {
-        size_t i = y * w.width + x;
-        auto sample = resolve_terrain_visual(w, static_cast<int>(i));
+        auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f);
         if (gOverlay.showWaterOverlay && !sample.isWater) continue;
         if (gOverlay.showTerrainMaterialOverlay && !gOverlay.showWaterOverlay && sample.isWater) continue;
         glm::vec3 oc = gOverlay.showWaterOverlay ? glm::vec3(0.24f, 0.72f, 1.0f) : sample.accent;

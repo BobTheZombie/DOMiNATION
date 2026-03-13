@@ -45,6 +45,7 @@ struct TerrainPresentationCounters {
 };
 
 TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cellIndex);
+TerrainVisualSample resolve_terrain_visual_blended(const dom::sim::World& world, float worldX, float worldY);
 float terrain_slope_hint(const dom::sim::World& world, int cellIndex);
 
 void reset_terrain_presentation_counters();

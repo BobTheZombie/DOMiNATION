@@ -88,6 +88,29 @@ bool is_land_coast(const dom::sim::World& world, int cellIndex) {
   }
   return false;
 }
+
+float hash01(int x, int y, uint32_t salt) {
+  uint32_t h = static_cast<uint32_t>(x) * 0x8da6b343u ^ static_cast<uint32_t>(y) * 0xd8163841u ^ salt * 0xcb1ab31fu;
+  h ^= h >> 13;
+  h *= 0x85ebca6bu;
+  h ^= h >> 16;
+  return static_cast<float>(h & 0xffffu) / 65535.0f;
+}
+
+TerrainVisualSample blend_samples(const TerrainVisualSample& a, const TerrainVisualSample& b, float t) {
+  TerrainVisualSample out = a;
+  const float k = std::clamp(t, 0.0f, 1.0f);
+  out.color = glm::mix(a.color, b.color, k);
+  out.accent = glm::mix(a.accent, b.accent, k);
+  out.isWater = a.isWater || b.isWater;
+  out.hasForestCanopy = a.hasForestCanopy || b.hasForestCanopy;
+  out.hasCliff = a.hasCliff || b.hasCliff;
+  out.mountain = a.mountain || b.mountain;
+  out.snowCap = a.snowCap || b.snowCap;
+  if (k > 0.5f) out.material = b.material;
+  return out;
+}
+
 } // namespace
 
 float terrain_slope_hint(const dom::sim::World& world, int cellIndex) {
@@ -178,6 +201,57 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
   sample.accent = glm::clamp(sample.accent, glm::vec3(0.0f), glm::vec3(1.0f));
   return sample;
 }
+
+
+TerrainVisualSample resolve_terrain_visual_blended(const dom::sim::World& world, float worldX, float worldY) {
+  if (world.width < 1 || world.height < 1 || world.heightmap.empty()) return {};
+  const float maxX = static_cast<float>(std::max(0, world.width - 1));
+  const float maxY = static_cast<float>(std::max(0, world.height - 1));
+  const float fx = std::clamp(worldX, 0.0f, maxX);
+  const float fy = std::clamp(worldY, 0.0f, maxY);
+  const int x0 = std::clamp(static_cast<int>(fx), 0, world.width - 1);
+  const int y0 = std::clamp(static_cast<int>(fy), 0, world.height - 1);
+  const int x1 = std::clamp(x0 + 1, 0, world.width - 1);
+  const int y1 = std::clamp(y0 + 1, 0, world.height - 1);
+  const int i00 = y0 * world.width + x0;
+  const int i10 = y0 * world.width + x1;
+  const int i01 = y1 * world.width + x0;
+  const int i11 = y1 * world.width + x1;
+
+  TerrainVisualSample s00 = resolve_terrain_visual(world, i00);
+  TerrainVisualSample s10 = resolve_terrain_visual(world, i10);
+  TerrainVisualSample s01 = resolve_terrain_visual(world, i01);
+  TerrainVisualSample s11 = resolve_terrain_visual(world, i11);
+
+  float tx = fx - static_cast<float>(x0);
+  float ty = fy - static_cast<float>(y0);
+
+  const float jitterX = (hash01(x0, y0, 13u) - 0.5f) * 0.22f;
+  const float jitterY = (hash01(x0, y0, 29u) - 0.5f) * 0.22f;
+  tx = std::clamp(tx + jitterX, 0.0f, 1.0f);
+  ty = std::clamp(ty + jitterY, 0.0f, 1.0f);
+
+  TerrainVisualSample top = blend_samples(s00, s10, tx);
+  TerrainVisualSample bottom = blend_samples(s01, s11, tx);
+  TerrainVisualSample out = blend_samples(top, bottom, ty);
+
+  const float h = glm::mix(glm::mix(world.heightmap[static_cast<size_t>(i00)], world.heightmap[static_cast<size_t>(i10)], tx),
+                           glm::mix(world.heightmap[static_cast<size_t>(i01)], world.heightmap[static_cast<size_t>(i11)], tx), ty);
+  if (h > 0.80f) {
+    out.accent = glm::mix(out.accent, glm::vec3(0.92f, 0.94f, 0.97f), std::clamp((h - 0.80f) * 2.4f, 0.0f, 1.0f));
+    out.color = glm::mix(out.color, out.accent, 0.22f);
+    out.snowCap = true;
+  }
+
+  const bool nearWater = s00.isWater || s10.isWater || s01.isWater || s11.isWater;
+  if (nearWater && !out.isWater) {
+    out.color = glm::mix(out.color, material_color(TerrainMaterialId::Littoral), 0.16f);
+  }
+  out.color = glm::clamp(out.color, glm::vec3(0.0f), glm::vec3(1.0f));
+  out.accent = glm::clamp(out.accent, glm::vec3(0.0f), glm::vec3(1.0f));
+  return out;
+}
+
 
 void reset_terrain_presentation_counters() { gCounters = {}; }
 void add_forest_cluster_counter(uint64_t count) { gCounters.forestClusterCount += count; }

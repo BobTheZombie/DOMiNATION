@@ -68,6 +68,7 @@ add_executable(rts
   engine/render/content_resolution.cpp
   engine/render/render_stylesheet.cpp
   engine/render/terrain_materials.cpp
+  engine/render/terrain_chunk_mesh.cpp
   engine/sim/simulation.cpp
   engine/audio/audio_events.cpp
   engine/audio/audio_resolution.cpp
