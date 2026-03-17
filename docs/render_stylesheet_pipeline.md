@@ -43,6 +43,7 @@ Resolved styles now directly feed runtime model selection (`mesh`, `lod_group`) 
 
 ## Runtime attachment consumption
 - Attachment maps authored in stylesheets are consumed during the runtime model pass after mesh/LOD resolution.
+- Runtime hook positions can optionally be authored per asset in `content/asset_manifest.json` under `attachment_hooks` (semantic or hook ID key), with deterministic fallback to built-in defaults.
 - Attachment semantics are presentation-only hooks and do not mutate simulation state.
 - Attachment iteration is key-sorted at runtime to keep deterministic ordering across runs.
 - Unknown hook identifiers use deterministic fallback offsets and increment attachment fallback diagnostics.

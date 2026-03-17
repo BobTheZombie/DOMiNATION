@@ -24,6 +24,7 @@ struct AttachmentHookResolveResult {
   glm::vec3 normalizedOffset{0.0f, 0.0f, 0.0f};
   bool valid{false};
   bool fallback{false};
+  bool assetSpecific{false};
 };
 
 class ModelCache {
@@ -31,16 +32,21 @@ class ModelCache {
   ModelResolveResult resolve(std::string_view meshId,
                              std::string_view lodGroup,
                              ContentLodTier lodTier);
-  AttachmentHookResolveResult resolve_attachment_hook(std::string_view hookId) const;
+  AttachmentHookResolveResult resolve_attachment_hook(std::string_view resolvedAssetId,
+                                                      std::string_view semanticId,
+                                                      std::string_view hookId) const;
 
  private:
-  void lazy_load_manifests();
+  void lazy_load_manifests() const;
 
   struct ManifestState {
     bool loaded{false};
     std::unordered_map<std::string, std::string> lodToAsset;
     std::unordered_map<std::string, std::string> assetToMeshPath;
-  } manifests_;
+    std::unordered_map<std::string, std::unordered_map<std::string, glm::vec3>> assetAttachmentHooks;
+  };
+
+  mutable ManifestState manifests_;
 
   GltfRuntimeLoader loader_;
   std::unordered_set<std::string> warnedMissing_;

@@ -1,5 +1,6 @@
 #include "engine/render/model_cache.h"
 
+#include <array>
 #include <fstream>
 #include <iostream>
 
@@ -11,7 +12,7 @@ namespace {
 constexpr const char* kFallbackModel = "assets_final/fallback/missing_mesh.glb";
 }
 
-void ModelCache::lazy_load_manifests() {
+void ModelCache::lazy_load_manifests() const {
   if (manifests_.loaded) return;
   manifests_.loaded = true;
 
@@ -35,7 +36,15 @@ void ModelCache::lazy_load_manifests() {
   if (assetDoc.is_object() && assetDoc.contains("assets") && assetDoc["assets"].is_array()) {
     for (const auto& asset : assetDoc["assets"]) {
       if (!asset.is_object() || !asset.contains("asset_id") || !asset.contains("mesh")) continue;
-      manifests_.assetToMeshPath[asset["asset_id"].get<std::string>()] = asset["mesh"].get<std::string>();
+      const std::string assetId = asset["asset_id"].get<std::string>();
+      manifests_.assetToMeshPath[assetId] = asset["mesh"].get<std::string>();
+      if (auto hookIt = asset.find("attachment_hooks"); hookIt != asset.end() && hookIt->is_object()) {
+        auto& hookMap = manifests_.assetAttachmentHooks[assetId];
+        for (const auto& [semantic, offsetNode] : hookIt->items()) {
+          if (!offsetNode.is_array() || offsetNode.size() != 3) continue;
+          hookMap[semantic] = glm::vec3{offsetNode[0].get<float>(), offsetNode[1].get<float>(), offsetNode[2].get<float>()};
+        }
+      }
     }
   }
 }
@@ -76,7 +85,10 @@ ModelResolveResult ModelCache::resolve(std::string_view meshId,
   return result;
 }
 
-AttachmentHookResolveResult ModelCache::resolve_attachment_hook(std::string_view hookId) const {
+AttachmentHookResolveResult ModelCache::resolve_attachment_hook(std::string_view resolvedAssetId,
+                                                               std::string_view semanticId,
+                                                               std::string_view hookId) const {
+  lazy_load_manifests();
   static const std::unordered_map<std::string, glm::vec3> kKnownHookOffsets{
       {"banner_socket", {0.0f, 0.92f, 0.0f}},
       {"civ_emblem", {0.0f, 0.56f, 0.0f}},
@@ -88,14 +100,31 @@ AttachmentHookResolveResult ModelCache::resolve_attachment_hook(std::string_view
   };
 
   AttachmentHookResolveResult result{};
-  auto it = kKnownHookOffsets.find(std::string(hookId));
-  if (it == kKnownHookOffsets.end()) {
-    result.fallback = true;
+  const std::array<std::string, 2> lookupKeys = {std::string(hookId), std::string(semanticId)};
+
+  if (const auto assetIt = manifests_.assetAttachmentHooks.find(std::string(resolvedAssetId));
+      assetIt != manifests_.assetAttachmentHooks.end()) {
+    for (const auto& key : lookupKeys) {
+      if (key.empty()) continue;
+      if (const auto offsetIt = assetIt->second.find(key); offsetIt != assetIt->second.end()) {
+        result.normalizedOffset = offsetIt->second;
+        result.valid = true;
+        result.assetSpecific = true;
+        return result;
+      }
+    }
+  }
+
+  for (const auto& key : lookupKeys) {
+    if (key.empty()) continue;
+    const auto it = kKnownHookOffsets.find(key);
+    if (it == kKnownHookOffsets.end()) continue;
+    result.normalizedOffset = it->second;
+    result.valid = true;
     return result;
   }
 
-  result.normalizedOffset = it->second;
-  result.valid = true;
+  result.fallback = true;
   return result;
 }
 
