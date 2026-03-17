@@ -25,6 +25,12 @@ struct EntityPresentationCounters {
   uint64_t guardianPresentationResolves{0};
   uint64_t entityPresentationFallbacks{0};
   uint64_t farLodClusterCount{0};
+  uint64_t modelResolveCount{0};
+  uint64_t modelFallbackCount{0};
+  uint64_t activeModelInstances{0};
+  uint64_t lodModelNearCount{0};
+  uint64_t lodModelMidCount{0};
+  uint64_t lodModelFarCount{0};
 };
 
 struct VisualFeedbackCounters {

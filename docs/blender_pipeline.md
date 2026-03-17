@@ -50,3 +50,6 @@ Styles exported from Blender should be registered in `content/asset_manifest.jso
 
 - Optional Studio scene layout save/load (`tools/dom_asset_studio/scene_preview_layout.json`) can preserve comparison setups between export passes without touching Blender source files or gameplay maps.
 - Use Studio Asset Catalog thumbnail generation to build editor-only browse previews after new GLTF/GLB exports; cached files live under `tools/dom_asset_studio/cache/thumbnails/` and can be safely cleared/regenerated.
+
+## Runtime usage
+Engine runtime now consumes exported GLB assets directly via `asset_manifest.json` and `lod_manifest.json`; invalid or missing paths resolve to deterministic fallback mesh warnings.

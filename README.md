@@ -731,3 +731,9 @@ Use these deterministic integration checks after world-render/content changes:
 - Building stylesheet now covers city, economic, military, industrial, strategic, and wonder classes with explicit `construction`, `damaged`, and `strategic_warning` states.
 - Object stylesheet now covers resource/rail/logistics/guardian/strategic map objects and deterministic fallback classes used by current overlays.
 - Attachments are authored in JSON (`banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`) and remain renderer-driven behavior.
+
+## Runtime 3D model rendering
+- Units, buildings, and world-object markers now route through a bounded runtime model pass backed by `asset_manifest.json` + `lod_manifest.json`.
+- Missing/invalid GLB content resolves deterministically to `assets_final/fallback/missing_mesh.glb` (warning-only).
+- Debug panel counters: `MODEL_RESOLVE_COUNT`, `MODEL_FALLBACK_COUNT`, `ACTIVE_MODEL_INSTANCES`, `LOD_MODEL_TIER_COUNTS`.
+- See `docs/runtime_model_rendering.md`.

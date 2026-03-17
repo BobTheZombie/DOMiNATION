@@ -36,3 +36,6 @@ Style-context selector modes in Studio (default/exact/render-class/civ/theme/sta
 
 
 Attachment metadata remains non-authoritative gameplay data: hooks/anchors are authored in manifests/stylesheets for renderer/pipeline consumption only, and Studio diagnostics enforce safe failures for missing or invalid references during preview/export.
+
+## Runtime model selection
+Resolved styles now directly feed runtime model selection (`mesh`, `lod_group`) for unit/building/object passes with fixed LOD tier mapping and deterministic fallback.
