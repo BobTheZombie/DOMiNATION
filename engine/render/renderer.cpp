@@ -2161,7 +2161,15 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       if (glyph == UnitGlyph::Armor || glyph == UnitGlyph::Naval) s += 0.08f;
       draw_model_instance({u.renderPos, s, base, uStyle.mesh, uStyle.lodGroup, lodTier, u.selected});
 
-      glBegin(GL_QUADS);
+      if (glyph == UnitGlyph::Aircraft) {
+        glBegin(GL_TRIANGLES);
+        glColor3f(base[0], base[1], base[2]);
+        glVertex2f(u.renderPos.x, u.renderPos.y + s);
+        glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.7f);
+        glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.7f);
+        glEnd();
+      } else if (glyph == UnitGlyph::Naval) {
+        glBegin(GL_QUADS);
         glColor3f(base[0], base[1], base[2]);
         glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.55f);
         glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.55f);
