@@ -123,3 +123,6 @@ Attachment conventions by family:
 - Industrial chains: `smoke_stack`
 - Strategic warning entities: `warning_badge`
 - Guardian content: `guardian_aura`
+
+## Civ/theme model override behavior
+Civ and theme overrides now apply to runtime model selection (units/buildings/objects) using the existing deterministic style resolution chain.

@@ -60,6 +60,14 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)entityCounters.guardianPresentationResolves,
               (unsigned long long)entityCounters.entityPresentationFallbacks,
               (unsigned long long)entityCounters.farLodClusterCount);
+  ImGui::Text("MODEL_RESOLVE_COUNT=%llu MODEL_FALLBACK_COUNT=%llu ACTIVE_MODEL_INSTANCES=%llu",
+              (unsigned long long)entityCounters.modelResolveCount,
+              (unsigned long long)entityCounters.modelFallbackCount,
+              (unsigned long long)entityCounters.activeModelInstances);
+  ImGui::Text("LOD_MODEL_TIER_COUNTS near=%llu mid=%llu far=%llu",
+              (unsigned long long)entityCounters.lodModelNearCount,
+              (unsigned long long)entityCounters.lodModelMidCount,
+              (unsigned long long)entityCounters.lodModelFarCount);
   const auto& resolveCounters = dom::render::content_resolution_counters();
   ImGui::Text("MATERIAL_RESOLVE_COUNT=%llu ENTITY_RESOLVE_COUNT=%llu CITY_REGION_RESOLVE_COUNT=%llu ICON_RESOLVE_COUNT=%llu FALLBACK_COUNT=%llu",
               (unsigned long long)resolveCounters.materialResolveCount,

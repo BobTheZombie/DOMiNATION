@@ -67,6 +67,9 @@ add_executable(rts
   engine/render/renderer.cpp
   engine/render/content_resolution.cpp
   engine/render/render_stylesheet.cpp
+  engine/render/gltf_runtime_loader.cpp
+  engine/render/model_cache.cpp
+  engine/render/model_render_pass.cpp
   engine/render/terrain_materials.cpp
   engine/render/terrain_chunk_mesh.cpp
   engine/sim/simulation.cpp
@@ -98,6 +101,9 @@ add_executable(rts
 add_executable(dom_asset_studio
   engine/render/content_resolution.cpp
   engine/render/render_stylesheet.cpp
+  engine/render/gltf_runtime_loader.cpp
+  engine/render/model_cache.cpp
+  engine/render/model_render_pass.cpp
   engine/assets/asset_manager.cpp
   engine/assets/asset_registry.cpp
   engine/assets/texture_atlas.cpp

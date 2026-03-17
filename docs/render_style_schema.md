@@ -29,3 +29,6 @@ Studio scene placements keep resolved style IDs and mesh refs as editor-only pre
 
 
 Studio scene layout persistence (`tools/dom_asset_studio/scene_preview_layout.json`) is editor-only preview state and is intentionally outside render style schema/runtime data.
+
+## Runtime model fields
+`mesh` and `lod_group` are now consumed by the in-game runtime model pass for deterministic GLB selection. State variants continue to override these fields declaratively.

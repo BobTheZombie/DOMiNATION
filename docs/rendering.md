@@ -268,3 +268,6 @@ Attachment hooks are now authored broadly in stylesheets for deterministic marke
 - `smoke_stack` on industrial entities
 - `muzzle_flash` on artillery/armor
 - `selection_badge`, `warning_badge`, `guardian_aura` for UI/FX anchoring
+
+## Runtime model pass (units/buildings/objects)
+The renderer now performs a bounded model-instance pass that consumes resolved stylesheet mesh/lod IDs and uses deterministic fallback handling for missing/invalid GLB entries.

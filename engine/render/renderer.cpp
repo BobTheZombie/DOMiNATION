@@ -2,6 +2,7 @@
 #include "engine/render/content_resolution.h"
 #include "engine/render/render_stylesheet.h"
 #include "engine/render/terrain_chunk_mesh.h"
+#include "engine/render/model_render_pass.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <algorithm>
@@ -1398,7 +1399,7 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     float r = (strategic ? 0.20f : 0.28f) * objStyle.sizeScale[0];
     if (rn.type == dom::sim::ResourceNodeType::Ruins) r *= 1.25f;
     else if (rn.type == dom::sim::ResourceNodeType::Ore) r *= 1.14f;
-    draw_feature_circle(rn.pos, r, col);
+    draw_model_instance({rn.pos, r, col, objStyle.mesh, objStyle.lodGroup, strategic ? ContentLodTier::Far : ContentLodTier::Near, false});
     if (strategic || rn.type == dom::sim::ResourceNodeType::Ore || rn.type == dom::sim::ResourceNodeType::Ruins) {
       draw_ring(rn.pos, r + 0.11f, 0.05f, mix_color(col, {1.0f, 1.0f, 1.0f}, 0.35f));
     }
@@ -1428,7 +1429,7 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     if (!s.discovered && !w.godMode) continue;
     const auto gStyle = resolve_render_style({RenderStyleDomain::Object, s.guardianId, {}, {}, "guardian_site", (s.spawned && s.alive) ? "strategic_warning" : "default", {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
     std::array<float, 3> col{gStyle.tint[0], gStyle.tint[1], gStyle.tint[2]};
-    draw_feature_circle(s.pos, (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0], col);
+    draw_model_instance({s.pos, (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0], col, gStyle.mesh, gStyle.lodGroup, strategic ? ContentLodTier::Far : ContentLodTier::Near, false});
   }
 }
 
@@ -1928,6 +1929,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   reset_terrain_presentation_counters();
   reset_content_resolution_counters();
   reset_render_stylesheet_counters();
+  reset_model_render_counters();
   gEntityCounters = {};
   gStrategicCounters = {};
   std::vector<TerrainChunkMesh> terrainChunks;
@@ -2048,7 +2050,6 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   }
   glEnd();
 
-  glBegin(GL_QUADS);
   for (const auto& b : w.buildings) {
     ++gEntityCounters.buildingPresentationResolves;
     auto bPres = dom::sim::building_content_presentation(w, b.team, b.type, b.definitionId);
@@ -2056,54 +2057,15 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     auto rel = diplomatic_color(w, b.team);
     auto theme = theme_tint_for_team(w, b.team);
     auto base = mix_color(rel, theme, 0.35f);
-    if (b.underConstruction) base = mix_color(base, {0.35f, 0.35f, 0.35f}, 0.45f);
-    if (b.factory.blocked) base = {0.88f, 0.35f, 0.25f};
-    else if (b.factory.active) base = mix_color(base, {0.95f, 0.95f, 0.42f}, 0.2f);
-    const bool logistics = b.type == dom::sim::BuildingType::Port || b.type == dom::sim::BuildingType::Market;
-    const bool mythic = b.type == dom::sim::BuildingType::Wonder;
     std::string state = b.underConstruction ? "construction" : (b.hp < b.maxHp * 0.5f ? "damaged" : "default");
     if (b.factory.blocked) state = "strategic_warning";
     const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, select_lod_tier(c.zoom)});
     if (bStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
     base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
-    float sx = b.size.x * 0.5f * bStyle.sizeScale[0];
-    float sy = b.size.y * 0.5f * bStyle.sizeScale[1];
-    glColor4f(0.06f, 0.05f, 0.04f, 0.35f);
-    glVertex2f(b.pos.x - sx * 0.95f, b.pos.y - sy * 0.95f + 0.1f);
-    glVertex2f(b.pos.x + sx * 0.95f, b.pos.y - sy * 0.95f + 0.1f);
-    glVertex2f(b.pos.x + sx * 0.95f, b.pos.y + sy * 0.95f + 0.1f);
-    glVertex2f(b.pos.x - sx * 0.95f, b.pos.y + sy * 0.95f + 0.1f);
-    glColor3f(base[0], base[1], base[2]);
-    glVertex2f(b.pos.x - sx, b.pos.y - sy);
-    glVertex2f(b.pos.x + sx, b.pos.y - sy);
-    glVertex2f(b.pos.x + sx, b.pos.y + sy);
-    glVertex2f(b.pos.x - sx, b.pos.y + sy);
-
-    auto accent = mix_color(rel, {1.0f, 1.0f, 1.0f}, 0.2f);
-    if (b.type == dom::sim::BuildingType::MissileSilo) accent = {0.95f, 0.24f, 0.24f};
-    if (b.type == dom::sim::BuildingType::RadarTower || b.type == dom::sim::BuildingType::MobileRadar) accent = {0.35f, 0.95f, 0.95f};
-    if (mythic) accent = {0.82f, 0.62f, 0.95f};
-    if (logistics) accent = mix_color(accent, {0.92f, 0.86f, 0.44f}, 0.25f);
-    glColor3f(accent[0], accent[1], accent[2]);
-    float ax = sx * 0.42f;
-    float ay = sy * 0.42f;
-    glVertex2f(b.pos.x - ax, b.pos.y - ay);
-    glVertex2f(b.pos.x + ax, b.pos.y - ay);
-    glVertex2f(b.pos.x + ax, b.pos.y + ay);
-    glVertex2f(b.pos.x - ax, b.pos.y + ay);
-
-    if (b.type == dom::sim::BuildingType::Port || b.type == dom::sim::BuildingType::Mine || b.type == dom::sim::BuildingType::FactoryHub) {
-      auto ring = b.type == dom::sim::BuildingType::Port ? std::array<float, 3>{0.44f, 0.82f, 0.94f}
-                                                         : (b.type == dom::sim::BuildingType::Mine ? std::array<float, 3>{0.96f, 0.84f, 0.46f}
-                                                                                                    : std::array<float, 3>{0.94f, 0.64f, 0.42f});
-      glColor4f(ring[0], ring[1], ring[2], 0.28f);
-      glVertex2f(b.pos.x - sx * 1.2f, b.pos.y - sy * 1.2f);
-      glVertex2f(b.pos.x + sx * 1.2f, b.pos.y - sy * 1.2f);
-      glVertex2f(b.pos.x + sx * 1.2f, b.pos.y + sy * 1.2f);
-      glVertex2f(b.pos.x - sx * 1.2f, b.pos.y + sy * 1.2f);
-    }
+    draw_model_instance({b.pos, std::max(0.35f, b.size.x * 0.22f * bStyle.sizeScale[0]), base, bStyle.mesh, bStyle.lodGroup, select_lod_tier(c.zoom), false});
+    if (b.type == dom::sim::BuildingType::Port) draw_ring(b.pos, 1.05f, 0.08f, {0.44f, 0.82f, 0.94f});
+    if (b.type == dom::sim::BuildingType::FactoryHub) draw_ring(b.pos, 1.0f, 0.08f, {0.94f, 0.64f, 0.42f});
   }
-  glEnd();
 
   glPointSize(c.zoom > 30.0f ? 2.0f : 3.0f);
   glBegin(GL_POINTS);
@@ -2197,16 +2159,9 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       float s = (c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f)) * uStyle.sizeScale[0];
       if (glyph == UnitGlyph::Guardian) s += 0.16f;
       if (glyph == UnitGlyph::Armor || glyph == UnitGlyph::Naval) s += 0.08f;
+      draw_model_instance({u.renderPos, s, base, uStyle.mesh, uStyle.lodGroup, lodTier, u.selected});
 
-      if (glyph == UnitGlyph::Aircraft) {
-        glBegin(GL_TRIANGLES);
-        glColor3f(base[0], base[1], base[2]);
-        glVertex2f(u.renderPos.x, u.renderPos.y + s);
-        glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.7f);
-        glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.7f);
-        glEnd();
-      } else if (glyph == UnitGlyph::Naval) {
-        glBegin(GL_QUADS);
+      glBegin(GL_QUADS);
         glColor3f(base[0], base[1], base[2]);
         glVertex2f(u.renderPos.x - s, u.renderPos.y - s * 0.55f);
         glVertex2f(u.renderPos.x + s, u.renderPos.y - s * 0.55f);
@@ -2237,15 +2192,6 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
         glEnd();
       }
 
-      glBegin(GL_QUADS);
-      auto accent = mix_color(rel, {1.0f, 1.0f, 1.0f}, 0.35f);
-      glColor3f(accent[0], accent[1], accent[2]);
-      float badge = s * 0.3f;
-      glVertex2f(u.renderPos.x - badge, u.renderPos.y - badge);
-      glVertex2f(u.renderPos.x + badge, u.renderPos.y - badge);
-      glVertex2f(u.renderPos.x + badge, u.renderPos.y + badge);
-      glVertex2f(u.renderPos.x - badge, u.renderPos.y + badge);
-      glEnd();
     }
   }
 
@@ -2456,6 +2402,13 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glBlitFramebuffer(0, 0, gOverlay.sceneW, gOverlay.sceneH, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  const auto& modelCounters = model_render_counters();
+  gEntityCounters.modelResolveCount = modelCounters.modelResolveCount;
+  gEntityCounters.modelFallbackCount = modelCounters.modelFallbackCount;
+  gEntityCounters.activeModelInstances = modelCounters.activeModelInstances;
+  gEntityCounters.lodModelNearCount = modelCounters.lodNearInstances;
+  gEntityCounters.lodModelMidCount = modelCounters.lodMidInstances;
+  gEntityCounters.lodModelFarCount = modelCounters.lodFarInstances;
   const auto drawEnd = Clock::now();
   gLastDrawMs = std::chrono::duration<double, std::milli>(drawEnd - drawStart).count();
 }
