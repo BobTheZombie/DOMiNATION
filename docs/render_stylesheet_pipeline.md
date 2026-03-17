@@ -39,3 +39,10 @@ Attachment metadata remains non-authoritative gameplay data: hooks/anchors are a
 
 ## Runtime model selection
 Resolved styles now directly feed runtime model selection (`mesh`, `lod_group`) for unit/building/object passes with fixed LOD tier mapping and deterministic fallback.
+
+
+## Runtime attachment consumption
+- Attachment maps authored in stylesheets are consumed during the runtime model pass after mesh/LOD resolution.
+- Attachment semantics are presentation-only hooks and do not mutate simulation state.
+- Attachment iteration is key-sorted at runtime to keep deterministic ordering across runs.
+- Unknown hook identifiers use deterministic fallback offsets and increment attachment fallback diagnostics.

@@ -14,12 +14,27 @@ This pass adds a deterministic runtime 3D model integration layer for units, bui
 - mid: `_lod1`
 - far: `_lod2` (falls back to group/base asset if not authored)
 
+
+## Runtime attachment/effect hooks
+- `ResolvedRenderStyle::attachments` now drive a deterministic attachment pass for units/buildings/objects.
+- Supported semantics: `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`.
+- Runtime state wiring (presentation-only):
+  - selected -> `selection_badge`
+  - damaged / strategic warning -> `warning_badge`
+  - active industry -> `smoke_stack`
+  - combat firing window -> `muzzle_flash`
+  - guardian site active/revealed -> `guardian_aura`
+- Missing/unknown hooks fail safely to a deterministic center-offset fallback with debug counting (non-fatal).
+
 ## Debug counters
 Debug Visualization panel includes:
 - `MODEL_RESOLVE_COUNT`
 - `MODEL_FALLBACK_COUNT`
 - `ACTIVE_MODEL_INSTANCES`
 - `LOD_MODEL_TIER_COUNTS`
+- `ATTACHMENT_RESOLVE_COUNT`
+- `ATTACHMENT_FALLBACK_COUNT`
+- `ACTIVE_ATTACHMENT_INSTANCES`
 
 ## Determinism constraints
 - Render cache state is transient only (never serialized).

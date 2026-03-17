@@ -76,4 +76,27 @@ ModelResolveResult ModelCache::resolve(std::string_view meshId,
   return result;
 }
 
+AttachmentHookResolveResult ModelCache::resolve_attachment_hook(std::string_view hookId) const {
+  static const std::unordered_map<std::string, glm::vec3> kKnownHookOffsets{
+      {"banner_socket", {0.0f, 0.92f, 0.0f}},
+      {"civ_emblem", {0.0f, 0.56f, 0.0f}},
+      {"smoke_stack", {0.28f, 0.82f, 0.0f}},
+      {"muzzle_flash", {0.62f, 0.16f, 0.0f}},
+      {"selection_badge", {0.0f, -0.9f, 0.0f}},
+      {"warning_badge", {0.0f, 0.98f, 0.0f}},
+      {"guardian_aura", {0.0f, 0.0f, 0.0f}},
+  };
+
+  AttachmentHookResolveResult result{};
+  auto it = kKnownHookOffsets.find(std::string(hookId));
+  if (it == kKnownHookOffsets.end()) {
+    result.fallback = true;
+    return result;
+  }
+
+  result.normalizedOffset = it->second;
+  result.valid = true;
+  return result;
+}
+
 } // namespace dom::render

@@ -6,8 +6,11 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+
+#include <glm/vec3.hpp>
 
 namespace dom::render {
 
@@ -17,11 +20,18 @@ struct ModelResolveResult {
   std::string resolvedAssetId;
 };
 
+struct AttachmentHookResolveResult {
+  glm::vec3 normalizedOffset{0.0f, 0.0f, 0.0f};
+  bool valid{false};
+  bool fallback{false};
+};
+
 class ModelCache {
  public:
   ModelResolveResult resolve(std::string_view meshId,
                              std::string_view lodGroup,
                              ContentLodTier lodTier);
+  AttachmentHookResolveResult resolve_attachment_hook(std::string_view hookId) const;
 
  private:
   void lazy_load_manifests();

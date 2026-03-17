@@ -31,6 +31,9 @@ struct EntityPresentationCounters {
   uint64_t lodModelNearCount{0};
   uint64_t lodModelMidCount{0};
   uint64_t lodModelFarCount{0};
+  uint64_t attachmentResolveCount{0};
+  uint64_t attachmentFallbackCount{0};
+  uint64_t activeAttachmentInstances{0};
 };
 
 struct VisualFeedbackCounters {
