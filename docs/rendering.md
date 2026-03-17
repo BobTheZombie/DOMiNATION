@@ -23,7 +23,8 @@
 Stylized RTS game art should prioritize readability at strategic zoom levels.
 
 ### Camera
-- Top-down / isometric RTS perspective.
+- Pitched 3D RTS perspective using bounded yaw/pitch/distance/FOV.
+- Main world pass now uses perspective projection (instead of orthographic) while preserving minimap/HUD authority boundaries.
 
 ### Art direction
 - Clean silhouettes.
