@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 
 #include <glm/vec2.hpp>
 
@@ -18,6 +19,19 @@ struct ModelRenderCounters {
   uint64_t lodNearInstances{0};
   uint64_t lodMidInstances{0};
   uint64_t lodFarInstances{0};
+  uint64_t attachmentResolveCount{0};
+  uint64_t attachmentFallbackCount{0};
+  uint64_t activeAttachmentInstances{0};
+};
+
+enum class ModelAttachmentSemantic : uint8_t {
+  BannerSocket,
+  CivEmblem,
+  SmokeStack,
+  MuzzleFlash,
+  SelectionBadge,
+  WarningBadge,
+  GuardianAura,
 };
 
 struct ModelInstanceDesc {
@@ -28,6 +42,13 @@ struct ModelInstanceDesc {
   std::string lodGroup;
   ContentLodTier lodTier{ContentLodTier::Near};
   bool selected{false};
+  bool damaged{false};
+  bool strategicWarning{false};
+  bool activeIndustry{false};
+  bool combatFiring{false};
+  bool guardianActive{false};
+  bool guardianRevealed{false};
+  std::unordered_map<std::string, std::string> attachmentHooks;
 };
 
 void reset_model_render_counters();

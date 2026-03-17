@@ -1399,7 +1399,15 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     float r = (strategic ? 0.20f : 0.28f) * objStyle.sizeScale[0];
     if (rn.type == dom::sim::ResourceNodeType::Ruins) r *= 1.25f;
     else if (rn.type == dom::sim::ResourceNodeType::Ore) r *= 1.14f;
-    draw_model_instance({rn.pos, r, col, objStyle.mesh, objStyle.lodGroup, strategic ? ContentLodTier::Far : ContentLodTier::Near, false});
+    ModelInstanceDesc rnInstance{};
+    rnInstance.pos = rn.pos;
+    rnInstance.footprint = r;
+    rnInstance.tint = col;
+    rnInstance.meshId = objStyle.mesh;
+    rnInstance.lodGroup = objStyle.lodGroup;
+    rnInstance.lodTier = strategic ? ContentLodTier::Far : ContentLodTier::Near;
+    rnInstance.attachmentHooks = objStyle.attachments;
+    draw_model_instance(rnInstance);
     if (strategic || rn.type == dom::sim::ResourceNodeType::Ore || rn.type == dom::sim::ResourceNodeType::Ruins) {
       draw_ring(rn.pos, r + 0.11f, 0.05f, mix_color(col, {1.0f, 1.0f, 1.0f}, 0.35f));
     }
@@ -1429,7 +1437,17 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     if (!s.discovered && !w.godMode) continue;
     const auto gStyle = resolve_render_style({RenderStyleDomain::Object, s.guardianId, {}, {}, "guardian_site", (s.spawned && s.alive) ? "strategic_warning" : "default", {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
     std::array<float, 3> col{gStyle.tint[0], gStyle.tint[1], gStyle.tint[2]};
-    draw_model_instance({s.pos, (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0], col, gStyle.mesh, gStyle.lodGroup, strategic ? ContentLodTier::Far : ContentLodTier::Near, false});
+    ModelInstanceDesc guardianInstance{};
+    guardianInstance.pos = s.pos;
+    guardianInstance.footprint = (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0];
+    guardianInstance.tint = col;
+    guardianInstance.meshId = gStyle.mesh;
+    guardianInstance.lodGroup = gStyle.lodGroup;
+    guardianInstance.lodTier = strategic ? ContentLodTier::Far : ContentLodTier::Near;
+    guardianInstance.attachmentHooks = gStyle.attachments;
+    guardianInstance.guardianActive = s.spawned && s.alive;
+    guardianInstance.guardianRevealed = s.discovered || w.godMode;
+    draw_model_instance(guardianInstance);
   }
 }
 
@@ -2062,7 +2080,18 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, select_lod_tier(c.zoom)});
     if (bStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
     base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
-    draw_model_instance({b.pos, std::max(0.35f, b.size.x * 0.22f * bStyle.sizeScale[0]), base, bStyle.mesh, bStyle.lodGroup, select_lod_tier(c.zoom), false});
+    ModelInstanceDesc buildingInstance{};
+    buildingInstance.pos = b.pos;
+    buildingInstance.footprint = std::max(0.35f, b.size.x * 0.22f * bStyle.sizeScale[0]);
+    buildingInstance.tint = base;
+    buildingInstance.meshId = bStyle.mesh;
+    buildingInstance.lodGroup = bStyle.lodGroup;
+    buildingInstance.lodTier = select_lod_tier(c.zoom);
+    buildingInstance.attachmentHooks = bStyle.attachments;
+    buildingInstance.damaged = b.hp < b.maxHp * 0.5f;
+    buildingInstance.strategicWarning = b.factory.blocked;
+    buildingInstance.activeIndustry = b.factory.active;
+    draw_model_instance(buildingInstance);
     if (b.type == dom::sim::BuildingType::Port) draw_ring(b.pos, 1.05f, 0.08f, {0.44f, 0.82f, 0.94f});
     if (b.type == dom::sim::BuildingType::FactoryHub) draw_ring(b.pos, 1.0f, 0.08f, {0.94f, 0.64f, 0.42f});
   }
@@ -2159,7 +2188,18 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       float s = (c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f)) * uStyle.sizeScale[0];
       if (glyph == UnitGlyph::Guardian) s += 0.16f;
       if (glyph == UnitGlyph::Armor || glyph == UnitGlyph::Naval) s += 0.08f;
-      draw_model_instance({u.renderPos, s, base, uStyle.mesh, uStyle.lodGroup, lodTier, u.selected});
+      ModelInstanceDesc unitInstance{};
+      unitInstance.pos = u.renderPos;
+      unitInstance.footprint = s;
+      unitInstance.tint = base;
+      unitInstance.meshId = uStyle.mesh;
+      unitInstance.lodGroup = uStyle.lodGroup;
+      unitInstance.lodTier = lodTier;
+      unitInstance.selected = u.selected;
+      unitInstance.damaged = u.hp < 65.0f;
+      unitInstance.combatFiring = (u.targetUnit != 0 || u.attackCooldownTicks > 0);
+      unitInstance.attachmentHooks = uStyle.attachments;
+      draw_model_instance(unitInstance);
 
       if (glyph == UnitGlyph::Aircraft) {
         glBegin(GL_TRIANGLES);
@@ -2417,6 +2457,9 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   gEntityCounters.lodModelNearCount = modelCounters.lodNearInstances;
   gEntityCounters.lodModelMidCount = modelCounters.lodMidInstances;
   gEntityCounters.lodModelFarCount = modelCounters.lodFarInstances;
+  gEntityCounters.attachmentResolveCount = modelCounters.attachmentResolveCount;
+  gEntityCounters.attachmentFallbackCount = modelCounters.attachmentFallbackCount;
+  gEntityCounters.activeAttachmentInstances = modelCounters.activeAttachmentInstances;
   const auto drawEnd = Clock::now();
   gLastDrawMs = std::chrono::duration<double, std::milli>(drawEnd - drawStart).count();
 }
