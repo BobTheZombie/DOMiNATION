@@ -187,6 +187,7 @@ See `docs/ai_telemetry.md` for deterministic AI counters.
 - **WASD / Arrow keys**: pan camera
 - **Edge scroll**: move mouse near screen edges
 - **Mouse wheel**: strategic zoom (smoothly interpolated)
+- **Q / E**: rotate camera yaw left/right
 - **Middle mouse drag**: pan camera
 - **Left click**: select unit / confirm build placement
 - **Right click**: move selected unit / cancel build placement
@@ -207,6 +208,8 @@ See `docs/ai_telemetry.md` for deterministic AI counters.
 - **F3**: toggle research panel
 - **F4**: toggle diplomacy panel
 - **F5**: toggle operations panel
+- **F6 / F7 / F8**: camera preset close / mid / far
+- **F12**: reset camera yaw + mid preset
 - **Replay mode controls**: `Space` pause/resume, `Right` step forward (paused), `Left` rewind fallback (restart+seek), `[`/`]` jump ticks, `+`/`-` speed
 
 ## Victory conditions

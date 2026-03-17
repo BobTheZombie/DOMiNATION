@@ -9,6 +9,8 @@
 #include <array>
 #include <cmath>
 #include <glm/geometric.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -65,6 +67,39 @@ VisualFeedbackCounters gFeedbackCounters{};
 StrategicVisualizationCounters gStrategicCounters{};
 
 void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<float, 3>& color);
+
+struct CameraBasis {
+  glm::vec3 eye{0.0f};
+  glm::vec3 forward{0.0f, 1.0f, 0.0f};
+  glm::vec3 right{1.0f, 0.0f, 0.0f};
+  glm::vec3 up{0.0f, 0.0f, 1.0f};
+};
+
+CameraBasis build_camera_basis(const Camera& camera) {
+  const float yaw = glm::radians(camera.yawDeg);
+  const float pitch = glm::radians(std::clamp(camera.pitchDeg, 25.0f, 80.0f));
+  const glm::vec3 target{camera.center.x, camera.center.y, 0.0f};
+  const glm::vec3 offset{
+      std::cos(yaw) * std::cos(pitch),
+      std::sin(yaw) * std::cos(pitch),
+      std::sin(pitch)};
+  CameraBasis basis{};
+  basis.eye = target - offset * std::max(2.0f, camera.distance);
+  basis.forward = glm::normalize(target - basis.eye);
+  const glm::vec3 worldUp{0.0f, 0.0f, 1.0f};
+  basis.right = glm::normalize(glm::cross(basis.forward, worldUp));
+  basis.up = glm::normalize(glm::cross(basis.right, basis.forward));
+  return basis;
+}
+
+glm::vec2 ray_ground_intersection(const glm::vec3& origin, const glm::vec3& dir, const Camera& fallback) {
+  const float dz = dir.z;
+  if (std::abs(dz) < 1e-5f) return fallback.center;
+  const float t = -origin.z / dz;
+  if (t <= 0.0f) return fallback.center;
+  glm::vec3 hit = origin + dir * t;
+  return {hit.x, hit.y};
+}
 
 std::array<std::array<float, 3>, 4> kTeamColors{{
     {0.0f, 0.0f, 0.0f},
@@ -1897,10 +1932,15 @@ void set_render_scale(float scale) { gOverlay.renderScale = std::clamp(scale, 0.
 void set_ui_scale(float scale) { gOverlay.uiScale = std::clamp(scale, 0.75f, 2.5f); }
 
 glm::vec2 screen_to_world(const Camera& camera, int width, int height, glm::vec2 s) {
-  float aspect = static_cast<float>(width) / static_cast<float>(height);
-  float wx = ((s.x / width) * 2.0f - 1.0f) * camera.zoom * aspect + camera.center.x;
-  float wy = ((1.0f - s.y / height) * 2.0f - 1.0f) * camera.zoom + camera.center.y;
-  return {wx, wy};
+  const int safeW = std::max(1, width);
+  const int safeH = std::max(1, height);
+  const float aspect = static_cast<float>(safeW) / static_cast<float>(safeH);
+  const CameraBasis basis = build_camera_basis(camera);
+  const float ndcX = (s.x / static_cast<float>(safeW)) * 2.0f - 1.0f;
+  const float ndcY = 1.0f - (s.y / static_cast<float>(safeH)) * 2.0f;
+  const float tanHalfFov = std::tan(glm::radians(std::clamp(camera.fovDeg, 30.0f, 80.0f)) * 0.5f);
+  glm::vec3 dir = glm::normalize(basis.forward + basis.right * (ndcX * aspect * tanHalfFov) + basis.up * (ndcY * tanHalfFov));
+  return ray_ground_intersection(basis.eye, dir, camera);
 }
 
 uint32_t pick_unit(const dom::sim::World& world, const Camera& camera, int width, int height, glm::vec2 s) {
@@ -1938,11 +1978,18 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glViewport(0, 0, gOverlay.sceneW, gOverlay.sceneH);
   glClear(GL_COLOR_BUFFER_BIT);
   glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  float aspect = static_cast<float>(width) / static_cast<float>(height);
-  glOrtho(c.center.x - c.zoom * aspect, c.center.x + c.zoom * aspect, c.center.y - c.zoom, c.center.y + c.zoom, -1, 1);
+  const int safeW = std::max(1, width);
+  const int safeH = std::max(1, height);
+  const float aspect = static_cast<float>(safeW) / static_cast<float>(safeH);
+  const CameraBasis basis = build_camera_basis(c);
+  const glm::vec3 target{c.center.x, c.center.y, 0.0f};
+  const float nearPlane = 0.25f;
+  const float farPlane = std::max(256.0f, std::max<float>(w.width, w.height) * 3.0f);
+  const glm::mat4 proj = glm::perspective(glm::radians(std::clamp(c.fovDeg, 30.0f, 80.0f)), aspect, nearPlane, farPlane);
+  const glm::mat4 view = glm::lookAt(basis.eye, target, basis.up);
+  glLoadMatrixf(&proj[0][0]);
   glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
+  glLoadMatrixf(&view[0][0]);
 
   reset_terrain_presentation_counters();
   reset_content_resolution_counters();

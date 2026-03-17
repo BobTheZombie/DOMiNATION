@@ -372,8 +372,8 @@ A front-end SDL/ImGui setup shell now wraps entry into simulation runtime:
 
 ## Camera and map navigation system
 - Camera/navigation remains presentation-only (`engine/platform/app.cpp`, `engine/render/renderer.cpp`) and does **not** mutate authoritative simulation state.
-- Interactive camera now supports WASD/arrow pan, edge scroll, middle-mouse drag pan, and smooth zoom interpolation between tactical/operational/strategic/GOD bands.
-- Zoom limits clamp at `[4,70]` for normal play and `[4,160]` for GOD mode; runtime zoom uses target interpolation to reduce input jitter while keeping deterministic world-to-screen transforms.
+- Interactive camera now supports a pitched perspective RTS rig (focus target + yaw + pitch + distance + FOV), WASD/arrow pan, edge scroll, middle-mouse drag pan, smooth distance interpolation, and bounded tactical/operational/strategic presets.
+- Distance limits clamp at `[8,72]` for normal play and `[8,132]` for GOD mode; pitch/FOV are bounded for strategic readability.
 - Minimap input supports click-to-center and drag-to-reposition camera with clamped world mapping.
 - Camera focus helpers are player-facing shortcuts for selection, capital, objective, crisis, guardian, strategic alert source cycling, and theater targets.
 - Deterministic assertion policy remains unchanged: headless hashes must remain identical because camera/input work is excluded from authoritative hash/save paths.

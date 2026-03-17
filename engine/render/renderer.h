@@ -8,7 +8,11 @@
 namespace dom::render {
 struct Camera {
   glm::vec2 center{64, 64};
-  float zoom{8.0f};
+  float zoom{16.0f};
+  float yawDeg{45.0f};
+  float pitchDeg{58.0f};
+  float distance{16.0f};
+  float fovDeg{55.0f};
 };
 
 struct EntityPresentationCounters {

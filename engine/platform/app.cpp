@@ -98,12 +98,44 @@ struct SelectionState {
 };
 
 struct CameraNavState {
-  float targetZoom{8.0f};
-  float minZoom{4.0f};
-  float maxZoom{35.0f};
+  enum class ZoomPreset : uint8_t { Close = 0, Mid = 1, Far = 2 };
+  float targetDistance{16.0f};
+  float minDistance{8.0f};
+  float maxDistance{72.0f};
   float edgeScrollPx{14.0f};
   int alertCycleOffset{0};
+  ZoomPreset activePreset{ZoomPreset::Mid};
 };
+
+struct CameraPresetTuning {
+  float distance;
+  float pitch;
+  float fov;
+};
+
+constexpr std::array<CameraPresetTuning, 3> kCameraPresets{{
+    {10.0f, 52.0f, 52.0f},
+    {18.0f, 58.0f, 55.0f},
+    {34.0f, 64.0f, 58.0f},
+}};
+
+CameraPresetTuning preset_tuning(CameraNavState::ZoomPreset preset) {
+  return kCameraPresets[static_cast<size_t>(preset)];
+}
+
+CameraNavState::ZoomPreset preset_from_distance(float distance) {
+  if (distance < 14.0f) return CameraNavState::ZoomPreset::Close;
+  if (distance < 26.0f) return CameraNavState::ZoomPreset::Mid;
+  return CameraNavState::ZoomPreset::Far;
+}
+
+void apply_camera_preset(dom::render::Camera& camera, CameraNavState& nav, CameraNavState::ZoomPreset preset) {
+  const auto tuning = preset_tuning(preset);
+  nav.activePreset = preset;
+  nav.targetDistance = std::clamp(tuning.distance, nav.minDistance, nav.maxDistance);
+  camera.pitchDeg = tuning.pitch;
+  camera.fovDeg = tuning.fov;
+}
 
 struct UiCommandLogEntry {
   uint32_t tick{0};
@@ -406,11 +438,9 @@ void update_drag_highlight(dom::sim::World& world, SelectionState& s, const dom:
 }
 
 void clamp_camera_to_world(const dom::sim::World& world, dom::render::Camera& camera, int w, int h) {
-  const float aspect = static_cast<float>(std::max(1, w)) / static_cast<float>(std::max(1, h));
-  const float halfW = camera.zoom * aspect;
-  const float halfH = camera.zoom;
-  camera.center.x = std::clamp(camera.center.x, halfW, std::max(halfW, static_cast<float>(world.width) - halfW));
-  camera.center.y = std::clamp(camera.center.y, halfH, std::max(halfH, static_cast<float>(world.height) - halfH));
+  const float margin = std::clamp(camera.distance * 0.45f, 3.0f, 26.0f);
+  camera.center.x = std::clamp(camera.center.x, margin, std::max(margin, static_cast<float>(world.width) - margin));
+  camera.center.y = std::clamp(camera.center.y, margin, std::max(margin, static_cast<float>(world.height) - margin));
 }
 
 bool focus_selected_anchor(const dom::sim::World& world, const std::vector<uint32_t>& selected, glm::vec2& out) {
@@ -2071,8 +2101,10 @@ int run_app(int argc, char** argv) {
   }
   dom::render::Camera camera;
   CameraNavState cameraNav{};
-  cameraNav.maxZoom = world.godMode ? 160.0f : 70.0f;
-  cameraNav.targetZoom = std::clamp(camera.zoom, cameraNav.minZoom, cameraNav.maxZoom);
+  cameraNav.maxDistance = world.godMode ? 132.0f : 72.0f;
+  apply_camera_preset(camera, cameraNav, CameraNavState::ZoomPreset::Mid);
+  cameraNav.targetDistance = std::clamp(camera.distance, cameraNav.minDistance, cameraNav.maxDistance);
+  camera.zoom = camera.distance;
   if (opts.flowVisualize) std::cout << "flow visualization requested (debug overlay path not wired in this slice)\n";
   std::vector<uint32_t> selected;
   SelectionState sel;
@@ -2175,7 +2207,11 @@ int run_app(int argc, char** argv) {
         if (editorMode && e.key.keysym.sym == SDLK_TAB) editorTool = (editorTool + 1) % 6;
         if (editorMode && e.key.keysym.sym == SDLK_o) editorOwner = (uint16_t)((editorOwner + 1) % std::max<size_t>(1, world.players.size()));
         SDL_Keymod mod = SDL_GetModState();
-        if (e.key.keysym.sym == SDLK_g) { dom::sim::toggle_god_mode(world); cameraNav.maxZoom = world.godMode ? 160.0f : 70.0f; cameraNav.targetZoom = std::clamp(cameraNav.targetZoom, cameraNav.minZoom, cameraNav.maxZoom); }
+        if (e.key.keysym.sym == SDLK_g) { dom::sim::toggle_god_mode(world); cameraNav.maxDistance = world.godMode ? 132.0f : 72.0f; cameraNav.targetDistance = std::clamp(cameraNav.targetDistance, cameraNav.minDistance, cameraNav.maxDistance); }
+        if (e.key.keysym.sym == SDLK_F6) apply_camera_preset(camera, cameraNav, CameraNavState::ZoomPreset::Close);
+        if (e.key.keysym.sym == SDLK_F7) apply_camera_preset(camera, cameraNav, CameraNavState::ZoomPreset::Mid);
+        if (e.key.keysym.sym == SDLK_F8) apply_camera_preset(camera, cameraNav, CameraNavState::ZoomPreset::Far);
+        if (e.key.keysym.sym == SDLK_F12) { camera.yawDeg = 45.0f; apply_camera_preset(camera, cameraNav, CameraNavState::ZoomPreset::Mid); }
         if (replayMode) {
           if (e.key.keysym.sym == SDLK_SPACE) replayPaused = !replayPaused;
           if (e.key.keysym.sym == SDLK_EQUALS || e.key.keysym.sym == SDLK_PLUS) replaySpeed = std::min(16.0f, replaySpeed * 2.0f);
@@ -2267,8 +2303,9 @@ int run_app(int argc, char** argv) {
         }
       }
       if (e.type == SDL_MOUSEWHEEL) {
-        const float step = cameraNav.targetZoom > 70.0f ? 7.0f : (cameraNav.targetZoom > 28.0f ? 3.2f : 1.5f);
-        cameraNav.targetZoom = std::clamp(cameraNav.targetZoom - e.wheel.y * step, cameraNav.minZoom, cameraNav.maxZoom);
+        const float step = cameraNav.targetDistance > 28.0f ? 5.0f : (cameraNav.targetDistance > 14.0f ? 2.5f : 1.25f);
+        cameraNav.targetDistance = std::clamp(cameraNav.targetDistance - e.wheel.y * step, cameraNav.minDistance, cameraNav.maxDistance);
+        cameraNav.activePreset = preset_from_distance(cameraNav.targetDistance);
       }
 
       if (e.type == SDL_MOUSEMOTION && sel.middleMousePanning) {
@@ -2377,8 +2414,10 @@ int run_app(int argc, char** argv) {
     const Uint8* keys = SDL_GetKeyboardState(nullptr);
     int w, h; SDL_GetWindowSize(window, &w, &h);
     const bool uiBlockingCamera = uiState.showScenarioEditor || assetBrowser.visible();
-    float pan = frameDt * camera.zoom * 1.25f;
+    float pan = frameDt * camera.distance * 0.75f;
     if (!uiBlockingCamera) {
+      if (keys[SDL_SCANCODE_Q]) camera.yawDeg -= frameDt * 45.0f;
+      if (keys[SDL_SCANCODE_E]) camera.yawDeg += frameDt * 45.0f;
       if (keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP]) camera.center.y += pan;
       if (keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN]) camera.center.y -= pan;
       if (keys[SDL_SCANCODE_A] || keys[SDL_SCANCODE_LEFT]) camera.center.x -= pan;
@@ -2386,7 +2425,7 @@ int run_app(int argc, char** argv) {
 
       int mx = 0, my = 0;
       Uint32 mouseButtons = SDL_GetMouseState(&mx, &my);
-      const float edgePan = frameDt * camera.zoom * 1.45f;
+      const float edgePan = frameDt * camera.distance * 0.85f;
       const int edge = std::max(6, (int)std::round(cameraNav.edgeScrollPx));
       const bool edgeAllowed = (mouseButtons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) == 0;
       if (edgeAllowed && mx <= edge) camera.center.x -= edgePan;
@@ -2395,11 +2434,14 @@ int run_app(int argc, char** argv) {
       if (edgeAllowed && my >= h - edge) camera.center.y -= edgePan;
     }
 
-    cameraNav.maxZoom = world.godMode ? 160.0f : 70.0f;
-    cameraNav.targetZoom = std::clamp(cameraNav.targetZoom, cameraNav.minZoom, cameraNav.maxZoom);
+    cameraNav.maxDistance = world.godMode ? 132.0f : 72.0f;
+    cameraNav.targetDistance = std::clamp(cameraNav.targetDistance, cameraNav.minDistance, cameraNav.maxDistance);
     const float zoomAlpha = std::clamp(frameDt * 9.0f, 0.0f, 1.0f);
-    camera.zoom += (cameraNav.targetZoom - camera.zoom) * zoomAlpha;
-    camera.zoom = std::clamp(camera.zoom, cameraNav.minZoom, cameraNav.maxZoom);
+    camera.distance += (cameraNav.targetDistance - camera.distance) * zoomAlpha;
+    camera.distance = std::clamp(camera.distance, cameraNav.minDistance, cameraNav.maxDistance);
+    camera.pitchDeg = std::clamp(camera.pitchDeg, 40.0f, 72.0f);
+    camera.fovDeg = std::clamp(camera.fovDeg, 45.0f, 65.0f);
+    camera.zoom = camera.distance;
     clamp_camera_to_world(world, camera, w, h);
 
     while (!frontend.active && accum >= dom::core::kSimDeltaSeconds) {
@@ -2476,6 +2518,18 @@ int run_app(int argc, char** argv) {
       if (uiState.showHudDebug || uiState.showDebugPanels) dom::debug::draw_debug_panels(world, debugVisualState);
 #ifdef DOM_HAS_IMGUI
       if (uiState.showHudDebug) {
+        ImGui::Begin("RTS Camera Debug");
+        ImGui::Text("Focus: (%.2f, %.2f)", camera.center.x, camera.center.y);
+        ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.yawDeg, camera.pitchDeg);
+        ImGui::Text("Distance: %.2f  FOV: %.1f", camera.distance, camera.fovDeg);
+        const char* presetName = cameraNav.activePreset == CameraNavState::ZoomPreset::Close ? "Close/Tactical" : (cameraNav.activePreset == CameraNavState::ZoomPreset::Mid ? "Mid/Operational" : "Far/Strategic");
+        ImGui::Text("Preset: %s", presetName);
+        if (ImGui::Button("Reset RTS Camera [F12]")) {
+          camera.yawDeg = 45.0f;
+          apply_camera_preset(camera, cameraNav, CameraNavState::ZoomPreset::Mid);
+        }
+        ImGui::End();
+
         auto audioReports = dom::audio::consume_debug_reports();
         if (!audioReports.empty()) {
           ImGui::Begin("Audio Resolve Fallbacks");
