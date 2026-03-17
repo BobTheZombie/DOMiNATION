@@ -5,7 +5,7 @@ This pass adds a deterministic runtime 3D model integration layer for units, bui
 ## Resolution flow
 1. `resolve_render_style(...)` picks style via exact ID -> civ override -> theme override -> class/default fallback.
 2. The selected style provides `mesh` + `lod_group`.
-3. `ModelCache` resolves LOD asset IDs from `content/lod_manifest.json` and mesh paths from `content/asset_manifest.json`.
+3. `ModelCache` resolves LOD asset IDs from `content/lod_manifest.json`, mesh paths from `content/asset_manifest.json`, and optional per-asset attachment hook offsets from `asset_manifest.attachment_hooks`.
 4. `GltfRuntimeLoader` validates GLB headers and caches loaded metadata.
 5. Invalid/missing assets resolve to `assets_final/fallback/missing_mesh.glb` with a deterministic warning.
 
@@ -24,6 +24,7 @@ This pass adds a deterministic runtime 3D model integration layer for units, bui
   - active industry -> `smoke_stack`
   - combat firing window -> `muzzle_flash`
   - guardian site active/revealed -> `guardian_aura`
+- Hook resolve order is deterministic: asset-manifest hook (`attachment_hooks`) -> semantic hook ID fallback table -> center-offset fallback (non-fatal).
 - Missing/unknown hooks fail safely to a deterministic center-offset fallback with debug counting (non-fatal).
 
 ## Debug counters

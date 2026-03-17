@@ -166,7 +166,7 @@ void draw_model_instance(const ModelInstanceDesc& instance) {
     ModelAttachmentSemantic semantic{};
     if (!to_semantic(semanticName, semantic)) continue;
     ++gModelCounters.attachmentResolveCount;
-    const auto hook = gModelCache.resolve_attachment_hook(hookName.empty() ? semanticName : hookName);
+    const auto hook = gModelCache.resolve_attachment_hook(resolved.resolvedAssetId, semanticName, hookName.empty() ? semanticName : hookName);
     if (hook.fallback || !hook.valid) ++gModelCounters.attachmentFallbackCount;
     draw_attachment(instance, base, height, semantic, hook, hook.fallback || !hook.valid);
   }
