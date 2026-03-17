@@ -391,6 +391,214 @@ std::array<float, 3> army_stance_color(dom::sim::ArmyGroupStance stance) {
   return {0.85f, 0.85f, 0.85f};
 }
 
+enum class ForcePresenceKind : uint8_t { Garrison, FieldArmy, Raiding, SiegeGroup, NavalTaskForce, AirWingAnchor };
+
+struct ForcePresenceMarker {
+  glm::vec2 pos{0.0f, 0.0f};
+  uint16_t owner{0};
+  uint32_t stableId{0};
+  uint32_t theaterId{0};
+  float strength{0.0f};
+  float readiness{0.0f};
+  bool frontline{false};
+  ForcePresenceKind kind{ForcePresenceKind::FieldArmy};
+  dom::sim::ArmyGroupStance stance{dom::sim::ArmyGroupStance::Defensive};
+};
+
+std::array<float, 3> force_kind_color(ForcePresenceKind kind) {
+  switch (kind) {
+    case ForcePresenceKind::Garrison: return {0.56f, 0.82f, 1.0f};
+    case ForcePresenceKind::FieldArmy: return {0.97f, 0.76f, 0.38f};
+    case ForcePresenceKind::Raiding: return {0.96f, 0.44f, 0.36f};
+    case ForcePresenceKind::SiegeGroup: return {0.92f, 0.62f, 0.42f};
+    case ForcePresenceKind::NavalTaskForce: return {0.45f, 0.86f, 1.0f};
+    case ForcePresenceKind::AirWingAnchor: return {0.88f, 0.9f, 1.0f};
+  }
+  return {0.88f, 0.88f, 0.88f};
+}
+
+bool unit_is_siege_capable(const dom::sim::Unit& u) {
+  return u.role == dom::sim::UnitRole::Siege || u.type == dom::sim::UnitType::Siege ||
+         u.type == dom::sim::UnitType::BombardShip || u.definitionId.find("artillery") != std::string::npos;
+}
+
+bool near_friendly_city(const dom::sim::World& w, uint16_t owner, const glm::vec2& pos, float radius) {
+  const float r2 = radius * radius;
+  for (const auto& c : w.cities) {
+    if (c.team != owner) continue;
+    glm::vec2 d = c.pos - pos;
+    if (glm::dot(d, d) <= r2) return true;
+  }
+  return false;
+}
+
+void draw_operational_force_presence(const dom::sim::World& w, const Camera& c) {
+  if (c.zoom > 85.0f) return;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  std::unordered_map<uint32_t, const dom::sim::Unit*> unitsById;
+  unitsById.reserve(w.units.size());
+  for (const auto& u : w.units) unitsById.emplace(u.id, &u);
+
+  std::unordered_map<uint32_t, const dom::sim::OperationalObjective*> objectiveById;
+  objectiveById.reserve(w.operationalObjectives.size());
+  for (const auto& o : w.operationalObjectives) objectiveById.emplace(o.id, &o);
+
+  std::unordered_map<uint32_t, const dom::sim::TheaterCommand*> theaterById;
+  theaterById.reserve(w.theaterCommands.size());
+  for (const auto& t : w.theaterCommands) theaterById.emplace(t.theaterId, &t);
+
+  std::vector<ForcePresenceMarker> markers;
+  markers.reserve(w.armyGroups.size() + w.navalTaskForces.size() + w.airWings.size());
+
+  for (const auto& g : w.armyGroups) {
+    if (!g.active || g.unitIds.empty()) continue;
+    glm::vec2 center{0.0f, 0.0f};
+    int visibleCount = 0;
+    int supplied = 0;
+    int siegeUnits = 0;
+    int combatUnits = 0;
+    for (uint32_t uid : g.unitIds) {
+      auto it = unitsById.find(uid);
+      if (it == unitsById.end()) continue;
+      const auto& u = *it->second;
+      if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+      center += u.renderPos;
+      ++visibleCount;
+      supplied += (u.supplyState == dom::sim::SupplyState::InSupply ? 2 : (u.supplyState == dom::sim::SupplyState::LowSupply ? 1 : 0));
+      if (unit_is_siege_capable(u)) ++siegeUnits;
+      if (u.attackMove || u.targetUnit != 0) ++combatUnits;
+    }
+    if (visibleCount == 0) continue;
+    center /= static_cast<float>(visibleCount);
+
+    float readiness = std::clamp(static_cast<float>(supplied) / static_cast<float>(visibleCount * 2), 0.0f, 1.0f);
+    bool atFront = tile_frontline(w, static_cast<int>(center.x), static_cast<int>(center.y), static_cast<uint16_t>(g.owner + 1));
+    bool nearCity = near_friendly_city(w, g.owner, center, 6.5f);
+    bool objectiveRaid = false;
+    auto oit = objectiveById.find(g.assignedObjective);
+    if (oit != objectiveById.end()) {
+      objectiveRaid = oit->second->objectiveType == dom::sim::OperationType::RaidEconomy;
+    }
+
+    ForcePresenceKind kind = ForcePresenceKind::FieldArmy;
+    if (objectiveRaid || (g.stance == dom::sim::ArmyGroupStance::Offensive && combatUnits > 0 && visibleCount <= 5)) kind = ForcePresenceKind::Raiding;
+    else if (siegeUnits * 3 >= visibleCount) kind = ForcePresenceKind::SiegeGroup;
+    else if (g.stance == dom::sim::ArmyGroupStance::Defensive && nearCity && !atFront) kind = ForcePresenceKind::Garrison;
+
+    markers.push_back({center, g.owner, g.id, g.theaterId, static_cast<float>(visibleCount), readiness, atFront, kind, g.stance});
+  }
+
+  for (const auto& tf : w.navalTaskForces) {
+    if (!tf.active || tf.unitIds.empty()) continue;
+    glm::vec2 center{0.0f, 0.0f};
+    int count = 0;
+    for (uint32_t uid : tf.unitIds) {
+      auto it = unitsById.find(uid);
+      if (it == unitsById.end()) continue;
+      const auto& u = *it->second;
+      if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+      center += u.renderPos;
+      ++count;
+    }
+    if (count == 0) continue;
+    center /= static_cast<float>(count);
+    markers.push_back({center, tf.owner, tf.id, tf.theaterId, static_cast<float>(count), 0.85f, false, ForcePresenceKind::NavalTaskForce, dom::sim::ArmyGroupStance::Offensive});
+  }
+
+  for (const auto& aw : w.airWings) {
+    if (!aw.active || aw.squadronIds.empty()) continue;
+    glm::vec2 center{0.0f, 0.0f};
+    int count = 0;
+    for (uint32_t sid : aw.squadronIds) {
+      for (const auto& au : w.airUnits) {
+        if (au.id != sid || au.team != aw.owner) continue;
+        center += au.pos;
+        ++count;
+        break;
+      }
+    }
+    if (count == 0) continue;
+    center /= static_cast<float>(count);
+    markers.push_back({center, aw.owner, aw.id, aw.theaterId, static_cast<float>(count), 0.90f, false, ForcePresenceKind::AirWingAnchor, dom::sim::ArmyGroupStance::Offensive});
+  }
+
+  for (const auto& m : markers) {
+    auto teamCol = diplomatic_color(w, m.owner);
+    auto kindCol = force_kind_color(m.kind);
+    auto stanceCol = army_stance_color(m.stance);
+    auto base = mix_color(kindCol, teamCol, 0.52f);
+    auto posture = mix_color(base, stanceCol, 0.35f);
+    float theaterPressure = 0.0f;
+    auto tit = theaterById.find(m.theaterId);
+    if (tit != theaterById.end()) theaterPressure = std::clamp(tit->second->threatLevel, 0.0f, 1.0f);
+    float size = std::clamp(0.75f + std::sqrt(std::max(0.0f, m.strength)) * 0.2f, 0.75f, 2.25f);
+    float readinessAlpha = 0.2f + m.readiness * 0.35f;
+    float posturePulse = std::sin(tick_phase(w, m.stableId, 0.08f)) * 0.5f + 0.5f;
+
+    draw_ring(m.pos, size + 0.35f + theaterPressure * 0.22f, 0.10f, posture);
+    glColor4f(posture[0], posture[1], posture[2], readinessAlpha);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(m.pos.x, m.pos.y);
+    for (int i = 0; i <= 24; ++i) {
+      float a = 6.2831853f * (static_cast<float>(i) / 24.0f);
+      float r = size * (0.55f + m.readiness * 0.45f);
+      glVertex2f(m.pos.x + std::cos(a) * r, m.pos.y + std::sin(a) * r);
+    }
+    glEnd();
+
+    if (m.frontline || m.kind == ForcePresenceKind::Raiding) {
+      draw_pulse_ring(m.pos, size + 0.62f, 0.18f, 0.09f, tick_phase(w, m.stableId + 17u, 0.12f), {1.0f, 0.3f + posturePulse * 0.25f, 0.26f});
+    }
+
+    if (m.kind == ForcePresenceKind::NavalTaskForce || m.kind == ForcePresenceKind::AirWingAnchor) {
+      glColor4f(kindCol[0], kindCol[1], kindCol[2], 0.75f);
+      glBegin(GL_LINES);
+      glVertex2f(m.pos.x - size * 0.5f, m.pos.y);
+      glVertex2f(m.pos.x + size * 0.5f, m.pos.y);
+      glVertex2f(m.pos.x, m.pos.y - size * 0.5f);
+      glVertex2f(m.pos.x, m.pos.y + size * 0.5f);
+      glEnd();
+    }
+  }
+
+  for (const auto& city : w.cities) {
+    float concentration = 0.0f;
+    for (const auto& m : markers) {
+      if (m.owner != city.team) continue;
+      float dist = glm::length(m.pos - city.pos);
+      if (dist > 10.0f) continue;
+      concentration += std::max(0.0f, 1.0f - dist / 10.0f) * (m.strength * 0.35f + 0.4f);
+    }
+    if (concentration <= 1.0f) continue;
+    auto ccol = diplomatic_color(w, city.team);
+    float cityBoost = city.capital ? 0.22f : 0.12f;
+    draw_pulse_ring(city.pos,
+                    1.5f + std::min(1.8f, concentration * 0.16f),
+                    0.10f,
+                    0.08f,
+                    tick_phase(w, city.id, 0.05f),
+                    {std::min(1.0f, ccol[0] + cityBoost), std::min(1.0f, ccol[1] + cityBoost), std::min(1.0f, ccol[2] + cityBoost)});
+  }
+
+  for (const auto& n : w.railNodes) {
+    if (n.type != dom::sim::RailNodeType::Depot && n.type != dom::sim::RailNodeType::Station) continue;
+    glm::vec2 p{n.tile.x + 0.5f, n.tile.y + 0.5f};
+    float nearby = 0.0f;
+    for (const auto& m : markers) {
+      if (n.owner != UINT16_MAX && m.owner != n.owner) continue;
+      float d = glm::length(m.pos - p);
+      if (d > 8.0f) continue;
+      nearby += std::max(0.0f, 1.0f - d / 8.0f) * m.strength;
+    }
+    if (nearby <= 2.5f) continue;
+    draw_ring(p, 0.65f + std::min(0.65f, nearby * 0.04f), 0.07f, {0.98f, 0.9f, 0.48f});
+  }
+
+  glDisable(GL_BLEND);
+}
+
 void draw_unit_destination_marker(const dom::sim::World& w, const dom::sim::Unit& u, float scale) {
   auto glyph = unit_glyph(u);
   auto col = diplomatic_color(w, u.team);
@@ -1543,6 +1751,68 @@ void build_minimap_pixels(const dom::sim::World& w, int res, std::vector<uint8_t
     plot_dot(out, res, px, py, team_rgb(u.team), 0);
   }
 
+  std::unordered_map<uint32_t, const dom::sim::Unit*> unitsById;
+  unitsById.reserve(w.units.size());
+  for (const auto& u : w.units) unitsById.emplace(u.id, &u);
+
+  for (const auto& g : w.armyGroups) {
+    if (!g.active || g.unitIds.empty()) continue;
+    glm::vec2 center{0.0f, 0.0f};
+    int count = 0;
+    for (uint32_t uid : g.unitIds) {
+      auto it = unitsById.find(uid);
+      if (it == unitsById.end()) continue;
+      const auto& u = *it->second;
+      if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+      center += u.pos;
+      ++count;
+    }
+    if (count == 0) continue;
+    center /= static_cast<float>(count);
+    int px = world_to_minimap_px(center.x, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(center.y, static_cast<float>(w.height), res);
+    auto tc = team_rgb(g.owner);
+    plot_dot(out, res, px, py, tc, 1);
+  }
+
+  for (const auto& tf : w.navalTaskForces) {
+    if (!tf.active || tf.unitIds.empty()) continue;
+    glm::vec2 center{0.0f, 0.0f};
+    int count = 0;
+    for (uint32_t uid : tf.unitIds) {
+      auto it = unitsById.find(uid);
+      if (it == unitsById.end()) continue;
+      const auto& u = *it->second;
+      if (!w.godMode && !dom::sim::is_unit_visible_to_player(w, u, 0)) continue;
+      center += u.pos;
+      ++count;
+    }
+    if (count == 0) continue;
+    center /= static_cast<float>(count);
+    int px = world_to_minimap_px(center.x, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(center.y, static_cast<float>(w.height), res);
+    plot_dot(out, res, px, py, {84, 212, 255}, 1);
+  }
+
+  for (const auto& aw : w.airWings) {
+    if (!aw.active || aw.squadronIds.empty()) continue;
+    glm::vec2 center{0.0f, 0.0f};
+    int count = 0;
+    for (uint32_t sid : aw.squadronIds) {
+      for (const auto& au : w.airUnits) {
+        if (au.id != sid || au.team != aw.owner) continue;
+        center += au.pos;
+        ++count;
+        break;
+      }
+    }
+    if (count == 0) continue;
+    center /= static_cast<float>(count);
+    int px = world_to_minimap_px(center.x, static_cast<float>(w.width), res);
+    int py = world_to_minimap_px(center.y, static_cast<float>(w.height), res);
+    plot_dot(out, res, px, py, {228, 236, 255}, 1);
+  }
+
   for (const auto& th : w.theaterCommands) {
     glm::vec2 p{(th.bounds.x + th.bounds.z) * 0.5f, (th.bounds.y + th.bounds.w) * 0.5f};
     int px = world_to_minimap_px(p.x, static_cast<float>(w.width), res);
@@ -1721,6 +1991,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     draw_frontline_pressure_and_theater(w, c);
     draw_supply_and_logistics_flows(w, c);
     draw_rail_traffic_visualization(w, c);
+    draw_operational_force_presence(w, c);
     draw_unit_movement_paths(w, c);
     draw_army_group_formations(w, c);
     draw_combat_encounter_markers(w, c);
