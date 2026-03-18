@@ -19,11 +19,12 @@ This pass adds a deterministic runtime 3D model integration layer for units, bui
 - `ResolvedRenderStyle::attachments` now drive a deterministic attachment pass for units/buildings/objects.
 - Supported semantics: `banner_socket`, `civ_emblem`, `smoke_stack`, `muzzle_flash`, `selection_badge`, `warning_badge`, `guardian_aura`.
 - Runtime state wiring (presentation-only):
-  - selected -> `selection_badge`
-  - damaged / strategic warning -> `warning_badge`
-  - active industry -> `smoke_stack`
+  - selected units -> `selection_badge`
+  - damaged entities / strategic-warning structures -> `warning_badge`
+  - active factories and ore/industrial world objects -> `smoke_stack`
   - combat firing window -> `muzzle_flash`
-  - guardian site active/revealed -> `guardian_aura`
+  - guardian units/sites active or revealed -> `guardian_aura`
+  - civ/team tint readability on authored hooks -> `banner_socket` + `civ_emblem`
 - Hook resolve order is deterministic: asset-manifest hook (`attachment_hooks`) -> semantic hook ID fallback table -> center-offset fallback (non-fatal).
 - Missing/unknown hooks fail safely to a deterministic center-offset fallback with debug counting (non-fatal).
 
@@ -43,4 +44,4 @@ Debug Visualization panel includes:
 - Missing assets are non-fatal and resolve through deterministic fallback.
 
 ## Runtime animation integration
-`RuntimeModelData` caches detected GLB clip names; `draw_model_instance` resolves a bounded clip state per instance and applies lightweight visual pulse timing derived from deterministic playback time. Missing clips and unsupported animation data never crash rendering and always fall back safely.
+`RuntimeModelData` caches detected GLB clip names; `draw_model_instance` resolves a bounded clip state per instance and applies lightweight visual pulse timing derived from deterministic playback time. The animation resolver now attempts `requested state -> authored default_state mapping -> default_clip -> direct clip-name match -> first available clip`, so attachment/effect pulses stay deterministic even when authored state mappings are partial. Missing clips and unsupported animation data never crash rendering and always fall back safely.

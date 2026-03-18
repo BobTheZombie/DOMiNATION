@@ -50,3 +50,9 @@ Resolved styles now directly feed runtime model selection (`mesh`, `lod_group`) 
 
 ## Animation fields
 Entity styles can include an `animation` object with `default_state`, `default_clip`, `state_clips`, and `playback_hints` (`loop`/`oneshot`). Resolution order remains exact -> civ override -> theme override -> render class -> default, then state/lod overlays.
+
+
+## Runtime semantic attachment consumption
+- Author `attachments` in unit/building/object styles to opt specific classes or exact IDs into runtime semantic hooks.
+- Hook placement resolves through `content/asset_manifest.json` `attachment_hooks` when present; otherwise renderer uses deterministic semantic defaults and counts fallback usage for debug overlays.
+- Attachment pass order is stable because runtime iteration is key-sorted and uses resolved asset IDs + stylesheet-selected hook IDs only.

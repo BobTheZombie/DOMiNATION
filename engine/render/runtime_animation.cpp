@@ -34,6 +34,30 @@ float deterministic_clip_duration(std::string_view clipName) {
   return 18.0f + static_cast<float>(hash % 45u);
 }
 
+std::string first_available_clip(const RuntimeAnimationRequest& request,
+                                 const AnimationStyleBinding* binding,
+                                 std::string_view resolvedState,
+                                 bool& outStateFallback) {
+  outStateFallback = false;
+
+  if (!binding) return {};
+
+  if (auto it = binding->stateClips.find(std::string(resolvedState)); it != binding->stateClips.end() && !it->second.empty()) {
+    return it->second;
+  }
+
+  if (!binding->defaultState.empty() && binding->defaultState != resolvedState) {
+    if (auto it = binding->stateClips.find(binding->defaultState); it != binding->stateClips.end() && !it->second.empty()) {
+      outStateFallback = true;
+      return it->second;
+    }
+  }
+
+  if (!binding->defaultClip.empty()) return binding->defaultClip;
+  if (clip_available(request.model, resolvedState)) return std::string(resolvedState);
+  return {};
+}
+
 } // namespace
 
 void reset_runtime_animation_counters() { gCounters = {}; }
@@ -53,14 +77,9 @@ RuntimeAnimationState resolve_runtime_animation(const RuntimeAnimationRequest& r
   }
 
   const AnimationStyleBinding* binding = request.styleBinding;
-  if (binding) {
-    if (auto it = binding->stateClips.find(state.resolvedState); it != binding->stateClips.end()) {
-      state.resolvedClip = it->second;
-    }
-    if (state.resolvedClip.empty() && !binding->defaultClip.empty()) {
-      state.resolvedClip = binding->defaultClip;
-    }
-  }
+  bool stateFallback = false;
+  state.resolvedClip = first_available_clip(request, binding, state.resolvedState, stateFallback);
+  state.stateFallback = stateFallback;
 
   if (!state.resolvedClip.empty() && !clip_available(request.model, state.resolvedClip)) {
 #ifndef NDEBUG
@@ -72,6 +91,7 @@ RuntimeAnimationState resolve_runtime_animation(const RuntimeAnimationRequest& r
     }
 #endif
     state.resolvedClip.clear();
+    state.stateFallback = true;
   }
 
   if (state.resolvedClip.empty()) {

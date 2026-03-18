@@ -17,3 +17,9 @@ The runtime animation system is a bounded presentation-only layer integrated wit
 - `ACTIVE_ANIMATED_INSTANCES`
 - `CLIP_PLAY_EVENTS`
 - `LOOPING_CLIP_INSTANCES`
+
+## Attachment/effect-hook interplay
+- Attachment visuals consume the same deterministic runtime animation state used by the model body.
+- Looping clips gently pulse persistent hooks (`banner_socket`, `civ_emblem`, `smoke_stack`, `guardian_aura`).
+- One-shot attack clips bias `muzzle_flash` intensity toward the clip front edge while preserving stable fallback behavior.
+- Missing state mappings deterministically fall back through `default_state`, `default_clip`, direct clip-name match, then first available clip.

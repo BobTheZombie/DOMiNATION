@@ -1453,6 +1453,7 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     rnInstance.animationState = rn.type == dom::sim::ResourceNodeType::Ore ? "work" : "idle";
     rnInstance.stableId = rn.id;
     rnInstance.presentationTick = w.tick;
+    rnInstance.activeIndustry = rn.type == dom::sim::ResourceNodeType::Ore;
     draw_model_instance(rnInstance);
     if (strategic || rn.type == dom::sim::ResourceNodeType::Ore || rn.type == dom::sim::ResourceNodeType::Ruins) {
       draw_ring(rn.pos, r + 0.11f, 0.05f, mix_color(col, {1.0f, 1.0f, 1.0f}, 0.35f));
@@ -1497,6 +1498,7 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     guardianInstance.presentationTick = w.tick;
     guardianInstance.guardianActive = s.spawned && s.alive;
     guardianInstance.guardianRevealed = s.discovered || w.godMode;
+    guardianInstance.strategicWarning = s.spawned && s.alive;
     draw_model_instance(guardianInstance);
   }
 }
@@ -2275,6 +2277,8 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       unitInstance.selected = u.selected;
       unitInstance.damaged = u.hp < 65.0f;
       unitInstance.combatFiring = attacking;
+      unitInstance.guardianActive = glyph == UnitGlyph::Guardian;
+      unitInstance.guardianRevealed = glyph == UnitGlyph::Guardian;
       unitInstance.attachmentHooks = uStyle.attachments;
       unitInstance.animation = uStyle.animation;
       unitInstance.animationState = animState;

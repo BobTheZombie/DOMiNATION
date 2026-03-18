@@ -10,6 +10,21 @@ namespace dom::render {
 
 namespace {
 constexpr const char* kFallbackModel = "assets_final/fallback/missing_mesh.glb";
+
+bool parse_hook_offset(const nlohmann::json& node, glm::vec3& out) {
+  if (node.is_array() && node.size() == 3) {
+    out = glm::vec3{node[0].get<float>(), node[1].get<float>(), node[2].get<float>()};
+    return true;
+  }
+  if (node.is_object()) {
+    if (auto it = node.find("offset"); it != node.end() && parse_hook_offset(*it, out)) return true;
+    if (node.contains("x") && node.contains("y") && node.contains("z")) {
+      out = glm::vec3{node["x"].get<float>(), node["y"].get<float>(), node["z"].get<float>()};
+      return true;
+    }
+  }
+  return false;
+}
 }
 
 void ModelCache::lazy_load_manifests() const {
@@ -41,8 +56,9 @@ void ModelCache::lazy_load_manifests() const {
       if (auto hookIt = asset.find("attachment_hooks"); hookIt != asset.end() && hookIt->is_object()) {
         auto& hookMap = manifests_.assetAttachmentHooks[assetId];
         for (const auto& [semantic, offsetNode] : hookIt->items()) {
-          if (!offsetNode.is_array() || offsetNode.size() != 3) continue;
-          hookMap[semantic] = glm::vec3{offsetNode[0].get<float>(), offsetNode[1].get<float>(), offsetNode[2].get<float>()};
+          glm::vec3 parsed{0.0f, 0.0f, 0.0f};
+          if (!parse_hook_offset(offsetNode, parsed)) continue;
+          hookMap[semantic] = parsed;
         }
       }
     }
@@ -90,13 +106,13 @@ AttachmentHookResolveResult ModelCache::resolve_attachment_hook(std::string_view
                                                                std::string_view hookId) const {
   lazy_load_manifests();
   static const std::unordered_map<std::string, glm::vec3> kKnownHookOffsets{
-      {"banner_socket", {0.0f, 0.92f, 0.0f}},
-      {"civ_emblem", {0.0f, 0.56f, 0.0f}},
-      {"smoke_stack", {0.28f, 0.82f, 0.0f}},
-      {"muzzle_flash", {0.62f, 0.16f, 0.0f}},
-      {"selection_badge", {0.0f, -0.9f, 0.0f}},
-      {"warning_badge", {0.0f, 0.98f, 0.0f}},
-      {"guardian_aura", {0.0f, 0.0f, 0.0f}},
+      {"banner_socket", {0.0f, 0.92f, 0.18f}},
+      {"civ_emblem", {0.0f, 0.56f, 0.08f}},
+      {"smoke_stack", {0.28f, 0.82f, 0.32f}},
+      {"muzzle_flash", {0.62f, 0.16f, 0.10f}},
+      {"selection_badge", {0.0f, -0.9f, -0.08f}},
+      {"warning_badge", {0.0f, 0.98f, 0.12f}},
+      {"guardian_aura", {0.0f, 0.0f, -0.16f}},
   };
 
   AttachmentHookResolveResult result{};
