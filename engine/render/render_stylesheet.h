@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/render/content_resolution.h"
+#include "engine/render/runtime_animation.h"
 #include <array>
 #include <cstdint>
 #include <string>
@@ -36,6 +37,7 @@ struct ResolvedRenderStyle {
   std::array<float, 3> tint{1.0f, 1.0f, 1.0f};
   std::array<float, 2> sizeScale{1.0f, 1.0f};
   std::unordered_map<std::string, std::string> attachments;
+  AnimationStyleBinding animation;
   bool fallback{false};
 };
 

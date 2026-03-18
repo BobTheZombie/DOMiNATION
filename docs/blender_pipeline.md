@@ -53,3 +53,6 @@ Styles exported from Blender should be registered in `content/asset_manifest.jso
 
 ## Runtime usage
 Engine runtime now consumes exported GLB assets directly via `asset_manifest.json` and `lod_manifest.json`; invalid or missing paths resolve to deterministic fallback mesh warnings.
+
+## Animated GLB authoring expectations
+Animated GLB exports should provide stable clip names (`idle`, `move`, `attack`, `work`, `warning`, `aura`) where possible. Content remains valid without clips; runtime will safely render static meshes with fallback animation behavior.

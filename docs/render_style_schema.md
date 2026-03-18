@@ -32,3 +32,14 @@ Studio scene layout persistence (`tools/dom_asset_studio/scene_preview_layout.js
 
 ## Runtime model fields
 `mesh` and `lod_group` are now consumed by the in-game runtime model pass for deterministic GLB selection. State variants continue to override these fields declaratively.
+
+## `animation` schema fragment
+```json
+"animation": {
+  "default_state": "idle",
+  "default_clip": "idle",
+  "state_clips": { "move": "move", "attack": "attack" },
+  "playback_hints": { "attack": "oneshot", "idle": "loop" }
+}
+```
+All fields are optional; unresolved clips are handled by deterministic fallback.

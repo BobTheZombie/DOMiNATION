@@ -22,6 +22,7 @@ struct StyleLayer {
   std::array<float, 3> tint{1.0f, 1.0f, 1.0f};
   std::array<float, 2> sizeScale{1.0f, 1.0f};
   std::unordered_map<std::string, std::string> attachments;
+  AnimationStyleBinding animation;
   std::unordered_map<std::string, std::shared_ptr<StyleLayer>> stateVariants;
   std::unordered_map<std::string, std::shared_ptr<StyleLayer>> lodVariants;
 };
@@ -75,6 +76,19 @@ StyleLayer parse_style_layer(const json& j) {
   if (auto it = j.find("attachments"); it != j.end() && it->is_object()) {
     for (auto& [k, v] : it->items()) if (v.is_string()) s.attachments[k] = v.get<std::string>();
   }
+  if (auto it = j.find("animation"); it != j.end() && it->is_object()) {
+    if (auto st = it->find("default_state"); st != it->end() && st->is_string()) s.animation.defaultState = st->get<std::string>();
+    if (auto cp = it->find("default_clip"); cp != it->end() && cp->is_string()) s.animation.defaultClip = cp->get<std::string>();
+    if (auto stateClips = it->find("state_clips"); stateClips != it->end() && stateClips->is_object()) {
+      for (auto& [stateId, clip] : stateClips->items()) if (clip.is_string()) s.animation.stateClips[stateId] = clip.get<std::string>();
+    }
+    if (auto hints = it->find("playback_hints"); hints != it->end() && hints->is_object()) {
+      for (auto& [k, v] : hints->items()) {
+        if (!v.is_string()) continue;
+        s.animation.playbackHints[k] = (v.get<std::string>() == "oneshot") ? AnimationPlaybackHint::OneShot : AnimationPlaybackHint::Loop;
+      }
+    }
+  }
   if (auto it = j.find("state_variants"); it != j.end() && it->is_object()) {
     for (auto& [k, v] : it->items()) {
       if (v.is_object()) s.stateVariants[k] = std::make_shared<StyleLayer>(parse_style_layer(v));
@@ -100,6 +114,10 @@ void overlay(StyleLayer& out, const StyleLayer& over) {
   out.tint = over.tint;
   out.sizeScale = over.sizeScale;
   for (const auto& [k, v] : over.attachments) out.attachments[k] = v;
+  if (!over.animation.defaultState.empty()) out.animation.defaultState = over.animation.defaultState;
+  if (!over.animation.defaultClip.empty()) out.animation.defaultClip = over.animation.defaultClip;
+  for (const auto& [k, v] : over.animation.stateClips) out.animation.stateClips[k] = v;
+  for (const auto& [k, v] : over.animation.playbackHints) out.animation.playbackHints[k] = v;
 }
 
 size_t domain_index(RenderStyleDomain d) {
@@ -217,6 +235,7 @@ ResolvedRenderStyle resolve_render_style(const RenderStyleRequest& request) {
   out.tint = selected.tint;
   out.sizeScale = selected.sizeScale;
   out.attachments = std::move(selected.attachments);
+  out.animation = std::move(selected.animation);
   out.fallback = fallback;
   return out;
 }

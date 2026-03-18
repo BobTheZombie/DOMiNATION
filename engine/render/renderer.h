@@ -38,6 +38,11 @@ struct EntityPresentationCounters {
   uint64_t attachmentResolveCount{0};
   uint64_t attachmentFallbackCount{0};
   uint64_t activeAttachmentInstances{0};
+  uint64_t animationResolveCount{0};
+  uint64_t animationFallbackCount{0};
+  uint64_t activeAnimatedInstances{0};
+  uint64_t clipPlayEvents{0};
+  uint64_t loopingClipInstances{0};
 };
 
 struct VisualFeedbackCounters {

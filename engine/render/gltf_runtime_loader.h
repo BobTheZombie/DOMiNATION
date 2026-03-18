@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace dom::render {
 
@@ -12,6 +13,7 @@ struct RuntimeModelData {
   bool valid{false};
   float footprint{0.8f};
   float height{0.8f};
+  std::vector<std::string> clipNames;
 };
 
 class GltfRuntimeLoader {
