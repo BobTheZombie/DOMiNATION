@@ -47,3 +47,6 @@ Resolved styles now directly feed runtime model selection (`mesh`, `lod_group`) 
 - Attachment semantics are presentation-only hooks and do not mutate simulation state.
 - Attachment iteration is key-sorted at runtime to keep deterministic ordering across runs.
 - Unknown hook identifiers use deterministic fallback offsets and increment attachment fallback diagnostics.
+
+## Animation fields
+Entity styles can include an `animation` object with `default_state`, `default_clip`, `state_clips`, and `playback_hints` (`loop`/`oneshot`). Resolution order remains exact -> civ override -> theme override -> render class -> default, then state/lod overlays.
