@@ -10,6 +10,8 @@ namespace dom::render {
 namespace {
 using json = nlohmann::json;
 
+constexpr float kUnsetReadability = -1.0f;
+
 struct StyleLayer {
   std::string id;
   std::string mesh;
@@ -21,6 +23,11 @@ struct StyleLayer {
   std::string decalSet;
   std::array<float, 3> tint{1.0f, 1.0f, 1.0f};
   std::array<float, 2> sizeScale{1.0f, 1.0f};
+  bool hasTint{false};
+  bool hasSizeScale{false};
+  MaterialReadabilityProfile readability{kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability,
+                                         kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability,
+                                         kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability};
   std::unordered_map<std::string, std::string> attachments;
   AnimationStyleBinding animation;
   std::unordered_map<std::string, std::shared_ptr<StyleLayer>> stateVariants;
@@ -61,6 +68,44 @@ std::array<float, 2> read_vec2(const json& j, const char* key, const std::array<
   return {(*it)[0].get<float>(), (*it)[1].get<float>()};
 }
 
+float read_float(const json& j, const char* key, float fallback) {
+  auto it = j.find(key);
+  if (it == j.end() || !it->is_number()) return fallback;
+  return it->get<float>();
+}
+
+MaterialReadabilityProfile default_readability(RenderStyleDomain domain) {
+  switch (domain) {
+    case RenderStyleDomain::Terrain:
+      return {0.34f, 0.52f, 0.10f, 0.0f, 0.18f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.18f, 0.08f};
+    case RenderStyleDomain::Unit:
+      return {0.20f, 0.72f, 0.26f, 0.52f, 0.42f, 0.18f, 0.10f, 0.34f, 0.42f, 0.22f, 0.34f, 0.16f};
+    case RenderStyleDomain::Building:
+      return {0.24f, 0.68f, 0.22f, 0.38f, 0.40f, 0.16f, 0.48f, 0.42f, 0.28f, 0.26f, 0.28f, 0.22f};
+    case RenderStyleDomain::Object:
+      return {0.22f, 0.64f, 0.24f, 0.16f, 0.38f, 0.24f, 0.30f, 0.44f, 0.54f, 0.18f, 0.34f, 0.14f};
+  }
+  return {};
+}
+
+void overlay_readability(MaterialReadabilityProfile& out, const MaterialReadabilityProfile& over) {
+  auto overlayValue = [](float& dst, float src) {
+    if (src >= 0.0f) dst = src;
+  };
+  overlayValue(out.ambientBoost, over.ambientBoost);
+  overlayValue(out.directionalBoost, over.directionalBoost);
+  overlayValue(out.rimLight, over.rimLight);
+  overlayValue(out.civTintStrength, over.civTintStrength);
+  overlayValue(out.stateContrast, over.stateContrast);
+  overlayValue(out.emissiveStrength, over.emissiveStrength);
+  overlayValue(out.industrialHighlight, over.industrialHighlight);
+  overlayValue(out.warningHighlight, over.warningHighlight);
+  overlayValue(out.guardianHighlight, over.guardianHighlight);
+  overlayValue(out.damageDesaturate, over.damageDesaturate);
+  overlayValue(out.farDistanceBoost, over.farDistanceBoost);
+  overlayValue(out.terrainBlend, over.terrainBlend);
+}
+
 StyleLayer parse_style_layer(const json& j) {
   StyleLayer s{};
   s.id = read_string(j, "style_id");
@@ -71,8 +116,28 @@ StyleLayer parse_style_layer(const json& j) {
   s.icon = read_string(j, "icon");
   s.badge = read_string(j, "badge");
   s.decalSet = read_string(j, "decal_set");
-  s.tint = read_vec3(j, "tint", s.tint);
-  s.sizeScale = read_vec2(j, "size_scale", s.sizeScale);
+  if (j.contains("tint")) {
+    s.tint = read_vec3(j, "tint", s.tint);
+    s.hasTint = true;
+  }
+  if (j.contains("size_scale")) {
+    s.sizeScale = read_vec2(j, "size_scale", s.sizeScale);
+    s.hasSizeScale = true;
+  }
+  if (auto it = j.find("readability"); it != j.end() && it->is_object()) {
+    s.readability.ambientBoost = read_float(*it, "ambient_boost", s.readability.ambientBoost);
+    s.readability.directionalBoost = read_float(*it, "directional_boost", s.readability.directionalBoost);
+    s.readability.rimLight = read_float(*it, "rim_light", s.readability.rimLight);
+    s.readability.civTintStrength = read_float(*it, "civ_tint_strength", s.readability.civTintStrength);
+    s.readability.stateContrast = read_float(*it, "state_contrast", s.readability.stateContrast);
+    s.readability.emissiveStrength = read_float(*it, "emissive_strength", s.readability.emissiveStrength);
+    s.readability.industrialHighlight = read_float(*it, "industrial_highlight", s.readability.industrialHighlight);
+    s.readability.warningHighlight = read_float(*it, "warning_highlight", s.readability.warningHighlight);
+    s.readability.guardianHighlight = read_float(*it, "guardian_highlight", s.readability.guardianHighlight);
+    s.readability.damageDesaturate = read_float(*it, "damage_desaturate", s.readability.damageDesaturate);
+    s.readability.farDistanceBoost = read_float(*it, "far_distance_boost", s.readability.farDistanceBoost);
+    s.readability.terrainBlend = read_float(*it, "terrain_blend", s.readability.terrainBlend);
+  }
   if (auto it = j.find("attachments"); it != j.end() && it->is_object()) {
     for (auto& [k, v] : it->items()) if (v.is_string()) s.attachments[k] = v.get<std::string>();
   }
@@ -111,8 +176,15 @@ void overlay(StyleLayer& out, const StyleLayer& over) {
   if (!over.icon.empty()) out.icon = over.icon;
   if (!over.badge.empty()) out.badge = over.badge;
   if (!over.decalSet.empty()) out.decalSet = over.decalSet;
-  out.tint = over.tint;
-  out.sizeScale = over.sizeScale;
+  if (over.hasTint) {
+    out.tint = over.tint;
+    out.hasTint = true;
+  }
+  if (over.hasSizeScale) {
+    out.sizeScale = over.sizeScale;
+    out.hasSizeScale = true;
+  }
+  overlay_readability(out.readability, over.readability);
   for (const auto& [k, v] : over.attachments) out.attachments[k] = v;
   if (!over.animation.defaultState.empty()) out.animation.defaultState = over.animation.defaultState;
   if (!over.animation.defaultClip.empty()) out.animation.defaultClip = over.animation.defaultClip;
@@ -193,19 +265,20 @@ ResolvedRenderStyle resolve_render_style(const RenderStyleRequest& request) {
 
   const auto& domain = gStyles[domain_index(request.domain)];
   StyleLayer selected = domain.defaultStyle;
+  overlay_readability(selected.readability, default_readability(request.domain));
   bool fallback = false;
 
   if (auto it = domain.exactMappings.find(request.exactId); it != domain.exactMappings.end()) {
-    selected = it->second;
+    overlay(selected, it->second);
   } else if (auto ct = domain.renderClasses.find(request.renderClass); ct != domain.renderClasses.end()) {
-    selected = ct->second.defaultStyle;
+    overlay(selected, ct->second.defaultStyle);
     if (!request.civId.empty()) {
-      if (auto civIt = ct->second.civOverrides.find(request.civId); civIt != ct->second.civOverrides.end()) selected = civIt->second;
+      if (auto civIt = ct->second.civOverrides.find(request.civId); civIt != ct->second.civOverrides.end()) overlay(selected, civIt->second);
       else if (!request.themeId.empty()) {
-        if (auto thIt = ct->second.themeOverrides.find(request.themeId); thIt != ct->second.themeOverrides.end()) selected = thIt->second;
+        if (auto thIt = ct->second.themeOverrides.find(request.themeId); thIt != ct->second.themeOverrides.end()) overlay(selected, thIt->second);
       }
     } else if (!request.themeId.empty()) {
-      if (auto thIt = ct->second.themeOverrides.find(request.themeId); thIt != ct->second.themeOverrides.end()) selected = thIt->second;
+      if (auto thIt = ct->second.themeOverrides.find(request.themeId); thIt != ct->second.themeOverrides.end()) overlay(selected, thIt->second);
     }
   } else {
     fallback = true;
@@ -234,6 +307,7 @@ ResolvedRenderStyle resolve_render_style(const RenderStyleRequest& request) {
   out.decalSet = selected.decalSet;
   out.tint = selected.tint;
   out.sizeScale = selected.sizeScale;
+  out.readability = selected.readability;
   out.attachments = std::move(selected.attachments);
   out.animation = std::move(selected.animation);
   out.fallback = fallback;

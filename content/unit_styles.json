@@ -33,6 +33,18 @@
       "playback_hints": {
         "attack": "oneshot"
       }
+    },
+    "readability": {
+      "ambient_boost": 0.14,
+      "directional_boost": 0.68,
+      "rim_light": 0.18,
+      "civ_tint_strength": 0.52,
+      "state_contrast": 0.4,
+      "emissive_strength": 0.14,
+      "warning_highlight": 0.3,
+      "damage_desaturate": 0.22,
+      "far_distance_boost": 0.28,
+      "terrain_blend": 0.14
     }
   },
   "render_classes": {
@@ -495,6 +507,17 @@
           "playback_hints": {
             "attack": "oneshot"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.16,
+          "directional_boost": 0.78,
+          "rim_light": 0.24,
+          "civ_tint_strength": 0.44,
+          "state_contrast": 0.42,
+          "emissive_strength": 0.18,
+          "warning_highlight": 0.28,
+          "far_distance_boost": 0.32,
+          "terrain_blend": 0.16
         }
       },
       "civ_overrides": {
@@ -712,6 +735,18 @@
           "playback_hints": {
             "attack": "oneshot"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.18,
+          "directional_boost": 0.72,
+          "rim_light": 0.32,
+          "civ_tint_strength": 0.24,
+          "state_contrast": 0.48,
+          "emissive_strength": 0.36,
+          "guardian_highlight": 0.88,
+          "warning_highlight": 0.22,
+          "far_distance_boost": 0.34,
+          "terrain_blend": 0.12
         }
       }
     },

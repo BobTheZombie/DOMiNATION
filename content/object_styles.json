@@ -27,6 +27,13 @@
       "playback_hints": {
         "attack": "oneshot"
       }
+    },
+    "readability": {
+      "ambient_boost": 0.16,
+      "directional_boost": 0.58,
+      "state_contrast": 0.34,
+      "emissive_strength": 0.18,
+      "terrain_blend": 0.12
     }
   },
   "render_classes": {
@@ -103,6 +110,14 @@
           "playback_hints": {
             "aura": "loop"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.18,
+          "directional_boost": 0.54,
+          "state_contrast": 0.3,
+          "emissive_strength": 0.16,
+          "industrial_highlight": 0.4,
+          "terrain_blend": 0.14
         }
       }
     },
@@ -157,6 +172,17 @@
           "playback_hints": {
             "aura": "loop"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.14,
+          "directional_boost": 0.68,
+          "rim_light": 0.26,
+          "state_contrast": 0.5,
+          "emissive_strength": 0.32,
+          "guardian_highlight": 0.92,
+          "warning_highlight": 0.54,
+          "far_distance_boost": 0.3,
+          "terrain_blend": 0.1
         }
       }
     },
@@ -549,6 +575,15 @@
           "playback_hints": {
             "aura": "loop"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.2,
+          "directional_boost": 0.6,
+          "state_contrast": 0.4,
+          "emissive_strength": 0.22,
+          "industrial_highlight": 0.7,
+          "warning_highlight": 0.28,
+          "terrain_blend": 0.16
         }
       }
     },

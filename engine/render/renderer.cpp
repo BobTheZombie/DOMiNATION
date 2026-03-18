@@ -65,8 +65,14 @@ struct VisualFeedbackState {
 VisualFeedbackState gFeedbackState{};
 VisualFeedbackCounters gFeedbackCounters{};
 StrategicVisualizationCounters gStrategicCounters{};
+LightingMaterialSettings gLightingSettings{};
+LightingMaterialCounters gLightingCounters{};
 
 void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<float, 3>& color);
+
+glm::vec3 mix_color3(const glm::vec3& a, const glm::vec3& b, float t) {
+  return glm::mix(a, b, std::clamp(t, 0.0f, 1.0f));
+}
 
 struct CameraBasis {
   glm::vec3 eye{0.0f};
@@ -126,6 +132,33 @@ bool gEntityPresentationDebug{false};
 std::array<float, 3> mix_color(const std::array<float, 3>& a, const std::array<float, 3>& b, float t) {
   float k = std::clamp(t, 0.0f, 1.0f);
   return {a[0] * (1.0f - k) + b[0] * k, a[1] * (1.0f - k) + b[1] * k, a[2] * (1.0f - k) + b[2] * k};
+}
+
+std::array<float, 3> to_array3(const glm::vec3& v) {
+  return {v.r, v.g, v.b};
+}
+
+void apply_terrain_material_context(const TerrainVisualSample& terrainSample,
+                                    ContentLodTier lodTier,
+                                    MaterialReadabilityProfile& readability,
+                                    std::array<float, 3>& baseTint,
+                                    ModelInstanceDesc& instance) {
+  const float terrainMix = gLightingSettings.terrainCouplingEnabled ? std::clamp(readability.terrainBlend + terrainSample.terrainBlend + gLightingSettings.terrainCouplingStrength, 0.0f, 0.72f) : 0.0f;
+  const float farBoost = (lodTier == ContentLodTier::Far && gLightingSettings.farReadabilityBoostEnabled) ? gLightingSettings.farReadabilityStrength : 0.0f;
+  const glm::vec3 tinted = mix_color3(glm::vec3(baseTint[0], baseTint[1], baseTint[2]), terrainSample.color, terrainMix * 0.42f);
+  const glm::vec3 lifted = mix_color3(tinted, terrainSample.accent, 0.08f + terrainSample.contrast * 0.10f + farBoost * 0.12f);
+  baseTint = to_array3(glm::clamp(lifted, glm::vec3(0.0f), glm::vec3(1.0f)));
+  readability.ambientBoost += terrainSample.ambient * gLightingSettings.terrainAmbientStrength * 0.25f;
+  readability.directionalBoost += terrainSample.directional * gLightingSettings.terrainDirectionalStrength * 0.28f;
+  readability.stateContrast += gLightingSettings.stateContrastEnabled ? terrainSample.contrast * 0.18f : 0.0f;
+  readability.emissiveStrength *= gLightingSettings.emissiveAccentsEnabled ? 1.0f : 0.0f;
+  readability.farDistanceBoost += farBoost;
+  instance.terrainColor = to_array3(terrainSample.color);
+  instance.terrainAccent = to_array3(terrainSample.accent);
+  instance.terrainAmbient = terrainSample.ambient;
+  instance.terrainDirectional = terrainSample.directional;
+  instance.terrainContrast = terrainSample.contrast;
+  instance.terrainAware = terrainMix > 0.01f;
 }
 
 std::string normalized_civ_key(const dom::sim::World& w, uint16_t team) {
@@ -1436,18 +1469,23 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     else if (rn.type == dom::sim::ResourceNodeType::Ore) rc = "mine_entrance";
     else if (rn.type == dom::sim::ResourceNodeType::Farmable) rc = "settlement_object";
     else if (rn.type == dom::sim::ResourceNodeType::Ruins) rc = "capital_landmark";
-    const auto objStyle = resolve_render_style({RenderStyleDomain::Object, {}, {}, {}, rc, {}, {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
+    const auto objLod = strategic ? ContentLodTier::Far : ContentLodTier::Near;
+    const auto objStyle = resolve_render_style({RenderStyleDomain::Object, {}, {}, {}, rc, {}, {}, objLod});
     std::array<float, 3> col{objStyle.tint[0], objStyle.tint[1], objStyle.tint[2]};
+    MaterialReadabilityProfile readability = objStyle.readability;
     float r = (strategic ? 0.20f : 0.28f) * objStyle.sizeScale[0];
     if (rn.type == dom::sim::ResourceNodeType::Ruins) r *= 1.25f;
     else if (rn.type == dom::sim::ResourceNodeType::Ore) r *= 1.14f;
     ModelInstanceDesc rnInstance{};
+    auto terrainSample = resolve_terrain_visual_blended(w, rn.pos.x, rn.pos.y);
+    apply_terrain_material_context(terrainSample, objLod, readability, col, rnInstance);
     rnInstance.pos = rn.pos;
     rnInstance.footprint = r;
     rnInstance.tint = col;
+    rnInstance.readability = readability;
     rnInstance.meshId = objStyle.mesh;
     rnInstance.lodGroup = objStyle.lodGroup;
-    rnInstance.lodTier = strategic ? ContentLodTier::Far : ContentLodTier::Near;
+    rnInstance.lodTier = objLod;
     rnInstance.attachmentHooks = objStyle.attachments;
     rnInstance.animation = objStyle.animation;
     rnInstance.animationState = rn.type == dom::sim::ResourceNodeType::Ore ? "work" : "idle";
@@ -1482,15 +1520,20 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     auto gPres = dom::sim::guardian_content_presentation(s.guardianId, s.siteType);
     if (gPres.iconId.find("fallback") != std::string::npos) ++gEntityCounters.entityPresentationFallbacks;
     if (!s.discovered && !w.godMode) continue;
-    const auto gStyle = resolve_render_style({RenderStyleDomain::Object, s.guardianId, {}, {}, "guardian_site", (s.spawned && s.alive) ? "strategic_warning" : "default", {}, strategic ? ContentLodTier::Far : ContentLodTier::Near});
+    const auto guardianLod = strategic ? ContentLodTier::Far : ContentLodTier::Near;
+    const auto gStyle = resolve_render_style({RenderStyleDomain::Object, s.guardianId, {}, {}, "guardian_site", (s.spawned && s.alive) ? "strategic_warning" : "default", {}, guardianLod});
     std::array<float, 3> col{gStyle.tint[0], gStyle.tint[1], gStyle.tint[2]};
+    MaterialReadabilityProfile readability = gStyle.readability;
     ModelInstanceDesc guardianInstance{};
+    auto terrainSample = resolve_terrain_visual_blended(w, s.pos.x, s.pos.y);
+    apply_terrain_material_context(terrainSample, guardianLod, readability, col, guardianInstance);
     guardianInstance.pos = s.pos;
     guardianInstance.footprint = (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0];
     guardianInstance.tint = col;
+    guardianInstance.readability = readability;
     guardianInstance.meshId = gStyle.mesh;
     guardianInstance.lodGroup = gStyle.lodGroup;
-    guardianInstance.lodTier = strategic ? ContentLodTier::Far : ContentLodTier::Near;
+    guardianInstance.lodTier = guardianLod;
     guardianInstance.attachmentHooks = gStyle.attachments;
     guardianInstance.animation = gStyle.animation;
     guardianInstance.animationState = (s.spawned && s.alive) ? "aura" : "idle";
@@ -2014,6 +2057,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   reset_model_render_counters();
   gEntityCounters = {};
   gStrategicCounters = {};
+  gLightingCounters = {};
   std::vector<TerrainChunkMesh> terrainChunks;
   build_terrain_chunk_meshes(w, 16, terrainChunks);
   glBegin(GL_TRIANGLES);
@@ -2024,6 +2068,33 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     }
   }
   glEnd();
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBegin(GL_QUADS);
+  for (int y = 0; y < w.height - 1; ++y) {
+    for (int x = 0; x < w.width - 1; ++x) {
+      auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f);
+      ++gLightingCounters.terrainCellsLit;
+      if (sample.contrast > 0.12f) ++gLightingCounters.terrainContrastCells;
+      if (sample.terrainBlend > 0.12f) ++gLightingCounters.terrainBlendCells;
+      const float overlayProtection = std::clamp(gLightingSettings.overlayProtectionAlpha, 0.3f, 1.0f);
+      const glm::vec3 hi = mix_color3(sample.accent, glm::vec3(1.0f), 0.18f + sample.directional * 0.18f);
+      const glm::vec3 lo = mix_color3(sample.color, glm::vec3(0.07f, 0.08f, 0.09f), 0.12f + sample.contrast * 0.16f);
+      const float hiAlpha = (0.04f + sample.directional * 0.10f + sample.contrast * 0.05f) * overlayProtection;
+      const float loAlpha = (0.03f + (1.0f - sample.ambient) * 0.08f + sample.contrast * 0.04f) * overlayProtection;
+      glColor4f(lo.r, lo.g, lo.b, loAlpha);
+      glVertex2f(x, y);
+      glColor4f(mix_color3(lo, hi, 0.2f).r, mix_color3(lo, hi, 0.2f).g, mix_color3(lo, hi, 0.2f).b, loAlpha * 0.65f);
+      glVertex2f(x + 1, y);
+      glColor4f(hi.r, hi.g, hi.b, hiAlpha);
+      glVertex2f(x + 1, y + 1);
+      glColor4f(mix_color3(hi, lo, 0.15f).r, mix_color3(hi, lo, 0.15f).g, mix_color3(hi, lo, 0.15f).b, hiAlpha * 0.82f);
+      glVertex2f(x, y + 1);
+    }
+  }
+  glEnd();
+  glDisable(GL_BLEND);
 
   glBegin(GL_LINES);
   for (int y = 1; y < w.height - 1; ++y) {
@@ -2145,16 +2216,21 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     if (b.factory.blocked) buildingAnimState = "warning";
     else if (b.factory.active) buildingAnimState = "work";
     else if (b.underConstruction) buildingAnimState = "work";
-    const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, select_lod_tier(c.zoom)});
+    const auto lodTier = select_lod_tier(c.zoom);
+    const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, lodTier});
     if (bStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
     base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
+    auto terrainSample = resolve_terrain_visual_blended(w, b.pos.x, b.pos.y);
+    MaterialReadabilityProfile readability = bStyle.readability;
     ModelInstanceDesc buildingInstance{};
+    apply_terrain_material_context(terrainSample, lodTier, readability, base, buildingInstance);
     buildingInstance.pos = b.pos;
     buildingInstance.footprint = std::max(0.35f, b.size.x * 0.22f * bStyle.sizeScale[0]);
     buildingInstance.tint = base;
+    buildingInstance.readability = readability;
     buildingInstance.meshId = bStyle.mesh;
     buildingInstance.lodGroup = bStyle.lodGroup;
-    buildingInstance.lodTier = select_lod_tier(c.zoom);
+    buildingInstance.lodTier = lodTier;
     buildingInstance.attachmentHooks = bStyle.attachments;
     buildingInstance.animation = bStyle.animation;
     buildingInstance.animationState = buildingAnimState;
@@ -2263,14 +2339,18 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       const auto uStyle = resolve_render_style({RenderStyleDomain::Unit, u.definitionId, normalized_civ_key(w, u.team), team_theme_id(w, u.team), unit_render_class(u), uState, {}, lodTier});
       if (uStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
       base = mix_color(base, {uStyle.tint[0], uStyle.tint[1], uStyle.tint[2]}, 0.2f);
+      auto terrainSample = resolve_terrain_visual_blended(w, u.renderPos.x, u.renderPos.y);
+      MaterialReadabilityProfile readability = uStyle.readability;
       UnitGlyph glyph = unit_glyph(u);
       float s = (c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f)) * uStyle.sizeScale[0];
       if (glyph == UnitGlyph::Guardian) s += 0.16f;
       if (glyph == UnitGlyph::Armor || glyph == UnitGlyph::Naval) s += 0.08f;
       ModelInstanceDesc unitInstance{};
+      apply_terrain_material_context(terrainSample, lodTier, readability, base, unitInstance);
       unitInstance.pos = u.renderPos;
       unitInstance.footprint = s;
       unitInstance.tint = base;
+      unitInstance.readability = readability;
       unitInstance.meshId = uStyle.mesh;
       unitInstance.lodGroup = uStyle.lodGroup;
       unitInstance.lodTier = lodTier;
@@ -2550,6 +2630,21 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   gEntityCounters.activeAnimatedInstances = modelCounters.activeAnimatedInstances;
   gEntityCounters.clipPlayEvents = modelCounters.clipPlayEvents;
   gEntityCounters.loopingClipInstances = modelCounters.loopingClipInstances;
+  gEntityCounters.terrainAwareInstances = modelCounters.terrainAwareInstances;
+  gEntityCounters.civTintInstances = modelCounters.civTintInstances;
+  gEntityCounters.emissiveAccentInstances = modelCounters.emissiveAccentInstances;
+  gEntityCounters.warningHighlightInstances = modelCounters.warningHighlightInstances;
+  gEntityCounters.industrialHighlightInstances = modelCounters.industrialHighlightInstances;
+  gEntityCounters.guardianHighlightInstances = modelCounters.guardianHighlightInstances;
+  gEntityCounters.damagedContrastInstances = modelCounters.damagedContrastInstances;
+  gEntityCounters.farReadabilityBoostInstances = modelCounters.farReadabilityBoostInstances;
+  gLightingCounters.terrainAwareInstances = modelCounters.terrainAwareInstances;
+  gLightingCounters.emissiveAccentInstances = modelCounters.emissiveAccentInstances;
+  gLightingCounters.warningHighlightInstances = modelCounters.warningHighlightInstances;
+  gLightingCounters.industrialHighlightInstances = modelCounters.industrialHighlightInstances;
+  gLightingCounters.guardianHighlightInstances = modelCounters.guardianHighlightInstances;
+  gLightingCounters.damagedContrastInstances = modelCounters.damagedContrastInstances;
+  gLightingCounters.farReadabilityBoostInstances = modelCounters.farReadabilityBoostInstances;
   const auto drawEnd = Clock::now();
   gLastDrawMs = std::chrono::duration<double, std::milli>(drawEnd - drawStart).count();
 }
@@ -2609,6 +2704,16 @@ void set_strategic_visualization_enabled(bool enabled) { gOverlay.showStrategicO
 bool strategic_visualization_enabled() { return gOverlay.showStrategicOverlays; }
 const VisualFeedbackCounters& visual_feedback_counters() { return gFeedbackCounters; }
 const StrategicVisualizationCounters& strategic_visualization_counters() { return gStrategicCounters; }
+void set_lighting_material_settings(const LightingMaterialSettings& settings) {
+  gLightingSettings = settings;
+  gLightingSettings.terrainCouplingStrength = std::clamp(gLightingSettings.terrainCouplingStrength, 0.0f, 1.0f);
+  gLightingSettings.terrainAmbientStrength = std::clamp(gLightingSettings.terrainAmbientStrength, 0.0f, 1.0f);
+  gLightingSettings.terrainDirectionalStrength = std::clamp(gLightingSettings.terrainDirectionalStrength, 0.0f, 1.0f);
+  gLightingSettings.farReadabilityStrength = std::clamp(gLightingSettings.farReadabilityStrength, 0.0f, 1.0f);
+  gLightingSettings.overlayProtectionAlpha = std::clamp(gLightingSettings.overlayProtectionAlpha, 0.15f, 1.0f);
+}
+const LightingMaterialSettings& lighting_material_settings() { return gLightingSettings; }
+const LightingMaterialCounters& lighting_material_counters() { return gLightingCounters; }
 double last_draw_ms() { return gLastDrawMs; }
 
 void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }

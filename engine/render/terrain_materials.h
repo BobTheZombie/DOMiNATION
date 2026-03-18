@@ -29,6 +29,10 @@ struct TerrainVisualSample {
   TerrainMaterialId material{TerrainMaterialId::Grassland};
   glm::vec3 color{0.2f, 0.4f, 0.2f};
   glm::vec3 accent{0.2f, 0.4f, 0.2f};
+  float ambient{0.5f};
+  float directional{0.5f};
+  float contrast{0.0f};
+  float terrainBlend{0.12f};
   bool isWater{false};
   bool hasForestCanopy{false};
   bool hasCliff{false};
@@ -41,6 +45,9 @@ struct TerrainPresentationCounters {
   uint64_t waterFeatureResolves{0};
   uint64_t forestClusterCount{0};
   uint64_t mountainFeatureCount{0};
+  uint64_t terrainLightingSamples{0};
+  uint64_t terrainContrastSamples{0};
+  uint64_t terrainMaterialBlendSamples{0};
   uint64_t presentationFallbackCount{0};
 };
 

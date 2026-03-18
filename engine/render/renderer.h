@@ -43,6 +43,14 @@ struct EntityPresentationCounters {
   uint64_t activeAnimatedInstances{0};
   uint64_t clipPlayEvents{0};
   uint64_t loopingClipInstances{0};
+  uint64_t terrainAwareInstances{0};
+  uint64_t civTintInstances{0};
+  uint64_t emissiveAccentInstances{0};
+  uint64_t warningHighlightInstances{0};
+  uint64_t industrialHighlightInstances{0};
+  uint64_t guardianHighlightInstances{0};
+  uint64_t damagedContrastInstances{0};
+  uint64_t farReadabilityBoostInstances{0};
 };
 
 struct VisualFeedbackCounters {
@@ -68,6 +76,31 @@ struct StrategicVisualizationCounters {
   uint64_t railFlowLines{0};
   uint64_t trainMarkers{0};
   uint64_t logisticsVisualEvents{0};
+};
+
+struct LightingMaterialSettings {
+  bool terrainCouplingEnabled{true};
+  bool emissiveAccentsEnabled{true};
+  bool stateContrastEnabled{true};
+  bool farReadabilityBoostEnabled{true};
+  float terrainCouplingStrength{0.18f};
+  float terrainAmbientStrength{0.34f};
+  float terrainDirectionalStrength{0.28f};
+  float farReadabilityStrength{0.20f};
+  float overlayProtectionAlpha{0.84f};
+};
+
+struct LightingMaterialCounters {
+  uint64_t terrainCellsLit{0};
+  uint64_t terrainContrastCells{0};
+  uint64_t terrainBlendCells{0};
+  uint64_t terrainAwareInstances{0};
+  uint64_t emissiveAccentInstances{0};
+  uint64_t warningHighlightInstances{0};
+  uint64_t industrialHighlightInstances{0};
+  uint64_t guardianHighlightInstances{0};
+  uint64_t damagedContrastInstances{0};
+  uint64_t farReadabilityBoostInstances{0};
 };
 
 enum class StrategicLabelType : uint8_t {
@@ -112,6 +145,9 @@ bool strategic_visualization_enabled();
 bool visual_feedback_overlay_debug();
 const VisualFeedbackCounters& visual_feedback_counters();
 const StrategicVisualizationCounters& strategic_visualization_counters();
+void set_lighting_material_settings(const LightingMaterialSettings& settings);
+const LightingMaterialSettings& lighting_material_settings();
+const LightingMaterialCounters& lighting_material_counters();
 double last_draw_ms();
 
 struct EditorPreview {

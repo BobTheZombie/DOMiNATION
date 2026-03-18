@@ -48,6 +48,11 @@ Resolved styles now directly feed runtime model selection (`mesh`, `lod_group`) 
 - Attachment iteration is key-sorted at runtime to keep deterministic ordering across runs.
 - Unknown hook identifiers use deterministic fallback offsets and increment attachment fallback diagnostics.
 
+## Readability fields
+Entity/terrain styles may optionally include a `readability` object with bounded presentation-only controls such as `ambient_boost`, `directional_boost`, `rim_light`, `civ_tint_strength`, `state_contrast`, `emissive_strength`, `industrial_highlight`, `warning_highlight`, `guardian_highlight`, `damage_desaturate`, `far_distance_boost`, and `terrain_blend`.
+
+These values are merged through the same exact -> civ -> theme -> render-class -> default chain, then through LOD/state overlays. Omitted keys inherit deterministic per-domain defaults so partial overrides remain safe.
+
 ## Animation fields
 Entity styles can include an `animation` object with `default_state`, `default_clip`, `state_clips`, and `playback_hints` (`loop`/`oneshot`). Resolution order remains exact -> civ override -> theme override -> render class -> default, then state/lod overlays.
 
