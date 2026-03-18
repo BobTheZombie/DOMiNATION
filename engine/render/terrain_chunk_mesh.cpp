@@ -23,7 +23,7 @@ void emit_cell_triangles(const TerrainChunkVertex& v00,
 
 } // namespace
 
-void build_terrain_chunk_meshes(const dom::sim::World& world, int chunkSize, std::vector<TerrainChunkMesh>& outMeshes) {
+void build_terrain_chunk_meshes(const dom::sim::World& world, int chunkSize, ContentLodTier lodTier, std::vector<TerrainChunkMesh>& outMeshes) {
   outMeshes.clear();
   if (world.width < 2 || world.height < 2) return;
   const int step = std::max(4, chunkSize);
@@ -42,7 +42,7 @@ void build_terrain_chunk_meshes(const dom::sim::World& world, int chunkSize, std
         for (int lx = 0; lx <= chunk.width; ++lx) {
           const float wx = static_cast<float>(ox + lx);
           const float wy = static_cast<float>(oy + ly);
-          auto sample = resolve_terrain_visual_blended(world, wx, wy);
+          auto sample = resolve_terrain_visual_blended(world, wx, wy, lodTier);
           auto& v = verts[static_cast<size_t>(ly * vStride + lx)];
           v.x = wx;
           v.y = wy;

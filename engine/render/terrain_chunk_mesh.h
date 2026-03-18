@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/sim/simulation.h"
+#include "engine/render/content_resolution.h"
 #include <glm/vec3.hpp>
 #include <vector>
 
@@ -20,6 +21,6 @@ struct TerrainChunkMesh {
   std::vector<TerrainChunkVertex> triangles;
 };
 
-void build_terrain_chunk_meshes(const dom::sim::World& world, int chunkSize, std::vector<TerrainChunkMesh>& outMeshes);
+void build_terrain_chunk_meshes(const dom::sim::World& world, int chunkSize, ContentLodTier lodTier, std::vector<TerrainChunkMesh>& outMeshes);
 
 } // namespace dom::render

@@ -1477,7 +1477,7 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     if (rn.type == dom::sim::ResourceNodeType::Ruins) r *= 1.25f;
     else if (rn.type == dom::sim::ResourceNodeType::Ore) r *= 1.14f;
     ModelInstanceDesc rnInstance{};
-    auto terrainSample = resolve_terrain_visual_blended(w, rn.pos.x, rn.pos.y);
+    auto terrainSample = resolve_terrain_visual_blended(w, rn.pos.x, rn.pos.y, objLod);
     apply_terrain_material_context(terrainSample, objLod, readability, col, rnInstance);
     rnInstance.pos = rn.pos;
     rnInstance.footprint = r;
@@ -1525,7 +1525,7 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     std::array<float, 3> col{gStyle.tint[0], gStyle.tint[1], gStyle.tint[2]};
     MaterialReadabilityProfile readability = gStyle.readability;
     ModelInstanceDesc guardianInstance{};
-    auto terrainSample = resolve_terrain_visual_blended(w, s.pos.x, s.pos.y);
+    auto terrainSample = resolve_terrain_visual_blended(w, s.pos.x, s.pos.y, guardianLod);
     apply_terrain_material_context(terrainSample, guardianLod, readability, col, guardianInstance);
     guardianInstance.pos = s.pos;
     guardianInstance.footprint = (strategic ? 0.26f : 0.34f) * gStyle.sizeScale[0];
@@ -2058,8 +2058,9 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   gEntityCounters = {};
   gStrategicCounters = {};
   gLightingCounters = {};
+  const ContentLodTier terrainLodTier = select_lod_tier(c.zoom);
   std::vector<TerrainChunkMesh> terrainChunks;
-  build_terrain_chunk_meshes(w, 16, terrainChunks);
+  build_terrain_chunk_meshes(w, 16, terrainLodTier, terrainChunks);
   glBegin(GL_TRIANGLES);
   for (const auto& chunk : terrainChunks) {
     for (const auto& v : chunk.triangles) {
@@ -2074,7 +2075,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   glBegin(GL_QUADS);
   for (int y = 0; y < w.height - 1; ++y) {
     for (int x = 0; x < w.width - 1; ++x) {
-      auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f);
+      auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f, terrainLodTier);
       ++gLightingCounters.terrainCellsLit;
       if (sample.contrast > 0.12f) ++gLightingCounters.terrainContrastCells;
       if (sample.terrainBlend > 0.12f) ++gLightingCounters.terrainBlendCells;
@@ -2100,7 +2101,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   for (int y = 1; y < w.height - 1; ++y) {
     for (int x = 1; x < w.width - 1; ++x) {
       size_t i = y * w.width + x;
-      auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f);
+      auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f, terrainLodTier);
       if (!sample.hasCliff) continue;
       float slope = terrain_slope_hint(w, static_cast<int>(i));
       float len = 0.18f + slope * 0.24f;
@@ -2117,7 +2118,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     glBegin(GL_QUADS);
     for (int y = 0; y < w.height - 1; ++y) {
       for (int x = 0; x < w.width - 1; ++x) {
-        auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f);
+        auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f, terrainLodTier);
         if (gOverlay.showWaterOverlay && !sample.isWater) continue;
         if (gOverlay.showTerrainMaterialOverlay && !gOverlay.showWaterOverlay && sample.isWater) continue;
         glm::vec3 oc = gOverlay.showWaterOverlay ? glm::vec3(0.24f, 0.72f, 1.0f) : sample.accent;
@@ -2220,7 +2221,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, lodTier});
     if (bStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
     base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
-    auto terrainSample = resolve_terrain_visual_blended(w, b.pos.x, b.pos.y);
+    auto terrainSample = resolve_terrain_visual_blended(w, b.pos.x, b.pos.y, lodTier);
     MaterialReadabilityProfile readability = bStyle.readability;
     ModelInstanceDesc buildingInstance{};
     apply_terrain_material_context(terrainSample, lodTier, readability, base, buildingInstance);
@@ -2339,7 +2340,7 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       const auto uStyle = resolve_render_style({RenderStyleDomain::Unit, u.definitionId, normalized_civ_key(w, u.team), team_theme_id(w, u.team), unit_render_class(u), uState, {}, lodTier});
       if (uStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
       base = mix_color(base, {uStyle.tint[0], uStyle.tint[1], uStyle.tint[2]}, 0.2f);
-      auto terrainSample = resolve_terrain_visual_blended(w, u.renderPos.x, u.renderPos.y);
+      auto terrainSample = resolve_terrain_visual_blended(w, u.renderPos.x, u.renderPos.y, lodTier);
       MaterialReadabilityProfile readability = uStyle.readability;
       UnitGlyph glyph = unit_glyph(u);
       float s = (c.zoom < nearThreshold ? 0.38f : (c.zoom < farThreshold ? 0.46f : 0.50f)) * uStyle.sizeScale[0];
