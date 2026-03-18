@@ -68,6 +68,13 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
               (unsigned long long)entityCounters.lodModelNearCount,
               (unsigned long long)entityCounters.lodModelMidCount,
               (unsigned long long)entityCounters.lodModelFarCount);
+  ImGui::Text("ANIMATION_RESOLVE_COUNT=%llu ANIMATION_FALLBACK_COUNT=%llu ACTIVE_ANIMATED_INSTANCES=%llu",
+              (unsigned long long)entityCounters.animationResolveCount,
+              (unsigned long long)entityCounters.animationFallbackCount,
+              (unsigned long long)entityCounters.activeAnimatedInstances);
+  ImGui::Text("CLIP_PLAY_EVENTS=%llu LOOPING_CLIP_INSTANCES=%llu",
+              (unsigned long long)entityCounters.clipPlayEvents,
+              (unsigned long long)entityCounters.loopingClipInstances);
   const auto& resolveCounters = dom::render::content_resolution_counters();
   ImGui::Text("MATERIAL_RESOLVE_COUNT=%llu ENTITY_RESOLVE_COUNT=%llu CITY_REGION_RESOLVE_COUNT=%llu ICON_RESOLVE_COUNT=%llu FALLBACK_COUNT=%llu",
               (unsigned long long)resolveCounters.materialResolveCount,

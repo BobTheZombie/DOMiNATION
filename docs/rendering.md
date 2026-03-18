@@ -272,3 +272,6 @@ Attachment hooks are now authored broadly in stylesheets for deterministic marke
 
 ## Runtime model pass (units/buildings/objects)
 The renderer now performs a bounded model-instance pass that consumes resolved stylesheet mesh/lod IDs and uses deterministic fallback handling for missing/invalid GLB entries.
+
+## Runtime animated model pass
+Model instances now carry optional animation bindings resolved from stylesheets. Runtime playback is deterministic and bounded, with safe static fallback for non-animated models. Debug counters expose animation resolve/fallback/active/play/loop counts.

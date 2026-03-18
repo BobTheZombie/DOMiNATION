@@ -2,6 +2,7 @@
 
 #include "engine/render/content_resolution.h"
 #include "engine/render/model_cache.h"
+#include "engine/render/runtime_animation.h"
 
 #include <array>
 #include <cstdint>
@@ -22,6 +23,11 @@ struct ModelRenderCounters {
   uint64_t attachmentResolveCount{0};
   uint64_t attachmentFallbackCount{0};
   uint64_t activeAttachmentInstances{0};
+  uint64_t animationResolveCount{0};
+  uint64_t animationFallbackCount{0};
+  uint64_t activeAnimatedInstances{0};
+  uint64_t clipPlayEvents{0};
+  uint64_t loopingClipInstances{0};
 };
 
 enum class ModelAttachmentSemantic : uint8_t {
@@ -49,6 +55,10 @@ struct ModelInstanceDesc {
   bool guardianActive{false};
   bool guardianRevealed{false};
   std::unordered_map<std::string, std::string> attachmentHooks;
+  AnimationStyleBinding animation;
+  std::string animationState{"idle"};
+  uint64_t stableId{0};
+  uint64_t presentationTick{0};
 };
 
 void reset_model_render_counters();
