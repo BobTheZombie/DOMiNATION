@@ -743,3 +743,10 @@ Use these deterministic integration checks after world-render/content changes:
 
 ## Runtime animation (bounded)
 The renderer now resolves bounded runtime clip playback (`idle/move/attack/work/warning/aura`) from style mappings and model clip metadata with deterministic fallback to static rendering when clips are missing. This layer is presentation-only and does not affect authoritative simulation.
+
+## Bounded runtime shader pipeline
+- Terrain and runtime model passes now attempt to use bounded GLSL programs for pitched-camera readability while preserving deterministic simulation hashes and fixed-function fallbacks.
+- Terrain shader inputs are limited to renderer-owned terrain samples plus stylesheet readability fields such as `terrain_blend`, `terrain_macro_variation`, `terrain_slope_strength`, and `water_emphasis`.
+- Model shader inputs are limited to resolved presentation/readability state such as civ tint, emissive strength, warning/guardian/industrial emphasis, damage contrast, and deterministic camera/LOD context.
+- If shader compilation/linking fails, terrain/model rendering falls back to the pre-existing non-authoritative path and debug counters surface the failure.
+- Recommended validation commands for this PR are listed in `docs/shader_pipeline.md`.

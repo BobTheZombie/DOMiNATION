@@ -43,3 +43,12 @@ Studio scene layout persistence (`tools/dom_asset_studio/scene_preview_layout.js
 }
 ```
 All fields are optional; unresolved clips are handled by deterministic fallback.
+
+## Readability fields used by runtime shaders
+The declarative `readability` block now supports these bounded fields in addition to the existing lighting/readability values:
+- `terrain_blend`: terrain-to-accent blend amount.
+- `terrain_macro_variation`: deterministic large-scale terrain breakup strength.
+- `terrain_slope_strength`: slope/landform emphasis used by the terrain shader.
+- `water_emphasis`: coast/river/water readability emphasis.
+
+These remain declarative JSON values resolved by code and uploaded as shader inputs; they do not execute user-authored logic.

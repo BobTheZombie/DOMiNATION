@@ -47,6 +47,15 @@ void build_terrain_chunk_meshes(const dom::sim::World& world, int chunkSize, Con
           v.x = wx;
           v.y = wy;
           v.color = sample.color;
+          v.accent = sample.accent;
+          v.slope = sample.slope;
+          v.heightInfluence = sample.heightInfluence;
+          v.waterEmphasis = sample.waterEmphasis;
+          v.blendWeight = sample.terrainBlend;
+          v.ambient = sample.ambient;
+          v.directional = sample.directional;
+          v.contrast = sample.contrast;
+          v.macroVariation = sample.macroVariation;
         }
       }
 

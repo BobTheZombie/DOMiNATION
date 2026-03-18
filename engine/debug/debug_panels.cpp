@@ -75,6 +75,18 @@ void draw_debug_panels(const dom::sim::World& world, DebugVisualState& state) {
   ImGui::Text("CLIP_PLAY_EVENTS=%llu LOOPING_CLIP_INSTANCES=%llu",
               (unsigned long long)entityCounters.clipPlayEvents,
               (unsigned long long)entityCounters.loopingClipInstances);
+  const auto& shaderCounters = dom::render::shader_pipeline_counters();
+  ImGui::Text("SHADER_PROGRAM_COUNT=%llu SHADER_COMPILE_FAILURES=%llu SHADER_FALLBACK_COUNT=%llu",
+              (unsigned long long)shaderCounters.shaderProgramCount,
+              (unsigned long long)shaderCounters.shaderCompileFailures,
+              (unsigned long long)shaderCounters.shaderFallbackCount);
+  ImGui::Text("TERRAIN_SHADER_DRAWS=%llu MODEL_SHADER_DRAWS=%llu TERRAIN_SHADER_ACTIVE=%s MODEL_SHADER_ACTIVE=%s",
+              (unsigned long long)shaderCounters.terrainShaderDraws,
+              (unsigned long long)shaderCounters.modelShaderDraws,
+              dom::render::terrain_shader_active() ? "yes" : "no",
+              dom::render::model_shader_active() ? "yes" : "no");
+  ImGui::TextWrapped("Terrain shader: %s", dom::render::terrain_shader_debug_status().c_str());
+  ImGui::TextWrapped("Model shader: %s", dom::render::model_shader_debug_status().c_str());
   const auto& resolveCounters = dom::render::content_resolution_counters();
   ImGui::Text("MATERIAL_RESOLVE_COUNT=%llu ENTITY_RESOLVE_COUNT=%llu CITY_REGION_RESOLVE_COUNT=%llu ICON_RESOLVE_COUNT=%llu FALLBACK_COUNT=%llu",
               (unsigned long long)resolveCounters.materialResolveCount,

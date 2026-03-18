@@ -472,3 +472,10 @@ Renderer includes a non-authoritative runtime model cache/loader path for static
 
 ## Runtime animation layer
 A bounded runtime animation pass lives in the render pipeline. It consumes authoritative state plus presentation tick and stable IDs to resolve clip playback deterministically, but it is never consulted by gameplay authority, save/load authority, or replay authority.
+
+## Bounded runtime shader architecture
+- Runtime shaders live entirely inside the presentation boundary: GPU programs are compiled at renderer startup, never serialized into saves/replays, and never participate in authoritative simulation logic.
+- `engine/render/shader_program.*` owns small compile/link helpers plus frame-local shader telemetry.
+- `engine/render/terrain_shader.*` shades terrain chunk meshes from deterministic terrain samples and stylesheet readability parameters.
+- `engine/render/model_shader.*` shades runtime model geometry from already-resolved presentation state, directional/ambient/rim lighting, and bounded readability uniforms.
+- When a shader is unavailable, the renderer stays functional through the existing fixed-function fallback path.

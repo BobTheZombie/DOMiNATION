@@ -3,6 +3,8 @@
 #include "engine/render/render_stylesheet.h"
 #include "engine/render/terrain_chunk_mesh.h"
 #include "engine/render/model_render_pass.h"
+#include "engine/render/model_shader.h"
+#include "engine/render/terrain_shader.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <algorithm>
@@ -1979,6 +1981,9 @@ void draw_ring(glm::vec2 pos, float radius, float thickness, const std::array<fl
 bool init_renderer() {
   glClearColor(0.08f, 0.1f, 0.14f, 1.0f);
   load_render_stylesheets();
+  reset_shader_debug_counters();
+  initialize_terrain_shader();
+  initialize_model_shader();
   return true;
 }
 
@@ -2055,30 +2060,41 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   reset_content_resolution_counters();
   reset_render_stylesheet_counters();
   reset_model_render_counters();
+  reset_shader_debug_counters();
+  initialize_terrain_shader();
+  initialize_model_shader();
   gEntityCounters = {};
   gStrategicCounters = {};
   gLightingCounters = {};
   const ContentLodTier terrainLodTier = select_lod_tier(c.zoom);
   std::vector<TerrainChunkMesh> terrainChunks;
   build_terrain_chunk_meshes(w, 16, terrainLodTier, terrainChunks);
-  glBegin(GL_TRIANGLES);
-  for (const auto& chunk : terrainChunks) {
-    for (const auto& v : chunk.triangles) {
-      glColor3f(v.color.r, v.color.g, v.color.b);
-      glVertex2f(v.x, v.y);
+  const glm::mat4 terrainMvp = proj * view;
+  const glm::vec3 terrainLightDir = glm::normalize(glm::vec3(-0.58f, -0.42f, 0.70f));
+  const bool terrainShaderUsed = draw_terrain_chunks_with_shader(terrainChunks, terrainMvp, terrainLightDir, std::clamp(gLightingSettings.overlayProtectionAlpha, 0.3f, 1.0f));
+  if (!terrainShaderUsed) {
+    glBegin(GL_TRIANGLES);
+    for (const auto& chunk : terrainChunks) {
+      for (const auto& v : chunk.triangles) {
+        glColor3f(v.color.r, v.color.g, v.color.b);
+        glVertex2f(v.x, v.y);
+      }
     }
+    glEnd();
   }
-  glEnd();
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glBegin(GL_QUADS);
+  if (!terrainShaderUsed) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBegin(GL_QUADS);
+  }
   for (int y = 0; y < w.height - 1; ++y) {
     for (int x = 0; x < w.width - 1; ++x) {
       auto sample = resolve_terrain_visual_blended(w, x + 0.5f, y + 0.5f, terrainLodTier);
       ++gLightingCounters.terrainCellsLit;
       if (sample.contrast > 0.12f) ++gLightingCounters.terrainContrastCells;
       if (sample.terrainBlend > 0.12f) ++gLightingCounters.terrainBlendCells;
+      if (terrainShaderUsed) continue;
       const float overlayProtection = std::clamp(gLightingSettings.overlayProtectionAlpha, 0.3f, 1.0f);
       const glm::vec3 hi = mix_color3(sample.accent, glm::vec3(1.0f), 0.18f + sample.directional * 0.18f);
       const glm::vec3 lo = mix_color3(sample.color, glm::vec3(0.07f, 0.08f, 0.09f), 0.12f + sample.contrast * 0.16f);
@@ -2094,8 +2110,10 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       glVertex2f(x, y + 1);
     }
   }
-  glEnd();
-  glDisable(GL_BLEND);
+  if (!terrainShaderUsed) {
+    glEnd();
+    glDisable(GL_BLEND);
+  }
 
   glBegin(GL_LINES);
   for (int y = 1; y < w.height - 1; ++y) {
@@ -2715,6 +2733,11 @@ void set_lighting_material_settings(const LightingMaterialSettings& settings) {
 }
 const LightingMaterialSettings& lighting_material_settings() { return gLightingSettings; }
 const LightingMaterialCounters& lighting_material_counters() { return gLightingCounters; }
+const ShaderDebugCounters& shader_pipeline_counters() { return shader_debug_counters(); }
+bool terrain_shader_active() { return terrain_shader_ready(); }
+bool model_shader_active() { return model_shader_ready(); }
+const std::string& terrain_shader_debug_status() { return terrain_shader_status(); }
+const std::string& model_shader_debug_status() { return model_shader_status(); }
 double last_draw_ms() { return gLastDrawMs; }
 
 void set_editor_preview(const EditorPreview& preview) { gEditorPreview = preview; }

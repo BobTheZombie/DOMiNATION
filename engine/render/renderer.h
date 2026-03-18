@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/sim/simulation.h"
+#include "engine/render/shader_program.h"
 #include "engine/render/terrain_materials.h"
 #include <glm/vec2.hpp>
 #include <vector>
@@ -148,6 +149,11 @@ const StrategicVisualizationCounters& strategic_visualization_counters();
 void set_lighting_material_settings(const LightingMaterialSettings& settings);
 const LightingMaterialSettings& lighting_material_settings();
 const LightingMaterialCounters& lighting_material_counters();
+const ShaderDebugCounters& shader_pipeline_counters();
+bool terrain_shader_active();
+bool model_shader_active();
+const std::string& terrain_shader_debug_status();
+const std::string& model_shader_debug_status();
 double last_draw_ms();
 
 struct EditorPreview {

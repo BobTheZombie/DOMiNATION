@@ -287,3 +287,9 @@ The renderer now performs a bounded model-instance pass that consumes resolved s
 
 ## Runtime animated model pass
 Model instances now carry optional animation bindings resolved from stylesheets. Runtime playback is deterministic and bounded, with safe static fallback for non-animated models. Debug counters expose animation resolve/fallback/active/play/loop counts.
+
+## Bounded terrain/model shader pipeline
+- Terrain chunk meshes now carry deterministic readability inputs (base/accent colors, slope, height influence, water emphasis, blend weight, ambient/directional/contrast, macro variation) into a dedicated terrain shader.
+- Runtime models now use a bounded model shader for the main lit body pass, adding directional light, ambient fill, rim light, civ tint support, and state/readability emphasis without changing authoritative gameplay state.
+- Overlays/debug markers remain in their existing ordering; terrain/model shader failure automatically falls back to the previous fixed-function presentation path.
+- Debug counters now expose `SHADER_PROGRAM_COUNT`, `SHADER_COMPILE_FAILURES`, `TERRAIN_SHADER_DRAWS`, `MODEL_SHADER_DRAWS`, and `SHADER_FALLBACK_COUNT`.

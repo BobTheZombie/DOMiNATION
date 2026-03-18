@@ -1,4 +1,6 @@
 #include "engine/render/model_render_pass.h"
+#include "engine/render/model_shader.h"
+#include "engine/render/shader_program.h"
 
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
@@ -302,21 +304,47 @@ void draw_model_instance(const ModelInstanceDesc& instance) {
   glVertex2f(instance.pos.x - base * 0.94f + shadowOffset, instance.pos.y + base * 0.90f - shadowOffset * 0.2f);
   glEnd();
 
-  glBegin(GL_QUADS);
-  glColor4f(shadowColor[0], shadowColor[1], shadowColor[2], 0.96f);
-  glVertex2f(instance.pos.x - base, instance.pos.y - base);
-  glVertex2f(instance.pos.x + base, instance.pos.y - base);
-  glColor4f(bodyColor[0], bodyColor[1], bodyColor[2], 1.0f);
-  glVertex2f(instance.pos.x + base * 0.96f, instance.pos.y + base * 0.96f);
-  glVertex2f(instance.pos.x - base * 0.96f, instance.pos.y + base * 0.96f);
+  const bool useModelShader = model_shader_ready();
+  if (useModelShader) {
+    ModelShaderParams shaderParams{};
+    shaderParams.baseTint = litTint;
+    shaderParams.ambient = ambient;
+    shaderParams.directional = directional;
+    shaderParams.rim = rim;
+    shaderParams.civTintStrength = instance.readability.civTintStrength;
+    shaderParams.stateContrast = stateContrast;
+    shaderParams.emissiveStrength = std::clamp(instance.readability.emissiveStrength + (instance.combatFiring ? 0.18f : 0.0f), 0.0f, 1.0f);
+    shaderParams.warningHighlight = instance.strategicWarning ? instance.readability.warningHighlight : 0.0f;
+    shaderParams.guardianHighlight = (instance.guardianActive || instance.guardianRevealed) ? instance.readability.guardianHighlight : 0.0f;
+    shaderParams.industrialHighlight = instance.activeIndustry ? instance.readability.industrialHighlight : 0.0f;
+    shaderParams.damageContrast = instance.damaged ? instance.readability.damageDesaturate : 0.0f;
+    shaderParams.terrainBlend = instance.readability.terrainBlend;
+    bind_model_shader(shaderParams);
+  } else {
+    note_shader_fallback();
+  }
 
+  glBegin(GL_QUADS);
+  glNormal3f(0.0f, -0.35f, 0.94f);
+  glColor4f(shadowColor[0], shadowColor[1], shadowColor[2], 0.96f);
+  glVertex3f(instance.pos.x - base, instance.pos.y - base, 0.02f);
+  glVertex3f(instance.pos.x + base, instance.pos.y - base, 0.02f);
   glColor4f(bodyColor[0], bodyColor[1], bodyColor[2], 1.0f);
-  glVertex2f(instance.pos.x - base * 0.86f, instance.pos.y - base * 0.82f + height * 0.16f);
-  glVertex2f(instance.pos.x + base * 0.86f, instance.pos.y - base * 0.82f + height * 0.16f);
+  glVertex3f(instance.pos.x + base * 0.96f, instance.pos.y + base * 0.96f, height * 0.18f);
+  glVertex3f(instance.pos.x - base * 0.96f, instance.pos.y + base * 0.96f, height * 0.18f);
+
+  glNormal3f(0.0f, 0.15f, 0.99f);
+  glColor4f(bodyColor[0], bodyColor[1], bodyColor[2], 1.0f);
+  glVertex3f(instance.pos.x - base * 0.86f, instance.pos.y - base * 0.82f + height * 0.16f, height * 0.18f);
+  glVertex3f(instance.pos.x + base * 0.86f, instance.pos.y - base * 0.82f + height * 0.16f, height * 0.18f);
   glColor4f(topColor[0], topColor[1], topColor[2], 1.0f);
-  glVertex2f(instance.pos.x + base * 0.84f, instance.pos.y + base * 0.82f + height * 0.18f);
-  glVertex2f(instance.pos.x - base * 0.84f, instance.pos.y + base * 0.82f + height * 0.18f);
+  glVertex3f(instance.pos.x + base * 0.84f, instance.pos.y + base * 0.82f + height * 0.18f, height * 0.34f);
+  glVertex3f(instance.pos.x - base * 0.84f, instance.pos.y + base * 0.82f + height * 0.18f, height * 0.34f);
   glEnd();
+
+  if (useModelShader) {
+    unbind_model_shader();
+  }
 
   glLineWidth(farLod ? 1.5f : 1.0f);
   glColor4f(rimColor[0], rimColor[1], rimColor[2], 0.65f + stateContrast * 0.18f);

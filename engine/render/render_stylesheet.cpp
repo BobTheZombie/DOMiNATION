@@ -27,7 +27,8 @@ struct StyleLayer {
   bool hasSizeScale{false};
   MaterialReadabilityProfile readability{kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability,
                                          kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability,
-                                         kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability};
+                                         kUnsetReadability, kUnsetReadability, kUnsetReadability, kUnsetReadability,
+                                         kUnsetReadability, kUnsetReadability, kUnsetReadability};
   std::unordered_map<std::string, std::string> attachments;
   AnimationStyleBinding animation;
   std::unordered_map<std::string, std::shared_ptr<StyleLayer>> stateVariants;
@@ -77,13 +78,13 @@ float read_float(const json& j, const char* key, float fallback) {
 MaterialReadabilityProfile default_readability(RenderStyleDomain domain) {
   switch (domain) {
     case RenderStyleDomain::Terrain:
-      return {0.34f, 0.52f, 0.10f, 0.0f, 0.18f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.18f, 0.08f};
+      return {0.34f, 0.52f, 0.10f, 0.0f, 0.18f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.18f, 0.08f, 0.34f, 0.42f, 0.26f};
     case RenderStyleDomain::Unit:
-      return {0.20f, 0.72f, 0.26f, 0.52f, 0.42f, 0.18f, 0.10f, 0.34f, 0.42f, 0.22f, 0.34f, 0.16f};
+      return {0.20f, 0.72f, 0.26f, 0.52f, 0.42f, 0.18f, 0.10f, 0.34f, 0.42f, 0.22f, 0.34f, 0.16f, 0.0f, 0.0f, 0.0f};
     case RenderStyleDomain::Building:
-      return {0.24f, 0.68f, 0.22f, 0.38f, 0.40f, 0.16f, 0.48f, 0.42f, 0.28f, 0.26f, 0.28f, 0.22f};
+      return {0.24f, 0.68f, 0.22f, 0.38f, 0.40f, 0.16f, 0.48f, 0.42f, 0.28f, 0.26f, 0.28f, 0.22f, 0.0f, 0.0f, 0.0f};
     case RenderStyleDomain::Object:
-      return {0.22f, 0.64f, 0.24f, 0.16f, 0.38f, 0.24f, 0.30f, 0.44f, 0.54f, 0.18f, 0.34f, 0.14f};
+      return {0.22f, 0.64f, 0.24f, 0.16f, 0.38f, 0.24f, 0.30f, 0.44f, 0.54f, 0.18f, 0.34f, 0.14f, 0.0f, 0.0f, 0.0f};
   }
   return {};
 }
@@ -104,6 +105,9 @@ void overlay_readability(MaterialReadabilityProfile& out, const MaterialReadabil
   overlayValue(out.damageDesaturate, over.damageDesaturate);
   overlayValue(out.farDistanceBoost, over.farDistanceBoost);
   overlayValue(out.terrainBlend, over.terrainBlend);
+  overlayValue(out.terrainMacroVariation, over.terrainMacroVariation);
+  overlayValue(out.terrainSlopeStrength, over.terrainSlopeStrength);
+  overlayValue(out.waterEmphasis, over.waterEmphasis);
 }
 
 StyleLayer parse_style_layer(const json& j) {
@@ -137,6 +141,9 @@ StyleLayer parse_style_layer(const json& j) {
     s.readability.damageDesaturate = read_float(*it, "damage_desaturate", s.readability.damageDesaturate);
     s.readability.farDistanceBoost = read_float(*it, "far_distance_boost", s.readability.farDistanceBoost);
     s.readability.terrainBlend = read_float(*it, "terrain_blend", s.readability.terrainBlend);
+    s.readability.terrainMacroVariation = read_float(*it, "terrain_macro_variation", s.readability.terrainMacroVariation);
+    s.readability.terrainSlopeStrength = read_float(*it, "terrain_slope_strength", s.readability.terrainSlopeStrength);
+    s.readability.waterEmphasis = read_float(*it, "water_emphasis", s.readability.waterEmphasis);
   }
   if (auto it = j.find("attachments"); it != j.end() && it->is_object()) {
     for (auto& [k, v] : it->items()) if (v.is_string()) s.attachments[k] = v.get<std::string>();

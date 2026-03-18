@@ -26,6 +26,9 @@ struct MaterialReadabilityProfile {
   float damageDesaturate{0.0f};
   float farDistanceBoost{0.0f};
   float terrainBlend{0.0f};
+  float terrainMacroVariation{0.0f};
+  float terrainSlopeStrength{0.0f};
+  float waterEmphasis{0.0f};
 };
 
 struct RenderStyleRequest {
