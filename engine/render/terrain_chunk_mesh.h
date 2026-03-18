@@ -11,6 +11,15 @@ struct TerrainChunkVertex {
   float x{0.0f};
   float y{0.0f};
   glm::vec3 color{0.0f};
+  glm::vec3 accent{0.0f};
+  float slope{0.0f};
+  float heightInfluence{0.0f};
+  float waterEmphasis{0.0f};
+  float blendWeight{0.0f};
+  float ambient{0.0f};
+  float directional{0.0f};
+  float contrast{0.0f};
+  float macroVariation{0.0f};
 };
 
 struct TerrainChunkMesh {

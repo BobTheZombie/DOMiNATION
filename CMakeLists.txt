@@ -65,6 +65,9 @@ add_executable(rts
   engine/core/time.cpp
   engine/platform/app.cpp
   engine/render/renderer.cpp
+  engine/render/shader_program.cpp
+  engine/render/terrain_shader.cpp
+  engine/render/model_shader.cpp
   engine/render/content_resolution.cpp
   engine/render/render_stylesheet.cpp
   engine/render/gltf_runtime_loader.cpp
@@ -102,6 +105,8 @@ add_executable(rts
 add_executable(dom_asset_studio
   engine/render/content_resolution.cpp
   engine/render/render_stylesheet.cpp
+  engine/render/shader_program.cpp
+  engine/render/model_shader.cpp
   engine/render/gltf_runtime_loader.cpp
   engine/render/model_cache.cpp
   engine/render/runtime_animation.cpp

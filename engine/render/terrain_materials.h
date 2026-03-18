@@ -34,6 +34,10 @@ struct TerrainVisualSample {
   float directional{0.5f};
   float contrast{0.0f};
   float terrainBlend{0.12f};
+  float slope{0.0f};
+  float heightInfluence{0.0f};
+  float waterEmphasis{0.0f};
+  float macroVariation{0.0f};
   bool isWater{false};
   bool hasForestCanopy{false};
   bool hasCliff{false};

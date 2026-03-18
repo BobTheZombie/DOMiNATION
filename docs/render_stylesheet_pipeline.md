@@ -61,3 +61,8 @@ Entity styles can include an `animation` object with `default_state`, `default_c
 - Author `attachments` in unit/building/object styles to opt specific classes or exact IDs into runtime semantic hooks.
 - Hook placement resolves through `content/asset_manifest.json` `attachment_hooks` when present; otherwise renderer uses deterministic semantic defaults and counts fallback usage for debug overlays.
 - Attachment pass order is stable because runtime iteration is key-sorted and uses resolved asset IDs + stylesheet-selected hook IDs only.
+
+## Shader readability flow
+- Stylesheet resolution order remains deterministic: exact mapping -> civ override -> theme override -> class fallback -> domain default.
+- Resolved readability values are uploaded as bounded terrain/model shader uniforms or vertex payloads; there is no material scripting language and no shader-controlled authority path.
+- Terrain-specific readability fields now include `terrain_macro_variation`, `terrain_slope_strength`, and `water_emphasis` alongside existing `terrain_blend`.

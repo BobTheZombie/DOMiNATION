@@ -227,6 +227,10 @@ TerrainVisualSample blend_samples(const TerrainVisualSample& a, const TerrainVis
   out.directional = glm::mix(a.directional, b.directional, k);
   out.contrast = glm::mix(a.contrast, b.contrast, k);
   out.terrainBlend = glm::mix(a.terrainBlend, b.terrainBlend, k);
+  out.slope = glm::mix(a.slope, b.slope, k);
+  out.heightInfluence = glm::mix(a.heightInfluence, b.heightInfluence, k);
+  out.waterEmphasis = glm::mix(a.waterEmphasis, b.waterEmphasis, k);
+  out.macroVariation = glm::mix(a.macroVariation, b.macroVariation, k);
   out.isWater = a.isWater || b.isWater;
   out.hasForestCanopy = a.hasForestCanopy || b.hasForestCanopy;
   out.hasCliff = a.hasCliff || b.hasCliff;
@@ -315,6 +319,10 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
   sample.directional = std::clamp(0.40f + style.readability.directionalBoost, 0.2f, 1.0f);
   sample.contrast = std::clamp(0.08f + style.readability.stateContrast, 0.0f, 1.0f);
   sample.terrainBlend = std::clamp(style.readability.terrainBlend, 0.0f, 1.0f);
+  sample.slope = std::clamp(shape.slope * (0.72f + style.readability.terrainSlopeStrength * 0.42f), 0.0f, 1.0f);
+  sample.heightInfluence = std::clamp(shape.smoothedHeight * 0.85f + shape.ridgeness * 0.18f, 0.0f, 1.0f);
+  sample.waterEmphasis = std::clamp(style.readability.waterEmphasis, 0.0f, 1.0f);
+  sample.macroVariation = std::clamp(style.readability.terrainMacroVariation, 0.0f, 1.0f);
   ++gCounters.terrainLightingSamples;
 
   const float slope = shape.slope;
@@ -328,6 +336,8 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
   const float ambientBias = std::clamp(0.34f + fertility * 0.12f + waterAdj * 0.14f + shape.valleyness * 0.12f - shape.ridgeness * 0.08f, 0.18f, 0.94f);
   sample.directional = std::clamp(sample.directional * 0.45f + directionalBias * 0.72f, 0.0f, 1.0f);
   sample.ambient = std::clamp(sample.ambient * 0.48f + ambientBias * 0.70f, 0.0f, 1.0f);
+  sample.heightInfluence = std::clamp(sample.heightInfluence + macroHeight * 0.18f + shape.valleyness * 0.10f, 0.0f, 1.0f);
+  sample.macroVariation = std::clamp(sample.macroVariation + lod_macro_strength(lodTier) * 0.32f + shape.valleyness * 0.08f + shape.ridgeness * 0.10f, 0.0f, 1.0f);
 
   if (!sample.isWater) {
     const bool cliff = slope > 0.20f && h > 0.42f;
@@ -353,6 +363,7 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
       sample.color = glm::mix(sample.color, material_color(TerrainMaterialId::ShallowOcean), 0.18f);
       sample.accent = glm::mix(sample.accent, material_color(TerrainMaterialId::Desert), 0.12f);
       sample.terrainBlend = std::max(sample.terrainBlend, 0.18f);
+      sample.waterEmphasis = std::max(sample.waterEmphasis, 0.42f);
     }
     if (sample.mountain) {
       sample.accent = lift_color(sample.accent, 0.06f + slope * 0.16f + shape.ridgeness * 0.10f);
@@ -366,11 +377,17 @@ TerrainVisualSample resolve_terrain_visual(const dom::sim::World& world, int cel
     sample.ambient = std::clamp(sample.ambient + 0.08f, 0.0f, 1.0f);
     sample.directional = std::clamp(sample.directional + 0.05f + orientationLight * 0.04f, 0.0f, 1.0f);
     sample.contrast = std::clamp(sample.contrast + 0.05f + shape.ridgeness * 0.04f, 0.0f, 1.0f);
+    sample.waterEmphasis = std::max(sample.waterEmphasis, isRiver ? 0.88f : (isLake ? 0.72f : 0.64f));
+    sample.macroVariation = std::max(sample.macroVariation, 0.24f);
     if (sample.material == TerrainMaterialId::River || sample.material == TerrainMaterialId::Lake) {
       sample.accent = glm::mix(sample.color, material_color(TerrainMaterialId::ShallowOcean), 0.35f);
     } else {
       sample.accent = lift_color(sample.color, 0.08f + sample.directional * 0.10f);
     }
+  }
+
+  if (!sample.isWater && is_land_coast(world, cellIndex)) {
+    sample.waterEmphasis = std::max(sample.waterEmphasis, 0.36f + waterAdj * 0.24f);
   }
 
   sample.color = glm::clamp(sample.color, glm::vec3(0.0f), glm::vec3(1.0f));
@@ -430,7 +447,7 @@ TerrainVisualSample resolve_terrain_visual_blended(const dom::sim::World& world,
     const glm::vec3 macroTint = glm::mix(material_color(TerrainMaterialId::Grassland), material_color(TerrainMaterialId::Mountain), shape.ridgeness * 0.62f);
     out.color = glm::mix(out.color, macroTint, lodBlend * (0.06f + shape.ridgeness * 0.08f + shape.valleyness * 0.05f));
     out.accent = glm::mix(out.accent, lift_color(macroTint, 0.12f), lodBlend * 0.12f);
-    out.contrast = std::clamp(out.contrast * (1.0f - lodBlend * 0.16f) + shape.slope * 0.05f, 0.0f, 1.0f);
+  out.contrast = std::clamp(out.contrast * (1.0f - lodBlend * 0.16f) + shape.slope * 0.05f, 0.0f, 1.0f);
   }
 
   out.color = glm::clamp(out.color, glm::vec3(0.0f), glm::vec3(1.0f));
@@ -439,6 +456,10 @@ TerrainVisualSample resolve_terrain_visual_blended(const dom::sim::World& world,
   out.directional = std::clamp(out.directional, 0.0f, 1.0f);
   out.contrast = std::clamp(out.contrast, 0.0f, 1.0f);
   out.terrainBlend = std::clamp(out.terrainBlend, 0.0f, 1.0f);
+  out.slope = std::clamp(shape.slope, 0.0f, 1.0f);
+  out.heightInfluence = std::clamp(out.heightInfluence + shape.smoothedHeight * 0.12f + shape.ridgeness * 0.08f, 0.0f, 1.0f);
+  out.macroVariation = std::clamp(out.macroVariation + lodBlend * 0.16f, 0.0f, 1.0f);
+  if (nearWater && !out.isWater) out.waterEmphasis = std::max(out.waterEmphasis, 0.24f);
   return out;
 }
 

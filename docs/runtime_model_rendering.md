@@ -59,3 +59,8 @@ Debug Visualization panel includes:
 
 ## Runtime animation integration
 `RuntimeModelData` caches detected GLB clip names; `draw_model_instance` resolves a bounded clip state per instance and applies lightweight visual pulse timing derived from deterministic playback time. The animation resolver now attempts `requested state -> authored default_state mapping -> default_clip -> direct clip-name match -> first available clip`, so attachment/effect pulses stay deterministic even when authored state mappings are partial. Missing clips and unsupported animation data never crash rendering and always fall back safely.
+
+## Runtime model shader support
+- The main model body pass now binds a bounded runtime shader before emitting the lit unit/building/object quads used by the RTS camera.
+- Shader uniforms are sourced only from resolved presentation state: ambient/directional/rim values, civ tint strength, terrain blend, emissive strength, warning highlight, guardian highlight, industrial highlight, and damage contrast.
+- Attachments, badges, outlines, and other overlay helpers remain on safe fallback-compatible immediate-mode paths so incomplete content or shader failures do not hide critical strategy information.
