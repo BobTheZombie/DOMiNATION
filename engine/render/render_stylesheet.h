@@ -13,6 +13,21 @@ namespace dom::render {
 
 enum class RenderStyleDomain : uint8_t { Terrain, Unit, Building, Object };
 
+struct MaterialReadabilityProfile {
+  float ambientBoost{0.0f};
+  float directionalBoost{0.0f};
+  float rimLight{0.0f};
+  float civTintStrength{0.0f};
+  float stateContrast{0.0f};
+  float emissiveStrength{0.0f};
+  float industrialHighlight{0.0f};
+  float warningHighlight{0.0f};
+  float guardianHighlight{0.0f};
+  float damageDesaturate{0.0f};
+  float farDistanceBoost{0.0f};
+  float terrainBlend{0.0f};
+};
+
 struct RenderStyleRequest {
   RenderStyleDomain domain{RenderStyleDomain::Object};
   std::string exactId;
@@ -36,6 +51,7 @@ struct ResolvedRenderStyle {
   std::string decalSet;
   std::array<float, 3> tint{1.0f, 1.0f, 1.0f};
   std::array<float, 2> sizeScale{1.0f, 1.0f};
+  MaterialReadabilityProfile readability{};
   std::unordered_map<std::string, std::string> attachments;
   AnimationStyleBinding animation;
   bool fallback{false};

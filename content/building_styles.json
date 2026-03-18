@@ -23,6 +23,14 @@
       "playback_hints": {
         "attack": "oneshot"
       }
+    },
+    "readability": {
+      "ambient_boost": 0.18,
+      "directional_boost": 0.62,
+      "civ_tint_strength": 0.36,
+      "state_contrast": 0.34,
+      "emissive_strength": 0.14,
+      "terrain_blend": 0.18
     }
   },
   "render_classes": {
@@ -433,6 +441,15 @@
           "playback_hints": {
             "warning": "loop"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.22,
+          "directional_boost": 0.66,
+          "state_contrast": 0.44,
+          "emissive_strength": 0.28,
+          "industrial_highlight": 0.72,
+          "warning_highlight": 0.3,
+          "terrain_blend": 0.24
         }
       }
     },
@@ -707,6 +724,14 @@
           "playback_hints": {
             "warning": "loop"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.16,
+          "directional_boost": 0.74,
+          "state_contrast": 0.48,
+          "emissive_strength": 0.22,
+          "warning_highlight": 0.74,
+          "terrain_blend": 0.18
         }
       },
       "civ_overrides": {
@@ -912,6 +937,15 @@
           "playback_hints": {
             "warning": "loop"
           }
+        },
+        "readability": {
+          "ambient_boost": 0.2,
+          "directional_boost": 0.68,
+          "state_contrast": 0.46,
+          "emissive_strength": 0.26,
+          "industrial_highlight": 0.7,
+          "warning_highlight": 0.4,
+          "terrain_blend": 0.24
         }
       }
     },

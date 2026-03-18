@@ -9,9 +9,21 @@
       "cliff": "terrain_cliff_default"
     },
     "lods": {
-      "near": {"material_set": "terrain_grass_lod0"},
-      "mid": {"material_set": "terrain_grass_lod1"},
-      "far": {"material_set": "terrain_grass_lod2"}
+      "near": {
+        "material_set": "terrain_grass_lod0"
+      },
+      "mid": {
+        "material_set": "terrain_grass_lod1"
+      },
+      "far": {
+        "material_set": "terrain_grass_lod2"
+      }
+    },
+    "readability": {
+      "ambient_boost": 0.3,
+      "directional_boost": 0.44,
+      "state_contrast": 0.14,
+      "terrain_blend": 0.08
     }
   },
   "exact_mappings": {
@@ -20,9 +32,19 @@
       "material_set": "river_water",
       "detail_set": "river_bank_mud",
       "decal_set": "river_foam_lines",
-      "attachments": {"edge": "river_bank_edge"},
+      "attachments": {
+        "edge": "river_bank_edge"
+      },
       "state_variants": {
-        "default": {"material_set": "river_water"}
+        "default": {
+          "material_set": "river_water"
+        }
+      },
+      "readability": {
+        "ambient_boost": 0.34,
+        "directional_boost": 0.5,
+        "state_contrast": 0.2,
+        "terrain_blend": 0.02
       }
     },
     "lake": {
@@ -30,31 +52,298 @@
       "material_set": "lake_water",
       "detail_set": "lake_bank_soft",
       "decal_set": "lake_ripple_soft",
-      "attachments": {"edge": "lake_bank_edge"}
+      "attachments": {
+        "edge": "lake_bank_edge"
+      },
+      "readability": {
+        "ambient_boost": 0.3,
+        "directional_boost": 0.46,
+        "state_contrast": 0.18,
+        "terrain_blend": 0.02
+      }
     }
   },
   "render_classes": {
-    "grassland": {"default": {"style_id": "terrain_grassland", "material_set": "terrain_grass_a", "detail_set": "terrain_dirt_soft", "decal_set": "terrain_flower_sparse", "attachments": {"edge": "wet_grass_edge"}, "lods": {"near": {"material_set": "terrain_grass_lod0"}, "mid": {"material_set": "terrain_grass_lod1"}}}},
-    "plains": {"default": {"style_id": "terrain_plains", "material_set": "terrain_plains_a", "detail_set": "terrain_dirt_firm", "decal_set": "terrain_grass_patch", "attachments": {"edge": "rock_grass_edge"}}},
-    "steppe": {"default": {"style_id": "terrain_steppe", "material_set": "steppe_dry", "detail_set": "terrain_steppe_dust", "decal_set": "terrain_steppe_tufts", "attachments": {"edge": "dry_grass_edge"}}},
-    "forest": {"default": {"style_id": "terrain_forest", "material_set": "forest_floor", "detail_set": "forest_leaf_litter", "decal_set": "forest_roots", "attachments": {"edge": "forest_grass_edge", "cliff": "terrain_cliff_moss"}}},
-    "forest_ground": {"default": {"style_id": "terrain_forest_ground", "material_set": "forest_floor", "detail_set": "forest_leaf_litter", "decal_set": "forest_roots", "attachments": {"edge": "forest_grass_edge", "cliff": "terrain_cliff_moss"}}},
-    "jungle": {"default": {"style_id": "terrain_jungle", "material_set": "jungle_floor", "detail_set": "jungle_wet_loam", "decal_set": "jungle_vines_ground", "attachments": {"edge": "jungle_mud_edge", "cliff": "terrain_cliff_jungle"}}},
-    "desert": {"default": {"style_id": "terrain_desert", "material_set": "sand_dune", "detail_set": "desert_compact_sand", "decal_set": "desert_wind_ridges", "attachments": {"edge": "sand_wet_edge", "cliff": "terrain_cliff_sandstone"}}},
-    "mediterranean": {"default": {"style_id": "terrain_mediterranean", "material_set": "mediterranean_soil", "detail_set": "mediterranean_rock_dust", "decal_set": "olive_grove_ground", "attachments": {"edge": "mediterranean_coast_edge"}}},
-    "wetlands": {"default": {"style_id": "terrain_wetlands", "material_set": "marsh", "detail_set": "wetland_peat", "decal_set": "wetland_reed_patches", "attachments": {"edge": "marsh_water_edge", "cliff": "terrain_cliff_wet"}}},
-    "wetlands_marsh": {"default": {"style_id": "terrain_wetlands_marsh", "material_set": "marsh", "detail_set": "wetland_peat", "decal_set": "wetland_reed_patches", "attachments": {"edge": "marsh_water_edge", "cliff": "terrain_cliff_wet"}}},
-    "tundra": {"default": {"style_id": "terrain_tundra", "material_set": "tundra_soil", "detail_set": "tundra_frozen_mud", "decal_set": "tundra_scrub", "attachments": {"edge": "frost_edge", "cliff": "terrain_cliff_frost"}}},
-    "snow": {"default": {"style_id": "terrain_snow", "material_set": "snow", "detail_set": "snow_crust", "decal_set": "snow_drift_lines", "attachments": {"edge": "snow_wet_edge", "cliff": "terrain_cliff_snow"}}},
-    "snow_arctic": {"default": {"style_id": "terrain_snow_arctic", "material_set": "snow", "detail_set": "snow_crust", "decal_set": "snow_drift_lines", "attachments": {"edge": "snow_wet_edge", "cliff": "terrain_cliff_snow"}}},
-    "mountains": {"default": {"style_id": "terrain_mountains", "material_set": "rock_highland", "detail_set": "mountain_gravel", "decal_set": "mountain_lichen", "attachments": {"edge": "rock_grass_edge", "cliff": "terrain_cliff_rock"}, "lods": {"near": {"material_set": "mountain_rock_lod0"}, "mid": {"material_set": "mountain_rock_lod1"}}}},
-    "snow_mountains": {"default": {"style_id": "terrain_snow_mountains", "material_set": "snow_rock_highland", "detail_set": "snow_mountain_crust", "decal_set": "snow_rock_overlay", "attachments": {"edge": "snow_rock_edge", "cliff": "terrain_cliff_snow_rock"}}},
-    "coast": {"default": {"style_id": "terrain_coast", "material_set": "coastal_mix", "detail_set": "shore_wet_sand", "decal_set": "shore_foam", "attachments": {"edge": "terrain_edge_coast", "cliff": "terrain_cliff_coast"}}},
-    "coast_littoral": {"default": {"style_id": "terrain_coast_littoral", "material_set": "coastal_mix", "detail_set": "shore_wet_sand", "decal_set": "shore_foam", "attachments": {"edge": "terrain_edge_coast", "cliff": "terrain_cliff_coast"}}},
-    "shallow_water": {"default": {"style_id": "terrain_shallow", "material_set": "shallow_water", "detail_set": "shoal_tint", "decal_set": "water_ripple_shallow", "attachments": {"edge": "waterline_soft"}}},
-    "deep_water": {"default": {"style_id": "terrain_deep", "material_set": "deep_water", "detail_set": "abyssal_tint", "decal_set": "water_ripple_deep"}},
-    "river": {"default": {"style_id": "terrain_river_class", "material_set": "river_water", "detail_set": "river_bank_mud", "decal_set": "river_foam_lines", "attachments": {"edge": "river_bank_edge"}}},
-    "lake": {"default": {"style_id": "terrain_lake_class", "material_set": "lake_water", "detail_set": "lake_bank_soft", "decal_set": "lake_ripple_soft", "attachments": {"edge": "lake_bank_edge"}}},
-    "river_lake": {"default": {"style_id": "terrain_inland_water", "material_set": "river_water", "detail_set": "river_bank_mud", "decal_set": "river_foam_lines", "attachments": {"edge": "river_bank_edge"}}}
+    "grassland": {
+      "default": {
+        "style_id": "terrain_grassland",
+        "material_set": "terrain_grass_a",
+        "detail_set": "terrain_dirt_soft",
+        "decal_set": "terrain_flower_sparse",
+        "attachments": {
+          "edge": "wet_grass_edge"
+        },
+        "lods": {
+          "near": {
+            "material_set": "terrain_grass_lod0"
+          },
+          "mid": {
+            "material_set": "terrain_grass_lod1"
+          }
+        }
+      }
+    },
+    "plains": {
+      "default": {
+        "style_id": "terrain_plains",
+        "material_set": "terrain_plains_a",
+        "detail_set": "terrain_dirt_firm",
+        "decal_set": "terrain_grass_patch",
+        "attachments": {
+          "edge": "rock_grass_edge"
+        }
+      }
+    },
+    "steppe": {
+      "default": {
+        "style_id": "terrain_steppe",
+        "material_set": "steppe_dry",
+        "detail_set": "terrain_steppe_dust",
+        "decal_set": "terrain_steppe_tufts",
+        "attachments": {
+          "edge": "dry_grass_edge"
+        }
+      }
+    },
+    "forest": {
+      "default": {
+        "style_id": "terrain_forest",
+        "material_set": "forest_floor",
+        "detail_set": "forest_leaf_litter",
+        "decal_set": "forest_roots",
+        "attachments": {
+          "edge": "forest_grass_edge",
+          "cliff": "terrain_cliff_moss"
+        }
+      }
+    },
+    "forest_ground": {
+      "default": {
+        "style_id": "terrain_forest_ground",
+        "material_set": "forest_floor",
+        "detail_set": "forest_leaf_litter",
+        "decal_set": "forest_roots",
+        "attachments": {
+          "edge": "forest_grass_edge",
+          "cliff": "terrain_cliff_moss"
+        }
+      }
+    },
+    "jungle": {
+      "default": {
+        "style_id": "terrain_jungle",
+        "material_set": "jungle_floor",
+        "detail_set": "jungle_wet_loam",
+        "decal_set": "jungle_vines_ground",
+        "attachments": {
+          "edge": "jungle_mud_edge",
+          "cliff": "terrain_cliff_jungle"
+        }
+      }
+    },
+    "desert": {
+      "default": {
+        "style_id": "terrain_desert",
+        "material_set": "sand_dune",
+        "detail_set": "desert_compact_sand",
+        "decal_set": "desert_wind_ridges",
+        "attachments": {
+          "edge": "sand_wet_edge",
+          "cliff": "terrain_cliff_sandstone"
+        }
+      }
+    },
+    "mediterranean": {
+      "default": {
+        "style_id": "terrain_mediterranean",
+        "material_set": "mediterranean_soil",
+        "detail_set": "mediterranean_rock_dust",
+        "decal_set": "olive_grove_ground",
+        "attachments": {
+          "edge": "mediterranean_coast_edge"
+        }
+      }
+    },
+    "wetlands": {
+      "default": {
+        "style_id": "terrain_wetlands",
+        "material_set": "marsh",
+        "detail_set": "wetland_peat",
+        "decal_set": "wetland_reed_patches",
+        "attachments": {
+          "edge": "marsh_water_edge",
+          "cliff": "terrain_cliff_wet"
+        }
+      }
+    },
+    "wetlands_marsh": {
+      "default": {
+        "style_id": "terrain_wetlands_marsh",
+        "material_set": "marsh",
+        "detail_set": "wetland_peat",
+        "decal_set": "wetland_reed_patches",
+        "attachments": {
+          "edge": "marsh_water_edge",
+          "cliff": "terrain_cliff_wet"
+        }
+      }
+    },
+    "tundra": {
+      "default": {
+        "style_id": "terrain_tundra",
+        "material_set": "tundra_soil",
+        "detail_set": "tundra_frozen_mud",
+        "decal_set": "tundra_scrub",
+        "attachments": {
+          "edge": "frost_edge",
+          "cliff": "terrain_cliff_frost"
+        }
+      }
+    },
+    "snow": {
+      "default": {
+        "style_id": "terrain_snow",
+        "material_set": "snow",
+        "detail_set": "snow_crust",
+        "decal_set": "snow_drift_lines",
+        "attachments": {
+          "edge": "snow_wet_edge",
+          "cliff": "terrain_cliff_snow"
+        }
+      }
+    },
+    "snow_arctic": {
+      "default": {
+        "style_id": "terrain_snow_arctic",
+        "material_set": "snow",
+        "detail_set": "snow_crust",
+        "decal_set": "snow_drift_lines",
+        "attachments": {
+          "edge": "snow_wet_edge",
+          "cliff": "terrain_cliff_snow"
+        }
+      }
+    },
+    "mountains": {
+      "default": {
+        "style_id": "terrain_mountains",
+        "material_set": "rock_highland",
+        "detail_set": "mountain_gravel",
+        "decal_set": "mountain_lichen",
+        "attachments": {
+          "edge": "rock_grass_edge",
+          "cliff": "terrain_cliff_rock"
+        },
+        "lods": {
+          "near": {
+            "material_set": "mountain_rock_lod0"
+          },
+          "mid": {
+            "material_set": "mountain_rock_lod1"
+          }
+        },
+        "readability": {
+          "ambient_boost": 0.24,
+          "directional_boost": 0.68,
+          "rim_light": 0.16,
+          "state_contrast": 0.28,
+          "terrain_blend": 0.12
+        }
+      }
+    },
+    "snow_mountains": {
+      "default": {
+        "style_id": "terrain_snow_mountains",
+        "material_set": "snow_rock_highland",
+        "detail_set": "snow_mountain_crust",
+        "decal_set": "snow_rock_overlay",
+        "attachments": {
+          "edge": "snow_rock_edge",
+          "cliff": "terrain_cliff_snow_rock"
+        }
+      }
+    },
+    "coast": {
+      "default": {
+        "style_id": "terrain_coast",
+        "material_set": "coastal_mix",
+        "detail_set": "shore_wet_sand",
+        "decal_set": "shore_foam",
+        "attachments": {
+          "edge": "terrain_edge_coast",
+          "cliff": "terrain_cliff_coast"
+        }
+      }
+    },
+    "coast_littoral": {
+      "default": {
+        "style_id": "terrain_coast_littoral",
+        "material_set": "coastal_mix",
+        "detail_set": "shore_wet_sand",
+        "decal_set": "shore_foam",
+        "attachments": {
+          "edge": "terrain_edge_coast",
+          "cliff": "terrain_cliff_coast"
+        },
+        "readability": {
+          "ambient_boost": 0.34,
+          "directional_boost": 0.48,
+          "state_contrast": 0.2,
+          "terrain_blend": 0.16
+        }
+      }
+    },
+    "shallow_water": {
+      "default": {
+        "style_id": "terrain_shallow",
+        "material_set": "shallow_water",
+        "detail_set": "shoal_tint",
+        "decal_set": "water_ripple_shallow",
+        "attachments": {
+          "edge": "waterline_soft"
+        }
+      }
+    },
+    "deep_water": {
+      "default": {
+        "style_id": "terrain_deep",
+        "material_set": "deep_water",
+        "detail_set": "abyssal_tint",
+        "decal_set": "water_ripple_deep"
+      }
+    },
+    "river": {
+      "default": {
+        "style_id": "terrain_river_class",
+        "material_set": "river_water",
+        "detail_set": "river_bank_mud",
+        "decal_set": "river_foam_lines",
+        "attachments": {
+          "edge": "river_bank_edge"
+        }
+      }
+    },
+    "lake": {
+      "default": {
+        "style_id": "terrain_lake_class",
+        "material_set": "lake_water",
+        "detail_set": "lake_bank_soft",
+        "decal_set": "lake_ripple_soft",
+        "attachments": {
+          "edge": "lake_bank_edge"
+        }
+      }
+    },
+    "river_lake": {
+      "default": {
+        "style_id": "terrain_inland_water",
+        "material_set": "river_water",
+        "detail_set": "river_bank_mud",
+        "decal_set": "river_foam_lines",
+        "attachments": {
+          "edge": "river_bank_edge"
+        }
+      }
+    }
   }
 }

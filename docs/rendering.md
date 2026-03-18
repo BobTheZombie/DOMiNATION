@@ -121,7 +121,9 @@ Feature clutter:
 Debug integration:
 - terrain material overlay toggle
 - water overlay toggle
-- counters: TERRAIN_MATERIAL_RESOLVES, WATER_FEATURE_RESOLVES, FOREST_CLUSTER_COUNT, MOUNTAIN_FEATURE_COUNT, PRESENTATION_FALLBACK_COUNT
+- counters: TERRAIN_MATERIAL_RESOLVES, WATER_FEATURE_RESOLVES, FOREST_CLUSTER_COUNT, MOUNTAIN_FEATURE_COUNT, TERRAIN_LIGHTING_SAMPLES, TERRAIN_CONTRAST_SAMPLES, TERRAIN_MATERIAL_BLEND_SAMPLES, PRESENTATION_FALLBACK_COUNT
+
+Terrain now also runs a deterministic lighting readability overlay that lifts facing slopes, deepens low-angle shadowing, and preserves overlay legibility with a bounded protection alpha. Units/buildings/objects sample the same terrain context so their presentation tint, ambient lift, and far-zoom contrast stay coherent with the ground material under the pitched RTS camera.
 
 
 ## World entities (units/cities/structures/sites)
@@ -135,6 +137,16 @@ Debug counters exposed in the visualization panel:
 - `GUARDIAN_PRESENTATION_RESOLVES`
 - `ENTITY_PRESENTATION_FALLBACKS`
 - `FAR_LOD_CLUSTER_COUNT`
+- `TERRAIN_AWARE_INSTANCES`
+- `CIV_TINT_INSTANCES`
+- `EMISSIVE_ACCENT_INSTANCES`
+- `WARNING_HIGHLIGHT_INSTANCES`
+- `INDUSTRIAL_HIGHLIGHT_INSTANCES`
+- `GUARDIAN_HIGHLIGHT_INSTANCES`
+- `DAMAGED_CONTRAST_INSTANCES`
+- `FAR_READABILITY_BOOST_INSTANCES`
+
+Lighting/material diagnostics are also exposed through renderer settings/counters so debug panels can inspect terrain-lit cells, terrain blend coverage, emissive usage, and far-readability boosts without touching authoritative simulation state.
 
 ## World marker / badge pass
 - Strategic world markers for capitals, rail/port/factory/radar/missile entities are rendered as deterministic overlays.
