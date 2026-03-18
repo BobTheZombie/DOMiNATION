@@ -30,6 +30,7 @@ struct RuntimeAnimationState {
   bool fallback{false};
   bool looping{false};
   bool playEvent{false};
+  bool stateFallback{false};
   std::string resolvedState;
   std::string resolvedClip;
   float normalizedTime{0.0f};
