@@ -3,27 +3,632 @@
     "style_id": "object_default",
     "mesh": "missing_mesh",
     "lod_group": "missing_mesh",
-    "tint": [0.85, 0.8, 0.35],
-    "size_scale": [1.0, 1.0],
-    "attachments": {"selection_badge": "selection_badge"}
+    "tint": [
+      0.85,
+      0.8,
+      0.35
+    ],
+    "size_scale": [
+      1.0,
+      1.0
+    ],
+    "attachments": {
+      "selection_badge": "selection_badge"
+    },
+    "animation": {
+      "default_state": "idle",
+      "default_clip": "idle",
+      "state_clips": {
+        "idle": "idle",
+        "work": "work",
+        "warning": "warning",
+        "aura": "aura"
+      },
+      "playback_hints": {
+        "attack": "oneshot"
+      }
+    }
   },
   "render_classes": {
-    "mine_entrance": {"default": {"style_id": "object_mine_entrance", "mesh": "default_mine_entrance_marker", "lod_group": "default_mine_entrance_marker_lod0", "material": "rock_mine", "tint": [0.76, 0.76, 0.84], "state_variants": {"selected": {"decal_set": "mine_active"}, "damaged": {"decal_set": "mine_empty"}}}},
-    "resource_node": {"default": {"style_id": "object_resource_node", "mesh": "default_resource_node_marker", "lod_group": "default_resource_node_marker_lod0", "material": "resource_generic", "tint": [0.86, 0.78, 0.42], "state_variants": {"selected": {"tint": [0.9, 0.82, 0.46]}, "damaged": {"tint": [0.54, 0.54, 0.54]}}}},
-    "guardian_site": {"default": {"style_id": "object_guardian_site", "mesh": "default_guardian_site_marker", "lod_group": "default_guardian_site_marker_lod0", "material": "guardian_runic", "tint": [0.77, 0.22, 0.82], "attachments": {"guardian_aura": "guardian_aura"}, "state_variants": {"default": {"tint": [0.77, 0.22, 0.82]}, "strategic_warning": {"tint": [0.92, 0.42, 0.26], "badge": "warning_badge"}}, "lods": {"far": {"size_scale": [0.8, 0.8]}}}},
-    "rail_node": {"default": {"style_id": "object_rail_node", "mesh": "default_rail_node_marker", "lod_group": "default_rail_node_marker_lod0", "material": "rail_steel", "tint": [0.95, 0.9, 0.45], "state_variants": {"selected": {"tint": [0.98, 0.92, 0.48]}, "damaged": {"tint": [0.72, 0.62, 0.32]}}}},
-    "logistics_depot": {"default": {"style_id": "object_logistics_depot", "mesh": "default_logistics_depot_marker", "lod_group": "default_logistics_depot_marker_lod0", "material": "logistics_steel", "tint": [0.8, 0.74, 0.46], "state_variants": {"selected": {"tint": [0.84, 0.78, 0.5]}, "strategic_warning": {"badge": "warning_badge"}}}},
-    "radar_site": {"default": {"style_id": "object_radar_site", "mesh": "default_radar_site_marker", "lod_group": "default_radar_site_marker_lod0", "material": "radar_composite", "tint": [0.52, 0.82, 0.95], "state_variants": {"selected": {"tint": [0.6, 0.9, 1.0]}, "strategic_warning": {"badge": "warning_badge"}}}},
-    "strategic_marker": {"default": {"style_id": "object_strategic_marker", "mesh": "default_strategic_marker", "lod_group": "default_strategic_marker_lod0", "material": "strategic_alloy", "tint": [0.95, 0.4, 0.35], "attachments": {"warning_badge": "warning_badge"}, "state_variants": {"strategic_warning": {"badge": "warning_badge", "tint": [0.98, 0.45, 0.32]}}}},
-    "theater_target": {"default": {"style_id": "object_theater_target", "mesh": "default_theater_target_marker", "lod_group": "default_theater_target_marker_lod0", "material": "target_composite", "tint": [0.94, 0.53, 0.39], "state_variants": {"selected": {"tint": [1.0, 0.62, 0.42]}, "strategic_warning": {"badge": "warning_badge"}}}},
-    "capital_landmark": {"default": {"style_id": "object_capital_landmark", "mesh": "default_capital_landmark_marker", "lod_group": "default_capital_landmark_marker_lod0", "material": "capital_stone_gold", "tint": [0.95, 0.9, 0.45], "attachments": {"civ_emblem": "civ_emblem"}, "state_variants": {"selected": {"tint": [1.0, 0.95, 0.55]}}}, "civ_overrides": {"rome": {"tint": [0.92, 0.82, 0.44]}, "china": {"tint": [0.95, 0.78, 0.42]}, "usa": {"tint": [0.82, 0.88, 0.95]}}},
-    "industrial_zone": {"default": {"style_id": "object_industrial_zone", "mesh": "default_industrial_zone_marker", "lod_group": "default_industrial_zone_marker_lod0", "material": "industrial_steel", "tint": [0.86, 0.72, 0.34], "attachments": {"smoke_stack": "smoke_stack"}, "state_variants": {"selected": {"tint": [0.88, 0.74, 0.36]}, "damaged": {"tint": [0.62, 0.52, 0.3]}}}},
-    "port_marker": {"default": {"style_id": "object_port_marker", "mesh": "default_port_marker", "lod_group": "default_port_marker_lod0", "material": "port_timber_steel", "tint": [0.53, 0.76, 0.9], "state_variants": {"selected": {"tint": [0.58, 0.82, 0.95]}, "strategic_warning": {"badge": "warning_badge"}}}},
-
-    "rail_hub": {"default": {"style_id": "object_rail_hub", "mesh": "default_rail_node_marker", "lod_group": "default_rail_node_marker_lod0", "tint": [0.95, 0.9, 0.45]}},
-    "industrial_node": {"default": {"style_id": "object_industrial_node", "mesh": "default_industrial_zone_marker", "lod_group": "default_industrial_zone_marker_lod0", "tint": [0.86, 0.72, 0.34], "attachments": {"smoke_stack": "smoke_stack"}}},
-    "forest_site": {"default": {"style_id": "object_forest_site", "mesh": "default_resource_node_marker", "lod_group": "default_resource_node_marker_lod0", "tint": [0.14, 0.45, 0.2]}},
-    "settlement_object": {"default": {"style_id": "object_settlement_object", "mesh": "default_resource_node_marker", "lod_group": "default_resource_node_marker_lod0", "tint": [0.86, 0.72, 0.34]}},
-    "strategic_structure": {"default": {"style_id": "object_strategic_structure", "mesh": "default_strategic_marker", "lod_group": "default_strategic_marker_lod0", "tint": [0.95, 0.4, 0.35], "attachments": {"warning_badge": "warning_badge"}}}
+    "mine_entrance": {
+      "default": {
+        "style_id": "object_mine_entrance",
+        "mesh": "default_mine_entrance_marker",
+        "lod_group": "default_mine_entrance_marker_lod0",
+        "material": "rock_mine",
+        "tint": [
+          0.76,
+          0.76,
+          0.84
+        ],
+        "state_variants": {
+          "selected": {
+            "decal_set": "mine_active"
+          },
+          "damaged": {
+            "decal_set": "mine_empty"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "resource_node": {
+      "default": {
+        "style_id": "object_resource_node",
+        "mesh": "default_resource_node_marker",
+        "lod_group": "default_resource_node_marker_lod0",
+        "material": "resource_generic",
+        "tint": [
+          0.86,
+          0.78,
+          0.42
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.9,
+              0.82,
+              0.46
+            ]
+          },
+          "damaged": {
+            "tint": [
+              0.54,
+              0.54,
+              0.54
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "guardian_site": {
+      "default": {
+        "style_id": "object_guardian_site",
+        "mesh": "default_guardian_site_marker",
+        "lod_group": "default_guardian_site_marker_lod0",
+        "material": "guardian_runic",
+        "tint": [
+          0.77,
+          0.22,
+          0.82
+        ],
+        "attachments": {
+          "guardian_aura": "guardian_aura"
+        },
+        "state_variants": {
+          "default": {
+            "tint": [
+              0.77,
+              0.22,
+              0.82
+            ]
+          },
+          "strategic_warning": {
+            "tint": [
+              0.92,
+              0.42,
+              0.26
+            ],
+            "badge": "warning_badge"
+          }
+        },
+        "lods": {
+          "far": {
+            "size_scale": [
+              0.8,
+              0.8
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "rail_node": {
+      "default": {
+        "style_id": "object_rail_node",
+        "mesh": "default_rail_node_marker",
+        "lod_group": "default_rail_node_marker_lod0",
+        "material": "rail_steel",
+        "tint": [
+          0.95,
+          0.9,
+          0.45
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.98,
+              0.92,
+              0.48
+            ]
+          },
+          "damaged": {
+            "tint": [
+              0.72,
+              0.62,
+              0.32
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "logistics_depot": {
+      "default": {
+        "style_id": "object_logistics_depot",
+        "mesh": "default_logistics_depot_marker",
+        "lod_group": "default_logistics_depot_marker_lod0",
+        "material": "logistics_steel",
+        "tint": [
+          0.8,
+          0.74,
+          0.46
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.84,
+              0.78,
+              0.5
+            ]
+          },
+          "strategic_warning": {
+            "badge": "warning_badge"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "radar_site": {
+      "default": {
+        "style_id": "object_radar_site",
+        "mesh": "default_radar_site_marker",
+        "lod_group": "default_radar_site_marker_lod0",
+        "material": "radar_composite",
+        "tint": [
+          0.52,
+          0.82,
+          0.95
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.6,
+              0.9,
+              1.0
+            ]
+          },
+          "strategic_warning": {
+            "badge": "warning_badge"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "strategic_marker": {
+      "default": {
+        "style_id": "object_strategic_marker",
+        "mesh": "default_strategic_marker",
+        "lod_group": "default_strategic_marker_lod0",
+        "material": "strategic_alloy",
+        "tint": [
+          0.95,
+          0.4,
+          0.35
+        ],
+        "attachments": {
+          "warning_badge": "warning_badge"
+        },
+        "state_variants": {
+          "strategic_warning": {
+            "badge": "warning_badge",
+            "tint": [
+              0.98,
+              0.45,
+              0.32
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "theater_target": {
+      "default": {
+        "style_id": "object_theater_target",
+        "mesh": "default_theater_target_marker",
+        "lod_group": "default_theater_target_marker_lod0",
+        "material": "target_composite",
+        "tint": [
+          0.94,
+          0.53,
+          0.39
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              1.0,
+              0.62,
+              0.42
+            ]
+          },
+          "strategic_warning": {
+            "badge": "warning_badge"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "capital_landmark": {
+      "default": {
+        "style_id": "object_capital_landmark",
+        "mesh": "default_capital_landmark_marker",
+        "lod_group": "default_capital_landmark_marker_lod0",
+        "material": "capital_stone_gold",
+        "tint": [
+          0.95,
+          0.9,
+          0.45
+        ],
+        "attachments": {
+          "civ_emblem": "civ_emblem"
+        },
+        "state_variants": {
+          "selected": {
+            "tint": [
+              1.0,
+              0.95,
+              0.55
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      },
+      "civ_overrides": {
+        "rome": {
+          "tint": [
+            0.92,
+            0.82,
+            0.44
+          ]
+        },
+        "china": {
+          "tint": [
+            0.95,
+            0.78,
+            0.42
+          ]
+        },
+        "usa": {
+          "tint": [
+            0.82,
+            0.88,
+            0.95
+          ]
+        }
+      }
+    },
+    "industrial_zone": {
+      "default": {
+        "style_id": "object_industrial_zone",
+        "mesh": "default_industrial_zone_marker",
+        "lod_group": "default_industrial_zone_marker_lod0",
+        "material": "industrial_steel",
+        "tint": [
+          0.86,
+          0.72,
+          0.34
+        ],
+        "attachments": {
+          "smoke_stack": "smoke_stack"
+        },
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.88,
+              0.74,
+              0.36
+            ]
+          },
+          "damaged": {
+            "tint": [
+              0.62,
+              0.52,
+              0.3
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "port_marker": {
+      "default": {
+        "style_id": "object_port_marker",
+        "mesh": "default_port_marker",
+        "lod_group": "default_port_marker_lod0",
+        "material": "port_timber_steel",
+        "tint": [
+          0.53,
+          0.76,
+          0.9
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.58,
+              0.82,
+              0.95
+            ]
+          },
+          "strategic_warning": {
+            "badge": "warning_badge"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "rail_hub": {
+      "default": {
+        "style_id": "object_rail_hub",
+        "mesh": "default_rail_node_marker",
+        "lod_group": "default_rail_node_marker_lod0",
+        "tint": [
+          0.95,
+          0.9,
+          0.45
+        ],
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "industrial_node": {
+      "default": {
+        "style_id": "object_industrial_node",
+        "mesh": "default_industrial_zone_marker",
+        "lod_group": "default_industrial_zone_marker_lod0",
+        "tint": [
+          0.86,
+          0.72,
+          0.34
+        ],
+        "attachments": {
+          "smoke_stack": "smoke_stack"
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "forest_site": {
+      "default": {
+        "style_id": "object_forest_site",
+        "mesh": "default_resource_node_marker",
+        "lod_group": "default_resource_node_marker_lod0",
+        "tint": [
+          0.14,
+          0.45,
+          0.2
+        ],
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "settlement_object": {
+      "default": {
+        "style_id": "object_settlement_object",
+        "mesh": "default_resource_node_marker",
+        "lod_group": "default_resource_node_marker_lod0",
+        "tint": [
+          0.86,
+          0.72,
+          0.34
+        ],
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    },
+    "strategic_structure": {
+      "default": {
+        "style_id": "object_strategic_structure",
+        "mesh": "default_strategic_marker",
+        "lod_group": "default_strategic_marker_lod0",
+        "tint": [
+          0.95,
+          0.4,
+          0.35
+        ],
+        "attachments": {
+          "warning_badge": "warning_badge"
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura"
+          },
+          "playback_hints": {
+            "aura": "loop"
+          }
+        }
+      }
+    }
   }
 }

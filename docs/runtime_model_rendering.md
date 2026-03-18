@@ -41,3 +41,6 @@ Debug Visualization panel includes:
 - Render cache state is transient only (never serialized).
 - Authoritative simulation hash is unchanged by this pass.
 - Missing assets are non-fatal and resolve through deterministic fallback.
+
+## Runtime animation integration
+`RuntimeModelData` caches detected GLB clip names; `draw_model_instance` resolves a bounded clip state per instance and applies lightweight visual pulse timing derived from deterministic playback time. Missing clips and unsupported animation data never crash rendering and always fall back safely.

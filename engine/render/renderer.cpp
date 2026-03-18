@@ -300,16 +300,23 @@ std::string team_theme_id(const dom::sim::World& w, uint16_t team) {
 }
 
 std::string unit_render_class(const dom::sim::Unit& u) {
+  const std::string def = u.definitionId;
+  if (def.find("guardian") != std::string::npos) return "guardian";
+  if (def.find("heavy") != std::string::npos || def.find("legion") != std::string::npos) return "heavy_infantry";
+  if (def.find("archer") != std::string::npos || def.find("ranged") != std::string::npos || def.find("bow") != std::string::npos) return "ranged_infantry";
+  if (def.find("tank") != std::string::npos || def.find("armor") != std::string::npos || def.find("mech") != std::string::npos) return "armor";
+  if (def.find("train") != std::string::npos) return "train";
+  if (def.find("raider") != std::string::npos || def.find("scout") != std::string::npos) return "raider";
   switch (u.type) {
     case dom::sim::UnitType::Worker: return "worker";
     case dom::sim::UnitType::Infantry: return "infantry";
-    case dom::sim::UnitType::Archer: return "infantry";
+    case dom::sim::UnitType::Archer: return "ranged_infantry";
     case dom::sim::UnitType::Cavalry: return "cavalry";
     case dom::sim::UnitType::Siege: return "artillery";
     case dom::sim::UnitType::TransportShip: return "transport_ship";
     case dom::sim::UnitType::LightWarship:
     case dom::sim::UnitType::HeavyWarship:
-    case dom::sim::UnitType::BombardShip: return "warship";
+    case dom::sim::UnitType::BombardShip: return "naval";
     case dom::sim::UnitType::Fighter:
     case dom::sim::UnitType::Interceptor: return "fighter";
     case dom::sim::UnitType::Bomber:
@@ -1442,6 +1449,10 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     rnInstance.lodGroup = objStyle.lodGroup;
     rnInstance.lodTier = strategic ? ContentLodTier::Far : ContentLodTier::Near;
     rnInstance.attachmentHooks = objStyle.attachments;
+    rnInstance.animation = objStyle.animation;
+    rnInstance.animationState = rn.type == dom::sim::ResourceNodeType::Ore ? "work" : "idle";
+    rnInstance.stableId = rn.id;
+    rnInstance.presentationTick = w.tick;
     draw_model_instance(rnInstance);
     if (strategic || rn.type == dom::sim::ResourceNodeType::Ore || rn.type == dom::sim::ResourceNodeType::Ruins) {
       draw_ring(rn.pos, r + 0.11f, 0.05f, mix_color(col, {1.0f, 1.0f, 1.0f}, 0.35f));
@@ -1480,6 +1491,10 @@ void draw_forest_and_feature_markers(const dom::sim::World& w, const Camera& c) 
     guardianInstance.lodGroup = gStyle.lodGroup;
     guardianInstance.lodTier = strategic ? ContentLodTier::Far : ContentLodTier::Near;
     guardianInstance.attachmentHooks = gStyle.attachments;
+    guardianInstance.animation = gStyle.animation;
+    guardianInstance.animationState = (s.spawned && s.alive) ? "aura" : "idle";
+    guardianInstance.stableId = s.instanceId;
+    guardianInstance.presentationTick = w.tick;
     guardianInstance.guardianActive = s.spawned && s.alive;
     guardianInstance.guardianRevealed = s.discovered || w.godMode;
     draw_model_instance(guardianInstance);
@@ -2124,6 +2139,10 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     auto base = mix_color(rel, theme, 0.35f);
     std::string state = b.underConstruction ? "construction" : (b.hp < b.maxHp * 0.5f ? "damaged" : "default");
     if (b.factory.blocked) state = "strategic_warning";
+    std::string buildingAnimState = "idle";
+    if (b.factory.blocked) buildingAnimState = "warning";
+    else if (b.factory.active) buildingAnimState = "work";
+    else if (b.underConstruction) buildingAnimState = "work";
     const auto bStyle = resolve_render_style({RenderStyleDomain::Building, b.definitionId, normalized_civ_key(w, b.team), team_theme_id(w, b.team), building_render_class(b.type), state, {}, select_lod_tier(c.zoom)});
     if (bStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
     base = mix_color(base, {bStyle.tint[0], bStyle.tint[1], bStyle.tint[2]}, 0.25f);
@@ -2135,6 +2154,10 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
     buildingInstance.lodGroup = bStyle.lodGroup;
     buildingInstance.lodTier = select_lod_tier(c.zoom);
     buildingInstance.attachmentHooks = bStyle.attachments;
+    buildingInstance.animation = bStyle.animation;
+    buildingInstance.animationState = buildingAnimState;
+    buildingInstance.stableId = b.id;
+    buildingInstance.presentationTick = w.tick;
     buildingInstance.damaged = b.hp < b.maxHp * 0.5f;
     buildingInstance.strategicWarning = b.factory.blocked;
     buildingInstance.activeIndustry = b.factory.active;
@@ -2227,7 +2250,14 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       auto rel = unit_color(u);
       auto theme = theme_tint_for_team(w, u.team);
       auto base = mix_color(rel, theme, 0.25f);
+      const bool moving = u.hasMoveOrder || glm::length(u.moveDir) > 0.01f;
+      const bool attacking = (u.targetUnit != 0 || u.attackCooldownTicks > 0);
       std::string uState = u.selected ? "selected" : (u.supplyState == dom::sim::SupplyState::LowSupply ? "low_supply" : "default");
+      std::string animState = "idle";
+      if (attacking) animState = "attack";
+      else if (moving) animState = "move";
+      else if (u.supplyState != dom::sim::SupplyState::InSupply) animState = "low_supply";
+      else if (u.hp < 65.0f) animState = "damaged";
       const auto uStyle = resolve_render_style({RenderStyleDomain::Unit, u.definitionId, normalized_civ_key(w, u.team), team_theme_id(w, u.team), unit_render_class(u), uState, {}, lodTier});
       if (uStyle.fallback) ++gEntityCounters.entityPresentationFallbacks;
       base = mix_color(base, {uStyle.tint[0], uStyle.tint[1], uStyle.tint[2]}, 0.2f);
@@ -2244,8 +2274,12 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
       unitInstance.lodTier = lodTier;
       unitInstance.selected = u.selected;
       unitInstance.damaged = u.hp < 65.0f;
-      unitInstance.combatFiring = (u.targetUnit != 0 || u.attackCooldownTicks > 0);
+      unitInstance.combatFiring = attacking;
       unitInstance.attachmentHooks = uStyle.attachments;
+      unitInstance.animation = uStyle.animation;
+      unitInstance.animationState = animState;
+      unitInstance.stableId = u.id;
+      unitInstance.presentationTick = w.tick;
       draw_model_instance(unitInstance);
 
       if (glyph == UnitGlyph::Aircraft) {
@@ -2507,6 +2541,11 @@ void draw(dom::sim::World& w, const Camera& c, int width, int height, const std:
   gEntityCounters.attachmentResolveCount = modelCounters.attachmentResolveCount;
   gEntityCounters.attachmentFallbackCount = modelCounters.attachmentFallbackCount;
   gEntityCounters.activeAttachmentInstances = modelCounters.activeAttachmentInstances;
+  gEntityCounters.animationResolveCount = modelCounters.animationResolveCount;
+  gEntityCounters.animationFallbackCount = modelCounters.animationFallbackCount;
+  gEntityCounters.activeAnimatedInstances = modelCounters.activeAnimatedInstances;
+  gEntityCounters.clipPlayEvents = modelCounters.clipPlayEvents;
+  gEntityCounters.loopingClipInstances = modelCounters.loopingClipInstances;
   const auto drawEnd = Clock::now();
   gLastDrawMs = std::chrono::duration<double, std::milli>(drawEnd - drawStart).count();
 }

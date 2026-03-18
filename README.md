@@ -740,3 +740,6 @@ Use these deterministic integration checks after world-render/content changes:
 - Missing/invalid GLB content resolves deterministically to `assets_final/fallback/missing_mesh.glb` (warning-only).
 - Debug panel counters: `MODEL_RESOLVE_COUNT`, `MODEL_FALLBACK_COUNT`, `ACTIVE_MODEL_INSTANCES`, `LOD_MODEL_TIER_COUNTS`.
 - See `docs/runtime_model_rendering.md`.
+
+## Runtime animation (bounded)
+The renderer now resolves bounded runtime clip playback (`idle/move/attack/work/warning/aura`) from style mappings and model clip metadata with deterministic fallback to static rendering when clips are missing. This layer is presentation-only and does not affect authoritative simulation.

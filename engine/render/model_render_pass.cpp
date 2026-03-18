@@ -125,7 +125,7 @@ void draw_attachment(const ModelInstanceDesc& instance,
 }
 }
 
-void reset_model_render_counters() { gModelCounters = {}; }
+void reset_model_render_counters() { gModelCounters = {}; reset_runtime_animation_counters(); }
 
 const ModelRenderCounters& model_render_counters() { return gModelCounters; }
 
@@ -139,18 +139,28 @@ void draw_model_instance(const ModelInstanceDesc& instance) {
   const auto resolved = gModelCache.resolve(instance.meshId, instance.lodGroup, instance.lodTier);
   if (resolved.fallback) ++gModelCounters.modelFallbackCount;
 
+  const auto animation = resolve_runtime_animation({instance.stableId,
+                                                   instance.presentationTick,
+                                                   instance.animationState,
+                                                   &resolved.model,
+                                                   &instance.animation});
+
   const float scale = lod_scale(instance.lodTier);
   const float base = instance.footprint * resolved.model.footprint * scale;
   const float height = base * resolved.model.height;
 
   glBegin(GL_QUADS);
-  glColor3f(instance.tint[0] * 0.35f, instance.tint[1] * 0.35f, instance.tint[2] * 0.35f);
+  const float animPulse = animation.animated ? (0.9f + 0.2f * std::sin(animation.normalizedTime * 6.2831853f)) : 1.0f;
+  glColor3f(instance.tint[0] * 0.35f * animPulse, instance.tint[1] * 0.35f * animPulse, instance.tint[2] * 0.35f * animPulse);
   glVertex2f(instance.pos.x - base, instance.pos.y - base);
   glVertex2f(instance.pos.x + base, instance.pos.y - base);
   glVertex2f(instance.pos.x + base, instance.pos.y + base);
   glVertex2f(instance.pos.x - base, instance.pos.y + base);
 
-  glColor3f(instance.tint[0] * 0.68f, instance.tint[1] * 0.68f, instance.tint[2] * 0.68f);
+  const float activeBoost = animation.playEvent ? 1.25f : (animation.animated ? 1.05f : 1.0f);
+  glColor3f(std::min(1.0f, instance.tint[0] * 0.68f * activeBoost),
+            std::min(1.0f, instance.tint[1] * 0.68f * activeBoost),
+            std::min(1.0f, instance.tint[2] * 0.68f * activeBoost));
   glVertex2f(instance.pos.x - base * 0.85f, instance.pos.y - base * 0.85f + height * 0.2f);
   glVertex2f(instance.pos.x + base * 0.85f, instance.pos.y - base * 0.85f + height * 0.2f);
   glVertex2f(instance.pos.x + base * 0.85f, instance.pos.y + base * 0.85f + height * 0.2f);
@@ -161,6 +171,13 @@ void draw_model_instance(const ModelInstanceDesc& instance) {
   sortedHooks.reserve(instance.attachmentHooks.size());
   for (const auto& kv : instance.attachmentHooks) sortedHooks.emplace_back(kv.first, kv.second);
   std::sort(sortedHooks.begin(), sortedHooks.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+
+  const auto& animCounters = runtime_animation_counters();
+  gModelCounters.animationResolveCount = animCounters.animationResolveCount;
+  gModelCounters.animationFallbackCount = animCounters.animationFallbackCount;
+  gModelCounters.activeAnimatedInstances = animCounters.activeAnimatedInstances;
+  gModelCounters.clipPlayEvents = animCounters.clipPlayEvents;
+  gModelCounters.loopingClipInstances = animCounters.loopingClipInstances;
 
   for (const auto& [semanticName, hookName] : sortedHooks) {
     ModelAttachmentSemantic semantic{};

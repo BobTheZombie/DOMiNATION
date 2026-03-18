@@ -469,3 +469,6 @@ Expanded terrain/unit/building/object class coverage does not alter command proc
 
 ## Runtime 3D model integration
 Renderer includes a non-authoritative runtime model cache/loader path for static GLB content, with deterministic fallback and debug counters; authoritative simulation remains unchanged.
+
+## Runtime animation layer
+A bounded runtime animation pass lives in the render pipeline. It consumes authoritative state plus presentation tick and stable IDs to resolve clip playback deterministically, but it is never consulted by gameplay authority, save/load authority, or replay authority.

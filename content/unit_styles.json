@@ -4,29 +4,995 @@
     "mesh": "missing_mesh",
     "lod_group": "missing_mesh",
     "icon": "missing_icon",
-    "tint": [0.9, 0.9, 0.9],
-    "size_scale": [1.0, 1.0],
-    "attachments": {"selection_badge": "selection_badge"}
+    "tint": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "size_scale": [
+      1.0,
+      1.0
+    ],
+    "attachments": {
+      "selection_badge": "selection_badge"
+    },
+    "animation": {
+      "default_state": "idle",
+      "default_clip": "idle",
+      "state_clips": {
+        "idle": "idle",
+        "move": "move",
+        "attack": "attack",
+        "work": "work",
+        "warning": "warning",
+        "aura": "aura",
+        "low_supply": "warning",
+        "damaged": "warning",
+        "selected": "idle"
+      },
+      "playback_hints": {
+        "attack": "oneshot"
+      }
+    }
   },
   "render_classes": {
-    "worker": {"default": {"style_id": "unit_worker", "mesh": "rome_worker_cohort", "lod_group": "rome_worker_cohort_lod0", "icon": "ui_icon_worker", "material": "worker_cloth_leather", "size_scale": [0.9, 0.9], "state_variants": {"selected": {"tint": [0.48, 0.9, 1.0]}, "low_supply": {"decal_set": "supply_warning"}, "damaged": {"decal_set": "damage_marks_light"}}, "lods": {"mid": {"lod_group": "rome_worker_cohort_lod1"}, "far": {"size_scale": [0.8, 0.8]}}}, "civ_overrides": {"china": {"mesh": "china_scholar_engineer", "lod_group": "china_scholar_engineer_lod0"}, "usa": {"mesh": "usa_frontier_engineer", "lod_group": "usa_frontier_engineer_lod0"}}, "theme_overrides": {"japan": {"mesh": "japan_castle_engineer", "lod_group": "japan_castle_engineer_lod0"}}},
-    "infantry": {"default": {"style_id": "unit_infantry", "mesh": "rome_legionary", "lod_group": "rome_legionary_lod0", "icon": "ui_icon_infantry", "material": "infantry_cloth_steel", "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "supply_warning"}, "damaged": {"decal_set": "damage_marks"}}, "lods": {"mid": {"lod_group": "rome_legionary_lod1"}, "far": {"size_scale": [0.88, 0.88]}}}, "civ_overrides": {"china": {"mesh": "china_imperial_guard", "lod_group": "china_imperial_guard_lod0"}, "japan": {"mesh": "japan_samurai_retainer", "lod_group": "japan_samurai_retainer_lod0"}, "usa": {"mesh": "usa_rifleman", "lod_group": "usa_rifleman_lod0"}, "egypt": {"mesh": "egypt_desert_guard", "lod_group": "egypt_desert_guard_lod0"}}},
-    "ranged_infantry": {"default": {"style_id": "unit_ranged_infantry", "mesh": "rome_auxiliary_archer", "lod_group": "rome_auxiliary_archer_lod0", "icon": "ui_icon_archer", "material": "infantry_ranged_composite", "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "ammo_warning"}, "damaged": {"decal_set": "damage_marks_light"}}}, "civ_overrides": {"china": {"mesh": "china_fire_lancer", "lod_group": "china_fire_lancer_lod0"}, "uk": {"mesh": "uk_longbow_guard", "lod_group": "uk_longbow_guard_lod0"}}},
-    "heavy_infantry": {"default": {"style_id": "unit_heavy_infantry", "mesh": "rome_praetorian_guard", "lod_group": "rome_praetorian_guard_lod0", "icon": "ui_icon_heavy_infantry", "material": "infantry_plate_steel", "size_scale": [1.06, 1.06], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "supply_warning"}, "damaged": {"decal_set": "damage_marks_heavy"}}}, "civ_overrides": {"tartaria": {"mesh": "tartaria_steppe_guard", "lod_group": "tartaria_steppe_guard_lod0"}, "russia": {"mesh": "russia_shock_guard", "lod_group": "russia_shock_guard_lod0"}}},
-    "cavalry": {"default": {"style_id": "unit_cavalry", "mesh": "rome_cataphract", "lod_group": "rome_cataphract_lod0", "icon": "ui_icon_cavalry", "material": "cavalry_leather_steel", "size_scale": [1.06, 1.06], "state_variants": {"selected": {"tint": [0.5, 0.8, 1.0]}, "low_supply": {"decal_set": "supply_warning"}, "damaged": {"decal_set": "damage_marks"}}}, "civ_overrides": {"middle_east": {"mesh": "middle_east_camel_raider", "lod_group": "middle_east_camel_raider_lod0"}, "japan": {"mesh": "japan_horse_guard", "lod_group": "japan_horse_guard_lod0"}}},
-    "raider": {"default": {"style_id": "unit_raider", "mesh": "tartaria_raider_lancers", "lod_group": "tartaria_raider_lancers_lod0", "icon": "ui_icon_raider", "material": "raider_cloth_leather", "size_scale": [1.0, 1.0], "state_variants": {"selected": {"tint": [0.5, 0.8, 1.0]}, "low_supply": {"decal_set": "supply_warning"}, "damaged": {"decal_set": "damage_marks_light"}}}},
-    "artillery": {"default": {"style_id": "unit_artillery", "mesh": "europe_field_howitzer", "lod_group": "europe_field_howitzer_lod0", "icon": "ui_icon_artillery", "material": "artillery_steel", "size_scale": [1.08, 1.08], "attachments": {"muzzle_flash": "muzzle_flash"}, "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "ammo_warning"}, "damaged": {"decal_set": "damage_marks_heavy"}}}, "civ_overrides": {"usa": {"mesh": "usa_mobile_artillery", "lod_group": "usa_mobile_artillery_lod0"}, "china": {"mesh": "china_rocket_artillery", "lod_group": "china_rocket_artillery_lod0"}}},
-    "armor": {"default": {"style_id": "unit_armor", "mesh": "europe_heavy_tank_column", "lod_group": "europe_heavy_tank_column_lod0", "icon": "ui_icon_tank", "material": "armor_painted_steel", "size_scale": [1.14, 1.14], "attachments": {"muzzle_flash": "muzzle_flash"}, "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks_heavy"}}}, "civ_overrides": {"russia": {"mesh": "russia_breakthrough_tank", "lod_group": "russia_breakthrough_tank_lod0"}, "usa": {"mesh": "usa_armored_column", "lod_group": "usa_armored_column_lod0"}}},
-    "train": {"default": {"style_id": "unit_train", "mesh": "eu_armored_supply_train", "lod_group": "eu_armored_supply_train_lod0", "icon": "ui_icon_train", "material": "rail_steel", "size_scale": [1.16, 1.16], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "supply_warning"}, "damaged": {"decal_set": "damage_marks"}}}},
-    "naval": {"default": {"style_id": "unit_naval", "mesh": "uk_dreadnought_group", "lod_group": "uk_dreadnought_group_lod0", "icon": "ui_icon_warship", "material": "naval_hull_steel", "size_scale": [1.16, 1.16], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks_heavy"}}}, "civ_overrides": {"japan": {"mesh": "japan_carrier_group", "lod_group": "japan_carrier_group_lod0"}, "usa": {"mesh": "usa_carrier_group", "lod_group": "usa_carrier_group_lod0"}}},
-    "aircraft": {"default": {"style_id": "unit_aircraft", "mesh": "usa_strategic_bomber_wing", "lod_group": "usa_strategic_bomber_wing_lod0", "icon": "ui_icon_bomber", "material": "airframe_paint_metal", "size_scale": [1.14, 1.14], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks"}}}, "civ_overrides": {"uk": {"mesh": "uk_strategic_radar_fighter_wing", "lod_group": "uk_strategic_radar_fighter_wing_lod0"}, "usa": {"mesh": "usa_strategic_bomber_wing", "lod_group": "usa_strategic_bomber_wing_lod0"}}},
-    "guardian": {"default": {"style_id": "unit_guardian", "mesh": "guardian_stone_colossus", "lod_group": "guardian_stone_colossus_lod0", "icon": "ui_icon_guardian", "material": "guardian_runestone", "size_scale": [1.2, 1.2], "attachments": {"guardian_aura": "guardian_aura"}, "state_variants": {"selected": {"tint": [0.68, 0.78, 1.0]}, "low_supply": {"decal_set": "guardian_dim"}, "damaged": {"decal_set": "guardian_crack_marks"}}}},
-
-    "transport_ship": {"default": {"style_id": "unit_transport_ship", "mesh": "rome_transport_fleet", "lod_group": "rome_transport_fleet_lod0", "icon": "ui_icon_transport_ship", "material": "naval_hull_timber", "size_scale": [1.12, 1.12], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks"}}}},
-    "warship": {"default": {"style_id": "unit_warship", "mesh": "uk_dreadnought_group", "lod_group": "uk_dreadnought_group_lod0", "icon": "ui_icon_warship", "material": "naval_hull_steel", "size_scale": [1.16, 1.16], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks_heavy"}}}},
-    "fighter": {"default": {"style_id": "unit_fighter", "mesh": "uk_strategic_radar_fighter_wing", "lod_group": "uk_strategic_radar_fighter_wing_lod0", "icon": "ui_icon_fighter", "material": "airframe_matte", "size_scale": [1.08, 1.08], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks_light"}}}},
-    "bomber": {"default": {"style_id": "unit_bomber", "mesh": "usa_strategic_bomber_wing", "lod_group": "usa_strategic_bomber_wing_lod0", "icon": "ui_icon_bomber", "material": "airframe_paint_metal", "size_scale": [1.15, 1.15], "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks"}}}},
-    "missile": {"default": {"style_id": "unit_missile", "mesh": "default_strategic_missile", "lod_group": "default_strategic_missile_lod0", "icon": "ui_icon_missile", "material": "missile_ceramic", "size_scale": [0.95, 0.95], "state_variants": {"selected": {"tint": [1.0, 0.62, 0.32]}, "low_supply": {"decal_set": "ammo_warning"}, "damaged": {"decal_set": "damage_marks"}}}},
-    "tank": {"default": {"style_id": "unit_tank", "mesh": "europe_heavy_tank_column", "lod_group": "europe_heavy_tank_column_lod0", "icon": "ui_icon_tank", "material": "armor_painted_steel", "size_scale": [1.12, 1.12], "attachments": {"muzzle_flash": "muzzle_flash"}, "state_variants": {"selected": {"tint": [0.45, 0.76, 1.0]}, "low_supply": {"decal_set": "fuel_warning"}, "damaged": {"decal_set": "damage_marks_heavy"}}}}
+    "worker": {
+      "default": {
+        "style_id": "unit_worker",
+        "mesh": "rome_worker_cohort",
+        "lod_group": "rome_worker_cohort_lod0",
+        "icon": "ui_icon_worker",
+        "material": "worker_cloth_leather",
+        "size_scale": [
+          0.9,
+          0.9
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.48,
+              0.9,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "supply_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_light"
+          }
+        },
+        "lods": {
+          "mid": {
+            "lod_group": "rome_worker_cohort_lod1"
+          },
+          "far": {
+            "size_scale": [
+              0.8,
+              0.8
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "china": {
+          "mesh": "china_scholar_engineer",
+          "lod_group": "china_scholar_engineer_lod0"
+        },
+        "usa": {
+          "mesh": "usa_frontier_engineer",
+          "lod_group": "usa_frontier_engineer_lod0"
+        }
+      },
+      "theme_overrides": {
+        "japan": {
+          "mesh": "japan_castle_engineer",
+          "lod_group": "japan_castle_engineer_lod0"
+        }
+      }
+    },
+    "infantry": {
+      "default": {
+        "style_id": "unit_infantry",
+        "mesh": "rome_legionary",
+        "lod_group": "rome_legionary_lod0",
+        "icon": "ui_icon_infantry",
+        "material": "infantry_cloth_steel",
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "supply_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "lods": {
+          "mid": {
+            "lod_group": "rome_legionary_lod1"
+          },
+          "far": {
+            "size_scale": [
+              0.88,
+              0.88
+            ]
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "china": {
+          "mesh": "china_imperial_guard",
+          "lod_group": "china_imperial_guard_lod0"
+        },
+        "japan": {
+          "mesh": "japan_samurai_retainer",
+          "lod_group": "japan_samurai_retainer_lod0"
+        },
+        "usa": {
+          "mesh": "usa_rifleman",
+          "lod_group": "usa_rifleman_lod0"
+        },
+        "egypt": {
+          "mesh": "egypt_desert_guard",
+          "lod_group": "egypt_desert_guard_lod0"
+        }
+      }
+    },
+    "ranged_infantry": {
+      "default": {
+        "style_id": "unit_ranged_infantry",
+        "mesh": "rome_auxiliary_archer",
+        "lod_group": "rome_auxiliary_archer_lod0",
+        "icon": "ui_icon_archer",
+        "material": "infantry_ranged_composite",
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "ammo_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_light"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "china": {
+          "mesh": "china_fire_lancer",
+          "lod_group": "china_fire_lancer_lod0"
+        },
+        "uk": {
+          "mesh": "uk_longbow_guard",
+          "lod_group": "uk_longbow_guard_lod0"
+        }
+      }
+    },
+    "heavy_infantry": {
+      "default": {
+        "style_id": "unit_heavy_infantry",
+        "mesh": "rome_praetorian_guard",
+        "lod_group": "rome_praetorian_guard_lod0",
+        "icon": "ui_icon_heavy_infantry",
+        "material": "infantry_plate_steel",
+        "size_scale": [
+          1.06,
+          1.06
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "supply_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_heavy"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "tartaria": {
+          "mesh": "tartaria_steppe_guard",
+          "lod_group": "tartaria_steppe_guard_lod0"
+        },
+        "russia": {
+          "mesh": "russia_shock_guard",
+          "lod_group": "russia_shock_guard_lod0"
+        }
+      }
+    },
+    "cavalry": {
+      "default": {
+        "style_id": "unit_cavalry",
+        "mesh": "rome_cataphract",
+        "lod_group": "rome_cataphract_lod0",
+        "icon": "ui_icon_cavalry",
+        "material": "cavalry_leather_steel",
+        "size_scale": [
+          1.06,
+          1.06
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.5,
+              0.8,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "supply_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "middle_east": {
+          "mesh": "middle_east_camel_raider",
+          "lod_group": "middle_east_camel_raider_lod0"
+        },
+        "japan": {
+          "mesh": "japan_horse_guard",
+          "lod_group": "japan_horse_guard_lod0"
+        }
+      }
+    },
+    "raider": {
+      "default": {
+        "style_id": "unit_raider",
+        "mesh": "tartaria_raider_lancers",
+        "lod_group": "tartaria_raider_lancers_lod0",
+        "icon": "ui_icon_raider",
+        "material": "raider_cloth_leather",
+        "size_scale": [
+          1.0,
+          1.0
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.5,
+              0.8,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "supply_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_light"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "artillery": {
+      "default": {
+        "style_id": "unit_artillery",
+        "mesh": "europe_field_howitzer",
+        "lod_group": "europe_field_howitzer_lod0",
+        "icon": "ui_icon_artillery",
+        "material": "artillery_steel",
+        "size_scale": [
+          1.08,
+          1.08
+        ],
+        "attachments": {
+          "muzzle_flash": "muzzle_flash"
+        },
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "ammo_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_heavy"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "usa": {
+          "mesh": "usa_mobile_artillery",
+          "lod_group": "usa_mobile_artillery_lod0"
+        },
+        "china": {
+          "mesh": "china_rocket_artillery",
+          "lod_group": "china_rocket_artillery_lod0"
+        }
+      }
+    },
+    "armor": {
+      "default": {
+        "style_id": "unit_armor",
+        "mesh": "europe_heavy_tank_column",
+        "lod_group": "europe_heavy_tank_column_lod0",
+        "icon": "ui_icon_tank",
+        "material": "armor_painted_steel",
+        "size_scale": [
+          1.14,
+          1.14
+        ],
+        "attachments": {
+          "muzzle_flash": "muzzle_flash"
+        },
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_heavy"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "russia": {
+          "mesh": "russia_breakthrough_tank",
+          "lod_group": "russia_breakthrough_tank_lod0"
+        },
+        "usa": {
+          "mesh": "usa_armored_column",
+          "lod_group": "usa_armored_column_lod0"
+        }
+      }
+    },
+    "train": {
+      "default": {
+        "style_id": "unit_train",
+        "mesh": "eu_armored_supply_train",
+        "lod_group": "eu_armored_supply_train_lod0",
+        "icon": "ui_icon_train",
+        "material": "rail_steel",
+        "size_scale": [
+          1.16,
+          1.16
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "supply_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "naval": {
+      "default": {
+        "style_id": "unit_naval",
+        "mesh": "uk_dreadnought_group",
+        "lod_group": "uk_dreadnought_group_lod0",
+        "icon": "ui_icon_warship",
+        "material": "naval_hull_steel",
+        "size_scale": [
+          1.16,
+          1.16
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_heavy"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "japan": {
+          "mesh": "japan_carrier_group",
+          "lod_group": "japan_carrier_group_lod0"
+        },
+        "usa": {
+          "mesh": "usa_carrier_group",
+          "lod_group": "usa_carrier_group_lod0"
+        }
+      }
+    },
+    "aircraft": {
+      "default": {
+        "style_id": "unit_aircraft",
+        "mesh": "usa_strategic_bomber_wing",
+        "lod_group": "usa_strategic_bomber_wing_lod0",
+        "icon": "ui_icon_bomber",
+        "material": "airframe_paint_metal",
+        "size_scale": [
+          1.14,
+          1.14
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      },
+      "civ_overrides": {
+        "uk": {
+          "mesh": "uk_strategic_radar_fighter_wing",
+          "lod_group": "uk_strategic_radar_fighter_wing_lod0"
+        },
+        "usa": {
+          "mesh": "usa_strategic_bomber_wing",
+          "lod_group": "usa_strategic_bomber_wing_lod0"
+        }
+      }
+    },
+    "guardian": {
+      "default": {
+        "style_id": "unit_guardian",
+        "mesh": "guardian_stone_colossus",
+        "lod_group": "guardian_stone_colossus_lod0",
+        "icon": "ui_icon_guardian",
+        "material": "guardian_runestone",
+        "size_scale": [
+          1.2,
+          1.2
+        ],
+        "attachments": {
+          "guardian_aura": "guardian_aura"
+        },
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.68,
+              0.78,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "guardian_dim"
+          },
+          "damaged": {
+            "decal_set": "guardian_crack_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "transport_ship": {
+      "default": {
+        "style_id": "unit_transport_ship",
+        "mesh": "rome_transport_fleet",
+        "lod_group": "rome_transport_fleet_lod0",
+        "icon": "ui_icon_transport_ship",
+        "material": "naval_hull_timber",
+        "size_scale": [
+          1.12,
+          1.12
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "warship": {
+      "default": {
+        "style_id": "unit_warship",
+        "mesh": "uk_dreadnought_group",
+        "lod_group": "uk_dreadnought_group_lod0",
+        "icon": "ui_icon_warship",
+        "material": "naval_hull_steel",
+        "size_scale": [
+          1.16,
+          1.16
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_heavy"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "fighter": {
+      "default": {
+        "style_id": "unit_fighter",
+        "mesh": "uk_strategic_radar_fighter_wing",
+        "lod_group": "uk_strategic_radar_fighter_wing_lod0",
+        "icon": "ui_icon_fighter",
+        "material": "airframe_matte",
+        "size_scale": [
+          1.08,
+          1.08
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_light"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "bomber": {
+      "default": {
+        "style_id": "unit_bomber",
+        "mesh": "usa_strategic_bomber_wing",
+        "lod_group": "usa_strategic_bomber_wing_lod0",
+        "icon": "ui_icon_bomber",
+        "material": "airframe_paint_metal",
+        "size_scale": [
+          1.15,
+          1.15
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "missile": {
+      "default": {
+        "style_id": "unit_missile",
+        "mesh": "default_strategic_missile",
+        "lod_group": "default_strategic_missile_lod0",
+        "icon": "ui_icon_missile",
+        "material": "missile_ceramic",
+        "size_scale": [
+          0.95,
+          0.95
+        ],
+        "state_variants": {
+          "selected": {
+            "tint": [
+              1.0,
+              0.62,
+              0.32
+            ]
+          },
+          "low_supply": {
+            "decal_set": "ammo_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    },
+    "tank": {
+      "default": {
+        "style_id": "unit_tank",
+        "mesh": "europe_heavy_tank_column",
+        "lod_group": "europe_heavy_tank_column_lod0",
+        "icon": "ui_icon_tank",
+        "material": "armor_painted_steel",
+        "size_scale": [
+          1.12,
+          1.12
+        ],
+        "attachments": {
+          "muzzle_flash": "muzzle_flash"
+        },
+        "state_variants": {
+          "selected": {
+            "tint": [
+              0.45,
+              0.76,
+              1.0
+            ]
+          },
+          "low_supply": {
+            "decal_set": "fuel_warning"
+          },
+          "damaged": {
+            "decal_set": "damage_marks_heavy"
+          }
+        },
+        "animation": {
+          "default_state": "idle",
+          "default_clip": "idle",
+          "state_clips": {
+            "idle": "idle",
+            "move": "move",
+            "attack": "attack",
+            "work": "work",
+            "warning": "warning",
+            "aura": "aura",
+            "low_supply": "warning",
+            "damaged": "warning",
+            "selected": "idle"
+          },
+          "playback_hints": {
+            "attack": "oneshot"
+          }
+        }
+      }
+    }
   }
 }
